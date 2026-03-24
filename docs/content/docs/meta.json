@@ -1,0 +1,28 @@
+{
+  "root": true,
+  "title": "Documentation",
+  "pages": [
+    "---Getting Started---",
+    "index",
+    "quick-start",
+    "setup",
+    "---Core Concepts---",
+    "concepts",
+    "actions",
+    "triggers",
+    "loops",
+    "agents",
+    "credentials",
+    "---Features---",
+    "ai-assistant",
+    "database",
+    "programmatic-usage",
+    "cli",
+    "---Framework Integrations---",
+    "...integrations",
+    "---Plugins---",
+    "...plugins",
+    "---Invect Internals---",
+    "...internals"
+  ]
+}

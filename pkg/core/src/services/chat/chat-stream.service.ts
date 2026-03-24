@@ -1,0 +1,357 @@
+/**
+ * Chat Stream Service
+ *
+ * The main entry point for the chat assistant feature.
+ * Responsibilities:
+ * - Resolve credential → determine provider (Anthropic/OpenAI) and API key
+ * - Create ephemeral ProviderAdapter instances for chat requests
+ * - Load flow context from the database
+ * - Create ChatStreamSession instances
+ *
+ * Lifecycle: Singleton created during ServiceFactory.initialize().
+ */
+
+import type { Logger } from 'src/types/schemas';
+import type { InvectConfig } from 'src/types/schemas';
+import type { InvectIdentity } from 'src/types/auth.types';
+import type { ActionRegistry } from 'src/actions';
+import type { ProviderAdapter } from '../ai/provider-adapter';
+import type {
+  ChatMessage,
+  ChatContext,
+  ChatConfig,
+  ChatStreamEvent,
+  ResolvedChatConfig,
+} from './chat-types';
+import type { FlowContextData } from './system-prompt';
+import { ChatConfigSchema } from './chat-types';
+import { ChatToolkit } from './chat-toolkit';
+import { ChatStreamSession } from './chat-stream-session';
+import { OpenAIAdapter } from '../ai/openai-adapter';
+import { AnthropicAdapter } from '../ai/anthropic-adapter';
+import { OpenRouterAdapter } from '../ai/openrouter-adapter';
+import { BatchProvider } from '../ai/ai-types';
+import { detectProviderFromCredential } from 'src/utils/provider-detection';
+import type { CredentialsService } from '../credentials/credentials.service';
+import type { FlowsService } from '../flows/flows.service';
+import type { FlowVersionsService } from '../flow-versions/flow-versions.service';
+
+/**
+ * Options for creating a chat stream.
+ */
+export interface CreateChatStreamOptions {
+  messages: ChatMessage[];
+  context: ChatContext;
+  identity?: InvectIdentity;
+}
+
+/**
+ * Chat Stream Service — manages chat sessions and dependencies.
+ */
+export class ChatStreamService {
+  private toolkit: ChatToolkit;
+  private chatConfig: ChatConfig;
+
+  constructor(
+    private readonly logger: Logger,
+    private readonly config: InvectConfig,
+    private readonly credentialsService: CredentialsService,
+    private readonly flowsService: FlowsService,
+    private readonly flowVersionsService: FlowVersionsService,
+    private readonly actionRegistry: ActionRegistry | null,
+    /** Invect core instance — passed to tools as an opaque handle */
+    private readonly invect: unknown,
+  ) {
+    // Parse and apply defaults to chat config
+    this.chatConfig = ChatConfigSchema.parse(this.config.chat ?? {});
+    this.toolkit = new ChatToolkit(logger);
+
+    logger.info(
+      `ChatStreamService initialized (enabled: ${this.chatConfig.enabled}, tools: ${this.toolkit.size})`,
+    );
+  }
+
+  /**
+   * Create a streaming chat session.
+   *
+   * Returns an AsyncGenerator that yields ChatStreamEvents.
+   * Framework adapters (Express, NestJS, Next.js) consume this
+   * and serialize events to SSE.
+   */
+  async createStream(options: CreateChatStreamOptions): Promise<AsyncGenerator<ChatStreamEvent>> {
+    if (!this.chatConfig.enabled) {
+      return this.errorStream('Chat assistant is disabled in configuration');
+    }
+
+    const { messages, context, identity } = options;
+
+    // 1. Resolve config (credential → provider + apiKey + model)
+    let resolvedConfig: ResolvedChatConfig;
+    try {
+      resolvedConfig = await this.resolveConfig(context.credentialId);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      return this.errorStream(`Failed to resolve chat credentials: ${msg}`);
+    }
+
+    // 2. Create ephemeral adapter for this request
+    const adapter = this.createAdapter(resolvedConfig);
+
+    // 3. Load flow context from database (if flowId provided)
+    let flowContext: FlowContextData | null = null;
+    if (context.flowId) {
+      try {
+        flowContext = await this.loadFlowContext(
+          context.flowId,
+          context.selectedNodeId,
+          context.viewMode,
+        );
+      } catch (error: unknown) {
+        this.logger.warn('Failed to load flow context for chat:', { error });
+        // Continue without flow context — better than failing
+      }
+    }
+
+    // 4. Apply per-request overrides from context
+    if (context.maxSteps && context.maxSteps >= 1 && context.maxSteps <= 50) {
+      resolvedConfig = { ...resolvedConfig, maxSteps: context.maxSteps };
+    }
+
+    // 5. Create and return session stream
+    const session = new ChatStreamSession({
+      logger: this.logger,
+      toolkit: this.toolkit,
+      config: resolvedConfig,
+      adapter,
+      identity,
+      invect: this.invect,
+      actionRegistry: this.actionRegistry,
+    });
+
+    return session.stream(messages, context, flowContext);
+  }
+
+  /**
+   * Check if the chat feature is enabled and properly configured.
+   */
+  isEnabled(): boolean {
+    return this.chatConfig.enabled;
+  }
+
+  /**
+   * Get the toolkit for external registration of tools.
+   */
+  getToolkit(): ChatToolkit {
+    return this.toolkit;
+  }
+
+  // =====================================
+  // CREDENTIAL & CONFIG RESOLUTION
+  // =====================================
+
+  /**
+   * Resolve chat model configuration.
+   *
+   * Resolution order:
+   * 1. Per-request credentialId (from frontend)
+   * 2. chatConfig.credentialId (from InvectConfig)
+   */
+  private async resolveConfig(perRequestCredentialId?: string): Promise<ResolvedChatConfig> {
+    const base: Partial<ResolvedChatConfig> = {
+      maxSteps: this.chatConfig.maxSteps,
+      maxHistoryMessages: this.chatConfig.maxHistoryMessages,
+      enabled: this.chatConfig.enabled,
+    };
+
+    // Try per-request credential
+    if (perRequestCredentialId) {
+      return this.resolveFromCredential(perRequestCredentialId, base);
+    }
+
+    // Try chatConfig credential
+    if (this.chatConfig.credentialId) {
+      return this.resolveFromCredential(this.chatConfig.credentialId, base);
+    }
+
+    throw new Error(
+      'No chat credential configured. Select a credential in the chat settings, ' +
+        'or set chat.credentialId in the server config.',
+    );
+  }
+
+  /**
+   * Resolve config from a credential in the credentials table.
+   */
+  private async resolveFromCredential(
+    credentialId: string,
+    base: Partial<ResolvedChatConfig>,
+  ): Promise<ResolvedChatConfig> {
+    const credential = await this.credentialsService.getDecryptedWithRefresh(credentialId);
+
+    const provider = detectProviderFromCredential(credential);
+    if (!provider) {
+      throw new Error(
+        `Cannot determine AI provider from credential "${credentialId}". ` +
+          `Set "provider" in credential metadata (OPENAI, ANTHROPIC, or OPENROUTER).`,
+      );
+    }
+
+    const apiKey = (credential.config as Record<string, unknown>)?.apiKey as string;
+    if (!apiKey) {
+      throw new Error(`Credential "${credentialId}" has no apiKey in config.`);
+    }
+
+    const model = this.chatConfig.defaultModel ?? this.getDefaultModel(provider);
+
+    const providerMap: Record<string, 'OPENAI' | 'ANTHROPIC' | 'OPENROUTER'> = {
+      [BatchProvider.OPENAI]: 'OPENAI',
+      [BatchProvider.ANTHROPIC]: 'ANTHROPIC',
+      [BatchProvider.OPENROUTER]: 'OPENROUTER',
+    };
+
+    return {
+      ...base,
+      credentialId,
+      model,
+      provider: providerMap[provider] ?? 'OPENAI',
+      apiKey,
+      maxSteps: base.maxSteps ?? 15,
+      maxHistoryMessages: base.maxHistoryMessages ?? 20,
+      enabled: base.enabled ?? true,
+    };
+  }
+
+  /**
+   * Get the default model for a provider (cheap models for chat).
+   */
+  private getDefaultModel(provider: BatchProvider): string {
+    switch (provider) {
+      case BatchProvider.ANTHROPIC:
+        return 'claude-sonnet-4-20250514';
+      case BatchProvider.OPENAI:
+        return 'gpt-4o-mini';
+      case BatchProvider.OPENROUTER:
+        return 'anthropic/claude-sonnet-4-20250514';
+      default:
+        return 'gpt-4o-mini';
+    }
+  }
+
+  // =====================================
+  // ADAPTER CREATION
+  // =====================================
+
+  /**
+   * Create an ephemeral ProviderAdapter for a chat request.
+   * Uses the resolved config to instantiate the correct adapter.
+   */
+  private createAdapter(config: ResolvedChatConfig): ProviderAdapter {
+    switch (config.provider) {
+      case 'OPENAI':
+        return new OpenAIAdapter(this.logger, config.apiKey);
+      case 'ANTHROPIC':
+        return new AnthropicAdapter(this.logger, config.apiKey);
+      case 'OPENROUTER':
+        return new OpenRouterAdapter(this.logger, config.apiKey);
+      default:
+        throw new Error(`Unsupported chat provider: ${config.provider}`);
+    }
+  }
+
+  // =====================================
+  // FLOW CONTEXT LOADING
+  // =====================================
+
+  /**
+   * Load flow context from the database for the system prompt.
+   */
+  private async loadFlowContext(
+    flowId: string,
+    selectedNodeId?: string,
+    viewMode?: string,
+  ): Promise<FlowContextData | null> {
+    try {
+      const flow = await this.flowsService.getFlowById(flowId);
+      if (!flow) {
+        return null;
+      }
+
+      // Get the latest version to read node definitions
+      const latestVersion = await this.flowVersionsService.getFlowVersion(flowId, 'latest');
+      if (!latestVersion) {
+        return {
+          flowId: flow.id,
+          flowName: flow.name,
+          flowDescription: flow.description ?? undefined,
+          nodes: [],
+          edges: [],
+          selectedNodeId,
+          viewMode: viewMode as 'edit' | 'runs' | undefined,
+        };
+      }
+
+      // Parse definition
+      const definition =
+        typeof latestVersion.invectDefinition === 'string'
+          ? JSON.parse(latestVersion.invectDefinition)
+          : latestVersion.invectDefinition;
+
+      interface FlowNode {
+        id: string;
+        type: string;
+        label?: string;
+        referenceId?: string;
+        params?: Record<string, unknown>;
+        data?: { label?: string; referenceId?: string; params?: Record<string, unknown> };
+      }
+      interface FlowEdge {
+        source?: string;
+        sourceId?: string;
+        target?: string;
+        targetId?: string;
+      }
+
+      const nodes = ((definition?.nodes ?? []) as FlowNode[]).map((n) => ({
+        id: n.id,
+        type: n.type,
+        label: n.label || n.data?.label || 'Unnamed',
+        referenceId: n.referenceId || n.data?.referenceId,
+        paramKeys: n.params
+          ? Object.keys(n.params)
+          : n.data?.params
+            ? Object.keys(n.data.params)
+            : undefined,
+      }));
+
+      const edges = ((definition?.edges ?? []) as FlowEdge[]).map((e) => ({
+        sourceId: e.source ?? e.sourceId ?? '',
+        targetId: e.target ?? e.targetId ?? '',
+      }));
+
+      return {
+        flowId: flow.id,
+        flowName: flow.name,
+        flowDescription: flow.description ?? undefined,
+        nodes,
+        edges,
+        selectedNodeId,
+        viewMode: viewMode as 'edit' | 'runs' | undefined,
+      };
+    } catch (error) {
+      this.logger.warn('Error loading flow context:', { error, flowId });
+      return null;
+    }
+  }
+
+  // =====================================
+  // HELPERS
+  // =====================================
+
+  /**
+   * Create a one-shot error stream.
+   */
+  private async *errorStream(message: string): AsyncGenerator<ChatStreamEvent> {
+    yield { type: 'error', message, recoverable: false };
+    yield { type: 'done' };
+  }
+}

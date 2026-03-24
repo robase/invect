@@ -1,0 +1,119 @@
+---
+title: Database
+description: Configure SQLite, PostgreSQL, or MySQL for Invect.
+---
+
+## Overview
+
+Invect uses [Drizzle ORM](https://orm.drizzle.team/) and supports three database backends out of the box:
+
+- **SQLite** — Zero-config, great for development and small deployments
+- **PostgreSQL** — Recommended for production
+- **MySQL** — Full support
+
+The database stores flows, flow versions, flow runs, node executions, credentials, and batch jobs.
+
+## Configuration
+
+Pass `baseDatabaseConfig` when initializing Invect:
+
+<Tabs groupId="database" persist items={['SQLite', 'PostgreSQL', 'MySQL']}>
+<Tab value="SQLite">
+```ts
+createInvectRouter({
+  baseDatabaseConfig: {
+    type: 'sqlite',
+    connectionString: 'file:./dev.db',
+    id: 'main',
+  },
+});
+```
+</Tab>
+<Tab value="PostgreSQL">
+```ts
+createInvectRouter({
+  baseDatabaseConfig: {
+    type: 'postgresql',
+    connectionString: 'postgresql://user:pass@localhost:5432/invect',
+    id: 'main',
+  },
+});
+```
+</Tab>
+<Tab value="MySQL">
+```ts
+createInvectRouter({
+  baseDatabaseConfig: {
+    type: 'mysql',
+    connectionString: 'mysql://user:pass@localhost:3306/invect',
+    id: 'main',
+  },
+});
+```
+</Tab>
+</Tabs>
+
+## Migrations
+
+Invect does **not** run migrations automatically. You control when and how the schema is applied using the CLI:
+
+```bash
+# 1. Generate Drizzle schema files from core + plugin schemas
+npx invect generate
+
+# 2. Apply the schema to your database
+npx invect migrate --push    # Development — applies directly
+npx invect migrate           # Production — creates SQL migration files
+```
+
+Run `npx invect generate` whenever you add a plugin with new tables or upgrade Invect. Then run `npx invect migrate` to apply the changes.
+
+### Schema Verification
+
+On startup, Invect can verify that your database has the required tables and columns. This is a read-only check — it never creates or alters anything.
+
+```ts
+createInvectRouter({
+  baseDatabaseConfig: {
+    type: 'sqlite',
+    connectionString: 'file:./dev.db',
+    id: 'main',
+  },
+  schemaVerification: true,           // Log warnings if tables are missing
+  // schemaVerification: { strict: true }, // Throw an error instead
+});
+```
+
+If verification fails, you'll see a message telling you exactly which tables or columns are missing and the commands to fix it.
+
+## Schema Overview
+
+| Table | Description |
+|-------|-------------|
+| `flows` | Flow definitions with name, description, and metadata |
+| `flow_versions` | Versioned flow definitions (nodes, edges, parameters) |
+| `flow_runs` | Execution records with status, inputs, outputs, timing |
+| `node_executions` | Per-node execution traces with inputs, outputs, errors |
+| `credentials` | Encrypted credential storage (API keys, OAuth2 tokens) |
+| `batch_jobs` | Batch processing job tracking for OpenAI/Anthropic |
+| `agent_tool_executions` | Tool call traces within agent node executions |
+| `flow_access` | Per-flow access control (user roles) |
+| `flow_triggers` | Webhook and cron trigger configuration |
+| `chat_messages` | Chat message history for conversational flows |
+
+Plugins can add their own tables or extend existing ones. Run `npx invect generate` after adding a plugin to include its tables in the schema.
+
+## Using Your Existing Database
+
+Invect creates its own tables and doesn't interfere with your existing schema. You can point it at the same database your application uses:
+
+```ts
+// Same database as your app
+app.use('/invect', createInvectRouter({
+  baseDatabaseConfig: {
+    type: 'postgresql',
+    connectionString: process.env.DATABASE_URL!, // Your existing DB
+    id: 'main',
+  },
+}));
+```

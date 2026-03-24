@@ -1,0 +1,59 @@
+{
+  "name": "@invect/cli",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "CLI for managing Invect database schemas, migrations, and project setup",
+  "bin": {
+    "invect": "./dist/index.js",
+    "@invect/cli": "./dist/index.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./api": {
+      "types": "./dist/api.d.ts",
+      "import": "./dist/api.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts src/api.ts --format esm --clean",
+    "prepublishOnly": "pnpm run build",
+    "dev": "tsup src/index.ts src/api.ts --format esm --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@invect/core": "workspace:*",
+    "@mrleebo/prisma-ast": "^0.14.0",
+    "commander": "^13.1.0",
+    "dotenv": "^16.4.7",
+    "jiti": "^2.4.2",
+    "picocolors": "^1.1.1",
+    "prompts": "^2.4.2"
+  },
+  "devDependencies": {
+    "@types/prompts": "^2.4.9",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.3",
+    "vitest": "^3.2.4"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "invect",
+    "cli",
+    "workflow",
+    "migration",
+    "drizzle"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/robase/flow-backend.git",
+    "directory": "pkg/cli"
+  }
+}

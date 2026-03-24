@@ -1,0 +1,25 @@
+/**
+ * @invect/layouts
+ *
+ * Shared layout utilities for Invect graph positioning.
+ * Framework-agnostic layout algorithms used by both core services and frontend.
+ *
+ * These utilities work with generic node/edge interfaces to maintain framework independence.
+ */
+
+// Re-export types
+export type { LayoutNode, LayoutEdge, LayoutHandle, ElkLayoutNode, ElkLayoutEdge } from './types';
+
+// Re-export Dagre layout
+export {
+  applyDagreLayout,
+  applyRowWrapping,
+  detectSkipEdges,
+  applyVerticalOffsetForSkipEdges,
+  applyMultiOutputBranchOffsets,
+  applyIfElseBranchOffsets,
+  type DagreLayoutOptions,
+} from './dagre';
+
+// Re-export ElkJS layout
+export { applyElkLayout, enrichNodesWithHandles, type ElkJsLayoutOptions } from './elk';

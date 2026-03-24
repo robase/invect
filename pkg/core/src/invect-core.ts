@@ -1,0 +1,2515 @@
+// Core services and factories
+import { ServiceFactory } from './services/service-factory';
+import { DefaultNodeRegistryFactory, NodeExecutorRegistry } from './nodes/executor-registry';
+import { FlowValidator } from './services/flow-validator';
+import { GraphNodeType, SubmitAgentPromptRequest, NodeExecutionContext } from './types-fresh';
+import { AgentNodeExecutor } from './nodes/agent-executor';
+
+// Database models
+import type { Flow } from './services/flows/flows.model';
+import type { FlowRun } from './services/flow-runs/flow-runs.model';
+import type { NodeExecution } from './services/node-executions/node-executions.model';
+import { FlowVersion } from './database';
+import type { DatabaseConnection } from './database/connection';
+
+// Service interfaces and types
+import type {
+  ExecuteFlowOptions,
+  FlowRunResult,
+  FlowInputs,
+} from './services/flow-runs/flow-runs.service';
+import type {
+  SubmitPromptRequest,
+  SubmitSQLQueryRequest,
+  SQLQueryResult,
+} from './services/node-data.service';
+import type {
+  Credential,
+  CreateCredentialInput,
+  UpdateCredentialInput,
+  CredentialFilters,
+} from './services/credentials';
+
+import type {
+  FlowTriggerRegistration,
+  CreateTriggerInput,
+  UpdateTriggerInput,
+} from './services/triggers';
+
+// Schemas and validation
+import * as Schemas from './types/schemas';
+import {
+  InvectConfig,
+  InvectConfigSchema,
+  PaginatedResponse,
+  QueryOptions,
+} from './types/schemas';
+import {
+  CreateFlowVersionRequest,
+  createFlowVersionRequestSchema,
+  FlowNodeForType,
+  InvectDefinition,
+  invectDefinitionSchema,
+} from './services/flow-versions/schemas-fresh';
+import type { CreateFlowRequest } from './types/schemas/flow/create-flow.schema';
+import { FlowValidationResult } from './types/validation';
+import type { UpdateFlowInput } from './services/flows/flows.model';
+
+// Utilities and errors
+import {
+  LoggerManager,
+  ScopedLogger,
+  type LogLevel,
+  type ScopedLoggingConfig,
+} from './utils/logger';
+import { DatabaseError, ValidationError } from './types/common/errors.types';
+import { FlowRunStatus, NodeExecutionStatus } from './types/base';
+
+// Template + JS expression engine
+import { JsExpressionService, getTemplateService } from './services/templating';
+import type { TemplateService } from './services/templating';
+
+// React Flow renderer types
+import type { ReactFlowData } from './services/react-flow-renderer.service';
+import { NodeDefinition } from './types/node-definition.types';
+import { BatchProvider, Model } from './services/ai/base-client';
+import { detectProviderFromCredential } from './utils/provider-detection';
+import type {
+  NodeConfigUpdateEvent,
+  NodeConfigUpdateResponse,
+} from './types/node-config-update.types';
+
+// Agent tools
+import {
+  AgentToolRegistry,
+  initializeGlobalToolRegistry,
+  getGlobalToolRegistry,
+} from './services/agent-tools';
+
+// Plugin system
+import { PluginManager } from './services/plugin-manager';
+import type {
+  InvectPlugin,
+  InvectPluginEndpoint,
+  PluginDatabaseApi,
+  PluginHookRunner,
+} from './types/plugin.types';
+import type { AgentToolDefinition, AgentPromptResult } from './types/agent-tool.types';
+
+// Action registry (Provider-Actions architecture)
+import {
+  ActionRegistry,
+  initializeGlobalActionRegistry,
+  createToolExecutorForAction,
+  registerBuiltinActions,
+} from './actions';
+import type { ActionDefinition, ProviderDef, LoadOptionsResult } from './actions';
+
+// Authorization
+import { AuthorizationService, createAuthorizationService } from './services/auth';
+import type {
+  InvectIdentity,
+  InvectPermission,
+  AuthorizationContext,
+  AuthorizationResult,
+  AuthEvent,
+  InvectAuthConfig,
+} from './types/auth.types';
+
+type PostgreSqlClientLike = {
+  unsafe<T = Record<string, unknown>>(statement: string, params?: unknown[]): Promise<T[]>;
+};
+
+type SqliteClientLike = {
+  prepare(statement: string): {
+    all(...params: unknown[]): unknown[];
+    run(...params: unknown[]): unknown;
+  };
+};
+
+type MysqlClientLike = {
+  execute<T = unknown>(statement: string, params?: unknown[]): Promise<[T, unknown]>;
+};
+
+function createPluginDatabaseApi(connection: DatabaseConnection): PluginDatabaseApi {
+  const normalizeSql = (statement: string): string => {
+    if (connection.type !== 'postgresql') {
+      return statement;
+    }
+
+    let index = 0;
+    return statement.replace(/\?/g, () => `$${++index}`);
+  };
+
+  const query = async <T = Record<string, unknown>>(
+    statement: string,
+    params: unknown[] = [],
+  ): Promise<T[]> => {
+    switch (connection.type) {
+      case 'postgresql': {
+        const client = (connection.db as unknown as { $client: PostgreSqlClientLike }).$client;
+        return client.unsafe<T>(normalizeSql(statement), params);
+      }
+      case 'sqlite': {
+        const client = (connection.db as unknown as { $client: SqliteClientLike }).$client;
+        return client.prepare(statement).all(...params) as T[];
+      }
+      case 'mysql': {
+        const client = (connection.db as unknown as { $client: MysqlClientLike }).$client;
+        const [rows] = await client.execute<T[]>(statement, params);
+        return Array.isArray(rows) ? rows : [];
+      }
+    }
+  };
+
+  return {
+    type: connection.type,
+    query,
+    async execute(statement: string, params: unknown[] = []): Promise<void> {
+      switch (connection.type) {
+        case 'postgresql': {
+          const client = (connection.db as unknown as { $client: PostgreSqlClientLike }).$client;
+          await client.unsafe(normalizeSql(statement), params);
+          return;
+        }
+        case 'sqlite': {
+          const client = (connection.db as unknown as { $client: SqliteClientLike }).$client;
+          const coerced = params.map((param) =>
+            typeof param === 'boolean' ? (param ? 1 : 0) : param,
+          );
+          client.prepare(statement).run(...coerced);
+          return;
+        }
+        case 'mysql': {
+          const client = (connection.db as unknown as { $client: MysqlClientLike }).$client;
+          await client.execute(statement, params);
+          return;
+        }
+      }
+    },
+  };
+}
+
+/**
+ * Custom node configuration interface
+ */
+export interface CustomNodeConfig {
+  nodeType: string;
+  executor: string; // path to executor class or instance
+  config?: Record<string, unknown>;
+}
+
+/**
+ * Invect Core initialization status
+ */
+export interface CoreInitializationStatus {
+  isInitialized: boolean;
+  servicesReady: boolean;
+  databaseReady: boolean;
+  errors?: string[];
+}
+
+/**
+ * Dashboard statistics returned by getDashboardStats()
+ */
+export interface DashboardStats {
+  /** Total number of flows */
+  totalFlows: number;
+  /** Total number of flow runs (all time) */
+  totalRuns: number;
+  /** Number of runs in the last 24 hours */
+  runsLast24h: number;
+  /** Currently active runs (RUNNING + PENDING + PAUSED_FOR_BATCH) */
+  activeRuns: number;
+  /** Success rate as percentage (0-100) */
+  successRate: number;
+  /** Number of failed runs in the last 24 hours */
+  failedRunsLast24h: number;
+  /** Run counts keyed by FlowRunStatus */
+  runsByStatus: Record<string, number>;
+  /** Most recent 10 flow runs */
+  recentRuns: FlowRun[];
+}
+
+/** Invect Core provider stub shared by all built-in legacy nodes. */
+const _INVECT_CORE_PROVIDER: NonNullable<NodeDefinition['provider']> = {
+  id: 'core',
+  name: 'Invect Core',
+  icon: 'Blocks',
+};
+
+/**
+ * Provider overrides for specific legacy node types that are NOT core nodes.
+ * If a legacy node type is listed here it gets that provider; otherwise it
+ * gets INVECT_CORE_PROVIDER.
+ */
+const _LEGACY_NODE_PROVIDER_OVERRIDES: Record<string, NonNullable<NodeDefinition['provider']>> = {
+  [GraphNodeType.GMAIL]: { id: 'gmail', name: 'Gmail', icon: 'Mail' },
+};
+
+/**
+ * Main Invect Core class
+ *
+ * Provides a high-level API for flow operations with comprehensive lifecycle management.
+ * This class orchestrates all flow-related operations including:
+ * - Flow and flow version management
+ * - Flow execution and monitoring
+ * - Node execution tracking
+ * - AI batch operations
+ * - Testing and development utilities
+ *
+ * @example
+ * ```typescript
+ * const invect = new Invect(config);
+ * await invect.initialize();
+ *
+ * const flow = await invect.createFlow({ name: "My Flow", description: "..." });
+ * const result = await invect.startFlowRun(flow.id, inputs);
+ *
+ * await invect.shutdown();
+ * ```
+ */
+export class Invect {
+  protected serviceFactory: ServiceFactory | null = null;
+  protected nodeRegistry: NodeExecutorRegistry | null = null;
+  protected actionRegistry: ActionRegistry | null = null;
+  private jsExpressionService: JsExpressionService | null = null;
+  private templateService: TemplateService | null = null;
+  private pluginManager: PluginManager;
+  private initialized = false;
+  private loggerManager: LoggerManager;
+  private authService: AuthorizationService;
+
+  /**
+   * Creates a new Invect instance
+   *
+   * @param config - Invect configuration object
+   */
+  constructor(private readonly config: InvectConfig) {
+    // Parse and validate the config to ensure defaults are applied
+    this.config = InvectConfigSchema.parse(config);
+
+    // Initialize logger manager with scoped logging support
+    const loggingConfig: ScopedLoggingConfig = {
+      level: this.config.logging?.level || 'info',
+      scopes: this.config.logging?.scopes,
+    };
+    this.loggerManager = new LoggerManager(loggingConfig);
+
+    // ALWAYS use the LoggerManager's basic logger for services
+    // This ensures log level filtering is respected.
+    // If you passed `logger: console`, it would bypass log level filtering
+    // because console.debug() always outputs regardless of configured level.
+    this.config.logger = this.loggerManager.getBasicLogger();
+
+    // Initialize authorization service
+    this.authService = createAuthorizationService({
+      config: this.config.auth as InvectAuthConfig | undefined,
+      logger: this.config.logger,
+    });
+
+    // Initialize plugin manager
+    this.pluginManager = new PluginManager(
+      (this.config.plugins as InvectPlugin[] | undefined) ?? [],
+    );
+  }
+
+  // =====================================
+  // AUTHORIZATION API
+  // =====================================
+
+  /**
+   * Authorize an action for an identity.
+   *
+   * This is the main entry point for authorization checks. Framework adapters
+   * (Express, NestJS, Next.js) should call this method to check permissions.
+   *
+   * @param context - Authorization context with identity, action, and optional resource
+   * @returns Authorization result with allowed flag and optional reason
+   *
+   * @example
+   * ```typescript
+   * const result = await invect.authorize({
+   *   identity: { id: 'user_123', role: 'editor' },
+   *   action: 'flow:create',
+   * });
+   *
+   * if (!result.allowed) {
+   *   throw new ForbiddenError(result.reason);
+   * }
+   * ```
+   */
+  async authorize(context: AuthorizationContext): Promise<AuthorizationResult> {
+    const hookResult = await this.pluginManager.runOnAuthorize({
+      ...context,
+      database: this.serviceFactory
+        ? createPluginDatabaseApi(this.serviceFactory.getDatabaseService().getConnection())
+        : undefined,
+    });
+    if (hookResult) {
+      return hookResult;
+    }
+    return this.authService.authorize(context);
+  }
+
+  /**
+   * Check if a specific identity has a permission.
+   * Convenience method that wraps authorize().
+   */
+  hasPermission(identity: InvectIdentity | null, permission: InvectPermission): boolean {
+    return this.authService.hasPermission(identity, permission);
+  }
+
+  /**
+   * Get all permissions for an identity.
+   */
+  getPermissions(identity: InvectIdentity | null): InvectPermission[] {
+    return this.authService.getPermissions(identity);
+  }
+
+  // =====================================
+  // PLUGIN API
+  // =====================================
+
+  /**
+   * Check if a plugin is registered by ID.
+   */
+  hasPlugin(pluginId: string): boolean {
+    return this.pluginManager.hasPlugin(pluginId);
+  }
+
+  /**
+   * Get a registered plugin by ID.
+   */
+  getPlugin(pluginId: string): InvectPlugin | null {
+    return this.pluginManager.getPlugin(pluginId);
+  }
+
+  /**
+   * Get all registered plugins.
+   */
+  getPlugins(): readonly InvectPlugin[] {
+    return this.pluginManager.getPlugins();
+  }
+
+  /**
+   * Get all plugin-defined API endpoints.
+   * Framework adapters use this to mount plugin routes.
+   */
+  getPluginEndpoints(): InvectPluginEndpoint[] {
+    return this.pluginManager.getPluginEndpoints();
+  }
+
+  /**
+   * Get the plugin hook runner for framework adapters.
+   * Used to run onRequest/onResponse/onAuthorize hooks.
+   */
+  getPluginHookRunner(): PluginHookRunner {
+    return this.pluginManager;
+  }
+
+  /**
+   * Get the initialized host database connection.
+   * Framework adapters use this to expose a narrow database API to plugins.
+   */
+  getDatabaseConnection(): DatabaseConnection {
+    if (!this.serviceFactory) {
+      throw new Error('ServiceFactory not initialized');
+    }
+    return this.serviceFactory.getDatabaseService().getConnection();
+  }
+
+  /**
+   * Check if authentication is enabled.
+   */
+  isAuthEnabled(): boolean {
+    return this.authService.isEnabled();
+  }
+
+  /**
+   * Check if a route is public (no auth required).
+   */
+  isPublicRoute(path: string): boolean {
+    return this.authService.isPublicRoute(path);
+  }
+
+  /**
+   * Get the authorization service for advanced use cases.
+   * The service extends EventEmitter and emits auth events.
+   */
+  getAuthService(): AuthorizationService {
+    return this.authService;
+  }
+
+  /**
+   * Get available roles and their permissions.
+   * Useful for admin UIs to show role options.
+   */
+  getAvailableRoles() {
+    return this.authService.getAvailableRoles();
+  }
+
+  /**
+   * Subscribe to auth events for audit logging.
+   *
+   * @example
+   * ```typescript
+   * invect.onAuthEvent('auth:forbidden', (event) => {
+   *   auditLogger.warn('Access denied', event);
+   * });
+   * ```
+   */
+  onAuthEvent<T extends AuthEvent['type']>(
+    event: T,
+    listener: (event: Extract<AuthEvent, { type: T }>) => void,
+  ): void {
+    this.authService.on(event, listener);
+  }
+
+  // =====================================
+  // FLOW ACCESS API (Invect-managed permissions)
+  // =====================================
+
+  /**
+   * Check if flow access table is enabled.
+   */
+  isFlowAccessTableEnabled(): boolean {
+    return !!this.config.auth?.useFlowAccessTable;
+  }
+
+  /**
+   * Grant access to a flow for a user or team.
+   * Requires useFlowAccessTable: true in config.
+   *
+   * @example
+   * ```typescript
+   * // Grant editor access to a user
+   * await invect.grantFlowAccess({
+   *   flowId: 'flow_123',
+   *   userId: 'user_456',
+   *   permission: 'editor',
+   *   grantedBy: currentUser.id,
+   * });
+   *
+   * // Grant viewer access to a team
+   * await invect.grantFlowAccess({
+   *   flowId: 'flow_123',
+   *   teamId: 'team_abc',
+   *   permission: 'viewer',
+   * });
+   * ```
+   */
+  async grantFlowAccess(input: {
+    flowId: string;
+    userId?: string;
+    teamId?: string;
+    permission: 'owner' | 'editor' | 'operator' | 'viewer';
+    grantedBy?: string;
+    expiresAt?: Date | string;
+  }) {
+    this.ensureInitialized();
+    const flowAccessService = this.serviceFactory.getFlowAccessService();
+    if (!flowAccessService) {
+      throw new Error(
+        'Flow access table not enabled. Set auth.useFlowAccessTable: true in config.',
+      );
+    }
+    return flowAccessService.grantAccess(input);
+  }
+
+  /**
+   * Revoke a specific flow access record.
+   * Requires useFlowAccessTable: true in config.
+   */
+  async revokeFlowAccess(accessId: string) {
+    this.ensureInitialized();
+    const flowAccessService = this.serviceFactory.getFlowAccessService();
+    if (!flowAccessService) {
+      throw new Error(
+        'Flow access table not enabled. Set auth.useFlowAccessTable: true in config.',
+      );
+    }
+    return flowAccessService.revokeAccess(accessId);
+  }
+
+  /**
+   * Revoke all access to a flow for a specific user or team.
+   * Requires useFlowAccessTable: true in config.
+   */
+  async revokeFlowAccessForUserOrTeam(flowId: string, userId?: string, teamId?: string) {
+    this.ensureInitialized();
+    const flowAccessService = this.serviceFactory.getFlowAccessService();
+    if (!flowAccessService) {
+      throw new Error(
+        'Flow access table not enabled. Set auth.useFlowAccessTable: true in config.',
+      );
+    }
+    return flowAccessService.revokeAccessForUserOrTeam(flowId, userId, teamId);
+  }
+
+  /**
+   * List all access records for a flow.
+   * Requires useFlowAccessTable: true in config.
+   */
+  async listFlowAccess(flowId: string) {
+    this.ensureInitialized();
+    const flowAccessService = this.serviceFactory.getFlowAccessService();
+    if (!flowAccessService) {
+      throw new Error(
+        'Flow access table not enabled. Set auth.useFlowAccessTable: true in config.',
+      );
+    }
+    return flowAccessService.listFlowAccess(flowId);
+  }
+
+  /**
+   * Get all flows a user has access to (directly or via teams).
+   * Requires useFlowAccessTable: true in config.
+   */
+  async getAccessibleFlowIds(userId: string, teamIds: string[] = []) {
+    this.ensureInitialized();
+    const flowAccessService = this.serviceFactory.getFlowAccessService();
+    if (!flowAccessService) {
+      throw new Error(
+        'Flow access table not enabled. Set auth.useFlowAccessTable: true in config.',
+      );
+    }
+    return flowAccessService.getAccessibleFlowIds(userId, teamIds);
+  }
+
+  /**
+   * Check if a user has access to a flow with at least the required permission.
+   * Requires useFlowAccessTable: true in config.
+   */
+  async hasFlowAccess(
+    flowId: string,
+    userId: string,
+    teamIds: string[] = [],
+    requiredPermission: 'owner' | 'editor' | 'operator' | 'viewer' = 'viewer',
+  ) {
+    this.ensureInitialized();
+    const flowAccessService = this.serviceFactory.getFlowAccessService();
+    if (!flowAccessService) {
+      throw new Error(
+        'Flow access table not enabled. Set auth.useFlowAccessTable: true in config.',
+      );
+    }
+    return flowAccessService.hasFlowAccess(flowId, userId, teamIds, requiredPermission);
+  }
+
+  /**
+   * Get the highest permission level a user has for a flow.
+   * Requires useFlowAccessTable: true in config.
+   */
+  async getFlowPermission(flowId: string, userId: string, teamIds: string[] = []) {
+    this.ensureInitialized();
+    const flowAccessService = this.serviceFactory.getFlowAccessService();
+    if (!flowAccessService) {
+      throw new Error(
+        'Flow access table not enabled. Set auth.useFlowAccessTable: true in config.',
+      );
+    }
+    return flowAccessService.getFlowPermission(flowId, userId, teamIds);
+  }
+
+  // =====================================
+  // LOGGING MANAGEMENT
+  // =====================================
+
+  /**
+   * Get a scoped logger for a specific feature area.
+   *
+   * Scoped loggers have independent log levels that can be configured
+   * per scope via the logging.scopes configuration.
+   *
+   * @param scope - The scope/feature area (use LogScope constants)
+   * @param context - Optional additional context (e.g., class name)
+   * @returns A ScopedLogger instance
+   *
+   * @example
+   * ```typescript
+   * const logger = invect.getLogger('execution', 'MyService');
+   * logger.debug('Starting execution'); // Only logs if execution scope is 'debug'
+   * ```
+   */
+  getLogger(scope: string, context?: string): ScopedLogger {
+    return this.loggerManager.getLogger(scope, context);
+  }
+
+  /**
+   * Get the logger manager for advanced logging configuration
+   */
+  getLoggerManager(): LoggerManager {
+    return this.loggerManager;
+  }
+
+  /**
+   * Update the log level for a specific scope at runtime
+   *
+   * @example
+   * ```typescript
+   * // Enable debug logging for execution during troubleshooting
+   * invect.setLogLevel('execution', 'debug');
+   * ```
+   */
+  setLogLevel(scope: string, level: LogLevel): void {
+    this.loggerManager.setLogLevel(scope, level);
+  }
+
+  // =====================================
+  // INITIALIZATION & LIFECYCLE MANAGEMENT
+  // =====================================
+
+  /**
+   * Initialize Invect Core
+   */
+  async initialize(): Promise<void> {
+    if (this.initialized) {
+      this.config.logger.debug('Invect Core already initialized');
+      return;
+    }
+
+    // Skip initialization during Next.js build phase
+    if (this.isBuildTime()) {
+      this.config.logger.info('Skipping Invect Core initialization during build time');
+      throw new DatabaseError('Invect Core initialization skipped during build', {
+        reason: 'build_time_skip',
+        phase: process.env.NEXT_PHASE || 'unknown',
+      });
+    }
+
+    this.config.logger.info('Initializing Invect Core...');
+
+    try {
+      // Initialize action registry (Provider-Actions architecture)
+      this.actionRegistry = initializeGlobalActionRegistry(this.config.logger);
+
+      // Register all built-in actions (core, http, gmail, etc.)
+      registerBuiltinActions(this.actionRegistry);
+      this.config.logger.info(
+        `Registered ${this.actionRegistry.size} built-in actions from ${this.actionRegistry.getProviders().length} providers`,
+      );
+
+      // Initialize plugins (register plugin actions, call init hooks)
+      const actionRegistry = this.actionRegistry;
+      await this.pluginManager.initializePlugins({
+        config: this.config as unknown as Record<string, unknown>,
+        logger: this.config.logger,
+        registerAction: (action) => {
+          actionRegistry.register(action);
+        },
+      });
+
+      if (this.pluginManager.getPlugins().length > 0) {
+        this.config.logger.info(
+          `Initialized ${this.pluginManager.getPlugins().length} plugin(s): ${this.pluginManager
+            .getPlugins()
+            .map((p) => p.id)
+            .join(', ')}`,
+        );
+      }
+
+      // Initialize node registry first
+      this.nodeRegistry = await this.initializeNodes();
+
+      // Initialize JS expression engine (QuickJS sandbox for data mapper)
+      try {
+        this.jsExpressionService = new JsExpressionService({}, this.config.logger);
+        await this.jsExpressionService.initialize();
+        this.templateService = getTemplateService(this.jsExpressionService, this.config.logger);
+        this.config.logger.debug('JS expression engine + template service initialized');
+      } catch (error) {
+        this.jsExpressionService = null;
+        this.templateService = null;
+        this.config.logger.warn(
+          'JS expression engine unavailable; continuing without data mapper and template expression support',
+          { error: error instanceof Error ? (error.stack ?? error.message) : String(error) },
+        );
+      }
+
+      // Register action-based tools into the existing tool registry
+      this.registerActionsAsTools();
+
+      // Initialize service factory (requires node registry)
+      await this.initializeServices(this.nodeRegistry);
+
+      this.initialized = true;
+
+      // Ensure default credentials exist after initialization (non-blocking)
+      if (this.config.defaultCredentials?.length) {
+        this.ensureDefaultCredentials().catch((err) => {
+          this.config.logger.error('Default credential seeding failed', err);
+        });
+      }
+    } catch (error) {
+      // Don't double-wrap DatabaseError — it already has a clear message
+      if (error instanceof DatabaseError) {
+        throw error;
+      }
+      this.config.logger.error('Failed to initialize Invect Core', error);
+      throw new DatabaseError('Invect Core initialization failed', { error });
+    }
+  }
+
+  /**
+   * Check if we're in a build-time environment where database connections should be avoided
+   */
+  private isBuildTime(): boolean {
+    // Next.js build detection
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return true;
+    }
+
+    // Vercel build detection
+    if (process.env.VERCEL_ENV && process.env.CI) {
+      return true;
+    }
+
+    // Generic CI/build environment detection
+    if (
+      process.env.CI &&
+      (process.env.NODE_ENV === 'production' ||
+        process.env.BUILD_PHASE ||
+        process.argv.includes('build'))
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Gracefully shutdown Invect Core.
+   * Marks any in-progress flow runs as FAILED before closing services.
+   */
+  async shutdown(): Promise<void> {
+    this.config.logger.info('Shutting down Invect Core...');
+
+    try {
+      // Mark in-progress flows as failed before tearing down services
+      if (this.serviceFactory?.isInitialized()) {
+        try {
+          const flowRunsService = this.serviceFactory.getFlowRunsService();
+          const failedCount = await flowRunsService.failStaleRuns(0); // threshold 0 = fail ALL active runs
+          if (failedCount > 0) {
+            this.config.logger.warn(
+              `Graceful shutdown: marked ${failedCount} in-progress flow run(s) as FAILED`,
+            );
+          }
+        } catch (error) {
+          this.config.logger.error('Failed to mark in-progress runs during shutdown', error);
+        }
+      }
+
+      // Shutdown plugins (reverse order)
+      await this.pluginManager.shutdownPlugins(this.config.logger);
+
+      if (this.serviceFactory) {
+        await this.serviceFactory.close();
+        this.serviceFactory = null;
+      }
+
+      this.nodeRegistry = null;
+      this.actionRegistry = null;
+
+      // Dispose JS expression engine + template service
+      if (this.jsExpressionService) {
+        this.jsExpressionService.dispose();
+        this.jsExpressionService = null;
+      }
+      this.templateService = null;
+
+      this.initialized = false;
+
+      this.config.logger.info('Invect Core shutdown completed');
+    } catch (error) {
+      this.config.logger.error('Error during Invect Core shutdown', error);
+      throw new DatabaseError('Invect Core shutdown failed', { error });
+    }
+  }
+
+  /**
+   * Check if core is initialized
+   */
+  isInitialized(): boolean {
+    return this.initialized;
+  }
+
+  /**
+   * Run health check on all services
+   */
+  async healthCheck(): Promise<{ [serviceName: string]: boolean }> {
+    this.ensureInitialized();
+    const healthStatus = await this.serviceFactory.healthCheck();
+    return healthStatus.services;
+  }
+
+  // =====================================
+  // FLOW MANAGEMENT
+  // =====================================
+
+  /**
+   * Create a new flow
+   */
+  async createFlow(flowData: CreateFlowRequest): Promise<Flow> {
+    this.config.logger.debug(
+      'createFlow called with arguments:',
+      JSON.stringify(flowData, null, 2),
+    );
+    const data = Schemas.flow.createFlowRequestSchema.parse(flowData);
+    return this.flowService.createFlow(data);
+  }
+
+  /**
+   * Get all flows with optional filtering, sorting, and pagination
+   */
+  async listFlows(options?: QueryOptions<Flow>): Promise<PaginatedResponse<Flow>> {
+    this.config.logger.debug('listFlows called with arguments:', JSON.stringify(options, null, 2));
+
+    // Validate options using Zod schema
+    if (options) {
+      Schemas.QueryOptionsSchema.parse(options);
+    }
+
+    // Call the flows service and return its paginated response
+    return await this.flowService.listFlows(options);
+  }
+
+  /**
+   * Get flow by ID
+   */
+  async getFlow(flowId: string): Promise<Flow> {
+    this.config.logger.debug('getFlow called with arguments:', JSON.stringify({ flowId }, null, 2));
+    const validatedParams = Schemas.flow.FlowIdParamsSchema.parse({ flowId });
+    return this.flowService.getFlowById(validatedParams.flowId);
+  }
+
+  /**
+   * Update an existing flow
+   */
+  async updateFlow(flowId: string, updateData: UpdateFlowInput): Promise<Flow> {
+    this.config.logger.debug(
+      'updateFlow called with arguments:',
+      JSON.stringify({ flowId, updateData }, null, 2),
+    );
+    const validatedParams = Schemas.flow.FlowIdParamsSchema.parse({ flowId });
+    return this.flowService.updateFlow(validatedParams.flowId, updateData);
+  }
+
+  /**
+   * Delete a flow
+   */
+  async deleteFlow(flowId: string): Promise<void> {
+    this.config.logger.debug(
+      'deleteFlow called with arguments:',
+      JSON.stringify({ flowId }, null, 2),
+    );
+    const validatedParams = Schemas.flow.FlowIdParamsSchema.parse({ flowId });
+    return this.flowService.deleteFlow(validatedParams.flowId);
+  }
+
+  /**
+   * Validate flow definition
+   */
+  async validateFlowDefinition(
+    flowId: string,
+    flowDefinition: unknown,
+  ): Promise<FlowValidationResult> {
+    this.config.logger.debug(
+      'validateFlowDefinition called with arguments:',
+      JSON.stringify({ flowId, flowDefinition }, null, 2),
+    );
+    this.ensureInitialized();
+
+    // Validate parameters using Zod schemas
+    const validatedParams = Schemas.flow.FlowIdParamsSchema.parse({ flowId });
+
+    // First validate the raw data with the Zod schema
+    const validatedBody = invectDefinitionSchema.parse(flowDefinition);
+
+    // Now cast to the inferred type for use with FlowValidator
+    const typedDefinition = validatedBody as InvectDefinition;
+
+    this.config.logger.debug('Validating flow definition', {
+      flowId: validatedParams.flowId,
+    });
+
+    try {
+      // Use the properly typed definition for validation
+      const validationResult = FlowValidator.validateFlowDefinition(typedDefinition);
+
+      this.config.logger.debug('Flow validation completed', validationResult);
+
+      return validationResult;
+    } catch (error) {
+      this.config.logger.error('Flow validation failed', {
+        flowId: validatedParams.flowId,
+        error,
+      });
+      throw error;
+    }
+  }
+
+  // =====================================
+  // FLOW VERSION MANAGEMENT
+  // =====================================
+
+  /**
+   * Create flow version and sync trigger registrations (D3: sync on publish)
+   */
+  async createFlowVersion(
+    flowId: string,
+    versionData: CreateFlowVersionRequest,
+  ): Promise<FlowVersion> {
+    this.config.logger.debug(
+      'createFlowVersion called with arguments:',
+      JSON.stringify({ flowId, versionData }, null, 2),
+    );
+    const validatedParams = Schemas.flow.FlowIdParamsSchema.parse({ flowId });
+    const data = createFlowVersionRequestSchema.parse(versionData);
+    const version = await this.flowVersionsService.createFlowVersion(validatedParams.flowId, data);
+
+    // D3: Sync trigger registrations from the new version's definition.
+    // This upserts webhook paths/secrets and cron expressions as needed.
+    try {
+      if (data.invectDefinition?.nodes) {
+        await this.triggersService.syncTriggersForFlow(
+          validatedParams.flowId,
+          data.invectDefinition as {
+            nodes: Array<{ id: string; type: string; params?: Record<string, unknown> }>;
+          },
+        );
+        this.config.logger.debug('Trigger registrations synced after version creation', {
+          flowId: validatedParams.flowId,
+          versionNumber: version.version,
+        });
+      }
+    } catch (error) {
+      // Don't fail the version creation if trigger sync fails
+      this.config.logger.error('Failed to sync triggers after version creation', {
+        flowId: validatedParams.flowId,
+        error,
+      });
+    }
+
+    return version;
+  }
+
+  /**
+   * Get flow versions with optional filtering, sorting, and pagination
+   */
+  async listFlowVersions(
+    flowId: string,
+    options?: QueryOptions<FlowVersion>,
+  ): Promise<PaginatedResponse<FlowVersion>> {
+    this.config.logger.debug(
+      'listFlowVersions called with arguments:',
+      JSON.stringify({ flowId, options }, null, 2),
+    );
+    const validatedParams = Schemas.flow.FlowIdParamsSchema.parse({ flowId });
+    return await this.flowVersionsService.listFlowVersionsByFlowId(validatedParams.flowId, options);
+  }
+
+  /**
+   * Get specific flow version by version number or 'latest'
+   */
+  async getFlowVersion(
+    flowId: string,
+    version: string | number | 'latest',
+  ): Promise<FlowVersion | null> {
+    this.config.logger.debug(
+      'getFlowVersion called with arguments:',
+      JSON.stringify({ flowId, version }, null, 2),
+    );
+    const validatedParams = Schemas.flow.FlowIdParamsSchema.parse({ flowId });
+    return await this.flowVersionsService.getFlowVersion(validatedParams.flowId, version);
+  }
+
+  // =====================================
+  // FLOW RUN MANAGEMENT
+  // =====================================
+
+  /**
+   * Execute a flow (synchronous - waits for completion)
+   */
+  async startFlowRun(
+    flowId: string,
+    inputs: FlowInputs = {},
+    options?: ExecuteFlowOptions,
+  ): Promise<FlowRunResult> {
+    this.config.logger.debug(
+      'startFlowRun called with arguments:',
+      JSON.stringify({ flowId, inputs, options }, null, 2),
+    );
+    // TODO: validate inputs
+    return this.orchestrationService.executeFlow(flowId, inputs, options);
+  }
+
+  /**
+   * Start a flow execution asynchronously - returns immediately with flow run ID.
+   * The flow executes in the background. Use this for UI-initiated runs where
+   * you want to redirect the user immediately without waiting for completion.
+   */
+  async startFlowRunAsync(
+    flowId: string,
+    inputs: FlowInputs = {},
+    options?: ExecuteFlowOptions,
+  ): Promise<FlowRunResult> {
+    this.config.logger.debug(
+      'startFlowRunAsync called with arguments:',
+      JSON.stringify({ flowId, inputs, options }, null, 2),
+    );
+    return this.orchestrationService.executeFlowAsync(flowId, inputs, options);
+  }
+
+  /**
+   * Execute a flow up to a specific target node.
+   * Only executes the upstream nodes required to produce output for the target node.
+   * This is useful for testing a specific node with its real upstream dependencies.
+   *
+   * @param flowId - The flow to execute
+   * @param targetNodeId - The node to execute up to (this node will also be executed)
+   * @param inputs - Flow-level inputs
+   * @param options - Execution options (version, batch processing, etc.)
+   * @returns The flow run result with the target node's output
+   */
+  async executeFlowToNode(
+    flowId: string,
+    targetNodeId: string,
+    inputs: FlowInputs = {},
+    options?: ExecuteFlowOptions,
+  ): Promise<FlowRunResult> {
+    this.config.logger.debug(
+      'executeFlowToNode called with arguments:',
+      JSON.stringify({ flowId, targetNodeId, inputs, options }, null, 2),
+    );
+    return this.orchestrationService.executeFlowToNode(flowId, targetNodeId, inputs, options);
+  }
+
+  /**
+   * Resume execution
+   */
+  async resumeExecution(executionId: string): Promise<{ message: string; timestamp: string }> {
+    this.config.logger.debug(
+      'resumeExecution called with arguments:',
+      JSON.stringify({ executionId }, null, 2),
+    );
+    return this.flowRunsService.resumeRun(executionId);
+  }
+
+  /**
+   * Get all Flow Runs
+   */
+  async listFlowRuns(options?: QueryOptions<FlowRun>): Promise<PaginatedResponse<FlowRun>> {
+    this.config.logger.debug(
+      'listFlowRuns called with arguments:',
+      JSON.stringify(options, null, 2),
+    );
+
+    return await this.flowRunsService.listRuns(options);
+  }
+
+  /**
+   * Get flow executions for a specific flow
+   */
+  async listFlowRunsByFlowId(flowId: string): Promise<PaginatedResponse<FlowRun>> {
+    this.config.logger.debug(
+      'listFlowRunsByFlowId called with arguments:',
+      JSON.stringify({ flowId }, null, 2),
+    );
+    const validatedParams = Schemas.flow.FlowIdParamsSchema.parse({ flowId });
+    return this.flowRunsService.listRuns({ filter: { flowId: [validatedParams.flowId] } });
+  }
+
+  /**
+   * Get a specific flow run by ID
+   */
+  async getFlowRunById(flowRunId: string): Promise<FlowRun> {
+    this.config.logger.debug(
+      'getFlowRunById called with arguments:',
+      JSON.stringify({ flowRunId }, null, 2),
+    );
+    return this.flowRunsService.getRunById(flowRunId);
+  }
+
+  /**
+   * Cancel a flow run
+   */
+  async cancelFlowRun(flowRunId: string): Promise<{ message: string; timestamp: string }> {
+    this.config.logger.debug(
+      'cancelFlowRun called with arguments:',
+      JSON.stringify({ flowRunId }, null, 2),
+    );
+    return this.flowRunsService.cancelRun(flowRunId);
+  }
+
+  /**
+   * Pause a flow run
+   */
+  async pauseFlowRun(
+    flowRunId: string,
+    reason?: string,
+  ): Promise<{ message: string; timestamp: string }> {
+    this.config.logger.debug(
+      'pauseFlowRun called with arguments:',
+      JSON.stringify({ flowRunId, reason }, null, 2),
+    );
+    return this.flowRunsService.pauseRun(flowRunId, reason);
+  }
+
+  /**
+   * Get dashboard statistics: flow counts, run counts by status, recent activity.
+   */
+  async getDashboardStats(): Promise<DashboardStats> {
+    this.config.logger.debug('getDashboardStats called');
+
+    const [flowsResponse, runStats, recentRunsResponse] = await Promise.all([
+      this.flowService.listFlows({ pagination: { page: 1, limit: 1 } }),
+      this.flowRunsService.getStats(),
+      this.flowRunsService.listRuns({
+        pagination: { page: 1, limit: 10 },
+        sort: { sortBy: 'startedAt', sortOrder: 'desc' },
+      }),
+    ]);
+
+    const totalRunsAll = Object.values(runStats.totalRuns).reduce((sum, c) => sum + c, 0);
+    const totalSuccess = runStats.totalRuns[FlowRunStatus.SUCCESS] ?? 0;
+    const successRate = totalRunsAll > 0 ? Math.round((totalSuccess / totalRunsAll) * 100) : 0;
+
+    const activeCount =
+      (runStats.totalRuns[FlowRunStatus.RUNNING] ?? 0) +
+      (runStats.totalRuns[FlowRunStatus.PENDING] ?? 0) +
+      (runStats.totalRuns[FlowRunStatus.PAUSED_FOR_BATCH] ?? 0);
+
+    const recentRunsAll = Object.values(runStats.recentRuns).reduce((sum, c) => sum + c, 0);
+
+    return {
+      totalFlows: flowsResponse.pagination.totalPages, // limit=1 so totalPages === totalCount
+      totalRuns: totalRunsAll,
+      runsLast24h: recentRunsAll,
+      activeRuns: activeCount,
+      successRate,
+      failedRunsLast24h: runStats.recentRuns[FlowRunStatus.FAILED] ?? 0,
+      runsByStatus: runStats.totalRuns,
+      recentRuns: recentRunsResponse.data,
+    };
+  }
+
+  // =====================================
+  // CREDENTIAL MANAGEMENT
+  // =====================================
+
+  /**
+   * Create a credential
+   */
+  async createCredential(input: CreateCredentialInput): Promise<Credential> {
+    this.config.logger.debug('createCredential called');
+    return this.credentialsService.create(input);
+  }
+
+  /**
+   * List credentials with optional filters
+   */
+  async listCredentials(filters?: CredentialFilters): Promise<Array<Omit<Credential, 'config'>>> {
+    this.config.logger.debug('listCredentials called', { filters });
+    return this.credentialsService.list(filters);
+  }
+
+  /**
+   * Retrieve a credential by id
+   */
+  async getCredential(id: string): Promise<Credential> {
+    this.config.logger.debug('getCredential called', { id });
+    return this.credentialsService.get(id);
+  }
+
+  /**
+   * Update credential
+   */
+  async updateCredential(id: string, input: UpdateCredentialInput): Promise<Credential> {
+    this.config.logger.debug('updateCredential called', { id });
+    return this.credentialsService.update(id, input);
+  }
+
+  /**
+   * Delete credential
+   */
+  async deleteCredential(id: string): Promise<void> {
+    this.config.logger.debug('deleteCredential called', { id });
+    return this.credentialsService.delete(id);
+  }
+
+  /**
+   * Test credential validity
+   */
+  async testCredential(id: string): Promise<{ success: boolean; error?: string }> {
+    this.config.logger.debug('testCredential called', { id });
+    return this.credentialsService.test(id);
+  }
+
+  /**
+   * Update credential last used timestamp
+   */
+  async updateCredentialLastUsed(id: string): Promise<void> {
+    this.config.logger.debug('updateCredentialLastUsed called', { id });
+    return this.credentialsService.updateLastUsed(id);
+  }
+
+  /**
+   * Get expiring credentials helper
+   */
+  async getExpiringCredentials(daysUntilExpiry?: number): Promise<Credential[]> {
+    this.config.logger.debug('getExpiringCredentials called', { daysUntilExpiry });
+    return this.credentialsService.getExpiringCredentials(daysUntilExpiry);
+  }
+
+  // =====================================
+  // NODE EXECUTION MANAGEMENT
+  // =====================================
+
+  /**
+   * Get node executions by flow run ID
+   */
+  async getNodeExecutionsByRunId(flowRunId: string): Promise<NodeExecution[]> {
+    this.config.logger.debug(
+      'getNodeExecutionsByRunId called with arguments:',
+      JSON.stringify({ flowRunId }, null, 2),
+    );
+    return this.nodeExecutionsService.listNodeExecutionsByFlowRunId(flowRunId);
+  }
+
+  /**
+   * Get all node executions with optional filtering, sorting, and pagination
+   */
+  async listNodeExecutions(
+    options?: QueryOptions<NodeExecution>,
+  ): Promise<PaginatedResponse<NodeExecution>> {
+    this.config.logger.debug(
+      'listNodeExecutions called with arguments:',
+      JSON.stringify(options, null, 2),
+    );
+    return await this.nodeExecutionsService.listNodeExecutions(options);
+  }
+
+  // =====================================
+  // AI BATCH OPERATIONS
+  // =====================================
+
+  /**
+   * Start batch polling for automatic batch completion handling
+   */
+  async startBatchPolling(): Promise<void> {
+    await this.baseAIClient.startBatchPolling();
+  }
+
+  /**
+   * Stop batch polling
+   */
+  async stopBatchPolling(): Promise<void> {
+    await this.baseAIClient.stopBatchPolling();
+  }
+
+  // =====================================
+  // CRON SCHEDULER
+  // =====================================
+
+  /**
+   * Start the cron scheduler for automatic cron trigger execution.
+   * Call after initialize() — typically in your server startup code.
+   * If cronEnabled is false in InvectConfig.triggers, this is a no-op.
+   */
+  async startCronScheduler(): Promise<void> {
+    const cronEnabled = this.config.triggers?.cronEnabled ?? true;
+    if (!cronEnabled) {
+      this.config.logger.info('Cron scheduler disabled via config');
+      return;
+    }
+
+    this.config.logger.info('Starting cron scheduler');
+    const scheduler = this.serviceFactory?.getCronScheduler();
+    if (!scheduler) {
+      throw new Error('ServiceFactory not initialized');
+    }
+    await scheduler.start();
+  }
+
+  /**
+   * Stop the cron scheduler. Call during graceful shutdown.
+   */
+  stopCronScheduler(): void {
+    this.config.logger.info('Stopping cron scheduler');
+    const scheduler = this.serviceFactory?.getCronScheduler();
+    if (!scheduler) {
+      throw new Error('ServiceFactory not initialized');
+    }
+    scheduler.stop();
+  }
+
+  /**
+   * Refresh cron jobs from the database (e.g. after trigger registrations change).
+   */
+  async refreshCronScheduler(): Promise<void> {
+    const scheduler = this.serviceFactory?.getCronScheduler();
+    if (!scheduler) {
+      throw new Error('ServiceFactory not initialized');
+    }
+    await scheduler.refresh();
+  }
+
+  // =====================================
+  // TESTING AND DEVELOPMENT
+  // =====================================
+
+  /**
+   * Execute a SQL query for node testing purposes
+   */
+  async executeSqlQuery(request: SubmitSQLQueryRequest): Promise<SQLQueryResult> {
+    this.config.logger.debug(
+      'executeSqlQuery called with arguments:',
+      JSON.stringify(request, null, 2),
+    );
+    return this.nodeDataService.runSqlQuery(request);
+  }
+
+  /**
+   * Test a JS expression in the QuickJS sandbox.
+   * Used by the frontend data mapper preview.
+   */
+  async testJsExpression(request: {
+    expression: string;
+    context: Record<string, unknown>;
+  }): Promise<{ success: boolean; result?: unknown; error?: string }> {
+    this.ensureInitialized();
+    if (!this.jsExpressionService) {
+      return { success: false, error: 'JS expression engine not initialized' };
+    }
+    try {
+      const result = this.jsExpressionService.evaluate(request.expression, request.context);
+      return { success: true, result };
+    } catch (e) {
+      return {
+        success: false,
+        error: e instanceof Error ? e.message : String(e),
+      };
+    }
+  }
+
+  /**
+   * Test a mapper expression — returns the result plus metadata about how
+   * the node would behave (iterate vs single, item count).
+   * Used by the frontend Data Mapper pane live preview.
+   */
+  async testMapper(request: {
+    expression: string;
+    incomingData: Record<string, unknown>;
+    mode?: 'auto' | 'iterate' | 'reshape';
+  }): Promise<{
+    success: boolean;
+    result?: unknown;
+    resultType?: 'array' | 'object' | 'primitive';
+    itemCount?: number;
+    error?: string;
+  }> {
+    this.ensureInitialized();
+    if (!this.jsExpressionService) {
+      return { success: false, error: 'JS expression engine not initialized' };
+    }
+    try {
+      const result = this.jsExpressionService.evaluate(request.expression, request.incomingData);
+      const mode = request.mode ?? 'auto';
+      const isArray = Array.isArray(result);
+      let resultType: 'array' | 'object' | 'primitive';
+
+      if (isArray) {
+        resultType = 'array';
+      } else if (result !== null && typeof result === 'object') {
+        resultType = 'object';
+      } else {
+        resultType = 'primitive';
+      }
+
+      // Apply mode semantics for preview
+      if (mode === 'iterate' && !isArray) {
+        return {
+          success: false,
+          error: `Mode is "iterate" but expression returned ${resultType}, not an array`,
+        };
+      }
+
+      return {
+        success: true,
+        result,
+        resultType,
+        itemCount: isArray ? (result as unknown[]).length : undefined,
+      };
+    } catch (e) {
+      return {
+        success: false,
+        error: e instanceof Error ? e.message : String(e),
+      };
+    }
+  }
+
+  /**
+   * Test a model prompt
+   */
+  async testModelPrompt(request: SubmitPromptRequest): Promise<unknown> {
+    this.config.logger.debug(
+      'testModelPrompt called with arguments:',
+      JSON.stringify(request, null, 2),
+    );
+    if (request.credentialId) {
+      await this.ensureAdapterForCredential(request.credentialId, request.provider);
+    }
+    return this.baseAIClient.executePrompt(request);
+  }
+
+  /**
+   * Get available AI models
+   */
+  async getAvailableModels(): Promise<unknown> {
+    return this.nodeDataService.getAvailableModels();
+  }
+
+  /**
+   * Get models for a specific provider
+   */
+  async getModelsForProvider(provider: BatchProvider): Promise<{
+    provider: BatchProvider;
+    models: Model[];
+    defaultModel: string;
+  }> {
+    if (!provider) {
+      throw new ValidationError('Provider is required to list models');
+    }
+
+    const result = await this.nodeDataService.getModelsForProvider(provider);
+    return {
+      provider,
+      ...result,
+    };
+  }
+
+  /**
+   * Get models for a credential by detecting its provider
+   */
+  async getModelsForCredential(credentialId: string): Promise<{
+    provider: BatchProvider;
+    models: Model[];
+    defaultModel: string;
+  }> {
+    if (!credentialId) {
+      throw new ValidationError('credentialId is required to list models');
+    }
+
+    const credential = await this.credentialsService.get(credentialId);
+    const provider = detectProviderFromCredential(credential);
+
+    if (!provider) {
+      throw new ValidationError(
+        'Unable to detect provider from credential. Ensure the credential has an API URL or provider hint.',
+      );
+    }
+
+    const result = await this.nodeDataService.getModelsForProvider(provider);
+    return {
+      provider,
+      ...result,
+    };
+  }
+
+  /**
+   * Get available databases
+   */
+  getAvailableDatabases(): Schemas.InvectDatabaseConfig[] {
+    return this.nodeDataService.getAvailableDatabases();
+  }
+
+  /**
+   * Get definitions for all available nodes.
+   * Returns both legacy node definitions and action-based node definitions.
+   */
+  getAvailableNodes(): NodeDefinition[] {
+    this.ensureInitialized();
+
+    // Action-based definitions are the primary source for all node types.
+    const actionDefs = this.actionRegistry ? this.actionRegistry.getAllNodeDefinitions() : [];
+
+    // Legacy executors only cover AGENT — add its definition if not already
+    // present in the action registry.
+    const actionTypes = new Set(actionDefs.map((d) => d.type as string));
+    const legacyDefs = this.nodeRegistry
+      .getAllDefinitions()
+      .filter((d) => !actionTypes.has(d.type as string));
+
+    const allDefs = [...actionDefs, ...legacyDefs];
+
+    // Legacy nodes don't carry provider info — stamp them as Invect Core.
+    for (const def of allDefs) {
+      if (!def.provider) {
+        def.provider = { id: 'core', name: 'Invect Core', icon: 'Blocks' };
+      }
+    }
+
+    return allDefs;
+  }
+
+  /** Get the TemplateService or throw if not initialized. */
+  private getTemplateServiceOrThrow(): TemplateService {
+    if (!this.templateService) {
+      throw new Error('TemplateService not available — JS expression engine failed to initialize');
+    }
+    return this.templateService;
+  }
+
+  /**
+   * Resolve {{ expression }} templates in params using the provided context.
+   * Used for test node execution where we need to resolve templates before running.
+   *
+   * @param params - The node parameters to resolve
+   * @param context - The context to use for template resolution
+   * @param skipKeys - Keys to skip (their values should not be resolved as templates)
+   */
+  private resolveTemplateParams(
+    params: Record<string, unknown>,
+    context: Record<string, unknown>,
+    skipKeys: string[] = [],
+  ): Record<string, unknown> {
+    const templateService = this.getTemplateServiceOrThrow();
+    const resolved: Record<string, unknown> = {};
+
+    for (const [key, value] of Object.entries(params)) {
+      // Skip keys that shouldn't have their templates resolved
+      if (skipKeys.includes(key)) {
+        resolved[key] = value;
+        continue;
+      }
+
+      if (typeof value === 'string' && templateService.isTemplate(value)) {
+        try {
+          const renderedValue = templateService.render(value, context);
+          resolved[key] = renderedValue;
+          this.config.logger.debug('Resolved template param for test', {
+            param: key,
+            template: value,
+            resolved: renderedValue,
+          });
+        } catch (error) {
+          // On error, keep original value and log warning
+          this.config.logger.warn('Failed to resolve template param for test', {
+            param: key,
+            template: value,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          resolved[key] = value;
+        }
+      } else {
+        resolved[key] = value;
+      }
+    }
+
+    return resolved;
+  }
+
+  /**
+   * Test/execute a single node with the provided params and input data.
+   * This is useful for testing node configuration in isolation.
+   *
+   * Templates in params (e.g., {{ some_input.data.variables.output.value }})
+   * are resolved using the inputData as context before execution.
+   *
+   * @param nodeType - The type of node to execute
+   * @param params - The node's configuration parameters (may contain {{ }} templates)
+   * @param inputData - Mock input data used both as node inputs and as template context
+   * @returns The node execution result
+   */
+  async testNode(
+    nodeType: string,
+    params: Record<string, unknown>,
+    inputData: Record<string, unknown> = {},
+  ): Promise<{ success: boolean; output?: Record<string, unknown>; error?: string }> {
+    this.ensureInitialized();
+
+    // Try legacy executor first (only AGENT remains), then action registry
+    const executor = this.nodeRegistry.get(nodeType as GraphNodeType);
+    const action = !executor && this.actionRegistry ? this.actionRegistry.get(nodeType) : undefined;
+
+    if (!executor && !action) {
+      throw new ValidationError(`Unknown node type: ${nodeType}`);
+    }
+
+    // Merge default params with provided params (provided params take precedence)
+    let defaultParams: Record<string, unknown> = {};
+    if (executor) {
+      defaultParams = executor.getDefinition().defaultParams ?? {};
+    } else if (action) {
+      defaultParams = Object.fromEntries(
+        (action.params.fields ?? [])
+          .filter((f) => f.defaultValue !== undefined)
+          .map((f) => [f.name, f.defaultValue]),
+      );
+    }
+    const mergedParams = { ...defaultParams, ...params };
+
+    // Determine which param keys should NOT be resolved as templates
+    const skipTemplateResolutionKeys: string[] = [];
+    if (nodeType === GraphNodeType.TEMPLATE_STRING || nodeType === 'core.template_string') {
+      skipTemplateResolutionKeys.push('template');
+    }
+
+    // Resolve templates in params using inputData as context
+    const resolvedParams = this.resolveTemplateParams(
+      mergedParams,
+      inputData,
+      skipTemplateResolutionKeys,
+    );
+
+    this.config.logger.debug('Test node with resolved params', {
+      nodeType,
+      defaultParams,
+      originalParams: params,
+      mergedParams,
+      resolvedParams,
+      inputDataKeys: Object.keys(inputData),
+    });
+
+    try {
+      if (action) {
+        // ── Action path ─────────────────────────────────────────────────
+        const { executeActionAsNode } = await import('./actions/action-executor');
+
+        const mockContext: NodeExecutionContext = {
+          nodeId: `test-${Date.now()}`,
+          flowRunId: `test-run-${Date.now()}`,
+          logger: this.config.logger,
+          globalConfig: {},
+          flowInputs: {},
+          flowParams: { useBatchProcessing: false },
+          incomingData: inputData,
+          functions: {
+            markDownstreamNodesAsSkipped: () => {
+              /* noop */
+            },
+            runTemplateReplacement: (template: string, variables: Record<string, unknown>) =>
+              this.nodeDataService.runTemplateReplacement(template, variables),
+            submitPrompt: async (request: SubmitPromptRequest) =>
+              this.baseAIClient.executePrompt(request),
+            getCredential: async (credentialId: string) =>
+              this.credentialsService.get(credentialId),
+          },
+          allNodeOutputs: new Map(),
+        } as unknown as NodeExecutionContext;
+
+        const result = await executeActionAsNode(action, resolvedParams, mockContext);
+
+        if (result.state === NodeExecutionStatus.SUCCESS) {
+          let output: Record<string, unknown> | undefined;
+          if (result.output?.data?.variables) {
+            output = Object.fromEntries(
+              Object.entries(result.output.data.variables).map(([k, v]) => [
+                k,
+                (v as { value: unknown }).value,
+              ]),
+            );
+          } else if (result.output) {
+            output = result.output as unknown as Record<string, unknown>;
+          }
+          return { success: true, output };
+        } else if (result.state === NodeExecutionStatus.FAILED) {
+          return { success: false, error: result.errors?.join(', ') || 'Node execution failed' };
+        } else {
+          return { success: true, output: { status: 'pending' } };
+        }
+      }
+
+      // ── Legacy executor path (AGENT only) ───────────────────────────
+      const mockNode = {
+        id: `test-${Date.now()}`,
+        type: nodeType,
+        params: resolvedParams,
+        position: { x: 0, y: 0 },
+      };
+
+      const context = {
+        nodeId: mockNode.id,
+        flowRunId: `test-run-${Date.now()}`,
+        logger: this.config.logger,
+        globalConfig: {},
+        flowInputs: {},
+        flowParams: { useBatchProcessing: false },
+        incomingData: inputData,
+        functions: {
+          markDownstreamNodesAsSkipped: () => {
+            /* noop for test execution */
+          },
+          testJsonLogic: (conditionLogic: Record<string, unknown>, evaluationData: object) => {
+            return this.nodeDataService.testJsonLogic(conditionLogic, evaluationData);
+          },
+          runSqlQuery: (request: SubmitSQLQueryRequest) => {
+            return this.nodeDataService.runSqlQuery(request);
+          },
+          runTemplateReplacement: (template: string, variables: Record<string, unknown>) => {
+            return this.nodeDataService.runTemplateReplacement(template, variables);
+          },
+          submitPrompt: async (request: SubmitPromptRequest) => {
+            this.config.logger.debug('Test node submitting prompt', { request });
+            return this.baseAIClient.executePrompt(request);
+          },
+          getCredential: async (credentialId: string) => {
+            return this.credentialsService.get(credentialId);
+          },
+        },
+        allNodeOutputs: new Map(),
+      };
+
+      const effectiveInputs: Record<string, unknown> = { ...inputData };
+
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const result = await executor!.execute(
+        effectiveInputs as unknown as Record<string, unknown>,
+        mockNode as FlowNodeForType<GraphNodeType>,
+        context as unknown as NodeExecutionContext,
+      );
+
+      if (result.state === NodeExecutionStatus.SUCCESS) {
+        let output: Record<string, unknown> | undefined;
+        if (result.output?.data?.variables) {
+          output = Object.fromEntries(
+            Object.entries(result.output.data.variables).map(([k, v]) => [
+              k,
+              (v as { value: unknown }).value,
+            ]),
+          );
+        } else if (result.output) {
+          output = result.output as unknown as Record<string, unknown>;
+        }
+        return { success: true, output };
+      } else if (result.state === NodeExecutionStatus.FAILED) {
+        return { success: false, error: result.errors?.join(', ') || 'Node execution failed' };
+      } else {
+        return { success: true, output: { status: 'pending' } };
+      }
+    } catch (error) {
+      this.config.logger.error('Test node execution failed', { error, nodeType });
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
+   * Handle node configuration update events coming from the frontend.
+   * Supports both legacy executors (AGENT) and action-based nodes.
+   */
+  async handleNodeConfigUpdate(event: NodeConfigUpdateEvent): Promise<NodeConfigUpdateResponse> {
+    this.ensureInitialized();
+
+    if (!event?.nodeType) {
+      throw new ValidationError('nodeType is required for node config updates');
+    }
+
+    if (!event.params || typeof event.params !== 'object') {
+      event.params = {};
+    }
+
+    const configContext = {
+      logger: this.config.logger,
+      services: {
+        credentials: this.credentialsService,
+        baseAIClient: this.baseAIClient,
+      },
+    };
+
+    // 1. Try legacy executor (AGENT)
+    const executor = this.nodeRegistry.get(event.nodeType);
+    if (executor) {
+      try {
+        return await executor.handleConfigUpdate(event, configContext);
+      } catch (error) {
+        this.config.logger.error('Node config update handler failed', {
+          error,
+          nodeType: event.nodeType,
+          nodeId: event.nodeId,
+        });
+        throw error;
+      }
+    }
+
+    // 2. Try action registry — use onConfigUpdate if defined, else return static definition
+    const nodeTypeStr = event.nodeType as string;
+    const action = this.actionRegistry?.get(nodeTypeStr);
+    if (action) {
+      if (action.onConfigUpdate) {
+        try {
+          return await action.onConfigUpdate({ ...event, nodeType: nodeTypeStr }, configContext);
+        } catch (error) {
+          this.config.logger.error('Action config update handler failed', {
+            error,
+            nodeType: nodeTypeStr,
+            nodeId: event.nodeId,
+          });
+          throw error;
+        }
+      }
+
+      // No custom handler — return the static definition from the action registry
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const definition = this.actionRegistry!.toNodeDefinition(nodeTypeStr);
+      if (definition) {
+        return { definition, params: event.params };
+      }
+    }
+
+    throw new ValidationError(`Unknown node type '${event.nodeType}' for config update`);
+  }
+
+  /**
+   * Resolve dynamic options for a specific field on an action.
+   *
+   * Called by: `GET /actions/:actionId/fields/:fieldName/options?deps={...}`
+   *
+   * The action's `ParamField.loadOptions.handler` is invoked server-side with
+   * the dependency values and returns an options list + optional default value.
+   */
+  async resolveFieldOptions(
+    actionId: string,
+    fieldName: string,
+    dependencyValues: Record<string, unknown>,
+  ): Promise<LoadOptionsResult> {
+    this.ensureInitialized();
+
+    if (!this.actionRegistry) {
+      throw new ValidationError('Action registry not initialised');
+    }
+
+    const context = {
+      logger: this.config.logger,
+      services: {
+        credentials: this.credentialsService,
+      },
+    };
+
+    return this.actionRegistry.resolveFieldOptions(actionId, fieldName, dependencyValues, context);
+  }
+
+  /**
+   * Render flow to React Flow format
+   */
+  async renderToReactFlow(
+    flowId: string,
+    options?: { version?: string | number | 'latest'; flowRunId?: string },
+  ): Promise<ReactFlowData> {
+    this.config.logger.debug(
+      'renderToReactFlow called with arguments:',
+      JSON.stringify({ flowId, options }, null, 2),
+    );
+    return this.reactFlowRendererService.renderToReactFlow(flowId, options);
+  }
+
+  // =====================================
+  // PRIVATE SERVICE GETTERS
+  // =====================================
+
+  /**
+   * Get flow service with initialization check
+   */
+  private get flowService() {
+    this.ensureInitialized();
+    return this.serviceFactory.getFlowService();
+  }
+
+  /**
+   * Get flow versions service with initialization check
+   */
+  private get flowVersionsService() {
+    this.ensureInitialized();
+    return this.serviceFactory.getFlowVersionsService();
+  }
+
+  /**
+   * Get flow runs service with initialization check
+   */
+  private get flowRunsService() {
+    this.ensureInitialized();
+    return this.serviceFactory.getFlowRunsService();
+  }
+
+  /**
+   * Get orchestration service with initialization check
+   */
+  private get orchestrationService() {
+    this.ensureInitialized();
+    return this.serviceFactory.getOrchestrationService();
+  }
+
+  /**
+   * Get node executions service with initialization check
+   */
+  private get nodeExecutionsService() {
+    this.ensureInitialized();
+    return this.serviceFactory.getNodeExecutionsService();
+  }
+
+  /**
+   * Get node data service with initialization check
+   */
+  private get nodeDataService() {
+    this.ensureInitialized();
+    return this.serviceFactory.getNodeDataService();
+  }
+
+  /**
+   * Get base AI client with initialization check
+   */
+  private get baseAIClient() {
+    this.ensureInitialized();
+    return this.serviceFactory.getBaseAIClient();
+  }
+
+  /**
+   * Ensure a provider adapter is registered for the given credential.
+   * Resolves the credential, extracts the API key, detects the provider,
+   * and calls registerAdapter() if not already present.
+   */
+  private async ensureAdapterForCredential(
+    credentialId: string,
+    providerHint?: BatchProvider | string,
+  ): Promise<void> {
+    const client = this.baseAIClient;
+    // If the provider hint is available and the adapter already exists, skip.
+    if (providerHint && client.hasAdapter(providerHint as BatchProvider)) {
+      return;
+    }
+
+    const credential = await this.credentialsService.getDecryptedWithRefresh(credentialId);
+    const apiKey = (credential.config as Record<string, unknown>)?.apiKey as string | undefined;
+    if (!apiKey) {
+      throw new Error(`Credential "${credentialId}" does not contain an apiKey.`);
+    }
+
+    const detected = detectProviderFromCredential(credential);
+    if (!detected) {
+      throw new Error(`Unable to detect AI provider from credential "${credentialId}".`);
+    }
+
+    if (client.hasAdapter(detected)) {
+      return;
+    }
+
+    const label =
+      detected === BatchProvider.OPENAI
+        ? 'OPENAI'
+        : detected === BatchProvider.ANTHROPIC
+          ? 'ANTHROPIC'
+          : 'OPENROUTER';
+
+    client.registerAdapter(label, apiKey);
+  }
+
+  /**
+   * Get React Flow renderer service with initialization check
+   */
+  private get reactFlowRendererService() {
+    this.ensureInitialized();
+    return this.serviceFactory.getReactFlowRendererService();
+  }
+
+  /**
+   * Get credentials service with initialization check
+   */
+  private get credentialsService() {
+    this.ensureInitialized();
+    return this.serviceFactory.getCredentialsService();
+  }
+
+  /**
+   * Get triggers service with initialization check
+   */
+  private get triggersService() {
+    this.ensureInitialized();
+    return this.serviceFactory.getTriggersService();
+  }
+
+  /**
+   * Get credentials service (public accessor)
+   */
+  public getCredentialsService() {
+    return this.credentialsService;
+  }
+
+  // =====================================
+  // PRIVATE INITIALIZATION METHODS
+  // =====================================
+
+  /**
+   * Ensure default credentials exist.
+   * Runs once after initialization completes — skips any that already exist by name.
+   */
+  private async ensureDefaultCredentials(): Promise<void> {
+    const seeds = this.config.defaultCredentials;
+    if (!seeds?.length) {
+      return;
+    }
+
+    const existing = await this.listCredentials();
+    const existingNames = new Set(existing.map((c) => c.name));
+
+    for (const seed of seeds) {
+      if (existingNames.has(seed.name)) {
+        this.config.logger.debug(`Seed credential "${seed.name}" already exists — skipping`);
+        continue;
+      }
+      try {
+        const created = await this.createCredential(seed as CreateCredentialInput);
+        // eslint-disable-next-line no-console
+        console.log(`🔐 Seeded credential: ${created.name} (${created.id})`);
+      } catch (error) {
+        this.config.logger.warn(`Failed to seed credential "${seed.name}"`, error);
+      }
+    }
+  }
+
+  /**
+   * Initialize services
+   */
+  private async initializeServices(nodeRegistry: NodeExecutorRegistry): Promise<void> {
+    this.config.logger.debug('Initializing service factory...');
+
+    this.serviceFactory = new ServiceFactory(
+      this.config,
+      nodeRegistry,
+      this,
+      this.actionRegistry,
+      this.pluginManager,
+      this.jsExpressionService ?? undefined,
+      this.templateService ?? undefined,
+    );
+    await this.serviceFactory.initialize();
+  }
+
+  /**
+   * Initialize node registry with tool registry
+   */
+  private async initializeNodes() {
+    this.config.logger.debug('Initializing node registry...');
+
+    // First create the node registry with all executors (without tool registry yet)
+    const nodeRegistry = await DefaultNodeRegistryFactory.createDefault(this.config.logger);
+
+    // Now initialize tool registry - it will discover tools from node executors
+    const toolRegistry = await initializeGlobalToolRegistry(this.config.logger);
+    this.config.logger.debug(`Initialized agent tool registry with ${toolRegistry.size} tools`);
+
+    // Update agent executor with the tool registry
+    const agentExecutor = nodeRegistry.get(GraphNodeType.AGENT);
+    if (agentExecutor && 'setToolRegistry' in agentExecutor) {
+      (agentExecutor as unknown as AgentNodeExecutor).setToolRegistry(toolRegistry);
+    }
+
+    return nodeRegistry;
+  }
+
+  /**
+   * Register all actions in the ActionRegistry as agent tools.
+   */
+  private registerActionsAsTools(): void {
+    if (!this.actionRegistry) {
+      return;
+    }
+
+    let toolRegistry: AgentToolRegistry;
+    try {
+      toolRegistry = getGlobalToolRegistry();
+    } catch {
+      // Tool registry not yet initialised — actions will be picked up
+      // when initializeGlobalToolRegistry runs during initializeNodes().
+      return;
+    }
+
+    for (const action of this.actionRegistry.getAll()) {
+      const toolDef = this.actionRegistry.toAgentToolDefinition(action.id);
+      if (toolDef && !toolRegistry.has(toolDef.id)) {
+        toolRegistry.register(toolDef, createToolExecutorForAction(action));
+      }
+    }
+  }
+
+  /**
+   * Ensure core is initialized
+   */
+  private ensureInitialized(): asserts this is {
+    serviceFactory: ServiceFactory;
+    nodeRegistry: NodeExecutorRegistry;
+  } {
+    if (!this.initialized || !this.serviceFactory || !this.nodeRegistry) {
+      throw new DatabaseError('Invect Core not initialized. Call initialize() first.');
+    }
+  }
+
+  // =====================================
+  // ACTIONS API (Provider-Actions architecture)
+  // =====================================
+
+  /**
+   * Get the action registry.
+   */
+  getActionRegistry(): ActionRegistry {
+    this.ensureInitialized();
+    if (!this.actionRegistry) {
+      throw new DatabaseError('Action registry not initialized');
+    }
+    return this.actionRegistry;
+  }
+
+  /**
+   * Register an action at runtime (e.g. from a plugin or external package).
+   */
+  registerAction(action: ActionDefinition): void {
+    this.ensureInitialized();
+    if (!this.actionRegistry) {
+      throw new DatabaseError('Action registry not initialized');
+    }
+    this.actionRegistry.register(action);
+
+    // Also register into the tool registry so the agent can discover it
+    const toolDef = this.actionRegistry.toAgentToolDefinition(action.id);
+    if (toolDef) {
+      const toolRegistry: AgentToolRegistry = getGlobalToolRegistry();
+      toolRegistry.register(toolDef, createToolExecutorForAction(action));
+    }
+  }
+
+  /**
+   * Get all registered providers.
+   */
+  getProviders(): ProviderDef[] {
+    this.ensureInitialized();
+    if (!this.actionRegistry) {
+      return [];
+    }
+    return this.actionRegistry.getProviders();
+  }
+
+  /**
+   * Get all actions for a specific provider.
+   */
+  getActionsForProvider(providerId: string): ActionDefinition[] {
+    this.ensureInitialized();
+    if (!this.actionRegistry) {
+      return [];
+    }
+    return this.actionRegistry.getActionsForProvider(providerId);
+  }
+
+  // =====================================
+  // AGENT TOOLS API
+  // =====================================
+
+  /**
+   * Get all available agent tools
+   */
+  getAgentTools(): AgentToolDefinition[] {
+    this.ensureInitialized();
+    return getGlobalToolRegistry().getDefinitions();
+  }
+
+  /**
+   * Execute agent prompt with tools
+   */
+  async submitAgentPrompt(
+    request: SubmitAgentPromptRequest,
+  ): Promise<
+    | AgentPromptResult
+    | { type: 'batch_submitted'; batchJobId: string; nodeId: string; flowRunId: string }
+  > {
+    this.ensureInitialized();
+    await this.ensureAdapterForCredential(request.credentialId, request.provider);
+    return await this.baseAIClient.runAgentPrompt(request, request.provider);
+  }
+
+  // =====================================
+  // CHAT ASSISTANT API
+  // =====================================
+
+  /**
+   * Create a streaming chat session.
+   *
+   * Returns an AsyncGenerator<ChatStreamEvent> that framework adapters
+   * serialize to SSE. The generator handles the full LLM loop including
+   * tool calls.
+   *
+   * @example
+   * ```typescript
+   * const stream = await invect.createChatStream({
+   *   messages: [{ role: 'user', content: 'Add a Gmail node' }],
+   *   context: { flowId: 'flow_123' },
+   * });
+   *
+   * for await (const event of stream) {
+   *   // event.type: 'text_delta' | 'tool_call_start' | 'tool_call_result' | 'done' | 'error'
+   * }
+   * ```
+   */
+  async createChatStream(options: {
+    messages: Array<{ role: string; content: string; toolCalls?: unknown[]; toolCallId?: string }>;
+    context: {
+      flowId?: string;
+      selectedNodeId?: string;
+      viewMode?: string;
+      credentialId?: string;
+      maxSteps?: number;
+    };
+    identity?: InvectIdentity;
+  }): Promise<AsyncGenerator<import('./services/chat').ChatStreamEvent>> {
+    this.ensureInitialized();
+    const chatService = this.serviceFactory.getChatStreamService();
+    return chatService.createStream({
+      messages: options.messages as import('./services/chat').ChatMessage[],
+      context: options.context as import('./services/chat').ChatContext,
+      identity: options.identity,
+    });
+  }
+
+  /**
+   * Check if the chat assistant feature is enabled and configured.
+   */
+  isChatEnabled(): boolean {
+    this.ensureInitialized();
+    return this.serviceFactory.getChatStreamService().isEnabled();
+  }
+
+  // =====================================
+  // CHAT MESSAGE PERSISTENCE API
+  // =====================================
+
+  /**
+   * Get all persisted chat messages for a flow (ordered by creation time).
+   */
+  async getChatMessages(
+    flowId: string,
+  ): Promise<import('./services/chat/chat-messages.model').ChatMessageRecord[]> {
+    this.ensureInitialized();
+    return this.serviceFactory.getDatabaseService().chatMessages.getByFlowId(flowId);
+  }
+
+  /**
+   * Save chat messages for a flow (replaces existing messages).
+   */
+  async saveChatMessages(
+    flowId: string,
+    messages: Array<{
+      role: 'user' | 'assistant' | 'system' | 'tool';
+      content: string;
+      toolMeta?: Record<string, unknown> | null;
+    }>,
+  ): Promise<import('./services/chat/chat-messages.model').ChatMessageRecord[]> {
+    this.ensureInitialized();
+    const db = this.serviceFactory.getDatabaseService();
+    // Replace: delete all existing, then bulk insert
+    await db.chatMessages.deleteByFlowId(flowId);
+    return db.chatMessages.createMany(
+      messages.map((m) => ({ flowId, role: m.role, content: m.content, toolMeta: m.toolMeta })),
+    );
+  }
+
+  /**
+   * Delete all chat messages for a flow.
+   */
+  async deleteChatMessages(flowId: string): Promise<void> {
+    this.ensureInitialized();
+    await this.serviceFactory.getDatabaseService().chatMessages.deleteByFlowId(flowId);
+  }
+
+  // =====================================
+  // TRIGGERS API
+  // =====================================
+
+  /**
+   * List all trigger registrations for a flow.
+   */
+  async listTriggersForFlow(flowId: string): Promise<FlowTriggerRegistration[]> {
+    this.config.logger.debug('listTriggersForFlow called', { flowId });
+    return this.triggersService.listTriggersForFlow(flowId);
+  }
+
+  /**
+   * Get a single trigger registration by ID.
+   */
+  async getTrigger(triggerId: string): Promise<FlowTriggerRegistration | null> {
+    this.config.logger.debug('getTrigger called', { triggerId });
+    return this.triggersService.getTrigger(triggerId);
+  }
+
+  /**
+   * Create a trigger registration.
+   */
+  async createTrigger(input: CreateTriggerInput): Promise<FlowTriggerRegistration> {
+    this.config.logger.debug('createTrigger called', { flowId: input.flowId, type: input.type });
+    return this.triggersService.createTrigger(input);
+  }
+
+  /**
+   * Update a trigger registration.
+   */
+  async updateTrigger(
+    triggerId: string,
+    input: UpdateTriggerInput,
+  ): Promise<FlowTriggerRegistration | null> {
+    this.config.logger.debug('updateTrigger called', { triggerId });
+    return this.triggersService.updateTrigger(triggerId, input);
+  }
+
+  /**
+   * Delete a trigger registration.
+   */
+  async deleteTrigger(triggerId: string): Promise<void> {
+    this.config.logger.debug('deleteTrigger called', { triggerId });
+    return this.triggersService.deleteTrigger(triggerId);
+  }
+
+  /**
+   * Sync trigger registrations for a flow from its definition.
+   * Call this after publishing a new flow version. Also refreshes
+   * the cron scheduler if any cron triggers were changed.
+   */
+  async syncTriggersForFlow(
+    flowId: string,
+    definition: { nodes: Array<{ id: string; type: string; params?: Record<string, unknown> }> },
+  ): Promise<FlowTriggerRegistration[]> {
+    this.config.logger.debug('syncTriggersForFlow called', { flowId });
+    const result = await this.triggersService.syncTriggersForFlow(flowId, definition);
+
+    // Refresh cron scheduler if it's running
+    try {
+      const scheduler = this.serviceFactory?.getCronScheduler();
+      if (scheduler?.isRunning()) {
+        await scheduler.refresh();
+      }
+    } catch {
+      // Scheduler may not be started — that's fine
+    }
+
+    return result;
+  }
+
+  /**
+   * Get all enabled cron triggers (for scheduler initialization).
+   */
+  async getEnabledCronTriggers(): Promise<FlowTriggerRegistration[]> {
+    this.config.logger.debug('getEnabledCronTriggers called');
+    return this.triggersService.getEnabledCronTriggers();
+  }
+
+  /**
+   * Execute a cron trigger (called by the cron scheduler).
+   */
+  async executeCronTrigger(triggerId: string): Promise<{ flowRunId: string; flowId: string }> {
+    this.config.logger.debug('executeCronTrigger called', { triggerId });
+    return this.triggersService.executeCronTrigger(triggerId);
+  }
+
+  // =====================================
+  // OAUTH2 API
+  // =====================================
+
+  /**
+   * Get all available OAuth2 providers
+   */
+  getOAuth2Providers() {
+    this.ensureInitialized();
+    return this.serviceFactory.getCredentialsService().getOAuth2Service().getProviders();
+  }
+
+  /**
+   * Get a specific OAuth2 provider by ID
+   */
+  getOAuth2Provider(providerId: string) {
+    this.ensureInitialized();
+    return this.serviceFactory.getCredentialsService().getOAuth2Service().getProvider(providerId);
+  }
+
+  /**
+   * Start an OAuth2 authorization flow
+   * Returns the authorization URL and state to redirect the user to
+   */
+  startOAuth2Flow(
+    providerId: string,
+    appConfig: { clientId: string; clientSecret: string; redirectUri: string },
+    options?: { scopes?: string[]; returnUrl?: string; credentialName?: string },
+  ) {
+    this.ensureInitialized();
+    return this.serviceFactory
+      .getCredentialsService()
+      .getOAuth2Service()
+      .startAuthorizationFlow(providerId, appConfig, options);
+  }
+
+  /**
+   * Get pending OAuth2 state (for verifying callback)
+   */
+  getOAuth2PendingState(state: string) {
+    this.ensureInitialized();
+    return this.serviceFactory.getCredentialsService().getOAuth2Service().getPendingState(state);
+  }
+
+  /**
+   * Handle OAuth2 callback - exchange code for tokens and create credential
+   */
+  async handleOAuth2Callback(
+    code: string,
+    state: string,
+    appConfig: { clientId: string; clientSecret: string; redirectUri: string },
+  ): Promise<Credential> {
+    this.ensureInitialized();
+
+    const credentialsService = this.serviceFactory.getCredentialsService();
+    const oauth2Service = credentialsService.getOAuth2Service();
+
+    // Exchange code for tokens
+    const { tokens, pendingState } = await oauth2Service.exchangeCodeForTokens(
+      code,
+      state,
+      appConfig,
+    );
+
+    // Get provider info
+    const provider = oauth2Service.getProvider(pendingState.providerId);
+    if (!provider) {
+      throw new Error(`Unknown OAuth2 provider: ${pendingState.providerId}`);
+    }
+
+    // Build credential config
+    const config = oauth2Service.buildCredentialConfig(tokens, pendingState.providerId, appConfig);
+
+    // Create credential
+    const credential = await credentialsService.create({
+      name: pendingState.credentialName || provider.name,
+      type: 'http-api',
+      authType: 'oauth2',
+      config,
+      description: `OAuth2 credential for ${provider.name}`,
+      metadata: {
+        oauth2Provider: pendingState.providerId,
+        scopes: tokens.scope?.split(' ') || provider.defaultScopes,
+      },
+    });
+
+    this.loggerManager.getBasicLogger().info('Created OAuth2 credential', {
+      credentialId: credential.id,
+      providerId: pendingState.providerId,
+    });
+
+    return credential;
+  }
+
+  /**
+   * Refresh an OAuth2 credential's access token
+   */
+  async refreshOAuth2Credential(credentialId: string): Promise<Credential> {
+    this.ensureInitialized();
+
+    // Use getDecryptedWithRefresh which handles the refresh automatically
+    return this.serviceFactory.getCredentialsService().getDecryptedWithRefresh(credentialId);
+  }
+}

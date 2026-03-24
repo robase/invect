@@ -1,0 +1,17 @@
+packages:
+  - pkg/*
+  - pkg/plugins/*
+  - examples/*
+
+onlyBuiltDependencies:
+  - '@nestjs/core'
+  - '@prisma/client'
+  - '@prisma/engines'
+  - '@swc/core'
+  - '@tailwindcss/oxide'
+  - esbuild
+  - msw
+  - prisma
+  - sharp
+  - sqlite3
+  - unrs-resolver

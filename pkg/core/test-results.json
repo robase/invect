@@ -1,0 +1,30 @@
+{
+  "timestamp": "2025-08-02T19:34:51.479Z",
+  "totalDuration": 4395,
+  "summary": {
+    "totalTests": 3,
+    "passed": 1,
+    "failed": 2,
+    "successRate": 33.33333333333333
+  },
+  "results": [
+    {
+      "category": "Unit Tests",
+      "passed": 0,
+      "failed": 1,
+      "duration": 1304
+    },
+    {
+      "category": "Integration Tests",
+      "passed": 0,
+      "failed": 1,
+      "duration": 565
+    },
+    {
+      "category": "Type Checking",
+      "passed": 1,
+      "failed": 0,
+      "duration": 921
+    }
+  ]
+}

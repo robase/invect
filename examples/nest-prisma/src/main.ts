@@ -1,0 +1,31 @@
+import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
+import { AppModule } from './app.module';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+
+  // Enable validation
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+
+  // Enable CORS
+  app.enableCors();
+
+  // Mount Invect API under /invect/*
+  const basePath = process.env.INVECT_BASE_PATH || '/invect';
+  app.setGlobalPrefix(basePath.replace(/^\//, ''));
+
+  const port = parseInt(process.env.PORT || '3001', 10);
+  await app.listen(port);
+
+  console.log(`🚀 Acme SaaS API running on: http://localhost:${port}`);
+  console.log(`   Invect API:  http://localhost:${port}${basePath}`);
+}
+
+void bootstrap();

@@ -1,0 +1,183 @@
+{
+  "name": "invect",
+  "version": "2.0.0",
+  "type": "module",
+  "description": "Complete workflow management system with React frontend and NestJS backend",
+  "main": "dist/index.cjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./frontend": {
+      "types": "./pkg/frontend/dist/index.d.ts",
+      "style": "./pkg/frontend/dist/index.css",
+      "import": "./pkg/frontend/dist/index.js",
+      "require": "./pkg/frontend/dist/index.js"
+    },
+    "./frontend/styles": "./pkg/frontend/dist/index.css",
+    "./nestjs": {
+      "types": "./pkg/nestjs/dist/index.d.ts",
+      "import": "./pkg/nestjs/dist/index.js",
+      "require": "./pkg/nestjs/dist/index.cjs"
+    },
+    "./nextjs": {
+      "types": "./pkg/nextjs/dist/index.d.ts",
+      "import": "./pkg/nextjs/dist/index.js",
+      "require": "./pkg/nextjs/dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "pkg/frontend/dist",
+    "pkg/nestjs/dist",
+    "pkg/nextjs/dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "pnpm --filter '@invect/*' run build",
+    "build:core": "pnpm --filter '@invect/core' run build",
+    "build:frontend": "pnpm --filter '@invect/frontend' run build",
+    "build:nestjs": "pnpm --filter '@invect/nestjs' run build",
+    "build:express": "pnpm --filter '@invect/express' run build",
+    "build:nextjs": "pnpm --filter '@invect/nextjs' run build",
+    "build:main": "tsdown",
+    "dev": "bash scripts/dev.sh",
+    "dev:packages": "pnpm --filter '@invect/*' --parallel run dev",
+    "dev:express-example": "pnpm --filter '@invect/core' --filter '@invect/express' --parallel run dev",
+    "dev:vite-example": "pnpm --filter '@invect/core' --filter '@invect/frontend' --parallel run dev",
+    "dev:all": "pnpm --filter '@invect/*' --parallel run dev",
+    "dev:fullstack": "bash scripts/dev-fullstack.sh",
+    "dev:next": "bash scripts/dev-next.sh",
+    "dev:nest": "bash scripts/dev-nest.sh",
+    "dev:watch-all": "pnpm --filter '@invect/*' --filter 'invect-express-simple' --filter 'flow-executor' --parallel run dev",
+    "test": "pnpm --filter '@invect/core' run test:unit && pnpm --filter '@invect/user-auth' run test:unit",
+    "test:int": "pnpm --filter '@invect/core' run test:integration",
+    "test:all": "pnpm --filter '@invect/*' run test",
+    "test:e2e": "pnpm --filter '@invect/core' run test:e2e",
+    "test:pw": "node scripts/run-playwright-with-port-check.mjs --project api --project frontend --project e2e --project critical-paths",
+    "test:pw:force-kill": "node scripts/run-playwright-with-port-check.mjs --force-kill-ports --project api --project frontend --project e2e --project critical-paths",
+    "test:pw:ui": "node scripts/run-playwright-with-port-check.mjs --ui",
+    "test:pw:headed": "node scripts/run-playwright-with-port-check.mjs --headed",
+    "ux:capture": "npx playwright test --config playwright/playwright.config.ts --project visual-audit",
+    "ux:analyze": "npx tsx playwright/visual-audit/analyze.ts",
+    "ux:audit": "pnpm ux:capture && pnpm ux:analyze",
+    "setup:credentials": "bash scripts/setup-credentials.sh",
+    "format": "pnpm --parallel run format",
+    "lint": "pnpm -r run lint --fix",
+    "typecheck": "pnpm -r run typecheck",
+    "clean": "rm -rf dist && pnpm --filter '@invect/*' run clean",
+    "changeset": "pnpm changeset",
+    "version-packages": "pnpm changeset version",
+    "release": "pnpm build && pnpm changeset publish"
+  },
+  "keywords": [
+    "invect",
+    "workflow",
+    "react",
+    "nestjs",
+    "typescript",
+    "frontend",
+    "backend",
+    "batch-processing",
+    "ai",
+    "Invect",
+    "components"
+  ],
+  "author": "Invect Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/flow-backend.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/flow-backend/issues"
+  },
+  "homepage": "https://github.com/your-username/flow-backend#readme",
+  "peerDependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@tanstack/react-query": "^5.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router": "^7.0.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.56.0",
+    "@nestjs/platform-express": "^11.1.3",
+    "@nestjs/schedule": "^6.0.0",
+    "@prisma/client": "^6.11.1",
+    "@radix-ui/react-dropdown-menu": "^2.1.15",
+    "@radix-ui/react-separator": "^1.1.7",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-tooltip": "^1.2.7",
+    "@types/pg": "^8.15.4",
+    "@xyflow/react": "^12.8.2",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "json-logic-js": "^2.0.5",
+    "lucide-react": "^0.525.0",
+    "mysql2": "^3.14.2",
+    "openai": "^5.9.0",
+    "pg": "^8.16.3",
+    "prisma": "^6.11.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "sqlite3": "^5.1.7",
+    "tailwind-merge": "^3.3.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@changesets/changelog-github": "^0.6.0",
+    "@changesets/cli": "^2.30.0",
+    "@eslint/js": "^9.31.0",
+    "@nestjs/common": "^11.1.16",
+    "@nestjs/core": "^11.1.16",
+    "@playwright/test": "^1.58.2",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^24.0.13",
+    "better-sqlite3": "^12.8.0",
+    "chokidar": "^4.0.1",
+    "cors": "^2.8.6",
+    "drizzle-orm": "^0.45.1",
+    "eslint": "^9.31.0",
+    "express": "^5.2.1",
+    "globals": "^16.3.0",
+    "msw": "^2.11.2",
+    "prettier": "^3.6.2",
+    "rollup": "^4.14.0",
+    "tsdown": "^0.21.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.0.0",
+    "typescript-eslint": "^8.36.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "@types/react": "18.3.7",
+      "@types/react-dom": "18.3.7"
+    },
+    "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "@prisma/client",
+      "@prisma/engines",
+      "@swc/core",
+      "@tailwindcss/oxide",
+      "better-sqlite3",
+      "esbuild",
+      "msw",
+      "prisma",
+      "sharp",
+      "sqlite3",
+      "unrs-resolver"
+    ]
+  }
+}

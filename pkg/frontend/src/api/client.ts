@@ -1,0 +1,916 @@
+// API client for communicating with the Invect backend
+
+import type {
+  Flow,
+  FlowVersion,
+  FlowRun,
+  NodeExecution,
+  CreateFlowRequest,
+  CreateFlowVersionRequest,
+  FlowValidationResult,
+  PaginatedResponse,
+  SubmitPromptRequest,
+  SubmitSQLQueryRequest,
+  SQLQueryResult,
+  QueryOptions,
+  InvectDatabaseConfig,
+  InvectDefinition,
+  Model,
+  ReactFlowData,
+  AgentToolDefinition,
+  NodeConfigUpdateResponse,
+  DashboardStats,
+  FlowRunResult,
+  FlowInputs,
+  ExecuteFlowOptions,
+  UpdateFlowInput,
+  NodeDefinition,
+} from './types';
+
+import {
+  ValidationError,
+  type ReactFlowDataOptions,
+  type Credential,
+  type CredentialFilters,
+  type CreateCredentialInput,
+  type UpdateCredentialInput,
+  type CredentialUsage,
+  type OAuth2ProviderDefinition,
+  type OAuth2StartResult,
+  type FlowTriggerRegistration,
+  type CreateTriggerInput,
+  type UpdateTriggerInput,
+} from './types';
+
+class ApiClient {
+  private baseURL: string;
+  private userId: string;
+
+  constructor(baseURL: string, options?: { userId?: string }) {
+    this.baseURL = baseURL;
+    this.userId = options?.userId ?? 'user_123';
+  }
+
+  // Method to configure the base URL
+  setBaseURL(baseURL: string): void {
+    this.baseURL = baseURL;
+  }
+
+  getBaseURL(): string {
+    return this.baseURL;
+  }
+
+  setUserId(userId: string): void {
+    this.userId = userId;
+  }
+
+  private getUserHeaders(): Record<string, string> {
+    return this.userId ? { 'X-User-ID': this.userId } : {};
+  }
+
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const url = `${this.baseURL}${endpoint}`;
+
+    console.log('🌐 Request: Starting request');
+    console.log('🌐 Request: URL:', url);
+    console.log('🌐 Request: Method:', options.method || 'GET');
+
+    const { headers: optionsHeaders, ...restOptions } = options;
+    const config: RequestInit = {
+      ...restOptions,
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(optionsHeaders as Record<string, string>),
+      },
+    };
+
+    try {
+      const response = await fetch(url, config);
+
+      console.log('🌐 Request: Response received');
+      console.log('🌐 Request: Status:', response.status);
+      console.log('🌐 Request: OK:', response.ok);
+
+      if (!response.ok) {
+        console.log('❌ Request: Response not OK, handling error...');
+        // Try to extract error message from response body
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+
+          // Handle ZodError format directly (when backend returns ZodError structure)
+          if (
+            response.status === 400 &&
+            errorData.error === 'Validation Error' &&
+            errorData.details
+          ) {
+            const validationResult = {
+              isValid: false,
+              errors: errorData.details.map((detail: { message: string; path?: string }) => ({
+                type: 'VALIDATION_ERROR',
+                message: detail.message,
+                severity: 'error' as const,
+                field: detail.path || '',
+                value: undefined,
+              })),
+              warnings: [],
+            };
+            const validationError = new ValidationError(
+              errorData.message || 'Flow validation failed',
+              validationResult,
+            );
+            throw validationError;
+          }
+
+          // Handle Express backend validation errors
+          if (
+            response.status === 400 &&
+            errorData.error === 'VALIDATION_ERROR' &&
+            errorData.details
+          ) {
+            const validationResult = {
+              isValid: false,
+              errors: errorData.details.map(
+                (detail: { message: string; field?: string; value?: unknown }) => ({
+                  type: 'VALIDATION_ERROR',
+                  message: detail.message,
+                  severity: 'error' as const,
+                  field: detail.field || '',
+                  value: detail.value,
+                }),
+              ),
+              warnings: [],
+            };
+            const validationError = new ValidationError(
+              errorData.message || 'Flow validation failed',
+              validationResult,
+            );
+            throw validationError;
+          }
+
+          // Legacy: Handle express-simple backend validation errors (validation field format)
+          if (
+            response.status === 400 &&
+            errorData.error === 'VALIDATION_ERROR' &&
+            errorData.validation
+          ) {
+            throw new ValidationError(
+              errorData.message || 'Flow validation failed',
+              errorData.validation,
+            );
+          }
+
+          // Check if this is a validation error (400 with validation field)
+          if (response.status === 400 && errorData.validation) {
+            throw new ValidationError(
+              errorData.message || 'Flow validation failed',
+              errorData.validation,
+            );
+          }
+
+          // Handle validation errors nested in response property
+          if (
+            (response.status === 400 || response.status === 500) &&
+            errorData.response?.validation
+          ) {
+            throw new ValidationError(
+              errorData.response.message || errorData.message || 'Flow validation failed',
+              errorData.response.validation,
+            );
+          }
+
+          // Check for validation data in any error response structure
+          if (errorData.validation) {
+            throw new ValidationError(
+              errorData.message || 'Flow validation failed',
+              errorData.validation,
+            );
+          }
+
+          // Additional check for validation data nested in response object (any status code)
+          if (errorData.response && typeof errorData.response === 'object') {
+            if (errorData.response.validation) {
+              throw new ValidationError(
+                errorData.response.message || errorData.message || 'Flow validation failed',
+                errorData.response.validation,
+              );
+            }
+          }
+
+          // Handle other errors
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } catch (parseError) {
+          console.log('❌ Request: Failed to parse error response body:', parseError);
+          // Re-throw validation errors
+          if (parseError instanceof ValidationError) {
+            throw parseError;
+          }
+          // If we can't parse the response body, use the default message
+        }
+        console.log('❌ Request: Throwing error:', errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      // Handle 204 No Content responses (e.g., DELETE operations)
+      if (response.status === 204) {
+        return undefined as T;
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.log(`❌ Request: API request failed for endpoint ${endpoint}:`, error);
+      throw error;
+    }
+  }
+
+  // Dashboard endpoints
+  async getDashboardStats(): Promise<DashboardStats> {
+    return this.request<DashboardStats>('/dashboard/stats');
+  }
+
+  // Flow endpoints
+  async getFlows(options?: QueryOptions<Flow>): Promise<PaginatedResponse<Flow>> {
+    const response = await this.request<PaginatedResponse<Flow>>('/flows/list', {
+      method: 'POST',
+      body: JSON.stringify(options || {}),
+    });
+    return response;
+  }
+
+  async getFlow(id: string): Promise<Flow> {
+    const response = await this.request<Flow>(`/flows/${id}`);
+    return response;
+  }
+
+  async createFlow(createFlowRequest: CreateFlowRequest): Promise<Flow> {
+    const response = await this.request<Flow>('/flows', {
+      method: 'POST',
+      body: JSON.stringify(createFlowRequest),
+    });
+    return response;
+  }
+
+  async createFlowWithVersion(
+    createFlowRequest: CreateFlowRequest,
+    createVersionRequest: CreateFlowVersionRequest,
+  ): Promise<Flow> {
+    // First create the flow
+    const flow = await this.createFlow(createFlowRequest);
+
+    // Then create the initial version
+    await this.createFlowVersion(flow.id, createVersionRequest);
+
+    // Return the flow with the version data
+    return this.getFlow(flow.id);
+  }
+
+  async updateFlow(id: string, updateData: UpdateFlowInput): Promise<Flow> {
+    const flow = await this.request<Flow>(`/flows/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+    });
+    return flow;
+  }
+
+  async deleteFlow(id: string): Promise<void> {
+    return this.request<void>(`/flows/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Flow version endpoints
+  async createFlowVersion(
+    flowId: string,
+    createVersionRequest: CreateFlowVersionRequest,
+  ): Promise<FlowVersion> {
+    console.log('🌐 ApiClient: createFlowVersion called');
+    console.log('🌐 ApiClient: flowId:', flowId);
+    console.log('🌐 ApiClient: payload:', JSON.stringify(createVersionRequest, null, 2));
+
+    const endpoint = `/flows/${flowId}/versions`;
+    console.log('🌐 ApiClient: endpoint:', endpoint);
+    console.log('🌐 ApiClient: full URL:', `${this.baseURL}${endpoint}`);
+
+    const response = await this.request<FlowVersion>(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(createVersionRequest),
+    });
+
+    console.log('🌐 ApiClient: createFlowVersion response:', response);
+    return response;
+  }
+
+  async getFlowVersions(
+    flowId: string,
+    options?: QueryOptions<FlowVersion>,
+  ): Promise<PaginatedResponse<FlowVersion>> {
+    const response = await this.request<PaginatedResponse<FlowVersion>>(
+      `/flows/${flowId}/versions/list`,
+      {
+        method: 'POST',
+        body: JSON.stringify(options || {}),
+      },
+    );
+    return response;
+  }
+
+  async validateFlow(
+    flowId: string,
+    flowDefinition: InvectDefinition,
+  ): Promise<FlowValidationResult> {
+    return this.request<FlowValidationResult>(`/validate-flow`, {
+      method: 'POST',
+      body: JSON.stringify({ flowId, flowDefinition }),
+    });
+  }
+
+  // Flow run execution endpoints
+  async executeFlow(
+    flowId: string,
+    inputs?: FlowInputs,
+    options?: ExecuteFlowOptions,
+  ): Promise<FlowRunResult> {
+    const response = await this.request<FlowRunResult>(`/flows/${flowId}/run`, {
+      method: 'POST',
+      body: JSON.stringify({ inputs, options }),
+    });
+    return response;
+  }
+
+  async getFlowRun(flowRunId: string): Promise<FlowRun> {
+    const response = await this.request<FlowRun>(`/flow-runs/${flowRunId}`);
+    return response;
+  }
+
+  async getFlowRunsByFlowId(flowId: string): Promise<PaginatedResponse<FlowRun>> {
+    return this.request<PaginatedResponse<FlowRun>>(`/flows/${flowId}/flow-runs`);
+  }
+
+  async getAllFlowRuns(options?: QueryOptions<FlowRun>): Promise<PaginatedResponse<FlowRun>> {
+    return this.request<PaginatedResponse<FlowRun>>('/flow-runs/list', {
+      method: 'POST',
+      body: JSON.stringify(options || {}),
+    });
+  }
+
+  // Flow run control endpoints
+  async pauseFlowRun(
+    flowRunId: string,
+    reason?: string,
+  ): Promise<{ message: string; timestamp: string }> {
+    return this.request<{ message: string; timestamp: string }>(`/flow-runs/${flowRunId}/pause`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  }
+
+  async resumeFlowRun(flowRunId: string): Promise<{ message: string; timestamp: string }> {
+    return this.request<{ message: string; timestamp: string }>(`/flow-runs/${flowRunId}/resume`, {
+      method: 'POST',
+    });
+  }
+
+  async cancelFlowRun(flowRunId: string): Promise<{ message: string; timestamp: string }> {
+    return this.request<{ message: string; timestamp: string }>(`/flow-runs/${flowRunId}/cancel`, {
+      method: 'POST',
+    });
+  }
+
+  // Node execution endpoints
+  async getNodeExecutionsByFlowRun(flowRunId: string): Promise<NodeExecution[]> {
+    return this.request<NodeExecution[]>(`/flow-runs/${flowRunId}/node-executions`);
+  }
+
+  async getAllNodeExecutions(
+    options?: QueryOptions<NodeExecution>,
+  ): Promise<PaginatedResponse<NodeExecution>> {
+    return this.request<PaginatedResponse<NodeExecution>>('/node-executions/list', {
+      method: 'POST',
+      body: JSON.stringify(options || {}),
+    });
+  }
+
+  // React Flow endpoint
+  async getFlowReactFlowData(
+    flowId: string,
+    options?: ReactFlowDataOptions,
+  ): Promise<ReactFlowData> {
+    const params = new URLSearchParams();
+
+    if (options?.version) {
+      params.set('version', options.version);
+    }
+    if (options?.flowRunId) {
+      params.set('flowRunId', options.flowRunId);
+    }
+
+    const queryString = params.toString();
+    const url = `/flows/${flowId}/react-flow${queryString ? `?${queryString}` : ''}`;
+
+    return this.request<ReactFlowData>(url);
+  }
+
+  // Database endpoints
+  async getAvailableDatabases(): Promise<InvectDatabaseConfig[]> {
+    return this.request<InvectDatabaseConfig[]>('/node-data/databases');
+  }
+
+  // Database query endpoint (for testing individual nodes)
+  async executeSqlQuery(request: SubmitSQLQueryRequest): Promise<SQLQueryResult> {
+    return this.request<SQLQueryResult>('/node-data/sql-query', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+
+  // JS expression test endpoint (for testing data mapper expressions)
+  async testJsExpression(request: {
+    expression: string;
+    context: Record<string, unknown>;
+  }): Promise<{ success: boolean; result?: unknown; error?: string }> {
+    return this.request<{ success: boolean; result?: unknown; error?: string }>(
+      '/node-data/test-expression',
+      {
+        method: 'POST',
+        body: JSON.stringify(request),
+      },
+    );
+  }
+
+  // Data mapper test endpoint (for testing mapper expressions with mode semantics)
+  async testMapper(request: {
+    expression: string;
+    incomingData: Record<string, unknown>;
+    mode?: 'auto' | 'iterate' | 'reshape';
+  }): Promise<{
+    success: boolean;
+    result?: unknown;
+    resultType?: 'array' | 'object' | 'primitive';
+    itemCount?: number;
+    error?: string;
+  }> {
+    return this.request<{
+      success: boolean;
+      result?: unknown;
+      resultType?: 'array' | 'object' | 'primitive';
+      itemCount?: number;
+      error?: string;
+    }>('/node-data/test-mapper', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+
+  // Model test endpoint (for testing model nodes)
+  async testModelPrompt(request: SubmitPromptRequest): Promise<unknown> {
+    return this.request<unknown>('/node-data/model-query', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+
+  // Models endpoint
+  async getModels(options?: {
+    credentialId?: string;
+    provider?: string;
+  }): Promise<{ provider?: string; models: Model[]; defaultModel: string }> {
+    const params = new URLSearchParams();
+    if (options?.credentialId) {
+      params.set('credentialId', options.credentialId);
+    }
+    if (options?.provider) {
+      params.set('provider', options.provider);
+    }
+
+    const query = params.toString();
+    const endpoint = `/node-data/models${query ? `?${query}` : ''}`;
+    return this.request<{ provider?: string; models: Model[]; defaultModel: string }>(endpoint);
+  }
+
+  async getModelsForCredential(credentialId: string) {
+    return this.getModels({ credentialId });
+  }
+
+  // Node definitions endpoint
+  async getAvailableNodes(): Promise<NodeDefinition[]> {
+    return this.request<NodeDefinition[]>('/nodes');
+  }
+
+  // Test/execute a single node in isolation
+  async testNode(
+    nodeType: string,
+    params: Record<string, unknown>,
+    inputData: Record<string, unknown> = {},
+  ): Promise<{ success: boolean; output?: Record<string, unknown>; error?: string }> {
+    return this.request<{ success: boolean; output?: Record<string, unknown>; error?: string }>(
+      '/nodes/test',
+      {
+        method: 'POST',
+        body: JSON.stringify({ nodeType, params, inputData }),
+      },
+    );
+  }
+
+  /**
+   * Execute a flow up to a specific target node.
+   */
+  async executeFlowToNode(
+    flowId: string,
+    nodeId: string,
+    inputs: Record<string, unknown> = {},
+    options?: { version?: number | 'latest'; useBatchProcessing?: boolean },
+  ): Promise<FlowRunResult> {
+    return this.request<FlowRunResult>(`/flows/${flowId}/run-to-node/${nodeId}`, {
+      method: 'POST',
+      body: JSON.stringify({ inputs, options }),
+    });
+  }
+
+  async resolveNodeDefinition(
+    nodeType: string,
+    options?: {
+      nodeId?: string | null;
+      flowId?: string | null;
+      params?: Record<string, unknown>;
+      changeField?: string;
+      changeValue?: unknown;
+    },
+  ): Promise<NodeConfigUpdateResponse> {
+    const searchParams = new URLSearchParams();
+
+    if (options?.nodeId) {
+      searchParams.set('nodeId', options.nodeId);
+    }
+
+    if (options?.flowId) {
+      searchParams.set('flowId', options.flowId);
+    }
+
+    if (options?.changeField) {
+      searchParams.set('changeField', options.changeField);
+      if (options.changeValue !== undefined && options.changeValue !== null) {
+        searchParams.set('changeValue', String(options.changeValue));
+      }
+    }
+
+    if (options?.params && Object.keys(options.params).length > 0) {
+      searchParams.set('params', JSON.stringify(options.params));
+    }
+
+    const query = searchParams.toString();
+    const endpoint = `/node-definition/${encodeURIComponent(nodeType)}${query ? `?${query}` : ''}`;
+
+    return this.request<NodeConfigUpdateResponse>(endpoint);
+  }
+
+  /**
+   * Load dynamic options for a field that has `loadOptions` defined.
+   */
+  async loadFieldOptions(
+    actionId: string,
+    fieldName: string,
+    dependencyValues: Record<string, unknown>,
+  ): Promise<{
+    options: { label: string; value: string | number }[];
+    defaultValue?: string | number;
+    placeholder?: string;
+    disabled?: boolean;
+  }> {
+    const params = new URLSearchParams();
+    params.set('deps', JSON.stringify(dependencyValues));
+    return this.request(
+      `/actions/${encodeURIComponent(actionId)}/fields/${encodeURIComponent(fieldName)}/options?${params.toString()}`,
+    );
+  }
+
+  // Credential endpoints
+  async listCredentials(filters?: CredentialFilters): Promise<Credential[]> {
+    const params = new URLSearchParams();
+    if (filters?.type) {
+      params.set('type', filters.type);
+    }
+    if (filters?.authType) {
+      params.set('authType', filters.authType);
+    }
+    if (filters?.isActive !== undefined) {
+      params.set('isActive', String(filters.isActive));
+    }
+    if (filters?.includeShared) {
+      params.set('includeShared', 'true');
+    }
+
+    const query = params.toString();
+    const endpoint = `/credentials${query ? `?${query}` : ''}`;
+    return this.request<Credential[]>(endpoint, {
+      headers: {
+        ...this.getUserHeaders(),
+      },
+    });
+  }
+
+  async getCredential(id: string): Promise<Credential> {
+    return this.request<Credential>(`/credentials/${id}`, {
+      headers: {
+        ...this.getUserHeaders(),
+      },
+    });
+  }
+
+  async createCredential(input: CreateCredentialInput): Promise<Credential> {
+    return this.request<Credential>('/credentials', {
+      method: 'POST',
+      headers: {
+        ...this.getUserHeaders(),
+      },
+      body: JSON.stringify(input),
+    });
+  }
+
+  async updateCredential(id: string, input: UpdateCredentialInput): Promise<Credential> {
+    return this.request<Credential>(`/credentials/${id}`, {
+      method: 'PUT',
+      headers: {
+        ...this.getUserHeaders(),
+      },
+      body: JSON.stringify(input),
+    });
+  }
+
+  async deleteCredential(id: string): Promise<void> {
+    await this.request<void>(`/credentials/${id}`, {
+      method: 'DELETE',
+      headers: {
+        ...this.getUserHeaders(),
+      },
+    });
+  }
+
+  async testCredential(id: string): Promise<{ success: boolean; error?: string }> {
+    return this.request<{ success: boolean; error?: string }>(`/credentials/${id}/test`, {
+      method: 'POST',
+      headers: {
+        ...this.getUserHeaders(),
+      },
+    });
+  }
+
+  /**
+   * Test a credential configuration by making an HTTP request through the backend
+   */
+  async testCredentialRequest(params: {
+    url: string;
+    method?: string;
+    headers?: Record<string, string>;
+    body?: string;
+  }): Promise<{ status: number; statusText: string; ok: boolean; body: unknown }> {
+    return this.request<{ status: number; statusText: string; ok: boolean; body: unknown }>(
+      '/credentials/test-request',
+      {
+        method: 'POST',
+        headers: {
+          ...this.getUserHeaders(),
+        },
+        body: JSON.stringify(params),
+      },
+    );
+  }
+
+  async getCredentialUsage(id: string): Promise<CredentialUsage> {
+    return this.request<CredentialUsage>(`/credentials/${id}/usage`, {
+      headers: {
+        ...this.getUserHeaders(),
+      },
+    });
+  }
+
+  async getCredentialWebhookInfo(
+    id: string,
+  ): Promise<{ webhookPath: string; webhookSecret: string; fullUrl?: string } | null> {
+    try {
+      return await this.request<{ webhookPath: string; webhookSecret: string; fullUrl?: string }>(
+        `/credentials/${id}/webhook`,
+        { headers: { ...this.getUserHeaders() } },
+      );
+    } catch {
+      return null;
+    }
+  }
+
+  async enableCredentialWebhook(
+    id: string,
+  ): Promise<{ webhookPath: string; webhookSecret: string; fullUrl?: string }> {
+    return this.request<{ webhookPath: string; webhookSecret: string; fullUrl?: string }>(
+      `/credentials/${id}/webhook`,
+      {
+        method: 'POST',
+        headers: { ...this.getUserHeaders() },
+      },
+    );
+  }
+
+  // =====================================
+  // OAUTH2
+  // =====================================
+
+  async getOAuth2Providers(): Promise<OAuth2ProviderDefinition[]> {
+    return this.request<OAuth2ProviderDefinition[]>('/credentials/oauth2/providers', {
+      headers: {
+        ...this.getUserHeaders(),
+      },
+    });
+  }
+
+  async getOAuth2Provider(providerId: string): Promise<OAuth2ProviderDefinition> {
+    return this.request<OAuth2ProviderDefinition>(`/credentials/oauth2/providers/${providerId}`, {
+      headers: {
+        ...this.getUserHeaders(),
+      },
+    });
+  }
+
+  async startOAuth2Flow(params: {
+    providerId: string;
+    clientId: string;
+    clientSecret: string;
+    redirectUri: string;
+    scopes?: string[];
+    returnUrl?: string;
+    credentialName?: string;
+  }): Promise<OAuth2StartResult> {
+    return this.request<OAuth2StartResult>('/credentials/oauth2/start', {
+      method: 'POST',
+      headers: {
+        ...this.getUserHeaders(),
+      },
+      body: JSON.stringify(params),
+    });
+  }
+
+  async handleOAuth2Callback(params: {
+    code: string;
+    state: string;
+    clientId: string;
+    clientSecret: string;
+    redirectUri: string;
+  }): Promise<Credential> {
+    return this.request<Credential>('/credentials/oauth2/callback', {
+      method: 'POST',
+      headers: {
+        ...this.getUserHeaders(),
+      },
+      body: JSON.stringify(params),
+    });
+  }
+
+  async refreshOAuth2Credential(credentialId: string): Promise<Credential> {
+    return this.request<Credential>(`/credentials/${credentialId}/refresh`, {
+      method: 'POST',
+      headers: {
+        ...this.getUserHeaders(),
+      },
+    });
+  }
+
+  // =====================================
+  // AGENT TOOLS
+  // =====================================
+
+  async getAgentTools(): Promise<AgentToolDefinition[]> {
+    return this.request<AgentToolDefinition[]>('/agent/tools', {
+      headers: {
+        ...this.getUserHeaders(),
+      },
+    });
+  }
+
+  // =====================================
+  // TRIGGERS
+  // =====================================
+
+  async listTriggersForFlow(flowId: string): Promise<FlowTriggerRegistration[]> {
+    return this.request<FlowTriggerRegistration[]>(`/flows/${flowId}/triggers`, {
+      headers: { ...this.getUserHeaders() },
+    });
+  }
+
+  async getTrigger(triggerId: string): Promise<FlowTriggerRegistration> {
+    return this.request<FlowTriggerRegistration>(`/triggers/${triggerId}`, {
+      headers: { ...this.getUserHeaders() },
+    });
+  }
+
+  async createTrigger(flowId: string, input: CreateTriggerInput): Promise<FlowTriggerRegistration> {
+    return this.request<FlowTriggerRegistration>(`/flows/${flowId}/triggers`, {
+      method: 'POST',
+      headers: { ...this.getUserHeaders() },
+      body: JSON.stringify(input),
+    });
+  }
+
+  async updateTrigger(
+    triggerId: string,
+    input: UpdateTriggerInput,
+  ): Promise<FlowTriggerRegistration> {
+    return this.request<FlowTriggerRegistration>(`/triggers/${triggerId}`, {
+      method: 'PUT',
+      headers: { ...this.getUserHeaders() },
+      body: JSON.stringify(input),
+    });
+  }
+
+  async deleteTrigger(triggerId: string): Promise<void> {
+    await this.request<void>(`/triggers/${triggerId}`, {
+      method: 'DELETE',
+      headers: { ...this.getUserHeaders() },
+    });
+  }
+
+  async syncTriggersForFlow(
+    flowId: string,
+    definition: { nodes: Array<{ id: string; type: string; params?: Record<string, unknown> }> },
+  ): Promise<FlowTriggerRegistration[]> {
+    return this.request<FlowTriggerRegistration[]>(`/flows/${flowId}/triggers/sync`, {
+      method: 'POST',
+      headers: { ...this.getUserHeaders() },
+      body: JSON.stringify({ definition }),
+    });
+  }
+
+  // =====================================
+  // CHAT ASSISTANT
+  // =====================================
+
+  async getChatStatus(): Promise<{ enabled: boolean }> {
+    return this.request<{ enabled: boolean }>('/chat/status');
+  }
+
+  async sendChatMessage(
+    messages: Array<{ role: string; content: string; toolCalls?: unknown[]; toolCallId?: string }>,
+    context: {
+      flowId?: string;
+      selectedNodeId?: string;
+      viewMode?: string;
+      credentialId?: string;
+      maxSteps?: number;
+    },
+    signal?: AbortSignal,
+  ): Promise<Response> {
+    const url = `${this.baseURL}/chat`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages, context }),
+      signal,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Chat request failed: ${response.status}`);
+    }
+
+    return response;
+  }
+
+  // =====================================
+  // CHAT MESSAGE PERSISTENCE
+  // =====================================
+
+  async getChatMessages(flowId: string): Promise<
+    Array<{
+      id: string;
+      flowId: string;
+      role: 'user' | 'assistant' | 'system' | 'tool';
+      content: string;
+      toolMeta?: Record<string, unknown> | null;
+      createdAt: string;
+    }>
+  > {
+    return this.request(`/chat/messages/${flowId}`);
+  }
+
+  async saveChatMessages(
+    flowId: string,
+    messages: Array<{
+      role: 'user' | 'assistant' | 'system' | 'tool';
+      content: string;
+      toolMeta?: Record<string, unknown> | null;
+    }>,
+  ): Promise<void> {
+    return this.request(`/chat/messages/${flowId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ messages }),
+    });
+  }
+
+  async deleteChatMessages(flowId: string): Promise<void> {
+    return this.request(`/chat/messages/${flowId}`, { method: 'DELETE' });
+  }
+}
+
+export { ApiClient };

@@ -1,0 +1,636 @@
+---
+title: Building Plugins
+description: Extend Invect with custom database tables, API endpoints, lifecycle hooks, and actions.
+---
+
+## Overview
+
+Plugins are the primary extension mechanism for Invect. A single plugin can add any combination of:
+
+- **Database tables** — New tables or columns on existing Invect tables
+- **API endpoints** — Custom REST routes mounted under `/plugins/`
+- **Lifecycle hooks** — Intercept flow runs and node executions
+- **Actions** — Custom flow nodes and agent tools
+- **Error codes** — Structured error catalog for your domain
+
+Plugins are plain objects that conform to the `InvectPlugin` interface. They require no build step, no separate process, and no runtime dependency beyond `@invect/core`.
+
+```
+┌─────────────────────────────────────────────────┐
+│                   Invect Core                  │
+│                                                 │
+│  ┌───────────┐  ┌───────────┐  ┌────────────┐  │
+│  │  Plugin A  │  │  Plugin B  │  │  Plugin C  │  │
+│  │  (schema)  │  │  (hooks)   │  │  (actions) │  │
+│  └───────────┘  └───────────┘  └────────────┘  │
+│         │              │               │        │
+│    ┌────▼────┐    ┌────▼────┐     ┌────▼────┐   │
+│    │ Tables  │    │Execution│     │  Nodes  │   │
+│    │ Merged  │    │Lifecycle│     │ & Tools │   │
+│    └─────────┘    └─────────┘     └─────────┘   │
+└─────────────────────────────────────────────────┘
+```
+
+## Quick Start
+
+### 1. Define a Plugin
+
+```ts title="my-plugin.ts"
+import type { InvectPlugin } from '@invect/core';
+
+export const myPlugin: InvectPlugin = {
+  id: 'my-plugin',
+  name: 'My Plugin',
+  version: '1.0.0',
+};
+```
+
+### 2. Register It
+
+Pass plugins in the Invect config array:
+
+<Tabs groupId="framework" persist items={['Express', 'NestJS', 'Next.js']}>
+<Tab value="Express">
+```ts
+import { createInvectRouter } from '@invect/express';
+import { myPlugin } from './my-plugin';
+
+app.use('/invect', createInvectRouter({
+  baseDatabaseConfig: {
+    type: 'sqlite',
+    connectionString: 'file:./dev.db',
+    id: 'main',
+  },
+  plugins: [myPlugin],
+}));
+```
+</Tab>
+<Tab value="NestJS">
+```ts
+import { InvectModule } from '@invect/nestjs';
+import { myPlugin } from './my-plugin';
+
+@Module({
+  imports: [
+    InvectModule.forRoot({
+      baseDatabaseConfig: {
+        type: 'postgresql',
+        connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/invect',
+        id: 'main',
+      },
+      plugins: [myPlugin],
+    }),
+  ],
+})
+export class AppModule {}
+```
+</Tab>
+<Tab value="Next.js">
+```ts
+import { createInvectHandler } from '@invect/nextjs';
+import { myPlugin } from './my-plugin';
+
+const handler = createInvectHandler({
+  baseDatabaseConfig: {
+    type: 'sqlite',
+    connectionString: process.env.DATABASE_URL || 'file:./dev.db',
+    id: 'main',
+  },
+  plugins: [myPlugin],
+});
+```
+</Tab>
+</Tabs>
+
+Plugins are initialized in array order during `core.initialize()` and shut down in reverse order during `core.shutdown()`.
+
+---
+
+## Plugin Interface
+
+The full `InvectPlugin` interface:
+
+```ts
+interface InvectPlugin {
+  /** Unique plugin identifier (required). */
+  id: string;
+
+  /** Human-readable display name. */
+  name?: string;
+
+  /** Semver version string. */
+  version?: string;
+
+  /** Database schema additions. */
+  schema?: InvectPluginSchema;
+
+  /** Custom API endpoints. */
+  endpoints?: InvectPluginEndpoint[];
+
+  /** Lifecycle hook implementations. */
+  hooks?: InvectPluginHooks;
+
+  /** Custom actions (flow nodes + agent tools). */
+  actions?: ActionDefinition[];
+
+  /** Called during core.initialize(). */
+  init?: (context: InvectPluginContext) => void | Promise<void>;
+
+  /** Called during core.shutdown(). */
+  shutdown?: () => void | Promise<void>;
+
+  /** Structured error codes for this plugin. */
+  $ERROR_CODES?: Record<string, { message: string; status: number }>;
+}
+```
+
+---
+
+## Database Schema
+
+Plugins can define new tables or extend existing core tables. Schemas are declared using an abstract field definition format — the Invect CLI generates the actual Drizzle ORM files for SQLite, PostgreSQL, and MySQL.
+
+### Adding a New Table
+
+```ts
+import type { InvectPlugin } from '@invect/core';
+
+export const auditPlugin: InvectPlugin = {
+  id: 'audit',
+  schema: {
+    auditLogs: {
+      order: 200, // Controls table creation order
+      fields: {
+        id:        { type: 'uuid', primaryKey: true, defaultValue: 'uuid()' },
+        action:    { type: 'string', required: true },
+        userId:    { type: 'string', required: false, index: true },
+        metadata:  { type: 'json', required: false },
+        createdAt: { type: 'date', required: true, defaultValue: 'now()' },
+      },
+    },
+  },
+};
+```
+
+### Extending a Core Table
+
+Add columns to any built-in Invect table:
+
+```ts
+export const rbacPlugin: InvectPlugin = {
+  id: 'rbac',
+  schema: {
+    // Same key as the core table name
+    flows: {
+      fields: {
+        ownerId:  { type: 'string', required: false },
+        tenantId: { type: 'string', required: false, index: true },
+      },
+    },
+    flowRuns: {
+      fields: {
+        executedBy: { type: 'string', required: false },
+      },
+    },
+  },
+};
+```
+
+Plugin fields are merged with core fields during schema generation. Conflicts (two plugins defining the same field on the same table) are caught and reported as errors.
+
+### Field Types
+
+| Type | SQLite | PostgreSQL | MySQL | Notes |
+|------|--------|------------|-------|-------|
+| `'string'` | `text` | `text` | `varchar(255)` | General-purpose text |
+| `'text'` | `text` | `text` | `text` | Long-form content |
+| `'number'` | `integer` | `integer` | `int` | Integer values |
+| `'bigint'` | `integer` | `bigint` | `bigint` | Large integers |
+| `'boolean'` | `integer` | `boolean` | `boolean` | True/false |
+| `'date'` | `text` | `timestamp` | `timestamp` | ISO date strings / timestamps |
+| `'json'` | `text` | `jsonb` | `json` | Serialized JSON |
+| `'uuid'` | `text` | `uuid` | `varchar(36)` | UUID strings |
+| `string[]` | — | enum | enum | Enum values, e.g. `['a','b','c']` |
+
+### Field Options
+
+```ts
+{
+  type: 'string',
+  primaryKey: true,        // Mark as primary key
+  required: true,          // NOT NULL constraint
+  unique: true,            // UNIQUE constraint
+  index: true,             // Create an index
+  defaultValue: 'now()',   // Default: 'now()', 'uuid()', or a literal
+  references: {            // Foreign key reference
+    table: 'flows',
+    column: 'id',
+  },
+  typeAnnotation: 'MyType', // TypeScript type override in generated code
+}
+```
+
+### Generating Schema Files
+
+After defining your plugin schema, run the CLI to generate dialect-specific Drizzle files:
+
+```bash
+npx invect generate
+```
+
+This reads the core schema plus all plugin schemas and produces:
+
+- `schema-sqlite.ts`
+- `schema-postgres.ts`
+- `schema-mysql.ts`
+
+### Previewing Changes
+
+Use `schema:diff` to see what a plugin would add without writing files:
+
+```bash
+npx invect schema:diff
+```
+
+---
+
+## API Endpoints
+
+Plugins can define custom REST endpoints. All framework adapters (Express, NestJS, Next.js) automatically mount these under the `/plugins/` prefix.
+
+```ts
+export const analyticsPlugin: InvectPlugin = {
+  id: 'analytics',
+  endpoints: [
+    {
+      method: 'GET',
+      path: '/analytics/summary',
+      isPublic: true,
+      handler: async (ctx) => {
+        // ctx.body, ctx.params, ctx.query, ctx.headers, ctx.identity
+        return {
+          status: 200,
+          body: { totalRuns: 42, successRate: 0.95 },
+        };
+      },
+    },
+    {
+      method: 'GET',
+      path: '/analytics/flows/:flowId',
+      handler: async (ctx) => {
+        const { flowId } = ctx.params;
+        return {
+          status: 200,
+          body: { flowId, executions: 17 },
+        };
+      },
+    },
+    {
+      method: 'POST',
+      path: '/analytics/export',
+      permission: 'flow-run:read' as any,
+      handler: async (ctx) => {
+        // Only accessible if the user has flow-run:read permission
+        return { status: 200, body: { exported: true } };
+      },
+    },
+  ],
+};
+```
+
+These endpoints are available at:
+
+| Framework | URL |
+|-----------|-----|
+| Express | `GET /invect/plugins/analytics/summary` |
+| NestJS | `GET /invect/plugins/analytics/summary` |
+| Next.js | `GET /api/invect/plugins/analytics/summary` |
+
+### Endpoint Context
+
+Every handler receives a `PluginEndpointContext` object:
+
+```ts
+interface PluginEndpointContext {
+  body: Record<string, unknown>;
+  params: Record<string, string>;
+  query: Record<string, string | undefined>;
+  headers: Record<string, string | undefined>;
+  identity: InvectIdentity | null;
+  request: Request;
+}
+```
+
+### Response Format
+
+Handlers return one of:
+
+```ts
+// JSON response
+{ status: 200, body: { data: 'value' } }
+
+// Streaming response (SSE)
+{ status: 200, stream: readableStream }
+
+// Raw Web Response
+new Response('raw body', { status: 200 })
+```
+
+---
+
+## Lifecycle Hooks
+
+Hooks let plugins observe and modify the execution engine at key points. All hooks are optional — implement only what you need.
+
+### Available Hooks
+
+| Hook | When It Runs | Can Modify |
+|------|-------------|------------|
+| `beforeFlowRun` | Before a flow execution starts | Cancel the run, modify inputs |
+| `afterFlowRun` | After a flow completes (success or failure) | Observe results |
+| `beforeNodeExecute` | Before each node executes | Skip the node, override params |
+| `afterNodeExecute` | After each node completes | Override output |
+| `onRequest` | Before any API request is processed | Modify or reject requests |
+| `onResponse` | After any API response is produced | Modify the response |
+| `onAuthorize` | During authorization checks | Override auth decisions |
+
+### Flow Execution Hooks
+
+```ts
+export const loggingPlugin: InvectPlugin = {
+  id: 'logging',
+  hooks: {
+    beforeFlowRun: async (ctx) => {
+      console.log(`Flow ${ctx.flowId} starting`, {
+        flowRunId: ctx.flowRunId,
+        inputs: ctx.inputs,
+      });
+
+      // Cancel a flow run:
+      // return { cancel: true, reason: 'Maintenance mode' };
+
+      // Modify inputs:
+      // return { inputs: { ...ctx.inputs, injected: true } };
+
+      // Allow execution to proceed:
+      return {};
+    },
+
+    afterFlowRun: async (ctx) => {
+      console.log(`Flow ${ctx.flowId} finished`, {
+        status: ctx.status,      // 'SUCCESS' | 'FAILED'
+        duration: ctx.duration,
+        outputs: ctx.outputs,
+        error: ctx.error,
+      });
+    },
+  },
+};
+```
+
+### Node Execution Hooks
+
+```ts
+export const nodeMonitorPlugin: InvectPlugin = {
+  id: 'node-monitor',
+  hooks: {
+    beforeNodeExecute: async (ctx) => {
+      console.log(`Node ${ctx.nodeId} (${ctx.nodeType}) starting`);
+
+      // Skip this node:
+      // return { skip: true };
+
+      // Override params:
+      // return { params: { ...ctx.params, timeout: 5000 } };
+
+      return {};
+    },
+
+    afterNodeExecute: async (ctx) => {
+      console.log(`Node ${ctx.nodeId} completed`, {
+        status: ctx.status,    // 'SUCCESS' | 'FAILED'
+        duration: ctx.duration,
+      });
+
+      // Override node output:
+      // return { output: { ...ctx.output, extra: 'data' } };
+
+      return {};
+    },
+  },
+};
+```
+
+### Request Hooks
+
+```ts
+export const rateLimitPlugin: InvectPlugin = {
+  id: 'rate-limit',
+  hooks: {
+    onRequest: async (ctx) => {
+      const ip = ctx.headers['x-forwarded-for'] || 'unknown';
+      if (isRateLimited(ip)) {
+        return {
+          status: 429,
+          body: { error: 'Too many requests' },
+        };
+      }
+      // Return null to continue normal processing
+      return null;
+    },
+  },
+};
+```
+
+### Hook Execution Order
+
+When multiple plugins define the same hook:
+
+- **`beforeFlowRun`** — Plugins run in registration order. If any plugin returns `{ cancel: true }`, the flow is cancelled and no further plugins are called.
+- **`afterFlowRun`** — All plugins run. Errors in individual hooks are caught and logged but never affect the result.
+- **`beforeNodeExecute`** — Plugins run in registration order. If any plugin returns `{ skip: true }`, the node is skipped and no further plugins are called.
+- **`afterNodeExecute`** — All plugins run. If multiple plugins return `{ output }`, the last one wins.
+- **`onAuthorize`** — The first plugin that returns a non-null result determines the outcome.
+
+---
+
+## Custom Actions
+
+Plugins can register custom actions that appear as both flow nodes in the editor and tools for AI agents:
+
+```ts
+import { defineAction } from '@invect/core';
+import { z } from 'zod';
+
+export const weatherPlugin: InvectPlugin = {
+  id: 'weather',
+  actions: [
+    defineAction({
+      id: 'weather.get_forecast',
+      name: 'Get Weather Forecast',
+      description: 'Fetches the weather forecast for a location',
+      provider: {
+        id: 'weather',
+        name: 'Weather',
+        icon: 'Cloud',
+      },
+      params: {
+        schema: z.object({
+          city: z.string().describe('City name'),
+          days: z.number().default(3).describe('Forecast days'),
+        }),
+        fields: [
+          { name: 'city', label: 'City', type: 'text', required: true },
+          { name: 'days', label: 'Days', type: 'number', defaultValue: 3 },
+        ],
+      },
+      async execute(params, context) {
+        const data = await fetchWeather(params.city, params.days);
+        return { success: true, output: data };
+      },
+    }),
+  ],
+};
+```
+
+Plugin actions are registered during `core.initialize()` and are immediately available in the flow editor palette and agent tool selector.
+
+---
+
+## Init & Shutdown
+
+For plugins that need setup or cleanup:
+
+```ts
+export const cachePlugin: InvectPlugin = {
+  id: 'cache',
+
+  init: async (context) => {
+    // context.config — The full Invect config object
+    // context.logger — Scoped logger
+    // context.registerAction(action) — Register additional actions dynamically
+    await connectToRedis(context.config.redisUrl);
+    context.logger.info('Cache plugin connected');
+  },
+
+  shutdown: async () => {
+    await disconnectFromRedis();
+  },
+};
+```
+
+The `init` function receives an `InvectPluginContext` with:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `config` | `Record<string, unknown>` | The full Invect configuration |
+| `logger` | `Logger` | Structured logger |
+| `registerAction` | `(action) => void` | Register actions at runtime |
+
+---
+
+## Error Codes
+
+Plugins can declare structured error codes for consistent error handling:
+
+```ts
+export const billingPlugin: InvectPlugin = {
+  id: 'billing',
+  $ERROR_CODES: {
+    'billing:quota_exceeded': {
+      message: 'Monthly flow run quota exceeded',
+      status: 429,
+    },
+    'billing:payment_required': {
+      message: 'Payment method required',
+      status: 402,
+    },
+  },
+};
+```
+
+Error codes from all plugins are merged and accessible via `core.getPluginErrorCodes()` (not yet exposed as an API endpoint by default — use a plugin endpoint if needed).
+
+---
+
+## Full Example: Audit Log Plugin
+
+A complete plugin that adds a database table, records every flow run, and exposes a query endpoint:
+
+```ts title="plugins/audit-plugin.ts"
+import type { InvectPlugin, InvectPluginContext } from '@invect/core';
+
+let db: any; // Your database connection
+
+export const auditPlugin: InvectPlugin = {
+  id: 'audit',
+  name: 'Audit Log',
+  version: '1.0.0',
+
+  // 1. Add an audit_logs table
+  schema: {
+    auditLogs: {
+      order: 200,
+      fields: {
+        id:        { type: 'uuid', primaryKey: true, defaultValue: 'uuid()' },
+        event:     { type: 'string', required: true, index: true },
+        flowId:    { type: 'string', required: false, references: { table: 'flows', column: 'id' } },
+        flowRunId: { type: 'string', required: false },
+        userId:    { type: 'string', required: false, index: true },
+        metadata:  { type: 'json', required: false },
+        createdAt: { type: 'date', required: true, defaultValue: 'now()' },
+      },
+    },
+  },
+
+  // 2. Hook into flow execution lifecycle
+  hooks: {
+    beforeFlowRun: async (ctx) => {
+      await db.insert('audit_logs', {
+        event: 'flow_run.started',
+        flowId: ctx.flowId,
+        flowRunId: ctx.flowRunId,
+      });
+      return {};
+    },
+
+    afterFlowRun: async (ctx) => {
+      await db.insert('audit_logs', {
+        event: `flow_run.${ctx.status.toLowerCase()}`,
+        flowId: ctx.flowId,
+        flowRunId: ctx.flowRunId,
+        metadata: { duration: ctx.duration, error: ctx.error },
+      });
+    },
+  },
+
+  // 3. Expose a query endpoint
+  endpoints: [
+    {
+      method: 'GET',
+      path: '/audit/logs',
+      handler: async (ctx) => {
+        const flowId = ctx.query.flowId;
+        const logs = await db.query('audit_logs', { flowId });
+        return { status: 200, body: logs };
+      },
+    },
+  ],
+
+  // 4. Initialize with database connection
+  init: async (context: InvectPluginContext) => {
+    context.logger.info('Audit plugin initialized');
+  },
+};
+```
+
+---
+
+## Tips
+
+- **Plugin IDs must be unique.** Invect throws on duplicate IDs at construction time.
+- **Hooks are fail-safe.** If a `beforeFlowRun` hook throws, the flow is cancelled. All `after*` hooks swallow errors and log warnings.
+- **Shutdown runs in reverse order.** If plugins A, B, C are registered, shutdown order is C → B → A.
+- **Schema fields cannot override core fields.** Plugins can only *add* new columns to core tables, not redefine existing ones.
+- **Endpoints are framework-agnostic.** Write once, works on Express, NestJS, and Next.js.
+- **Actions are dual-purpose.** Every plugin action is automatically available as both a flow node and an agent tool.

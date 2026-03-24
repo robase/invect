@@ -1,0 +1,53 @@
+{
+  "name": "acme-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "db:push": "drizzle-kit push",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "tsx db/seed.ts",
+    "invect:generate": "npx invect generate --config lib/invect.config.ts --output db --dialect postgresql --yes",
+    "invect:migrate": "npx invect migrate --config lib/invect.config.ts --push --yes",
+    "setup": "pnpm db:push && pnpm db:seed",
+    "typecheck": "tsc --noEmit",
+    "lint": "pnpm --dir ../.. exec eslint examples/nextjs-drizzle-auth-rbac/app examples/nextjs-drizzle-auth-rbac/lib examples/nextjs-drizzle-auth-rbac/db --config examples/nextjs-drizzle-auth-rbac/eslint.config.mjs",
+    "test": "echo \"No tests configured\"",
+    "test:e2e": "npx playwright test --config ../../playwright/playwright.config.ts --project nextjs-drizzle-auth-rbac"
+  },
+  "dependencies": {
+    "@invect/core": "workspace:*",
+    "@invect/frontend": "workspace:*",
+    "@invect/nextjs": "workspace:*",
+    "@invect/rbac": "workspace:*",
+    "@invect/user-auth": "workspace:*",
+    "@tailwindcss/postcss": "^4.1.12",
+    "autoprefixer": "^10.4.21",
+    "better-auth": "^1.5.4",
+    "pg": "^8.13.1",
+    "drizzle-orm": "^0.44.4",
+    "lucide-react": "^0.468.0",
+    "next": "^15.4.6",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^4.1.12"
+  },
+  "devDependencies": {
+    "@invect/cli": "workspace:*",
+    "@playwright/test": "^1.52.0",
+    "@types/pg": "^8.11.10",
+    "@types/node": "^20",
+    "@types/react": "18.3.7",
+    "@types/react-dom": "^18.3.7",
+    "drizzle-kit": "^0.31.4",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.5",
+    "tsx": "^4.19.4",
+    "typescript": "^5"
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "name": "@invect/webhooks",
+  "version": "0.0.1",
+  "description": "Webhook trigger plugin for Invect — adds webhook management, ingestion, signature verification, and a dedicated webhooks UI page",
+  "main": "dist/backend/index.cjs",
+  "module": "dist/backend/index.mjs",
+  "types": "dist/backend/index.d.ts",
+  "type": "module",
+  "files": [
+    "dist/**/*"
+  ],
+  "scripts": {
+    "build": "tsdown && tsc --emitDeclarationOnly --outDir dist",
+    "prepublishOnly": "pnpm run build",
+    "build:w": "tsdown --watch",
+    "dev": "tsdown --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix"
+  },
+  "keywords": [
+    "invect",
+    "webhooks",
+    "triggers",
+    "plugin",
+    "workflow"
+  ],
+  "author": "Invect Team",
+  "license": "MIT",
+  "dependencies": {
+    "@invect/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "@invect/frontend": ">=2.0.0",
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0",
+    "react-router": ">=7.0.0",
+    "@tanstack/react-query": ">=5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    },
+    "react-router": {
+      "optional": true
+    },
+    "@tanstack/react-query": {
+      "optional": true
+    },
+    "@invect/frontend": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@invect/frontend": "workspace:*",
+    "@tanstack/react-query": "^5.0.0",
+    "@types/node": "^20.11.20",
+    "@types/react": "18.3.7",
+    "@types/react-dom": "18.3.7",
+    "lucide-react": "^0.475.0",
+    "tsdown": "^0.21.1",
+    "typescript": "^5.3.3"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/backend/index.d.ts",
+      "import": "./dist/backend/index.mjs",
+      "require": "./dist/backend/index.cjs"
+    },
+    "./ui": {
+      "types": "./dist/frontend/index.d.ts",
+      "import": "./dist/frontend/index.mjs",
+      "require": "./dist/frontend/index.cjs"
+    },
+    "./types": {
+      "types": "./dist/shared/types.d.ts",
+      "import": "./dist/shared/types.mjs",
+      "require": "./dist/shared/types.cjs"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/robase/flow-backend.git",
+    "directory": "pkg/plugins/webhooks"
+  }
+}

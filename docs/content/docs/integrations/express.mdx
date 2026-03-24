@@ -1,0 +1,120 @@
+---
+title: Express
+description: Mount Invect into an Express application.
+---
+
+## Installation
+
+```bash
+npm install @invect/core @invect/express
+```
+
+## Setup
+
+The Express adapter provides a router factory. Mount it at any path in your app:
+
+```ts title="server.ts"
+import express from 'express';
+import cors from 'cors';
+import { createInvectRouter } from '@invect/express';
+
+const app = express();
+app.use(cors());
+
+// Mount alongside your existing routes
+app.use('/api/admin', adminRouter);
+app.use('/api/invect', createInvectRouter({
+  baseDatabaseConfig: {
+    type: 'sqlite',
+    connectionString: 'file:./dev.db',
+    id: 'main',
+  },
+}));
+
+app.listen(3000);
+```
+
+## Configuration
+
+`createInvectRouter` accepts the full `InvectConfig` object:
+
+```ts
+createInvectRouter({
+  // Required
+  baseDatabaseConfig: {
+    type: 'sqlite',            // 'sqlite' | 'postgresql' | 'mysql'
+    connectionString: string,  // Database connection URL
+    id: string,                // Identifier for this database
+  },
+
+  // Optional
+  plugins?: InvectPlugin[],   // Plugins to load
+  auth?: { ... },              // Authentication/authorization config
+  chat?: { ... },              // AI chat assistant config
+  logging?: { ... },           // Log level configuration
+  defaultCredentials?: [...],  // Credentials to seed on startup
+});
+```
+
+## How It Works
+
+The router creates an `Invect` core instance internally. On creation:
+
+1. The core initializes and connects to the database
+2. All built-in actions are registered
+3. Batch polling starts automatically
+
+Every route is a thin wrapper around a core method:
+
+```ts
+// Internally, the router does:
+router.post('/flows/:flowId/run', async (req, res) => {
+  const result = await core.startFlowRun(req.params.flowId, req.body.inputs);
+  res.json(result);
+});
+```
+
+## API Endpoints
+
+The router exposes 30+ endpoints. Key ones:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/flows` | List all flows |
+| `POST` | `/flows` | Create a flow |
+| `POST` | `/flows/:id/run` | Execute a flow |
+| `GET` | `/flow-runs/:id` | Get execution details |
+| `GET` | `/agent/tools` | List available agent tools |
+| `GET` | `/credentials` | List credentials |
+| `POST` | `/credentials/oauth2/start` | Start OAuth2 flow |
+
+## Embedding in Admin Panels
+
+A common pattern is mounting Invect alongside your existing admin panel:
+
+```ts title="admin-app.ts"
+import { createInvectRouter } from '@invect/express';
+
+// Your existing admin API
+app.use('/admin/api', adminRouter);
+
+// Invect workflows — same server, same database
+app.use('/admin/workflows', createInvectRouter({
+  baseDatabaseConfig: {
+    type: 'sqlite',
+    connectionString: process.env.DATABASE_URL || 'file:./dev.db',
+    id: 'main',
+  },
+}));
+```
+
+Then in your admin frontend, drop in the React component:
+
+```tsx title="admin-workflows.tsx"
+import { Invect } from '@invect/frontend';
+import '@invect/frontend/styles';
+
+export function WorkflowsPage() {
+  return <Invect apiBaseUrl="/admin/workflows" />;
+}
+```

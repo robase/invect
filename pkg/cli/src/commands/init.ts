@@ -1,0 +1,462 @@
+/**
+ * `npx invect init` — Initialize Invect in your project
+ *
+ * Interactive setup wizard that:
+ *   1. Detects your framework (Express, NestJS, Next.js)
+ *   2. Installs @invect/core + framework adapter
+ *   3. Creates invect.config.ts
+ *   4. Generates initial database schema files
+ *   5. Creates a starter route handler
+ *
+ * Usage:
+ *   npx invect init
+ *   npx invect init --framework express
+ *   npx invect init --database sqlite
+ */
+
+import { Command } from 'commander';
+import path from 'node:path';
+import fs from 'node:fs';
+import { execSync } from 'node:child_process';
+import pc from 'picocolors';
+import prompts from 'prompts';
+
+// =============================================================================
+// Constants
+// =============================================================================
+
+const FRAMEWORKS = [
+  {
+    name: 'Express',
+    id: 'express',
+    dependency: 'express',
+    adapterPackage: '@invect/express',
+    configPaths: null,
+  },
+  {
+    name: 'NestJS',
+    id: 'nestjs',
+    dependency: '@nestjs/core',
+    adapterPackage: '@invect/nestjs',
+    configPaths: ['nest-cli.json'],
+  },
+  {
+    name: 'Next.js',
+    id: 'nextjs',
+    dependency: 'next',
+    adapterPackage: '@invect/nextjs',
+    configPaths: ['next.config.js', 'next.config.ts', 'next.config.mjs'],
+  },
+  {
+    name: 'Other / Custom',
+    id: 'other',
+    dependency: null,
+    adapterPackage: null,
+    configPaths: null,
+  },
+] as const;
+
+type Framework = (typeof FRAMEWORKS)[number];
+
+const DATABASES = [
+  { name: 'SQLite (better-sqlite3)', id: 'sqlite', dependency: 'better-sqlite3' },
+  { name: 'PostgreSQL', id: 'postgresql', dependency: 'postgres' },
+  { name: 'MySQL', id: 'mysql', dependency: 'mysql2' },
+] as const;
+
+type Database = (typeof DATABASES)[number];
+
+// =============================================================================
+// Command
+// =============================================================================
+
+export const initCommand = new Command('init')
+  .description('Initialize Invect in your project')
+  .option('--framework <framework>', 'Framework to use (express, nestjs, nextjs)')
+  .option('--database <database>', 'Database to use (sqlite, postgresql, mysql)')
+  .option(
+    '--package-manager <pm>',
+    'Package manager (npm, pnpm, yarn, bun)',
+  )
+  .action(async (options: { framework?: string; database?: string; packageManager?: string }) => {
+    // Header
+    console.log(
+      '\n' +
+        [
+          `   ${pc.bold('Invect CLI')} ${pc.dim('(v0.1.0)')}`,
+          `   ${pc.gray("Let's set up Invect in your project.")}`,
+        ].join('\n') +
+        '\n',
+    );
+
+    // Check package.json exists
+    const pkgPath = path.join(process.cwd(), 'package.json');
+    if (!fs.existsSync(pkgPath)) {
+      console.error(
+        pc.red('✗ No package.json found in the current directory.\n') +
+          pc.dim('  Please initialize a project first (e.g., npm init).\n'),
+      );
+      process.exit(1);
+    }
+
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+    const allDeps = { ...pkg.dependencies, ...pkg.devDependencies };
+
+    let stepNum = 0;
+    const step = (text: string) => {
+      stepNum++;
+      console.log(pc.white(`\n${stepNum}. ${text}`));
+    };
+
+    // 1. Detect or ask for package manager
+    const pm = options.packageManager || detectPackageManager();
+    console.log(pc.dim(`  Package manager: ${pm}`));
+
+    // 2. Detect or ask for framework
+    step('Select Framework');
+
+    let framework: Framework;
+    if (options.framework) {
+      framework = FRAMEWORKS.find((f) => f.id === options.framework) || FRAMEWORKS[FRAMEWORKS.length - 1]!;
+    } else {
+      // Try auto-detection first
+      const detected = FRAMEWORKS.find((f) => f.dependency && f.dependency in allDeps);
+      if (detected) {
+        console.log(pc.dim(`  Detected: ${detected.name}`));
+        const { useDetected } = await prompts({
+          type: 'confirm',
+          name: 'useDetected',
+          message: `Use detected framework ${pc.cyan(detected.name)}?`,
+          initial: true,
+        });
+        framework = useDetected ? detected : await askFramework();
+      } else {
+        framework = await askFramework();
+      }
+    }
+
+    console.log(pc.dim(`  Framework: ${framework.name}`));
+
+    // 3. Select database
+    step('Select Database');
+
+    let database: Database;
+    if (options.database) {
+      database = DATABASES.find((d) => d.id === options.database) || DATABASES[0]!;
+    } else {
+      // Try auto-detection
+      const detected = DATABASES.find((d) => d.dependency in allDeps);
+      if (detected) {
+        console.log(pc.dim(`  Detected: ${detected.name}`));
+        database = detected;
+      } else {
+        database = await askDatabase();
+      }
+    }
+
+    console.log(pc.dim(`  Database: ${database.name}`));
+
+    // 4. Install dependencies
+    step('Install Dependencies');
+
+    const depsToInstall: string[] = ['@invect/core', 'drizzle-orm'];
+    const devDepsToInstall: string[] = ['drizzle-kit', '@invect/cli'];
+
+    // Database driver
+    if (!(database.dependency in allDeps)) {
+      depsToInstall.push(database.dependency);
+    }
+
+    // Framework adapter
+    if (framework.adapterPackage && !(framework.adapterPackage in allDeps)) {
+      depsToInstall.push(framework.adapterPackage);
+    }
+
+    // Frontend package
+    if (framework.id !== 'other') {
+      if (!('@invect/frontend' in allDeps)) {
+        depsToInstall.push('@invect/frontend');
+      }
+    }
+
+    console.log(pc.dim(`  Dependencies: ${depsToInstall.join(', ')}`));
+    if (devDepsToInstall.length > 0) {
+      console.log(pc.dim(`  Dev dependencies: ${devDepsToInstall.join(', ')}`));
+    }
+
+    const { shouldInstall } = await prompts({
+      type: 'confirm',
+      name: 'shouldInstall',
+      message: `Install packages using ${pc.bold(pm)}?`,
+      initial: true,
+    });
+
+    if (shouldInstall) {
+      try {
+        const installCmd = getInstallCommand(pm, depsToInstall, false);
+        console.log(pc.dim(`  $ ${installCmd}`));
+        execSync(installCmd, { stdio: 'inherit', cwd: process.cwd() });
+
+        if (devDepsToInstall.length > 0) {
+          const devCmd = getInstallCommand(pm, devDepsToInstall, true);
+          console.log(pc.dim(`  $ ${devCmd}`));
+          execSync(devCmd, { stdio: 'inherit', cwd: process.cwd() });
+        }
+      } catch {
+        console.error(pc.yellow('  ⚠ Package installation failed. You can install manually later.'));
+      }
+    }
+
+    // 5. Create config file
+    step('Create Configuration');
+
+    const configCode = generateConfigFile(framework, database);
+    const configDir = fs.existsSync(path.join(process.cwd(), 'src')) ? 'src' : '.';
+    const configPath = path.join(process.cwd(), configDir, 'invect.config.ts');
+
+    if (fs.existsSync(configPath)) {
+      console.log(pc.yellow(`  ⚠ ${path.relative(process.cwd(), configPath)} already exists — skipping`));
+    } else {
+      fs.mkdirSync(path.dirname(configPath), { recursive: true });
+      fs.writeFileSync(configPath, configCode, 'utf-8');
+      console.log(pc.green(`  ✓ Created ${path.relative(process.cwd(), configPath)}`));
+    }
+
+    // 6. Generate encryption key
+    step('Generate Encryption Key');
+
+    const crypto = await import('node:crypto');
+    const encryptionKey = crypto.randomBytes(32).toString('base64');
+
+    // Check for .env file
+    const envPath = path.join(process.cwd(), '.env');
+    const envLine = `INVECT_ENCRYPTION_KEY="${encryptionKey}"`;
+
+    if (fs.existsSync(envPath)) {
+      const envContent = fs.readFileSync(envPath, 'utf-8');
+      if (!envContent.includes('INVECT_ENCRYPTION_KEY')) {
+        fs.appendFileSync(envPath, `\n${envLine}\n`);
+        console.log(pc.green(`  ✓ Added INVECT_ENCRYPTION_KEY to .env`));
+      } else {
+        console.log(pc.dim('  ℹ INVECT_ENCRYPTION_KEY already set in .env'));
+      }
+    } else {
+      fs.writeFileSync(envPath, `${envLine}\n`);
+      console.log(pc.green(`  ✓ Created .env with INVECT_ENCRYPTION_KEY`));
+    }
+
+    // 7. Generate database schema
+    step('Generate Database Schema');
+
+    const { shouldGenerate } = await prompts({
+      type: 'confirm',
+      name: 'shouldGenerate',
+      message: 'Generate database schema files now?',
+      initial: true,
+    });
+
+    if (shouldGenerate) {
+      try {
+        const { generateAction } = await import('./generate.js');
+        const schemaDir = fs.existsSync(path.join(process.cwd(), 'src'))
+          ? './src/database'
+          : './database';
+        await generateAction({
+          config: configPath,
+          output: schemaDir,
+          yes: true,
+        });
+      } catch (error) {
+        console.error(
+          pc.yellow('  ⚠ Schema generation failed. You can run it manually later:') +
+            '\n' +
+            pc.dim(`    npx invect generate\n`),
+        );
+      }
+    } else {
+      console.log(
+        pc.dim(
+          '  Skipped. Run ' +
+            pc.cyan('npx invect generate') +
+            ' when ready.',
+        ),
+      );
+    }
+
+    // 8. Optionally run migration for SQLite (immediate usability)
+    if (database.id === 'sqlite' && shouldGenerate) {
+      const { shouldMigrate } = await prompts({
+        type: 'confirm',
+        name: 'shouldMigrate',
+        message: 'Run database migration now? (creates the SQLite database)',
+        initial: true,
+      });
+
+      if (shouldMigrate) {
+        try {
+          const { migrateAction } = await import('./migrate.js');
+          await migrateAction({
+            config: configPath,
+            yes: true,
+            push: true, // Use push for quick dev setup
+          });
+        } catch {
+          console.error(
+            pc.yellow('  ⚠ Migration failed. You can run it manually:') +
+              '\n' +
+              pc.dim('    npx invect migrate\n'),
+          );
+        }
+      }
+    }
+
+    // 9. Summary
+    console.log(pc.bold(pc.green('\n✓ Invect initialized successfully!\n')));
+
+    console.log(pc.dim('  Next steps:'));
+    const nextSteps: string[] = [];
+    let n = 1;
+
+    nextSteps.push(`  ${n++}. Review ${pc.cyan(path.relative(process.cwd(), configPath))}`);
+
+    if (database.id !== 'sqlite') {
+      nextSteps.push(
+        `  ${n++}. Set ${pc.cyan('DATABASE_URL')} in your .env file`,
+      );
+    }
+
+    if (!shouldGenerate) {
+      nextSteps.push(`  ${n++}. Run ${pc.cyan('npx invect generate')} to create schema files`);
+    }
+    nextSteps.push(`  ${n++}. Run ${pc.cyan('npx invect migrate')} to apply the schema`);
+
+    if (framework.id === 'express') {
+      nextSteps.push(`  ${n++}. Mount the router: ${pc.cyan("app.use('/invect', createInvectRouter(config))")}`);
+    } else if (framework.id === 'nextjs') {
+      nextSteps.push(`  ${n++}. Create a catch-all route: ${pc.cyan('app/api/invect/[...invect]/route.ts')}`);
+    } else if (framework.id === 'nestjs') {
+      nextSteps.push(`  ${n++}. Import ${pc.cyan('InvectModule.forRoot(config)')} in your AppModule`);
+    }
+
+    for (const s of nextSteps) {
+      console.log(s);
+    }
+
+    console.log('');
+  });
+
+// =============================================================================
+// Prompts
+// =============================================================================
+
+async function askFramework(): Promise<Framework> {
+  const { framework } = await prompts({
+    type: 'select',
+    name: 'framework',
+    message: 'Which framework are you using?',
+    choices: FRAMEWORKS.map((f) => ({
+      title: f.name,
+      value: f.id,
+    })),
+  });
+
+  if (!framework) {
+    console.log(pc.dim('\n  Cancelled.\n'));
+    process.exit(0);
+  }
+
+  return FRAMEWORKS.find((f) => f.id === framework)!;
+}
+
+async function askDatabase(): Promise<Database> {
+  const { database } = await prompts({
+    type: 'select',
+    name: 'database',
+    message: 'Which database will you use?',
+    choices: DATABASES.map((d) => ({
+      title: d.name,
+      value: d.id,
+    })),
+  });
+
+  if (!database) {
+    console.log(pc.dim('\n  Cancelled.\n'));
+    process.exit(0);
+  }
+
+  return DATABASES.find((d) => d.id === database)!;
+}
+
+// =============================================================================
+// Generators
+// =============================================================================
+
+function generateConfigFile(framework: Framework, database: Database): string {
+  const dbConfigMap: Record<string, string> = {
+    sqlite: `  baseDatabaseConfig: {
+    type: 'sqlite',
+    connectionString: 'file:./dev.db',
+  },`,
+    postgresql: `  baseDatabaseConfig: {
+    type: 'postgresql',
+    connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/invect',
+  },`,
+    mysql: `  baseDatabaseConfig: {
+    type: 'mysql',
+    connectionString: process.env.DATABASE_URL || 'mysql://root@localhost:3306/invect',
+  },`,
+  };
+
+  const adapterImport = framework.adapterPackage
+    ? `// import { ... } from '${framework.adapterPackage}';\n`
+    : '';
+
+  return `/**
+ * Invect Configuration
+ *
+ * This file is read by the Invect CLI for schema generation
+ * and by your application at runtime.
+ *
+ * Docs: https://invect.dev/docs
+ */
+
+${adapterImport}export default {
+${dbConfigMap[database.id]}
+
+  // Add plugins here
+  // plugins: [],
+
+  // AI provider configuration
+  // ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+  // OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+
+  // Encryption key for credential storage (auto-generated)
+  // INVECT_ENCRYPTION_KEY: process.env.INVECT_ENCRYPTION_KEY,
+};
+`;
+}
+
+// =============================================================================
+// Utilities
+// =============================================================================
+
+function detectPackageManager(): string {
+  const cwd = process.cwd();
+  if (fs.existsSync(path.join(cwd, 'pnpm-lock.yaml'))) return 'pnpm';
+  if (fs.existsSync(path.join(cwd, 'bun.lockb')) || fs.existsSync(path.join(cwd, 'bun.lock'))) return 'bun';
+  if (fs.existsSync(path.join(cwd, 'yarn.lock'))) return 'yarn';
+  return 'npm';
+}
+
+function getInstallCommand(pm: string, packages: string[], isDev: boolean): string {
+  const flags: Record<string, string> = {
+    npm: isDev ? '--save-dev' : '',
+    pnpm: isDev ? '--save-dev' : '',
+    yarn: isDev ? '--dev' : '',
+    bun: isDev ? '--dev' : '',
+  };
+
+  const flag = flags[pm] || '';
+  const cmd = pm === 'npm' ? 'npm install' : `${pm} add`;
+  return `${cmd} ${flag} ${packages.join(' ')}`.replace(/\s+/g, ' ').trim();
+}

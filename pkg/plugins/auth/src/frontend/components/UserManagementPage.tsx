@@ -1,0 +1,50 @@
+/**
+ * UserManagementPage — Standalone page for user management.
+ *
+ * Wraps the existing UserManagement component in a page layout
+ * consistent with the Access Control page style. Registered as a
+ * plugin route contribution at '/users'.
+ */
+
+import { Users } from 'lucide-react';
+import { useApiClient, PageLayout } from '@invect/frontend';
+import { UserManagement } from './UserManagement';
+import { useAuth } from '../providers/AuthProvider';
+
+export function UserManagementPage() {
+  const api = useApiClient();
+  const { user, isAuthenticated } = useAuth();
+  const apiBaseUrl = api.getBaseURL();
+
+  if (!isAuthenticated) {
+    return (
+      <div className="imp-page w-full h-full min-h-0 overflow-y-auto bg-imp-background text-imp-foreground flex items-center justify-center">
+        <p className="text-sm text-imp-muted-foreground">Please sign in to access this page.</p>
+      </div>
+    );
+  }
+
+  if (user?.role !== 'admin') {
+    return (
+      <PageLayout
+        title="User Management"
+        subtitle="Manage users for your Invect instance."
+        icon={Users}
+      >
+        <div className="rounded-md bg-yellow-50 p-3 text-sm text-yellow-800 dark:bg-yellow-950/20 dark:text-yellow-400">
+          Only administrators can manage users. Contact an admin for access.
+        </div>
+      </PageLayout>
+    );
+  }
+
+  return (
+    <PageLayout
+      title="User Management"
+      subtitle="Create, manage, and remove users for your Invect instance."
+      icon={Users}
+    >
+      <UserManagement apiBaseUrl={apiBaseUrl} />
+    </PageLayout>
+  );
+}

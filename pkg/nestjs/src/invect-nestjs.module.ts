@@ -1,0 +1,53 @@
+import {
+  Module,
+  DynamicModule,
+  type InjectionToken,
+  type OptionalFactoryDependency,
+} from '@nestjs/common';
+import { Invect, InvectConfig } from '@invect/core';
+import { InvectController } from './invect-nestjs.controller';
+import { InvectService } from './invect-nestjs.service';
+
+@Module({})
+export class InvectModule {
+  static forRoot(config: InvectConfig): DynamicModule {
+    const invectProvider = {
+      provide: 'INVECT_CORE',
+      useFactory: () => {
+        const core = new Invect(config);
+        core.initialize();
+        return core;
+      },
+    };
+
+    return {
+      module: InvectModule,
+      controllers: [InvectController],
+      providers: [invectProvider, InvectService],
+      exports: [invectProvider, InvectService],
+    };
+  }
+
+  static forRootAsync(options: {
+    useFactory: (...args: unknown[]) => InvectConfig | Promise<InvectConfig>;
+    inject?: (InjectionToken | OptionalFactoryDependency)[];
+  }): DynamicModule {
+    const invectProvider = {
+      provide: 'INVECT_CORE',
+      useFactory: async (...args: unknown[]) => {
+        const config = await options.useFactory(...args);
+        const core = new Invect(config);
+        core.initialize();
+        return core;
+      },
+      inject: options.inject || [],
+    };
+
+    return {
+      module: InvectModule,
+      controllers: [InvectController],
+      providers: [invectProvider, InvectService],
+      exports: [invectProvider, InvectService],
+    };
+  }
+}

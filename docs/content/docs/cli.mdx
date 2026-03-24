@@ -1,0 +1,215 @@
+---
+title: CLI Reference
+description: Commands for the Invect CLI — init, generate, migrate, and more.
+---
+
+## Overview
+
+The Invect CLI handles project setup, schema generation, and database migrations. It reads your `invect.config.ts` to know which plugins and database you're using, then generates the correct schema files.
+
+```bash
+npx invect <command> [options]
+```
+
+## Commands
+
+### `init`
+
+Interactive setup wizard that scaffolds Invect into your project.
+
+```bash
+npx invect init
+```
+
+The wizard walks through:
+
+1. **Detect framework** — Express, NestJS, Next.js, or custom
+2. **Choose database** — SQLite, PostgreSQL, or MySQL
+3. **Install packages** — `@invect/core`, your adapter, and DB driver
+4. **Create config** — Writes `invect.config.ts` with sensible defaults
+5. **Generate encryption key** — Adds `INVECT_ENCRYPTION_KEY` to `.env`
+6. **Generate schema** — Creates the Drizzle ORM schema files
+7. **Run migration** — Optionally applies the schema (SQLite only)
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `--framework <name>` | Skip framework prompt (`express`, `nestjs`, `nextjs`) |
+| `--database <name>` | Skip database prompt (`sqlite`, `postgresql`, `mysql`) |
+
+---
+
+### `generate`
+
+Generate Drizzle schema files from the merged core + plugin schemas.
+
+```bash
+npx invect generate
+```
+
+This reads your config, merges the core schema with any plugin schemas, and writes three dialect-specific Drizzle files:
+
+- `schema-sqlite.ts`
+- `schema-postgres.ts`
+- `schema-mysql.ts`
+
+Run this whenever you add a plugin that defines new tables or after upgrading Invect.
+
+**Options:**
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--config <path>` | Path to config file | Auto-detected |
+| `--output <path>` | Output directory | `./src/database` |
+| `--dialect <name>` | Generate only one dialect (`sqlite`, `postgresql`, `mysql`) | All three |
+| `-y, --yes` | Skip confirmation prompt | `false` |
+
+**Example with options:**
+
+```bash
+npx invect generate --output ./db --dialect sqlite --yes
+```
+
+---
+
+### `migrate`
+
+Apply the generated schema to your database using Drizzle Kit.
+
+```bash
+npx invect migrate
+```
+
+For development, use `--push` to apply changes directly without creating SQL migration files:
+
+```bash
+npx invect migrate --push
+```
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `--config <path>` | Path to config file |
+| `--push` | Push schema directly without migration files (dev mode) |
+| `-y, --yes` | Skip confirmation prompt |
+
+---
+
+### `secret`
+
+Generate a cryptographically secure encryption key.
+
+```bash
+npx invect secret
+```
+
+Outputs a 32-byte base64 key for `INVECT_ENCRYPTION_KEY`. This key is used for AES-256-GCM encryption of stored credentials (API keys, OAuth2 tokens).
+
+```
+🔑 Generated Encryption Key
+
+  dG9wIHNlY3JldCBrZXkgZm9yIGltcGVyYXQgdGVzdA==
+
+  Add this to your environment:
+    INVECT_ENCRYPTION_KEY="dG9wIHNlY3JldCBrZXkgZm9yIGltcGVyYXQgdGVzdA=="
+```
+
+---
+
+### `info`
+
+Display diagnostic information about your Invect setup.
+
+```bash
+npx invect info
+```
+
+Shows system details, detected frameworks, loaded plugins, and schema status. Useful for troubleshooting and bug reports.
+
+## Config File
+
+The CLI looks for a config file in this order:
+
+1. `--config` flag (if provided)
+2. `invect.config.ts` / `invect.config.js` / `invect.config.mjs` in the current directory
+3. `src/invect.config.ts`
+4. `lib/invect.config.ts`
+5. `config/invect.config.ts`
+
+A minimal config:
+
+<Tabs groupId="database" persist items={['SQLite', 'PostgreSQL', 'MySQL']}>
+<Tab value="SQLite">
+```ts title="invect.config.ts"
+export default {
+  baseDatabaseConfig: {
+    type: 'sqlite',
+    connectionString: 'file:./dev.db',
+    id: 'main',
+  },
+};
+```
+</Tab>
+<Tab value="PostgreSQL">
+```ts title="invect.config.ts"
+export default {
+  baseDatabaseConfig: {
+    type: 'postgresql',
+    connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/invect',
+    id: 'main',
+  },
+};
+```
+</Tab>
+<Tab value="MySQL">
+```ts title="invect.config.ts"
+export default {
+  baseDatabaseConfig: {
+    type: 'mysql',
+    connectionString: process.env.DATABASE_URL || 'mysql://user:pass@localhost:3306/invect',
+    id: 'main',
+  },
+};
+```
+</Tab>
+</Tabs>
+
+With plugins and environment variables:
+
+```ts title="invect.config.ts"
+import { auditLogPlugin } from './plugins/audit-log';
+
+export default {
+  baseDatabaseConfig: {
+    type: 'postgresql',
+    connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/invect',
+    id: 'main',
+  },
+  plugins: [auditLogPlugin],
+};
+```
+
+## Typical Workflow
+
+The standard flow when setting up or updating Invect:
+
+```bash
+# 1. Generate schema files from config
+npx invect generate
+
+# 2. Apply schema to your database
+npx invect migrate --push    # Development
+npx invect migrate           # Production (creates SQL migration files)
+```
+
+After adding a plugin with new tables:
+
+```bash
+# Regenerate to include the plugin's tables
+npx invect generate
+
+# Apply the updated schema
+npx invect migrate --push
+```

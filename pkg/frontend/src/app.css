@@ -1,0 +1,548 @@
+@import "tw-animate-css";
+
+/* Import React Flow styles globally (needed for proper rendering) */
+@import "@xyflow/react/dist/style.css";
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+
+/* Define layers for Tailwind v4 scoping */
+@layer theme, base, components, utilities;
+
+@font-face {
+  font-family: "Iosevka";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url("./assets/fonts/iosevka-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Iosevka";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url("./assets/fonts/iosevka-latin-500-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Iosevka";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url("./assets/fonts/iosevka-latin-600-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Iosevka";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url("./assets/fonts/iosevka-latin-700-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Geist Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("./assets/fonts/geist-cyrillic-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;
+}
+
+@font-face {
+  font-family: "Geist Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("./assets/fonts/geist-latin-ext-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Geist Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("./assets/fonts/geist-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+/* CSS @property for animated border gradient angle */
+@property --border-angle {
+  inherits: false;
+  initial-value: 0deg;
+  syntax: '<angle>';
+}
+
+/* Animated border for running nodes - uses conic gradient with CSS @property */
+.node-running-border {
+  background: 
+    linear-gradient(var(--card, #ffffff), var(--card, #ffffff)) padding-box,
+    conic-gradient(
+      from var(--border-angle),
+      rgba(148, 163, 184, 0.48) 80%,
+      #3b82f6 86%,
+      #93c5fd 90%,
+      #3b82f6 94%,
+      rgba(148, 163, 184, 0.48)
+    ) border-box;
+  border: 2px solid transparent;
+}
+
+/* Animation keyframes for the border angle */
+@keyframes border-spin {
+  to {
+    --border-angle: 360deg;
+  }
+}
+
+.animate-node-border {
+  animation: border-spin 3s linear infinite;
+}
+
+/* Custom dark mode variant scoped to .invect container */
+@custom-variant dark (&:is(.dark *));
+
+/* Scope all utilities to .invect container */
+@layer utilities {
+  .invect {
+    @tailwind utilities;
+
+    /* Theme CSS variables - light mode */
+    --imp-background: #fafafa;
+    --imp-canvas-background: #f8f9fb;
+    --imp-foreground: #1a1a2e;
+    --imp-card: #ffffff;
+    --imp-shadow-sidebar: 1px 0 3px rgba(0,0,0,0.06);
+    --imp-shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --imp-shadow-card-hover: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+    --imp-shadow-floating: 0 16px 48px -12px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.05);
+    --imp-card-foreground: #1a1a2e;
+    --imp-popover: #ffffff;
+    --imp-popover-foreground: #1a1a2e;
+    --imp-primary: #5B5BD6;
+    --imp-primary-foreground: #ffffff;
+    --imp-secondary: #f0f0f8;
+    --imp-secondary-foreground: #1a1a2e;
+    --imp-muted: #f4f4f8;
+    --imp-muted-foreground: #6e6e80;
+    --imp-accent: #ededf7;
+    --imp-accent-foreground: #1a1a2e;
+    --imp-destructive: #e5484d;
+    --imp-destructive-foreground: #ffffff;
+    --imp-border: #e0e0ec;
+    --imp-input: #dcdce4;
+    --imp-ring: #5B5BD6;
+    --imp-sidebar: #fafafe;
+    --imp-sidebar-foreground: #1a1a2e;
+    --imp-sidebar-primary: #1a1a2e;
+    --imp-sidebar-primary-foreground: #ffffff;
+    --imp-sidebar-accent: #ededf7;
+    --imp-sidebar-accent-foreground: #5B5BD6;
+    --imp-sidebar-border: #e0e0ec;
+    --imp-sidebar-ring: #5B5BD6;
+    --background: #ffffff;
+    --canvas-background: #f8f9fb;
+    --foreground: #1a1a2e;
+    --card: #ffffff;
+    --card-foreground: #1a1a2e;
+    --popover: #ffffff;
+    --popover-foreground: #1a1a2e;
+    --primary: #5B5BD6;
+    --primary-foreground: #ffffff;
+    --secondary: #f0f0f8;
+    --secondary-foreground: #1a1a2e;
+    --muted: #f4f4f8;
+    --muted-foreground: #6e6e80;
+    --accent: #ededf7;
+    --accent-foreground: #1a1a2e;
+    --destructive: #e5484d;
+    --destructive-foreground: #ffffff;
+    --border: #e0e0ec;
+    --input: #dcdce4;
+    --ring: #5B5BD6;
+    --chart-1: #5B5BD6;
+    --chart-2: #7C7CE0;
+    --chart-3: #3E63DD;
+    --chart-4: #30a46c;
+    --chart-5: #e5484d;
+    --radius: 0.5rem;
+    --sidebar: #fafafe;
+    --sidebar-foreground: #1a1a2e;
+    --sidebar-primary: #1a1a2e;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #ededf7;
+    --sidebar-accent-foreground: #5B5BD6;
+    --sidebar-border: #e0e0ec;
+    --sidebar-ring: #5B5BD6;
+    --shadow-x: 0px;
+    --shadow-y: 1px;
+    --shadow-blur: 3px;
+    --shadow-spread: 0px;
+    --shadow-opacity: 0.08;
+    --shadow-color: #1a1a2e;
+    /* Edge selection colors - light mode */
+    --edge-selected-stroke: #5B5BD6;
+    --edge-selected-glow: rgba(91, 91, 214, 0.5);
+    /* Semantic colors */
+    --imp-success: #30a46c;
+    --imp-success-foreground: #ffffff;
+    --imp-success-muted: #d4f4e2;
+    --imp-warning: #e5a100;
+    --imp-warning-foreground: #ffffff;
+    --imp-warning-muted: #fef3cd;
+    --imp-info: #3b82f6;
+    --imp-info-foreground: #ffffff;
+    --imp-info-muted: #dbeafe;
+
+    --background: var(--imp-background);
+    --canvas-background: var(--imp-canvas-background);
+    --foreground: var(--imp-foreground);
+    --card: var(--imp-card);
+    --card-foreground: var(--imp-card-foreground);
+    --popover: var(--imp-popover);
+    --popover-foreground: var(--imp-popover-foreground);
+    --primary: var(--imp-primary);
+    --primary-foreground: var(--imp-primary-foreground);
+    --secondary: var(--imp-secondary);
+    --secondary-foreground: var(--imp-secondary-foreground);
+    --muted: var(--imp-muted);
+    --muted-foreground: var(--imp-muted-foreground);
+    --accent: var(--imp-accent);
+    --accent-foreground: var(--imp-accent-foreground);
+    --destructive: var(--imp-destructive);
+    --destructive-foreground: var(--imp-destructive-foreground);
+    --border: var(--imp-border);
+    --input: var(--imp-input);
+    --ring: var(--imp-ring);
+    --sidebar: var(--imp-sidebar);
+    --sidebar-foreground: var(--imp-sidebar-foreground);
+    --sidebar-primary: var(--imp-sidebar-primary);
+    --sidebar-primary-foreground: var(--imp-sidebar-primary-foreground);
+    --sidebar-accent: var(--imp-sidebar-accent);
+    --sidebar-accent-foreground: var(--imp-sidebar-accent-foreground);
+    --sidebar-border: var(--imp-sidebar-border);
+    --sidebar-ring: var(--imp-sidebar-ring);
+
+    /* Apply Geist Sans for UI text within .invect and reserve Iosevka for code-oriented surfaces. */
+    font-family: "Geist Variable", "Geist", ui-sans-serif, system-ui, sans-serif;
+
+    @theme inline {
+      --font-sans: "Geist Variable", "Geist", ui-sans-serif, system-ui, sans-serif;
+      --font-mono: "Iosevka", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+      --color-background: var(--background);
+      --color-foreground: var(--foreground);
+      --color-card: var(--card);
+      --color-card-foreground: var(--card-foreground);
+      --color-popover: var(--popover);
+      --color-popover-foreground: var(--popover-foreground);
+      --color-primary: var(--primary);
+      --color-primary-foreground: var(--primary-foreground);
+      --color-secondary: var(--secondary);
+      --color-secondary-foreground: var(--secondary-foreground);
+      --color-muted: var(--muted);
+      --color-muted-foreground: var(--muted-foreground);
+      --color-accent: var(--accent);
+      --color-accent-foreground: var(--accent-foreground);
+      --color-destructive: var(--destructive);
+      --color-destructive-foreground: var(--destructive-foreground);
+      --color-border: var(--border);
+      --color-input: var(--input);
+      --color-ring: var(--ring);
+      --color-chart-1: var(--chart-1);
+      --color-chart-2: var(--chart-2);
+      --color-chart-3: var(--chart-3);
+      --color-chart-4: var(--chart-4);
+      --color-chart-5: var(--chart-5);
+      --radius-sm: calc(var(--radius) - 4px);
+      --radius-md: calc(var(--radius) - 2px);
+      --radius-lg: var(--radius);
+      --radius-xl: calc(var(--radius) + 4px);
+      --color-sidebar: var(--sidebar);
+      --color-sidebar-foreground: var(--sidebar-foreground);
+      --color-sidebar-primary: var(--sidebar-primary);
+      --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+      --color-sidebar-accent: var(--sidebar-accent);
+      --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+      --color-sidebar-border: var(--sidebar-border);
+      --color-sidebar-ring: var(--sidebar-ring);
+      --color-success: var(--imp-success);
+      --color-success-foreground: var(--imp-success-foreground);
+      --color-success-muted: var(--imp-success-muted);
+      --color-warning: var(--imp-warning);
+      --color-warning-foreground: var(--imp-warning-foreground);
+      --color-warning-muted: var(--imp-warning-muted);
+      --color-info: var(--imp-info);
+      --color-info-foreground: var(--imp-info-foreground);
+      --color-info-muted: var(--imp-info-muted);
+      --font-serif: "Geist Variable", "Geist", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+      /* computed shadow variables below - do not modify */
+      --shadow-2xs: var(--shadow-x) var(--shadow-y)
+        color-mix(in srgb, var(--shadow-color) calc(var(--shadow-opacity) * 100%), transparent);
+      --shadow-xs: var(--shadow-x) var(--shadow-y) var(--shadow-blur) var(--shadow-spread)
+        color-mix(in srgb, var(--shadow-color) calc(var(--shadow-opacity) * 100%), transparent);
+      --shadow-sm: var(--shadow-x) var(--shadow-y) calc(var(--shadow-blur) * 1.5) var(--shadow-spread)
+        color-mix(in srgb, var(--shadow-color) calc(var(--shadow-opacity) * 100%), transparent);
+      --shadow-md: calc(var(--shadow-x) * 2) calc(var(--shadow-y) * 2) calc(var(--shadow-blur) * 3)
+        calc(var(--shadow-spread) - 1px)
+        color-mix(in srgb, var(--shadow-color) calc(var(--shadow-opacity) * 100%), transparent);
+      --shadow-lg: calc(var(--shadow-x) * 4) calc(var(--shadow-y) * 4) calc(var(--shadow-blur) * 5)
+        calc(var(--shadow-spread) - 3px)
+        color-mix(in srgb, var(--shadow-color) calc(var(--shadow-opacity) * 100%), transparent);
+      --shadow-xl: calc(var(--shadow-x) * 6) calc(var(--shadow-y) * 6) calc(var(--shadow-blur) * 7)
+        calc(var(--shadow-spread) - 5px)
+        color-mix(in srgb, var(--shadow-color) calc(var(--shadow-opacity) * 100%), transparent);
+      --shadow-2xl: calc(var(--shadow-x) * 8) calc(var(--shadow-y) * 8) calc(max(0px, var(--shadow-blur) * 9 - 8px))
+        calc(var(--shadow-spread) - 12px)
+        color-mix(in srgb, var(--shadow-color) calc(var(--shadow-opacity) * 250%), transparent);
+      --shadow: var(--shadow-md);
+      --color-shadow-color: var(--shadow-color);
+      --shadow-opacity: var(--shadow-opacity);
+      --shadow-spread: var(--shadow-spread);
+      --shadow-blur: var(--shadow-blur);
+      --shadow-y: var(--shadow-y);
+      --shadow-x: var(--shadow-x);
+      --animate-accordion-down: accordion-down 0.2s ease-out;
+      --animate-accordion-up: accordion-up 0.2s ease-out;
+    }
+
+    @keyframes accordion-down {
+      from { height: 0; }
+      to { height: var(--radix-accordion-content-height); }
+    }
+    @keyframes accordion-up {
+      from { height: var(--radix-accordion-content-height); }
+      to { height: 0; }
+    }
+
+    /* Dark mode design */
+    &.dark {
+      --imp-background: #111114;
+      --imp-canvas-background: #17171c;
+      --imp-foreground: #ececf0;
+      --imp-card: #1e1e24;
+      --imp-card-foreground: #ececf0;
+      --imp-popover: #222228;
+      --imp-popover-foreground: #ececf0;
+      --imp-primary: #7B7BDE;
+      --imp-primary-foreground: #ffffff;
+      --imp-secondary: #22222c;
+      --imp-secondary-foreground: #ececf0;
+      --imp-muted: #22222c;
+      --imp-muted-foreground: #8b8b9e;
+      --imp-accent: #2c2c3a;
+      --imp-accent-foreground: #ececf0;
+      --imp-destructive: #e5484d;
+      --imp-destructive-foreground: #ffffff;
+      --imp-border: #2e2e3c;
+      --imp-input: #3a3a4a;
+      --imp-ring: #7B7BDE;
+      --chart-1: #7B7BDE;
+      --chart-2: #9B9BE8;
+      --chart-3: #5A7DE8;
+      --chart-4: #3dd68c;
+      --chart-5: #ff6369;
+      --imp-sidebar: #111114;
+      --imp-sidebar-foreground: #ececf0;
+      --imp-sidebar-primary: #ececf0;
+      --imp-sidebar-primary-foreground: #131316;
+      --imp-sidebar-accent: #26263a;
+      --imp-sidebar-accent-foreground: #7B7BDE;
+      --imp-sidebar-border: #2e2e3c;
+      --imp-sidebar-ring: #7B7BDE;
+      --shadow-x: 0px;
+      --shadow-y: 1px;
+      --shadow-blur: 3px;
+      --shadow-spread: 0px;
+      --shadow-opacity: 0.2;
+      --shadow-color: #000000;
+      --imp-shadow-sidebar: 1px 0 3px rgba(0,0,0,0.2);
+      --imp-shadow-card: 0 1px 3px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.15);
+      --imp-shadow-card-hover: 0 4px 12px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.15);
+      --imp-shadow-floating: 0 16px 48px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
+      /* Edge selection colors - dark mode */
+      --edge-selected-stroke: #7B7BDE;
+      --edge-selected-glow: rgba(123, 123, 222, 0.6);
+      /* Semantic colors - dark mode */
+      --imp-success: #3dd68c;
+      --imp-success-foreground: #0d2118;
+      --imp-success-muted: #1a3a2a;
+      --imp-warning: #f5c518;
+      --imp-warning-foreground: #1a1500;
+      --imp-warning-muted: #3a3000;
+      --imp-info: #60a5fa;
+      --imp-info-foreground: #0c1929;
+      --imp-info-muted: #1e3a5f;
+    }
+
+    /* Base styles scoped to .invect */
+    * {
+      @apply border-border outline-ring/50;
+    }
+
+    /* Explicitly set bg & text on the .invect container so the host app's
+       body/root colours never bleed through. This makes invect fully self-contained. */
+    background-color: var(--background);
+    color: var(--foreground);
+
+    .bg-imp-background {
+      background-color: var(--imp-background) !important;
+    }
+
+    .text-imp-foreground {
+      color: var(--imp-foreground) !important;
+    }
+
+    .bg-imp-card {
+      background-color: var(--imp-card) !important;
+    }
+
+    .bg-imp-sidebar {
+      background-color: var(--imp-sidebar) !important;
+    }
+
+    .text-imp-sidebar-foreground {
+      color: var(--imp-sidebar-foreground) !important;
+    }
+
+    .border-imp-border {
+      border-color: var(--imp-border) !important;
+    }
+
+    &.imp-shell,
+    .imp-shell {
+      background-color: var(--imp-background) !important;
+      color: var(--imp-foreground) !important;
+    }
+
+    .imp-page {
+      background-color: var(--imp-background) !important;
+    }
+
+    /* Tree view: hover highlight for all items */
+    .imp-tree-item-hover:hover {
+      background-color: var(--imp-muted);
+      border-radius: 0.375rem;
+    }
+
+    .imp-node-config-form [data-slot="input"],
+    .imp-node-config-form [data-slot="textarea"],
+    .imp-node-config-form [data-slot="select-trigger"],
+    .imp-node-config-form [role="combobox"],
+    .imp-node-config-form .cm-editor,
+    .imp-node-config-form .cm-scroller,
+    .imp-node-config-form .cm-content {
+      font-family: var(--font-mono);
+    }
+
+    .imp-sidebar-shell {
+      background-color: var(--imp-sidebar) !important;
+      color: var(--imp-sidebar-foreground) !important;
+    }
+
+    /* React Flow styles */
+    .react-flow,
+    .react-flow.dark,
+    .react-flow.light {
+      background-color: var(--canvas-background) !important;
+    }
+
+    .react-flow__node {
+      font-family: var(--font-sans);
+    }
+
+    .react-flow__edge-path {
+      stroke: var(--muted-foreground);
+      stroke-width: 2.5;
+    }
+
+    .react-flow__edge.selected .react-flow__edge-path {
+      stroke: var(--edge-selected-stroke, #3b82f6);
+      fill: var(--edge-selected-stroke, #3b82f6);
+      stroke-width: 3;
+      filter: drop-shadow(0 0 6px var(--edge-selected-glow, rgba(59, 130, 246, 0.5)));
+    }
+
+    .react-flow__handle {
+      box-shadow: none;
+    }
+
+    .react-flow__handle:hover {
+      box-shadow: none;
+    }
+
+    .react-flow__controls {
+      background: var(--background);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .react-flow__controls-button {
+      background: transparent;
+      border-bottom: 1px solid var(--border);
+      color: var(--foreground);
+      fill: var(--foreground);
+      transition: all 0.2s ease;
+    }
+
+    .react-flow__controls-button:hover {
+      background: var(--muted);
+    }
+
+    .react-flow__controls-button:last-child {
+      border-bottom: none;
+    }
+
+    .react-flow__controls-button svg {
+      fill: var(--foreground);
+    }
+
+    .react-flow__controls-button svg path {
+      fill: var(--foreground);
+    }
+
+    .react-flow__minimap {
+      background: var(--background);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .react-flow__minimap-mask {
+      fill: var(--muted);
+    }
+
+    .react-flow__minimap-node {
+      fill: var(--primary);
+      stroke: var(--border);
+    }
+
+    .react-flow__background {
+      background-color: var(--canvas-background) !important;
+    }
+
+    .react-flow__background pattern line {
+      stroke: var(--border);
+    }
+
+    .react-flow__background pattern circle {
+      fill: var(--border);
+    }
+
+    /* Interactive elements */
+    button,
+    a,
+    input,
+    select,
+    textarea {
+      transition: all 0.2s ease;
+    }
+
+    /* Focus states */
+    *:focus-visible {
+      outline: 2px solid var(--ring);
+      outline-offset: 2px;
+    }
+  }
+}

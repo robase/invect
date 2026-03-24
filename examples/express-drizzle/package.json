@@ -1,0 +1,53 @@
+{
+  "name": "invect-express-simple",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Simple Express.js example using Invect",
+  "main": "dist/index.js",
+  "scripts": {
+    "predev": "test -f dev.db || pnpm db:prepare",
+    "predev:tsx": "test -f dev.db || pnpm db:prepare",
+    "predev:debug": "test -f dev.db || pnpm db:prepare",
+    "dev": "nodemon --watch index.ts --watch ../../pkg/core/dist --watch ../../pkg/express/dist --watch ../../pkg/plugins/auth/dist --watch ../../pkg/plugins/rbac/dist --watch ../../pkg/plugins/webhooks/dist --exec tsx index.ts",
+    "dev:tsx": "tsx watch --clear-screen=false index.ts",
+    "dev:debug": "NODE_ENV=development tsx watch --clear-screen=false index.ts",
+    "build": "tsc",
+    "start": "npm run build && node dist/index.js",
+    "db:push": "drizzle-kit push",
+    "db:generate": "drizzle-kit generate",
+    "invect:generate": "pnpm --dir ../.. --filter @invect/cli build && node ../../pkg/cli/dist/index.js generate --config ./invect.config.ts --output ./db --dialect sqlite --yes",
+    "db:prepare": "pnpm invect:generate && pnpm db:push && tsx ensure-plugin-tables.ts",
+    "seed": "tsx seed/run-seed.ts",
+    "seed:lotr": "tsx seed/lord-of-rings-quest-seed.ts",
+    "seed:teams": "tsx seed/seed-users-teams.ts",
+    "format": "prettier --write \"**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "echo \"No tests configured\""
+  },
+  "dependencies": {
+    "@invect/core": "workspace:*",
+    "@invect/express": "workspace:*",
+    "@invect/user-auth": "workspace:*",
+    "@invect/rbac": "workspace:*",
+    "@invect/webhooks": "workspace:*",
+    "@types/cors": "^2.8.19",
+    "better-auth": "^1.0.0",
+    "better-sqlite3": "^12.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "drizzle-orm": "^0.44.4",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.5",
+    "drizzle-kit": "^0.31.4",
+    "msw": "^2.11.2",
+    "nodemon": "^3.1.10",
+    "tsx": "^4.20.3",
+    "typescript": "^5.3.3"
+  }
+}

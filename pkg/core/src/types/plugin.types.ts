@@ -1,0 +1,756 @@
+/**
+ * Invect Plugin System
+ *
+ * Plugins extend Invect with new capabilities: actions (nodes/tools),
+ * lifecycle hooks, API endpoints, database schema, and middleware.
+ *
+ * Inspired by better-auth's plugin architecture, adapted for Invect's
+ * framework-adapter pattern and action-based node system.
+ *
+ * @example
+ * ```typescript
+ * import { Invect } from '@invect/core';
+ * import { rbac } from '@invect/plugin-rbac';
+ * import { auditLog } from '@invect/plugin-audit-log';
+ *
+ * const invect = new Invect({
+ *   plugins: [
+ *     rbac({ resolveUser: (req) => req.user }),
+ *     auditLog({ destination: 'database' }),
+ *   ],
+ * });
+ * ```
+ */
+
+import type { ActionDefinition } from 'src/actions/types';
+import type {
+  InvectIdentity,
+  InvectPermission,
+  AuthorizationResult,
+  AuthorizationContext,
+} from './auth.types';
+
+// =============================================================================
+// Plugin Schema Types (Abstract, database-agnostic)
+// =============================================================================
+
+/**
+ * Abstract field types that map to concrete column types per dialect.
+ *
+ * | Abstract    | SQLite        | PostgreSQL       | MySQL              |
+ * |-------------|---------------|------------------|--------------------|
+ * | "string"    | text          | text             | varchar(255)       |
+ * | "text"      | text          | text             | text               |
+ * | "number"    | integer       | integer          | int                |
+ * | "boolean"   | integer(bool) | boolean          | boolean            |
+ * | "date"      | text          | timestamp        | timestamp          |
+ * | "json"      | text(json)    | json             | json               |
+ * | "uuid"      | text          | uuid             | varchar(36)        |
+ * | "bigint"    | integer       | bigint           | bigint             |
+ * | string[]    | N/A (enum)    | pgEnum values    | mysqlEnum values   |
+ */
+export type PluginFieldType =
+  | 'string'
+  | 'text'
+  | 'number'
+  | 'boolean'
+  | 'date'
+  | 'json'
+  | 'uuid'
+  | 'bigint'
+  | string[]; // Enum values — generates pgEnum/mysqlEnum/text
+
+/**
+ * Abstract field definition for plugin database schemas.
+ *
+ * Plugins declare fields using this format. The CLI schema generator
+ * converts these to dialect-specific Drizzle column definitions.
+ */
+export interface PluginFieldAttribute {
+  /** Abstract column type */
+  type: PluginFieldType;
+
+  /**
+   * Whether the field is required (NOT NULL).
+   * @default true
+   */
+  required?: boolean;
+
+  /** Whether to add a UNIQUE constraint */
+  unique?: boolean;
+
+  /** Whether this field is the primary key (or part of a composite PK) */
+  primaryKey?: boolean;
+
+  /**
+   * Foreign key reference.
+   * `table` is the Drizzle table name (e.g., "flows", "credentials").
+   */
+  references?: {
+    table: string;
+    field: string;
+    onDelete?: 'cascade' | 'set null' | 'restrict' | 'no action';
+  };
+
+  /** Whether to create an index on this column */
+  index?: boolean;
+
+  /**
+   * Default value for the column.
+   * - Primitives are used as literal defaults
+   * - "uuid()" generates a UUID default
+   * - "now()" generates a current timestamp default
+   * - "true" / "false" for booleans
+   */
+  defaultValue?: string | number | boolean | 'uuid()' | 'now()';
+
+  /**
+   * For string fields, the max length (MySQL varchar).
+   * Ignored for SQLite/PostgreSQL text columns.
+   * @default 255
+   */
+  maxLength?: number;
+
+  /**
+   * TypeScript type annotation for the column (Drizzle's $type<>()).
+   * Used for JSON columns or text columns storing typed data.
+   *
+   * @example "Record<string, unknown>"
+   * @example "string[]"
+   */
+  typeAnnotation?: string;
+
+  /**
+   * JSON mode for text/json columns.
+   * When true on SQLite, uses text({ mode: 'json' }).
+   */
+  jsonMode?: boolean;
+}
+
+/**
+ * Abstract table definition for plugin schemas.
+ */
+export interface PluginTableDefinition {
+  /**
+   * Column definitions keyed by field name.
+   * Field names are camelCase; the generator converts to snake_case for DB columns.
+   */
+  fields: Record<string, PluginFieldAttribute>;
+
+  /**
+   * Composite primary key columns (if not using a single-column PK).
+   * Array of field names that together form the primary key.
+   */
+  compositePrimaryKey?: string[];
+
+  /**
+   * Whether to skip this table in migration generation.
+   * Useful for tables that are conditionally created.
+   * @default false
+   */
+  disableMigration?: boolean;
+
+  /**
+   * Custom DB table name. If not provided, the key in the schema object
+   * is used, converted to snake_case.
+   */
+  tableName?: string;
+
+  /**
+   * Table creation order hint. Lower numbers are created first.
+   * Use this when tables have foreign key dependencies.
+   * @default 100
+   */
+  order?: number;
+}
+
+/**
+ * Plugin schema declaration.
+ *
+ * Keys are logical table names (camelCase). Use an existing core table name
+ * (e.g., "flows", "credentials") to add fields to that table (additive only).
+ *
+ * @example
+ * ```typescript
+ * const schema: InvectPluginSchema = {
+ *   // New table
+ *   auditLogs: {
+ *     fields: {
+ *       id: { type: 'uuid', primaryKey: true, defaultValue: 'uuid()' },
+ *       action: { type: 'string', required: true },
+ *       userId: { type: 'string', references: { table: 'flows', field: 'id' } },
+ *       metadata: { type: 'json' },
+ *       createdAt: { type: 'date', defaultValue: 'now()' },
+ *     },
+ *   },
+ *   // Extend existing core table
+ *   flows: {
+ *     fields: {
+ *       ownerId: { type: 'string' },
+ *       tenantId: { type: 'string', index: true },
+ *     },
+ *   },
+ * };
+ * ```
+ */
+export type InvectPluginSchema = Record<string, PluginTableDefinition>;
+
+// =============================================================================
+// Plugin Endpoint Types
+// =============================================================================
+
+/**
+ * An API endpoint defined by a plugin.
+ *
+ * Framework adapters (Express, Next.js, NestJS) mount these automatically.
+ * The handler receives a framework-agnostic request/response interface.
+ */
+export interface InvectPluginEndpoint {
+  /** HTTP method */
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+
+  /**
+   * Path relative to the Invect base path.
+   * Supports Express-style params: `/my-plugin/items/:id`
+   */
+  path: string;
+
+  /**
+   * The handler function.
+   * Receives parsed body/params/query and the Invect core instance.
+   * Must return a serializable response.
+   */
+  handler: (context: PluginEndpointContext) => Promise<PluginEndpointResponse>;
+
+  /**
+   * Required permission to access this endpoint.
+   * If set, the framework adapter enforces authorization before calling the handler.
+   */
+  permission?: InvectPermission;
+
+  /**
+   * If true, this endpoint does not require authentication.
+   * @default false
+   */
+  isPublic?: boolean;
+}
+
+/**
+ * Narrow API surface exposed to plugin endpoint handlers.
+ *
+ * This gives plugins access to core functionality (auth, flow access, etc.)
+ * without coupling them to the full Invect class. Framework adapters
+ * populate this from their core instance.
+ */
+export interface PluginEndpointCoreApi {
+  /** Get all permissions for an identity (based on role) */
+  getPermissions(identity: InvectIdentity | null): InvectPermission[];
+  /** Get available roles and their permission definitions */
+  getAvailableRoles(): Array<{ role: string; permissions: InvectPermission[] }>;
+  /** Get the resolved role string for an identity */
+  getResolvedRole(identity: InvectIdentity): string | null;
+  /** Whether the flow access table feature is enabled */
+  isFlowAccessTableEnabled(): boolean;
+  /** List flow access records for a flow */
+  listFlowAccess(flowId: string): Promise<unknown[]>;
+  /** Grant access to a flow */
+  grantFlowAccess(input: {
+    flowId: string;
+    userId?: string;
+    teamId?: string;
+    permission: 'owner' | 'editor' | 'operator' | 'viewer';
+    grantedBy?: string;
+    expiresAt?: Date | string;
+  }): Promise<unknown>;
+  /** Revoke a specific flow access record */
+  revokeFlowAccess(accessId: string): Promise<void>;
+  /** Get all flow IDs accessible to a user/teams */
+  getAccessibleFlowIds(userId: string, teamIds?: string[]): Promise<string[]>;
+  /** Get the highest permission level a user/teams has for a flow */
+  getFlowPermission(
+    flowId: string,
+    userId: string,
+    teamIds?: string[],
+  ): Promise<'owner' | 'editor' | 'operator' | 'viewer' | null>;
+  /** Authorize an action for an identity */
+  authorize(context: AuthorizationContext): Promise<AuthorizationResult>;
+}
+
+/**
+ * Narrow database API exposed to plugin endpoint handlers.
+ *
+ * Plugins should use this instead of reaching into framework-specific
+ * database clients directly. It keeps plugin code portable across the
+ * supported host database types while still allowing schema-owning plugins
+ * to persist their own records.
+ */
+export interface PluginDatabaseApi {
+  /** Host database dialect */
+  type: 'postgresql' | 'sqlite' | 'mysql';
+
+  /** Execute a query and return result rows */
+  query<T = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]>;
+
+  /** Execute a statement where no result rows are needed */
+  execute(sql: string, params?: unknown[]): Promise<void>;
+}
+
+/**
+ * Context passed to plugin endpoint handlers.
+ */
+export interface PluginEndpointContext {
+  /** Parsed request body (for POST/PUT/PATCH) */
+  body: Record<string, unknown>;
+  /** URL path parameters (e.g., { id: '123' }) */
+  params: Record<string, string>;
+  /** URL query parameters */
+  query: Record<string, string | undefined>;
+  /** Request headers */
+  headers: Record<string, string | undefined>;
+  /** Resolved identity (null if unauthenticated or public route) */
+  identity: InvectIdentity | null;
+  /** Database API for plugin-owned tables */
+  database: PluginDatabaseApi;
+  /** The raw Request object (Web API Request) */
+  request: Request;
+  /**
+   * Core API — provides access to auth, flow access, and authorization
+   * services. Populated by the framework adapter.
+   */
+  core: PluginEndpointCoreApi;
+}
+
+/**
+ * Response from a plugin endpoint handler.
+ */
+export type PluginEndpointResponse =
+  | { status?: number; body: unknown } // JSON response
+  | { status?: number; stream: ReadableStream } // Streaming response (SSE, etc.)
+  | Response; // Raw Web API Response
+
+// =============================================================================
+// Plugin Hook Types
+// =============================================================================
+
+/**
+ * Context for flow run lifecycle hooks.
+ */
+export interface FlowRunHookContext {
+  /** The flow ID being executed */
+  flowId: string;
+  /** The flow run ID */
+  flowRunId: string;
+  /** The flow version number */
+  flowVersion: number;
+  /** Input data for the flow run */
+  inputs: Record<string, unknown>;
+  /** Identity of the user who triggered the run (if available) */
+  identity?: InvectIdentity | null;
+}
+
+/**
+ * Context for node execution lifecycle hooks.
+ */
+export interface NodeExecutionHookContext {
+  /** The flow run context */
+  flowRun: FlowRunHookContext;
+  /** The node ID being executed */
+  nodeId: string;
+  /** The node type (action ID or "AGENT") */
+  nodeType: string;
+  /** The node's label */
+  nodeLabel?: string;
+  /** Input data for this node */
+  inputs: Record<string, unknown>;
+  /** Resolved config params for this node */
+  params: Record<string, unknown>;
+}
+
+/**
+ * Result from an afterNodeExecute hook.
+ */
+export interface NodeExecutionHookResult {
+  /** Optionally override the node output */
+  output?: unknown;
+}
+
+/**
+ * Plugin hooks for intercepting Invect lifecycle events.
+ *
+ * Hooks run in plugin array order. A hook returning `{ cancel: true }`
+ * short-circuits the operation (remaining plugins are skipped).
+ */
+export interface InvectPluginHooks {
+  /**
+   * Runs before a flow execution starts.
+   * Return `{ cancel: true, reason: '...' }` to prevent the run.
+   * Return `{ inputs: {...} }` to modify the inputs.
+   */
+  beforeFlowRun?: (
+    context: FlowRunHookContext,
+  ) => Promise<void | { cancel?: boolean; reason?: string; inputs?: Record<string, unknown> }>;
+
+  /**
+   * Runs after a flow execution completes (success or failure).
+   */
+  afterFlowRun?: (
+    context: FlowRunHookContext & {
+      status: 'SUCCESS' | 'FAILED' | 'CANCELLED';
+      outputs?: Record<string, unknown>;
+      error?: string;
+      duration?: number;
+    },
+  ) => Promise<void>;
+
+  /**
+   * Runs before each node executes.
+   * Return `{ skip: true }` to skip this node.
+   * Return `{ params: {...} }` to override resolved params.
+   */
+  beforeNodeExecute?: (
+    context: NodeExecutionHookContext,
+  ) => Promise<void | { skip?: boolean; params?: Record<string, unknown> }>;
+
+  /**
+   * Runs after each node executes.
+   * Return `{ output: ... }` to override the node's output.
+   */
+  afterNodeExecute?: (
+    context: NodeExecutionHookContext & {
+      status: 'SUCCESS' | 'FAILED' | 'SKIPPED';
+      output?: unknown;
+      error?: string;
+      duration?: number;
+    },
+  ) => Promise<void | NodeExecutionHookResult>;
+
+  /**
+   * Runs before every API request (in framework adapters).
+   * Return a Response to short-circuit (like better-auth's onRequest).
+   * Return `{ request }` to modify the request.
+   */
+  onRequest?: (
+    request: Request,
+    context: { path: string; method: string; identity: InvectIdentity | null },
+  ) => Promise<void | { response: Response } | { request: Request }>;
+
+  /**
+   * Runs after every API response (in framework adapters).
+   * Return a Response to replace the original response.
+   */
+  onResponse?: (
+    response: Response,
+    context: { path: string; method: string; identity: InvectIdentity | null },
+  ) => Promise<void | { response: Response }>;
+
+  /**
+   * Runs during authorization checks.
+   * Return `{ allowed: true/false }` to override the default RBAC result.
+   * Return void to use the default authorization logic.
+   */
+  onAuthorize?: (context: {
+    identity: InvectIdentity | null;
+    action: InvectPermission;
+    resource?: { type: string; id?: string };
+    database?: PluginDatabaseApi;
+  }) => Promise<void | AuthorizationResult>;
+}
+
+// =============================================================================
+// Plugin Context (passed to init)
+// =============================================================================
+
+/**
+ * Context provided to a plugin's `init()` function.
+ *
+ * Gives plugins access to Invect's internals for deep integration.
+ */
+export interface InvectPluginContext {
+  /**
+   * The full Invect configuration (read-only).
+   * Plugins can read config but not modify it after init.
+   */
+  config: Record<string, unknown>;
+
+  /** Logger instance for the plugin */
+  logger: {
+    debug(message: string, ...args: unknown[]): void;
+    info(message: string, ...args: unknown[]): void;
+    warn(message: string, ...args: unknown[]): void;
+    error(message: string, ...args: unknown[]): void;
+  };
+
+  /**
+   * Check if another plugin is registered.
+   *
+   * @example
+   * ```typescript
+   * if (ctx.hasPlugin('rbac')) {
+   *   // RBAC plugin is active, can rely on identity being resolved
+   * }
+   * ```
+   */
+  hasPlugin: (pluginId: string) => boolean;
+
+  /**
+   * Get another registered plugin by ID.
+   * Returns null if the plugin is not registered.
+   */
+  getPlugin: (pluginId: string) => InvectPlugin | null;
+
+  /**
+   * Register additional actions at init time.
+   * Equivalent to calling `invect.registerAction()` for each action.
+   */
+  registerAction: (action: ActionDefinition) => void;
+
+  /**
+   * Store plugin-specific data accessible to other plugins and hooks.
+   * This is a simple key-value store scoped to the plugin.
+   */
+  store: Map<string, unknown>;
+}
+
+// =============================================================================
+// Plugin Init Result
+// =============================================================================
+
+/**
+ * Optional return value from `init()`.
+ * Allows plugins to modify Invect's configuration or provide additional context.
+ */
+export interface InvectPluginInitResult {
+  /**
+   * Additional options to merge into the Invect config.
+   * Shallow-merged with the existing config. Cannot override core fields.
+   */
+  options?: Record<string, unknown>;
+
+  /**
+   * Additional context to merge into the plugin context.
+   * Available to other plugins via `ctx.store`.
+   */
+  context?: Record<string, unknown>;
+}
+
+// =============================================================================
+// Main Plugin Interface
+// =============================================================================
+
+/**
+ * The Invect Plugin interface.
+ *
+ * Only `id` is required. All other properties are optional and enable
+ * specific extension capabilities.
+ *
+ * @example
+ * ```typescript
+ * import type { InvectPlugin } from '@invect/core';
+ *
+ * export function myPlugin(options?: MyPluginOptions): InvectPlugin {
+ *   return {
+ *     id: 'my-plugin',
+ *
+ *     schema: {
+ *       auditLogs: {
+ *         fields: {
+ *           id: { type: 'uuid', primaryKey: true, defaultValue: 'uuid()' },
+ *           action: { type: 'string', required: true },
+ *           createdAt: { type: 'date', defaultValue: 'now()' },
+ *         },
+ *       },
+ *     },
+ *
+ *     actions: [myCustomAction],
+ *
+ *     endpoints: [{
+ *       method: 'GET',
+ *       path: '/my-plugin/stats',
+ *       handler: async (ctx) => ({ body: { count: 42 } }),
+ *     }],
+ *
+ *     hooks: {
+ *       afterFlowRun: async (context) => {
+ *         console.log(`Flow ${context.flowId} completed with ${context.status}`);
+ *       },
+ *     },
+ *
+ *     async init(ctx) {
+ *       ctx.logger.info('My plugin initialized');
+ *     },
+ *
+ *     async shutdown() {
+ *       // cleanup
+ *     },
+ *   };
+ * }
+ * ```
+ */
+export interface InvectPlugin {
+  /**
+   * Unique plugin identifier.
+   * Used for `hasPlugin()` / `getPlugin()` lookups and logging.
+   */
+  id: string;
+
+  /**
+   * Human-readable plugin name (for logging and diagnostics).
+   */
+  name?: string;
+
+  /**
+   * Called during `Invect.initialize()`, after the action registry is created
+   * but before the service factory is built.
+   *
+   * Use this to:
+   * - Register actions dynamically
+   * - Set up plugin-internal state
+   * - Read configuration from other plugins
+   * - Validate plugin prerequisites
+   */
+  init?: (
+    context: InvectPluginContext,
+  ) => Promise<InvectPluginInitResult | void> | InvectPluginInitResult | void;
+
+  /**
+   * Database schema required by this plugin.
+   *
+   * Declared using the abstract `InvectPluginSchema` format.
+   * The Invect CLI generates the concrete Drizzle schema files
+   * from core + plugin schemas combined.
+   *
+   * Run `npx invect generate` after adding/changing plugin schemas.
+   */
+  schema?: InvectPluginSchema;
+
+  /**
+   * Table names that this plugin requires to exist in the database.
+   *
+   * Used during startup to verify that all required tables are present.
+   * If any are missing, Invect logs a clear, developer-friendly error
+   * explaining which plugin needs which tables and how to fix it.
+   *
+   * This is separate from `schema` — use `requiredTables` when your plugin
+   * relies on tables that are managed externally (e.g., better-auth creates
+   * its own tables) or when you want a lightweight existence check without
+   * needing to declare a full abstract schema.
+   *
+   * If `schema` is declared and `requiredTables` is not, the table names
+   * from `schema` are used automatically.
+   *
+   * @example
+   * ```typescript
+   * // Plugin that relies on better-auth's tables
+   * requiredTables: ['user', 'session', 'account', 'verification']
+   *
+   * // Plugin that declares its own schema (requiredTables inferred)
+   * schema: { auditLogs: { tableName: 'audit_logs', fields: { ... } } }
+   * ```
+   */
+  requiredTables?: string[];
+
+  /**
+   * Actions (nodes + agent tools) provided by this plugin.
+   *
+   * These are registered into the ActionRegistry during initialization,
+   * making them available as flow nodes and agent tools.
+   */
+  actions?: ActionDefinition[];
+
+  /**
+   * API endpoints provided by this plugin.
+   *
+   * Framework adapters (Express, Next.js, NestJS) automatically mount
+   * these alongside the core Invect routes.
+   */
+  endpoints?: InvectPluginEndpoint[];
+
+  /**
+   * Lifecycle hooks for intercepting flow execution, API requests,
+   * and authorization.
+   */
+  hooks?: InvectPluginHooks;
+
+  /**
+   * Human-readable setup instructions shown when required tables are missing.
+   * Overrides the default generic Drizzle instructions.
+   *
+   * @example
+   * ```typescript
+   * setupInstructions: 'Run `pnpm db:push` to create the better-auth tables.'
+   * ```
+   */
+  setupInstructions?: string;
+
+  /**
+   * Error codes returned by this plugin.
+   * Merged into the global error code registry.
+   */
+  $ERROR_CODES?: Record<string, { message: string; status?: number }>;
+
+  /**
+   * Called during `Invect.shutdown()`.
+   * Clean up connections, timers, or other resources.
+   */
+  shutdown?: () => Promise<void> | void;
+}
+
+// =============================================================================
+// Plugin Hook Runner (internal utility)
+// =============================================================================
+
+/**
+ * Collects and executes hooks from all registered plugins.
+ * Used internally by `Invect` and framework adapters.
+ */
+export interface PluginHookRunner {
+  /** Run all beforeFlowRun hooks in order */
+  runBeforeFlowRun: (
+    context: FlowRunHookContext,
+  ) => Promise<{ cancelled: boolean; reason?: string; inputs?: Record<string, unknown> }>;
+
+  /** Run all afterFlowRun hooks in order */
+  runAfterFlowRun: (
+    context: FlowRunHookContext & {
+      status: 'SUCCESS' | 'FAILED' | 'CANCELLED';
+      outputs?: Record<string, unknown>;
+      error?: string;
+      duration?: number;
+    },
+  ) => Promise<void>;
+
+  /** Run all beforeNodeExecute hooks in order */
+  runBeforeNodeExecute: (
+    context: NodeExecutionHookContext,
+  ) => Promise<{ skipped: boolean; params?: Record<string, unknown> }>;
+
+  /** Run all afterNodeExecute hooks in order */
+  runAfterNodeExecute: (
+    context: NodeExecutionHookContext & {
+      status: 'SUCCESS' | 'FAILED' | 'SKIPPED';
+      output?: unknown;
+      error?: string;
+      duration?: number;
+    },
+  ) => Promise<{ output?: unknown }>;
+
+  /** Run all onRequest hooks in order */
+  runOnRequest: (
+    request: Request,
+    context: { path: string; method: string; identity: InvectIdentity | null },
+  ) => Promise<{ intercepted: boolean; response?: Response; request?: Request }>;
+
+  /** Run all onResponse hooks in order */
+  runOnResponse: (
+    response: Response,
+    context: { path: string; method: string; identity: InvectIdentity | null },
+  ) => Promise<Response>;
+
+  /** Run all onAuthorize hooks in order */
+  runOnAuthorize: (context: {
+    identity: InvectIdentity | null;
+    action: InvectPermission;
+    resource?: { type: string; id?: string };
+    database?: PluginDatabaseApi;
+  }) => Promise<AuthorizationResult | null>;
+}

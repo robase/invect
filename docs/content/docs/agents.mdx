@@ -1,0 +1,96 @@
+---
+title: AI Agents
+description: Build agent workflows with iterative tool-calling loops.
+---
+
+## Overview
+
+The **Agent** node type runs an AI agent that can iteratively call tools to accomplish a task. Unlike simple LLM calls, agents run a loop:
+
+1. Send task prompt + available tools to the LLM
+2. LLM responds with text or tool call(s)
+3. Execute the requested tools and return results
+4. Repeat until a stop condition is met
+
+## Agent Node Configuration
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `credentialId` | `string` | OpenAI or Anthropic API credential |
+| `model` | `string` | Model ID (e.g., `gpt-4o-mini`, `claude-sonnet-4-0`) |
+| `taskPrompt` | `string` | Main task/goal (supports Nunjucks templates) |
+| `systemPrompt` | `string?` | Optional system instructions |
+| `enabledTools` | `string[]` | Array of tool IDs to enable |
+| `maxIterations` | `number` | Loop limit (1–50, default 10) |
+| `stopCondition` | `string` | `explicit_stop`, `tool_result`, or `max_iterations` |
+| `enableParallelTools` | `boolean` | Allow parallel tool execution |
+
+## Tool Sources
+
+Agent tools come from three places:
+
+### 1. Actions (Primary)
+
+Every action registered with `defineAction()` is automatically available as an agent tool. This includes all 50+ built-in actions (Gmail, Slack, GitHub, etc.) plus any custom actions you create.
+
+### 2. Standalone Tools
+
+Utility tools that don't correspond to a flow node:
+
+- `math_eval` — Evaluate mathematical expressions
+- `json_logic` — Apply JSON Logic rules
+
+### 3. Custom Tools
+
+You can register your own standalone tools:
+
+```ts title="custom-tool.ts"
+import type { AgentToolDefinition, AgentToolExecutor } from '@invect/core';
+
+export const myToolDefinition: AgentToolDefinition = {
+  id: 'my_tool',
+  name: 'My Tool',
+  description: 'Does something the agent needs',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      query: { type: 'string', description: 'Search query' },
+    },
+    required: ['query'],
+  },
+  category: 'utility',
+};
+
+export const myToolExecutor: AgentToolExecutor = async (input, context) => {
+  const result = await search(input.query);
+  return { success: true, output: result };
+};
+```
+
+## Stop Conditions
+
+| Condition | Behavior |
+|-----------|----------|
+| `explicit_stop` | Agent must call a "stop" function to end |
+| `tool_result` | Stops after the first tool call returns |
+| `max_iterations` | Stops after reaching the iteration limit |
+
+## Supported Providers
+
+| Provider | Models |
+|----------|--------|
+| OpenAI | `gpt-4o`, `gpt-4o-mini`, `o1`, `o3-mini` |
+| Anthropic | `claude-sonnet-4-0`, `claude-haiku-3-5`, `claude-opus-4` |
+
+Both providers support tool calling natively. The adapter handles converting tool definitions to the provider-specific format.
+
+## Example: Email Processing Agent
+
+Configure an agent node with:
+
+- **Task prompt**: `"Read the latest 5 emails from {{ gmail_query }}. Summarize each one and create a Linear issue for any that require follow-up."`
+- **Enabled tools**: `gmail.list_messages`, `gmail.get_message`, `linear.create_issue`
+- **Stop condition**: `explicit_stop`
+- **Max iterations**: `20`
+
+The agent will autonomously read emails, analyze them, and create issues — calling tools as needed in a loop.

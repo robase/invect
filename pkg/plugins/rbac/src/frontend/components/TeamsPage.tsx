@@ -1,0 +1,476 @@
+/**
+ * TeamsPage — Team management page with create/edit/delete teams and member management.
+ */
+
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronDown, ChevronRight, Plus, Search, Trash2, User, Users, X } from 'lucide-react';
+import { useApiClient, PageLayout } from '@invect/frontend';
+import { useRbac } from '../providers/RbacProvider';
+import {
+  useTeams,
+  useTeam,
+  useCreateTeam,
+  useDeleteTeam,
+  useAddTeamMember,
+  useRemoveTeamMember,
+} from '../hooks/useTeams';
+
+// ─────────────────────────────────────────────────────────────
+// User fetching (reused from AccessControlPage pattern)
+// ─────────────────────────────────────────────────────────────
+
+interface AuthUser {
+  id: string;
+  name?: string;
+  email?: string;
+}
+
+function useUsers() {
+  const api = useApiClient();
+  const [users, setUsers] = useState<AuthUser[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${api.getBaseURL()}/plugins/auth/users?limit=200`, { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.users) {
+          setUsers(data.users);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [api]);
+
+  return { users };
+}
+
+// ─────────────────────────────────────────────────────────────
+// Main Page
+// ─────────────────────────────────────────────────────────────
+
+export function TeamsPage() {
+  const { isAuthenticated, checkPermission } = useRbac();
+  const teamsQuery = useTeams();
+  const createTeam = useCreateTeam();
+  const deleteTeam = useDeleteTeam();
+  const { users } = useUsers();
+
+  const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null);
+  const [teamSearch, setTeamSearch] = useState('');
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newTeamName, setNewTeamName] = useState('');
+  const [newTeamDescription, setNewTeamDescription] = useState('');
+
+  const teams = teamsQuery.data?.teams ?? [];
+  const isAdmin = isAuthenticated && checkPermission('admin:*');
+
+  const userMap = useMemo(() => {
+    const map = new Map<string, AuthUser>();
+    for (const u of users) {
+      map.set(u.id, u);
+    }
+    return map;
+  }, [users]);
+
+  const filteredTeams = useMemo(() => {
+    const q = teamSearch.trim().toLowerCase();
+    if (!q) {
+      return teams;
+    }
+    return teams.filter(
+      (t) => t.name.toLowerCase().includes(q) || t.description?.toLowerCase().includes(q),
+    );
+  }, [teams, teamSearch]);
+
+  const handleCreate = async () => {
+    if (!newTeamName.trim()) {
+      return;
+    }
+    await createTeam.mutateAsync({
+      name: newTeamName.trim(),
+      description: newTeamDescription.trim() || undefined,
+    });
+    setNewTeamName('');
+    setNewTeamDescription('');
+    setShowCreateForm(false);
+  };
+
+  const handleDelete = async (teamId: string) => {
+    await deleteTeam.mutateAsync(teamId);
+    if (expandedTeamId === teamId) {
+      setExpandedTeamId(null);
+    }
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="imp-page flex h-full min-h-0 w-full items-center justify-center overflow-y-auto bg-imp-background text-imp-foreground">
+        <p className="text-sm text-imp-muted-foreground">Please sign in to access this page.</p>
+      </div>
+    );
+  }
+
+  return (
+    <PageLayout
+      title="Teams"
+      icon={Users}
+      actions={
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-imp-muted-foreground">
+            {filteredTeams.length} team{filteredTeams.length !== 1 ? 's' : ''}
+          </span>
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => setShowCreateForm(!showCreateForm)}
+              className="flex items-center gap-1 rounded bg-imp-primary px-2 py-1 text-xs font-medium text-imp-primary-foreground hover:bg-imp-primary/90"
+            >
+              <Plus className="h-3 w-3" />
+              New Team
+            </button>
+          )}
+        </div>
+      }
+    >
+      {/* Create team form */}
+      {showCreateForm && (
+        <div className="rounded-lg border border-imp-border bg-imp-card p-3">
+          <div className="mb-2 text-xs font-medium text-imp-foreground">Create Team</div>
+          <div className="space-y-2">
+            <input
+              type="text"
+              value={newTeamName}
+              onChange={(e) => setNewTeamName(e.target.value)}
+              placeholder="Team name"
+              className="w-full rounded border border-imp-border bg-imp-background px-2 py-1.5 text-sm placeholder:text-imp-muted-foreground"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleCreate();
+                }
+              }}
+            />
+            <input
+              type="text"
+              value={newTeamDescription}
+              onChange={(e) => setNewTeamDescription(e.target.value)}
+              placeholder="Description (optional)"
+              className="w-full rounded border border-imp-border bg-imp-background px-2 py-1.5 text-sm placeholder:text-imp-muted-foreground"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleCreate();
+                }
+              }}
+            />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleCreate}
+                disabled={createTeam.isPending || !newTeamName.trim()}
+                className="rounded bg-imp-primary px-3 py-1 text-xs font-medium text-imp-primary-foreground hover:bg-imp-primary/90 disabled:opacity-50"
+              >
+                {createTeam.isPending ? 'Creating…' : 'Create'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCreateForm(false)}
+                className="rounded px-3 py-1 text-xs text-imp-muted-foreground hover:text-imp-foreground"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-imp-muted-foreground" />
+        <input
+          value={teamSearch}
+          onChange={(e) => setTeamSearch(e.target.value)}
+          placeholder="Search teams…"
+          className="w-full rounded-lg border border-imp-border bg-imp-card py-1.5 pl-8 pr-3 text-sm outline-none ring-0 placeholder:text-imp-muted-foreground focus:border-imp-primary/50"
+        />
+      </div>
+
+      {/* Teams list */}
+      <div className="rounded-lg border border-imp-border bg-imp-card">
+        {teamsQuery.isLoading ? (
+          <div className="px-4 py-8 text-center text-sm text-imp-muted-foreground">Loading…</div>
+        ) : teamsQuery.error ? (
+          <div className="px-4 py-8 text-center text-sm text-red-500">
+            {teamsQuery.error instanceof Error ? teamsQuery.error.message : 'Failed to load teams'}
+          </div>
+        ) : filteredTeams.length === 0 ? (
+          <div className="px-4 py-8 text-center text-sm text-imp-muted-foreground">
+            {teamSearch
+              ? 'No teams match this search.'
+              : 'No teams yet. Create one to get started.'}
+          </div>
+        ) : (
+          <div className="divide-y divide-imp-border">
+            {filteredTeams.map((team) => {
+              const isExpanded = expandedTeamId === team.id;
+              return (
+                <div key={team.id}>
+                  <div className="flex items-center gap-3 px-3 py-2">
+                    <button
+                      type="button"
+                      className="flex flex-1 items-center gap-3 text-left hover:opacity-80 transition-opacity"
+                      onClick={() => setExpandedTeamId(isExpanded ? null : team.id)}
+                    >
+                      {isExpanded ? (
+                        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-imp-muted-foreground" />
+                      ) : (
+                        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-imp-muted-foreground" />
+                      )}
+                      <Users className="h-3.5 w-3.5 shrink-0 text-imp-primary" />
+                      <div className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium">{team.name}</span>
+                        {team.description && (
+                          <span className="block truncate text-xs text-imp-muted-foreground">
+                            {team.description}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(team.id)}
+                        className="shrink-0 rounded p-1 text-imp-muted-foreground hover:text-red-500"
+                        title="Delete team"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  {isExpanded && (
+                    <TeamMembersPanel
+                      teamId={team.id}
+                      users={users}
+                      userMap={userMap}
+                      isAdmin={!!isAdmin}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </PageLayout>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Team members panel (inline, shown when a team is expanded)
+// ─────────────────────────────────────────────────────────────
+
+function TeamMembersPanel({
+  teamId,
+  users,
+  userMap,
+  isAdmin,
+}: {
+  teamId: string;
+  users: AuthUser[];
+  userMap: Map<string, AuthUser>;
+  isAdmin: boolean;
+}) {
+  const { data, isLoading } = useTeam(teamId);
+  const addMember = useAddTeamMember(teamId);
+  const removeMember = useRemoveTeamMember(teamId);
+
+  const members = data?.members ?? [];
+  const existingUserIds = new Set(members.map((m) => m.userId));
+
+  const getUserLabel = (userId: string) => {
+    const u = userMap.get(userId);
+    return u?.name || u?.email || userId;
+  };
+
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
+  const handleAdd = async () => {
+    if (!selectedUserId) {
+      return;
+    }
+    await addMember.mutateAsync({ userId: selectedUserId });
+    setSelectedUserId(null);
+  };
+
+  const handleRemove = async (userId: string) => {
+    await removeMember.mutateAsync(userId);
+  };
+
+  return (
+    <div className="border-t border-imp-border bg-imp-muted/20 px-3 pb-3 pt-2">
+      {isLoading ? (
+        <p className="py-3 text-center text-xs text-imp-muted-foreground">Loading…</p>
+      ) : members.length === 0 ? (
+        <p className="py-2 text-xs text-imp-muted-foreground">No members yet.</p>
+      ) : (
+        <div className="mb-2 space-y-1">
+          {members.map((member) => (
+            <div key={member.id} className="flex items-center gap-2 rounded px-2 py-1 text-xs">
+              <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-imp-primary/10">
+                <User className="h-3 w-3 text-imp-primary" />
+              </div>
+              <span className="min-w-0 flex-1 truncate">{getUserLabel(member.userId)}</span>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => handleRemove(member.userId)}
+                  className="shrink-0 rounded p-0.5 text-imp-muted-foreground hover:text-red-500"
+                  title="Remove member"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {isAdmin && (
+        <div className="flex items-center gap-1.5">
+          <MemberSearchCombobox
+            users={users}
+            excludeIds={existingUserIds}
+            selectedUserId={selectedUserId}
+            onSelect={setSelectedUserId}
+          />
+          <button
+            type="button"
+            onClick={handleAdd}
+            disabled={addMember.isPending || !selectedUserId}
+            className="shrink-0 rounded bg-imp-primary px-2.5 py-1 text-xs font-medium text-imp-primary-foreground hover:bg-imp-primary/90 disabled:opacity-50"
+          >
+            {addMember.isPending ? '…' : 'Add'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Member search combobox
+// ─────────────────────────────────────────────────────────────
+
+function MemberSearchCombobox({
+  users,
+  excludeIds,
+  selectedUserId,
+  onSelect,
+}: {
+  users: AuthUser[];
+  excludeIds: Set<string>;
+  selectedUserId: string | null;
+  onSelect: (userId: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const selectedUser = selectedUserId ? users.find((u) => u.id === selectedUserId) : null;
+
+  const filtered = useMemo(() => {
+    const q = query.toLowerCase();
+    return users.filter((u) => {
+      if (excludeIds.has(u.id)) {
+        return false;
+      }
+      if (!q) {
+        return true;
+      }
+      return (
+        u.name?.toLowerCase().includes(q) ||
+        u.email?.toLowerCase().includes(q) ||
+        u.id.toLowerCase().includes(q)
+      );
+    });
+  }, [users, excludeIds, query]);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    if (open) {
+      document.addEventListener('mousedown', handleClick);
+      return () => document.removeEventListener('mousedown', handleClick);
+    }
+  }, [open]);
+
+  return (
+    <div ref={containerRef} className="relative min-w-0 flex-1">
+      {selectedUser ? (
+        <button
+          type="button"
+          onClick={() => {
+            onSelect(null);
+            setQuery('');
+          }}
+          className="flex w-full items-center gap-1.5 rounded border border-imp-border bg-imp-background px-2 py-1 text-xs text-left"
+        >
+          <User className="h-3 w-3 shrink-0 text-imp-muted-foreground" />
+          <span className="min-w-0 flex-1 truncate">
+            {selectedUser.name || selectedUser.email || selectedUser.id}
+          </span>
+          <X className="h-3 w-3 shrink-0 text-imp-muted-foreground" />
+        </button>
+      ) : (
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-imp-muted-foreground" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              if (!open) {
+                setOpen(true);
+              }
+            }}
+            onFocus={() => setOpen(true)}
+            placeholder="Search users…"
+            className="w-full rounded border border-imp-border bg-imp-background py-1 pl-6 pr-2 text-xs placeholder:text-imp-muted-foreground"
+          />
+        </div>
+      )}
+
+      {open && !selectedUser && (
+        <div className="absolute left-0 top-full z-50 mt-1 w-full rounded-md border border-imp-border bg-imp-background shadow-lg">
+          <div className="max-h-40 overflow-y-auto py-1">
+            {filtered.length === 0 ? (
+              <p className="px-3 py-2 text-xs text-imp-muted-foreground">No users found.</p>
+            ) : (
+              filtered.map((u) => (
+                <button
+                  key={u.id}
+                  type="button"
+                  onClick={() => {
+                    onSelect(u.id);
+                    setQuery('');
+                    setOpen(false);
+                  }}
+                  className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs hover:bg-imp-muted/50 transition-colors"
+                >
+                  <User className="h-3.5 w-3.5 shrink-0 text-imp-muted-foreground" />
+                  <span className="min-w-0 flex-1 truncate">{u.name || u.email || u.id}</span>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

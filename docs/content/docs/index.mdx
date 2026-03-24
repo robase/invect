@@ -1,0 +1,55 @@
+---
+title: Introduction
+description: Drop-in workflow orchestration for any Node.js app.
+---
+
+## What is Invect?
+
+Invect is an open-source workflow orchestration library that you mount directly into your existing Node.js application. It provides a visual flow editor, AI agent nodes, 50+ built-in integrations, and batch processing — all as a library, not a platform.
+
+Unlike standalone workflow tools that require separate infrastructure, Invect ships as npm packages you install alongside your existing Express, NestJS, or Next.js app. The backend is a router/module you mount, the frontend is a single React component.
+
+## Key Features
+
+- **Visual Flow Editor** — Drag-and-drop workflow builder powered by React Flow with real-time execution monitoring.
+- **AI Agent Nodes** — Built-in agents with iterative tool-calling loops using OpenAI and Anthropic APIs.
+- **50+ Built-in Actions** — Gmail, Slack, GitHub, Google Drive, Linear, Postgres, and more.
+- **Batch Processing** — Cut AI costs 50% with native OpenAI and Anthropic batch APIs. Flows pause and resume automatically.
+- **AI-Assisted Builder** — Describe what you need in plain language and the chat assistant wires up nodes for you.
+- **Multi-Database** — SQLite, PostgreSQL, and MySQL via Drizzle ORM.
+- **OAuth2 Credentials** — Secure AES-256-GCM encrypted credential storage with full OAuth2 flow support.
+- **Framework Agnostic** — One core, thin adapters for Express, NestJS, and Next.js.
+
+## Architecture
+
+```
+┌─────────────────────────────────────┐
+│          @invect/core              │
+│  ┌───────────────────────────────┐  │
+│  │  Invect class                │  │
+│  │  - initialize()               │  │
+│  │  - createFlow()               │  │
+│  │  - startFlowRun()             │  │
+│  │  - 40+ methods                │  │
+│  └───────────────────────────────┘  │
+│           ▲    ▲    ▲               │
+└───────────┼────┼────┼───────────────┘
+            │    │    │
+  ┌─────────┘    │    └─────────┐
+  │              │              │
+┌─▼──────┐ ┌────▼─────┐ ┌─────▼────┐
+│Express │ │  NestJS  │ │ Next.js  │
+│ Router │ │  Module  │ │  Actions │
+└────────┘ └──────────┘ └──────────┘
+```
+
+All business logic lives in `@invect/core`. Framework packages are thin adapters that wrap the core — each under 500 lines.
+
+## Next Steps
+
+<Cards>
+  <Card title="Quick Start" href="/docs/quick-start" description="Get Invect running in 5 minutes." />
+  <Card title="Setup Guide" href="/docs/setup" description="Step-by-step guide to adding Invect to your app." />
+  <Card title="Concepts" href="/docs/concepts" description="Understand flows, nodes, and execution." />
+  <Card title="CLI Reference" href="/docs/cli" description="All CLI commands and options." />
+</Cards>

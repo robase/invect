@@ -1,0 +1,61 @@
+{
+  "name": "@invect/nextjs",
+  "version": "0.0.1",
+  "description": "Next.js integration for Invect",
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown && npm run build:types",
+    "prepublishOnly": "pnpm run build",
+    "build:types": "tsc --emitDeclarationOnly --outDir dist",
+    "dev": "tsdown --watch",
+    "clean": "rm -rf dist",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "test": "echo \"No tests configured\""
+  },
+  "dependencies": {
+    "@invect/core": "workspace:*",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.31.0",
+    "@types/node": "^20.0.0",
+    "eslint": "^9.31.0",
+    "globals": "^16.3.0",
+    "prettier": "^3.6.2",
+    "tsdown": "^0.21.1",
+    "typescript": "^5.0.0",
+    "typescript-eslint": "^8.36.0"
+  },
+  "peerDependencies": {
+    "next": ">=13.0.0"
+  },
+  "keywords": [
+    "invect",
+    "nextjs",
+    "workflow",
+    "automation",
+    "api"
+  ],
+  "author": "Invect Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/robase/flow-backend.git",
+    "directory": "pkg/nextjs"
+  }
+}

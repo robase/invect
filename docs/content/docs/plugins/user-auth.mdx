@@ -1,0 +1,357 @@
+---
+title: User Auth
+description: Add user authentication to Invect with better-auth.
+---
+
+## Overview
+
+`@invect/user-auth` wraps a [better-auth](https://better-auth.com) instance as an Invect plugin. Drop it into your config and get:
+
+- **Session-based identity** — Every Invect API request is associated with a user via better-auth sessions.
+- **Proxied auth routes** — Sign-in, sign-up, OAuth callbacks, sign-out — all mounted automatically.
+- **Role mapping** — better-auth roles map to Invect's RBAC (admin, editor, viewer).
+- **Zero custom middleware** — Works with Express, NestJS, and Next.js via the plugin system.
+
+```
+┌──────────────────────────────────────────────────────┐
+│                      Invect                         │
+│                                                      │
+│  ┌────────────────────────────────────────────────┐  │
+│  │          @invect/plugin-auth                  │  │
+│  │                                                │  │
+│  │  onRequest → auth.api.getSession() → identity  │  │
+│  │  /plugins/auth/* → auth.handler()              │  │
+│  └────────────────────────────────────────────────┘  │
+│                        │                             │
+│           ┌────────────▼──────────────┐              │
+│           │      better-auth          │              │
+│           │  (your configured instance) │             │
+│           └───────────────────────────┘              │
+└──────────────────────────────────────────────────────┘
+```
+
+## Installation
+
+```bash
+npm install @invect/user-auth better-auth
+# or
+pnpm add @invect/user-auth better-auth
+```
+
+`better-auth` is a **peer dependency** — you configure it in your app and pass the instance to the plugin.
+
+## Quick Start
+
+### 1. Configure better-auth
+
+```ts title="auth.ts"
+import { betterAuth } from 'better-auth';
+
+export const auth = betterAuth({
+  database: {
+    url: process.env.DATABASE_URL,
+    type: 'sqlite', // or 'postgres', 'mysql'
+  },
+  emailAndPassword: {
+    enabled: true,
+  },
+  // Add any better-auth plugins you need:
+  // plugins: [twoFactor(), organization(), ...],
+});
+```
+
+### 2. Add the plugin to Invect
+
+<Tabs groupId="framework" persist items={['Express', 'NestJS', 'Next.js']}>
+<Tab value="Express">
+```ts
+import { createInvectRouter } from '@invect/express';
+import { betterAuthPlugin } from '@invect/user-auth';
+import { auth } from './auth';
+
+app.use('/invect', createInvectRouter({
+  baseDatabaseConfig: {
+    type: 'sqlite',
+    connectionString: 'file:./dev.db',
+    id: 'main',
+  },
+  plugins: [
+    betterAuthPlugin({ auth }),
+  ],
+}));
+```
+</Tab>
+<Tab value="NestJS">
+```ts
+import { InvectModule } from '@invect/nestjs';
+import { betterAuthPlugin } from '@invect/user-auth';
+import { auth } from './auth';
+
+@Module({
+  imports: [
+    InvectModule.forRoot({
+      baseDatabaseConfig: {
+        type: 'postgresql',
+        connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/invect',
+        id: 'main',
+      },
+      plugins: [
+        betterAuthPlugin({ auth }),
+      ],
+    }),
+  ],
+})
+export class AppModule {}
+```
+</Tab>
+<Tab value="Next.js">
+```ts
+import { createInvectHandler } from '@invect/nextjs';
+import { betterAuthPlugin } from '@invect/user-auth';
+import { auth } from './auth';
+
+export const handler = createInvectHandler({
+  baseDatabaseConfig: {
+    type: 'sqlite',
+    connectionString: process.env.DATABASE_URL || 'file:./dev.db',
+    id: 'main',
+  },
+  plugins: [
+    betterAuthPlugin({ auth }),
+  ],
+});
+```
+</Tab>
+</Tabs>
+
+### 3. Done
+
+Users can now sign up and sign in via better-auth's routes (proxied through Invect), and all Invect API requests are authenticated automatically.
+
+## Auth Routes
+
+The plugin proxies all better-auth endpoints under `/plugins/auth/`. For an Invect instance mounted at `/invect`:
+
+| Route | Description |
+|-------|-------------|
+| `POST /invect/plugins/auth/api/auth/sign-up/email` | Email + password sign-up |
+| `POST /invect/plugins/auth/api/auth/sign-in/email` | Email + password sign-in |
+| `POST /invect/plugins/auth/api/auth/sign-out` | Sign out (invalidate session) |
+| `GET  /invect/plugins/auth/api/auth/get-session` | Get current session |
+| `GET  /invect/plugins/auth/api/auth/sign-in/social` | OAuth sign-in (Google, GitHub, etc.) |
+| `GET  /invect/plugins/auth/api/auth/callback/:provider` | OAuth callback |
+
+All standard better-auth routes are available. See the [better-auth docs](https://better-auth.com/docs) for the full list.
+
+## How It Works
+
+### Session Resolution
+
+On every Invect API request:
+
+1. The plugin's `onAuthorize` hook fires.
+2. It calls `auth.api.getSession({ headers })` with the incoming request headers.
+3. If a valid session exists, the better-auth `user` is mapped to an `InvectIdentity`.
+4. Invect's built-in RBAC engine uses that identity for permission checks.
+
+```
+Request → onAuthorize hook → auth.api.getSession()
+                                    │
+                   ┌────────────────┴────────────────┐
+                   │ Valid session                    │ No session
+                   ▼                                 ▼
+          Map user → InvectIdentity          Return null (401)
+                   │
+                   ▼
+          Invect RBAC checks permissions
+```
+
+### Identity Mapping
+
+By default, the plugin maps better-auth users to Invect identities like this:
+
+| better-auth field | InvectIdentity field | Notes |
+|-------------------|----------------------|-------|
+| `user.id` | `id` | Always mapped |
+| `user.name` (or `user.email`) | `name` | Falls back to email |
+| `user.role` | `role` | Via role mapping |
+
+Default role mapping:
+
+| better-auth role | Invect role |
+|-----------------|--------------|
+| `'admin'` | `'admin'` |
+| `'viewer'` or `'readonly'` | `'viewer'` |
+| anything else (including `null`) | `'editor'` |
+
+## Configuration
+
+### Full Options
+
+```ts
+betterAuthPlugin({
+  // Required: your better-auth instance
+  auth: auth,
+
+  // Prefix for proxied auth routes (default: 'auth')
+  prefix: 'auth',
+
+  // Custom user → identity mapping
+  mapUser: (user, session) => ({
+    id: user.id,
+    name: user.name ?? undefined,
+    role: 'admin',
+    teamIds: ['team-1', 'team-2'],
+    permissions: ['flow:read', 'flow:write'],
+  }),
+
+  // Custom role mapping (only used when mapUser is not provided)
+  mapRole: (role) => {
+    if (role === 'superadmin') return 'admin';
+    if (role === 'member') return 'editor';
+    return 'viewer';
+  },
+
+  // Paths that don't require a session
+  publicPaths: ['/health', '/webhooks'],
+
+  // What to do on session errors: 'throw' (401) or 'continue' (null identity)
+  onSessionError: 'throw',
+});
+```
+
+### Custom User Mapping
+
+Override `mapUser` to pull teams, permissions, or metadata from your better-auth user:
+
+```ts
+betterAuthPlugin({
+  auth,
+  mapUser: async (user, session) => {
+    // Fetch team memberships from your database
+    const teams = await getTeamsForUser(user.id);
+
+    return {
+      id: user.id,
+      name: user.name ?? undefined,
+      role: user.role === 'admin' ? 'admin' : 'editor',
+      teamIds: teams.map(t => t.id),
+      permissions: user.role === 'admin'
+        ? ['flow:write', 'flow:delete', 'credential:write']
+        : ['flow:read'],
+      metadata: {
+        email: user.email,
+        avatarUrl: user.image,
+      },
+    };
+  },
+});
+```
+
+### Custom Role Mapping
+
+If you don't need full identity customization, just map roles:
+
+```ts
+betterAuthPlugin({
+  auth,
+  mapRole: (betterAuthRole) => {
+    switch (betterAuthRole) {
+      case 'superadmin':
+      case 'admin':
+        return 'admin';
+      case 'developer':
+      case 'member':
+        return 'editor';
+      default:
+        return 'viewer';
+    }
+  },
+});
+```
+
+## Using with better-auth Plugins
+
+The plugin works with any better-auth plugin. Add them to your better-auth config — their routes are automatically proxied:
+
+```ts
+import { betterAuth } from 'better-auth';
+import { twoFactor } from 'better-auth/plugins';
+import { organization } from 'better-auth/plugins';
+
+const auth = betterAuth({
+  database: { url: process.env.DATABASE_URL, type: 'postgres' },
+  emailAndPassword: { enabled: true },
+  socialProviders: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    },
+    github: {
+      clientId: process.env.GITHUB_CLIENT_ID!,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+    },
+  },
+  plugins: [
+    twoFactor(),
+    organization(),
+  ],
+});
+```
+
+Two-factor endpoints (`/two-factor/enable`, `/two-factor/verify-totp`, etc.) and organization endpoints are all accessible through the Invect plugin proxy.
+
+## Frontend Integration
+
+On the frontend, configure better-auth's client to point at the proxied routes:
+
+```ts title="auth-client.ts"
+import { createAuthClient } from 'better-auth/react'; // or /vue, /svelte, etc.
+
+export const authClient = createAuthClient({
+  baseURL: 'http://localhost:3000/invect/plugins/auth',
+});
+
+export const { signIn, signUp, signOut, useSession } = authClient;
+```
+
+Then use it in your components:
+
+```tsx title="LoginForm.tsx"
+import { signIn } from './auth-client';
+
+function LoginForm() {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    await signIn.email({
+      email: form.get('email') as string,
+      password: form.get('password') as string,
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input name="email" type="email" placeholder="Email" />
+      <input name="password" type="password" placeholder="Password" />
+      <button type="submit">Sign In</button>
+    </form>
+  );
+}
+```
+
+## Error Codes
+
+The plugin registers these error codes:
+
+| Code | Status | Description |
+|------|--------|-------------|
+| `auth:session_expired` | 401 | Session has expired |
+| `auth:session_not_found` | 401 | No valid session found |
+| `auth:forbidden` | 403 | User lacks required permissions |
+
+## Database
+
+better-auth manages its own database tables (`user`, `session`, `account`, `verification`). These are separate from Invect's tables and are handled by better-auth's built-in migration system.
+
+If both Invect and better-auth use the same database, they coexist without conflict — each manages its own tables.

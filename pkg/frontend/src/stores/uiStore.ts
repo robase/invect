@@ -1,0 +1,175 @@
+import { create, type StoreApi, type UseBoundStore } from 'zustand';
+import { devtools, persist } from 'zustand/middleware';
+import { immer } from 'zustand/middleware/immer';
+
+export type ModalType =
+  | 'createFlow'
+  | 'createCredential'
+  | 'editCredential'
+  | 'confirm'
+  | 'executeFlow'
+  | 'deleteConfirm'
+  | null;
+
+export type SidebarTab = 'nodes' | 'settings' | 'history';
+
+interface UIState {
+  // Sidebar
+  sidebarCollapsed: boolean;
+  activeSidebarTab: SidebarTab;
+
+  // Modals
+  activeModal: ModalType;
+  modalData: Record<string, unknown>;
+
+  // Panels
+  validationPanelOpen: boolean;
+  logsPanelOpen: boolean;
+
+  // Node sidebar (for adding nodes)
+  nodeSidebarOpen: boolean;
+}
+
+interface UIActions {
+  // Sidebar
+  toggleSidebar: () => void;
+  setSidebarCollapsed: (collapsed: boolean) => void;
+  setSidebarTab: (tab: SidebarTab) => void;
+
+  // Modals
+  openModal: (modal: NonNullable<ModalType>, data?: Record<string, unknown>) => void;
+  closeModal: () => void;
+  setModalData: (data: Record<string, unknown>) => void;
+
+  // Panels
+  toggleValidationPanel: () => void;
+  setValidationPanelOpen: (open: boolean) => void;
+  toggleLogsPanel: () => void;
+  setLogsPanelOpen: (open: boolean) => void;
+
+  // Node sidebar
+  toggleNodeSidebar: () => void;
+  setNodeSidebarOpen: (open: boolean) => void;
+
+  // Reset
+  reset: () => void;
+}
+
+export type UIStore = UIState & UIActions;
+
+const initialState: UIState = {
+  sidebarCollapsed: false,
+  activeSidebarTab: 'nodes',
+  activeModal: null,
+  modalData: {},
+  validationPanelOpen: false,
+  logsPanelOpen: false,
+  nodeSidebarOpen: true,
+};
+
+export const useUIStore: UseBoundStore<StoreApi<UIStore>> = create<UIStore>()(
+  devtools(
+    persist(
+      immer((set) => ({
+        ...initialState,
+
+        // Sidebar
+        toggleSidebar: () =>
+          set((state) => {
+            state.sidebarCollapsed = !state.sidebarCollapsed;
+          }),
+
+        setSidebarCollapsed: (collapsed) =>
+          set((state) => {
+            state.sidebarCollapsed = collapsed;
+          }),
+
+        setSidebarTab: (tab) =>
+          set((state) => {
+            state.activeSidebarTab = tab;
+          }),
+
+        // Modals
+        openModal: (modal, data = {}) =>
+          set((state) => {
+            state.activeModal = modal;
+            state.modalData = data;
+          }),
+
+        closeModal: () =>
+          set((state) => {
+            state.activeModal = null;
+            state.modalData = {};
+          }),
+
+        setModalData: (data) =>
+          set((state) => {
+            state.modalData = { ...state.modalData, ...data };
+          }),
+
+        // Panels
+        toggleValidationPanel: () =>
+          set((state) => {
+            state.validationPanelOpen = !state.validationPanelOpen;
+          }),
+
+        setValidationPanelOpen: (open) =>
+          set((state) => {
+            state.validationPanelOpen = open;
+          }),
+
+        toggleLogsPanel: () =>
+          set((state) => {
+            state.logsPanelOpen = !state.logsPanelOpen;
+          }),
+
+        setLogsPanelOpen: (open) =>
+          set((state) => {
+            state.logsPanelOpen = open;
+          }),
+
+        // Node sidebar
+        toggleNodeSidebar: () =>
+          set((state) => {
+            state.nodeSidebarOpen = !state.nodeSidebarOpen;
+          }),
+
+        setNodeSidebarOpen: (open) =>
+          set((state) => {
+            state.nodeSidebarOpen = open;
+          }),
+
+        // Reset
+        reset: () => set(() => ({ ...initialState })),
+      })),
+      {
+        name: 'invect-ui',
+        // Only persist certain fields
+        partialize: (state) => ({
+          sidebarCollapsed: state.sidebarCollapsed,
+          activeSidebarTab: state.activeSidebarTab,
+          nodeSidebarOpen: state.nodeSidebarOpen,
+        }),
+      },
+    ),
+    { name: 'ui' },
+  ),
+);
+
+// Selector hooks
+export const useSidebarCollapsed = () => useUIStore((s) => s.sidebarCollapsed);
+export const useActiveSidebarTab = () => useUIStore((s) => s.activeSidebarTab);
+export const useActiveModal = () => useUIStore((s) => s.activeModal);
+export const useModalData = () => useUIStore((s) => s.modalData);
+export const useValidationPanelOpen = () => useUIStore((s) => s.validationPanelOpen);
+export const useLogsPanelOpen = () => useUIStore((s) => s.logsPanelOpen);
+export const useNodeSidebarOpen = () => useUIStore((s) => s.nodeSidebarOpen);
+
+// Combined selectors
+export const useModals = () =>
+  useUIStore((s) => ({
+    activeModal: s.activeModal,
+    modalData: s.modalData,
+    openModal: s.openModal,
+    closeModal: s.closeModal,
+  }));

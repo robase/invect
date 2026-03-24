@@ -1,0 +1,249 @@
+---
+title: Setup Guide
+description: Step-by-step guide to adding Invect to your Node.js app.
+---
+
+## Prerequisites
+
+- **Node.js** 18 or later
+- **A Node.js web framework** — Express, NestJS, or Next.js
+- **A package manager** — npm, pnpm, yarn, or bun
+
+## 1. Run the Setup Wizard
+
+The fastest way to get started is the interactive `init` command:
+
+```bash
+npx invect init
+```
+
+This detects your framework and database, installs the right packages, creates a config file, generates the database schema, and sets up encryption — all in one step.
+
+If you prefer doing things manually, follow the steps below.
+
+## 2. Install Packages
+
+Install `@invect/core`, your framework adapter, and a database driver:
+
+<Tabs groupId="framework" persist items={['Express', 'NestJS', 'Next.js']}>
+<Tab value="Express">
+```bash
+npm install @invect/core @invect/express @libsql/client
+```
+</Tab>
+<Tab value="NestJS">
+```bash
+npm install @invect/core @invect/nestjs postgres
+```
+</Tab>
+<Tab value="Next.js">
+```bash
+npm install @invect/core @invect/nextjs postgres
+```
+</Tab>
+</Tabs>
+
+For the frontend flow editor, install the frontend package in your React app:
+
+```bash
+npm install @invect/frontend
+```
+
+## 3. Create a Config File
+
+Create `invect.config.ts` in your project root (or `src/`):
+
+<Tabs groupId="database" persist items={['SQLite', 'PostgreSQL', 'MySQL']}>
+<Tab value="SQLite">
+```ts title="invect.config.ts"
+export default {
+  baseDatabaseConfig: {
+    type: 'sqlite',
+    connectionString: 'file:./dev.db',
+    id: 'main',
+  },
+};
+```
+</Tab>
+<Tab value="PostgreSQL">
+```ts title="invect.config.ts"
+export default {
+  baseDatabaseConfig: {
+    type: 'postgresql',
+    connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/invect',
+    id: 'main',
+  },
+};
+```
+</Tab>
+<Tab value="MySQL">
+```ts title="invect.config.ts"
+export default {
+  baseDatabaseConfig: {
+    type: 'mysql',
+    connectionString: process.env.DATABASE_URL || 'mysql://user:pass@localhost:3306/invect',
+    id: 'main',
+  },
+};
+```
+</Tab>
+</Tabs>
+
+## 4. Generate the Database Schema
+
+Run the schema generator:
+
+```bash
+npx invect generate
+```
+
+This reads your config (including any plugins) and writes Drizzle ORM schema files to `./src/database/`. You'll see `schema-sqlite.ts`, `schema-postgres.ts`, and `schema-mysql.ts` — one per supported dialect.
+
+## 5. Apply the Schema
+
+Push the schema to your database:
+
+```bash
+npx invect migrate --push
+```
+
+For SQLite, this creates the database file and all tables. For PostgreSQL/MySQL, make sure the database exists and `DATABASE_URL` is set.
+
+## 6. Set Up Environment Variables
+
+Create a `.env` file:
+
+```bash title=".env"
+# Encryption key for stored credentials (required)
+INVECT_ENCRYPTION_KEY="<run: npx invect secret>"
+
+# Database URL (for PostgreSQL/MySQL)
+DATABASE_URL=postgresql://user:pass@localhost:5432/invect
+```
+
+Generate an encryption key:
+
+```bash
+npx invect secret
+```
+
+AI provider keys (OpenAI, Anthropic) are stored as **credentials** through the Invect UI or seeded via the `defaultCredentials` config option — they are not environment variables.
+
+## 7. Mount the Backend
+
+<Tabs groupId="framework" persist items={['Express', 'NestJS', 'Next.js']}>
+<Tab value="Express">
+```ts title="server.ts"
+import express from 'express';
+import cors from 'cors';
+import { createInvectRouter } from '@invect/express';
+
+const app = express();
+app.use(cors());
+
+app.use('/invect', createInvectRouter({
+  baseDatabaseConfig: {
+    type: 'sqlite',
+    connectionString: 'file:./dev.db',
+    id: 'main',
+  },
+}));
+
+app.listen(3000, () => {
+  console.log('Server running on http://localhost:3000');
+});
+```
+</Tab>
+<Tab value="NestJS">
+```ts title="app.module.ts"
+import { Module } from '@nestjs/common';
+import { InvectModule } from '@invect/nestjs';
+
+@Module({
+  imports: [
+    InvectModule.forRoot({
+      baseDatabaseConfig: {
+        type: 'postgresql',
+        connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/invect',
+        id: 'main',
+      },
+    }),
+  ],
+})
+export class AppModule {}
+```
+</Tab>
+<Tab value="Next.js">
+```ts title="app/api/invect/[...route]/route.ts"
+import { createInvectHandler } from '@invect/nextjs';
+
+const handler = createInvectHandler({
+  baseDatabaseConfig: {
+    type: 'sqlite',
+    connectionString: process.env.DATABASE_URL || 'file:./dev.db',
+    id: 'main',
+  },
+});
+
+export const GET = handler;
+export const POST = handler;
+export const PUT = handler;
+export const DELETE = handler;
+```
+</Tab>
+</Tabs>
+
+## 8. Add the Frontend
+
+In your React app, render the flow editor:
+
+```tsx title="App.tsx"
+import { Invect } from '@invect/frontend';
+import '@invect/frontend/styles';
+
+export default function App() {
+  return (
+    <Invect apiBaseUrl="http://localhost:3000/invect" />
+  );
+}
+```
+
+This gives you the full visual flow editor, execution viewer, credential manager, and AI agent configuration in a single component.
+
+## 9. Verify It Works
+
+Start your backend and frontend, then open the frontend in your browser. You should see the Invect flow editor with an empty workspace. Try creating your first flow:
+
+1. Click **New Flow**
+2. Add an **Input** node and a **Model** node
+3. Connect them with an edge
+4. Configure the Model node with a prompt
+5. Run the flow
+
+## Project Structure
+
+After setup, your project will look something like this:
+
+```
+my-app/
+├── invect.config.ts         # Invect configuration
+├── src/
+│   ├── database/
+│   │   ├── schema-sqlite.ts  # Generated — do not edit
+│   │   ├── schema-postgres.ts
+│   │   └── schema-mysql.ts
+│   └── server.ts             # Your app + Invect router
+├── .env                      # API keys and encryption key
+└── dev.db                    # SQLite database (if using SQLite)
+```
+
+The schema files in `src/database/` are generated by the CLI and should not be edited manually. When you add plugins or upgrade Invect, regenerate them with `npx invect generate`.
+
+## Next Steps
+
+<Cards>
+  <Card title="Core Concepts" href="/docs/concepts" description="Understand flows, nodes, and execution." />
+  <Card title="CLI Reference" href="/docs/cli" description="All CLI commands and options." />
+  <Card title="Plugins" href="/docs/plugins" description="Extend Invect with custom tables and actions." />
+  <Card title="AI Agents" href="/docs/agents" description="Build agent workflows with tool calling." />
+</Cards>

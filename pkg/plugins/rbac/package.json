@@ -1,0 +1,94 @@
+{
+  "name": "@invect/rbac",
+  "version": "0.0.1",
+  "description": "RBAC plugin for Invect — adds role-based access control UI, flow sharing, and permission management. Requires @invect/user-auth.",
+  "type": "module",
+  "main": "dist/backend/index.cjs",
+  "module": "dist/backend/index.mjs",
+  "types": "dist/backend/index.d.ts",
+  "files": [
+    "dist/**/*"
+  ],
+  "scripts": {
+    "build": "tsdown && tsc --emitDeclarationOnly --outDir dist",
+    "prepublishOnly": "pnpm run build",
+    "build:w": "tsdown --watch",
+    "dev": "tsdown --watch",
+    "clean": "rm -rf dist",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "test": "echo \"No tests configured\"",
+    "test:watch": "vitest --watch"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/backend/index.d.ts",
+      "import": "./dist/backend/index.mjs",
+      "require": "./dist/backend/index.cjs"
+    },
+    "./ui": {
+      "types": "./dist/frontend/index.d.ts",
+      "import": "./dist/frontend/index.mjs",
+      "require": "./dist/frontend/index.cjs"
+    },
+    "./types": {
+      "types": "./dist/shared/types.d.ts",
+      "import": "./dist/shared/types.mjs",
+      "require": "./dist/shared/types.cjs"
+    }
+  },
+  "dependencies": {
+    "@invect/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "@invect/user-auth": ">=0.1.0",
+    "@invect/frontend": ">=2.0.0",
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0",
+    "@tanstack/react-query": ">=5.0.0",
+    "clsx": ">=2.0.0",
+    "tailwind-merge": ">=2.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@invect/frontend": {
+      "optional": true
+    },
+    "clsx": {
+      "optional": true
+    },
+    "tailwind-merge": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    },
+    "@tanstack/react-query": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@invect/frontend": "workspace:*",
+    "@invect/user-auth": "workspace:*",
+    "@tanstack/react-query": "^5.0.0",
+    "@types/node": "^20.11.20",
+    "@types/react": "18.3.7",
+    "@types/react-dom": "18.3.7",
+    "lucide-react": "^0.475.0",
+    "prettier": "^3.6.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tsdown": "^0.21.1",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/robase/flow-backend.git",
+    "directory": "pkg/plugins/rbac"
+  }
+}

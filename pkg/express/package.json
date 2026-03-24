@@ -1,0 +1,84 @@
+{
+  "name": "@invect/express",
+  "version": "0.0.1",
+  "description": "Express.js integration package for Invect Core",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "files": [
+    "dist/**/*"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "prepublishOnly": "pnpm run build",
+    "build:w": "tsdown --watch",
+    "dev": "tsdown --watch",
+    "clean": "rm -rf dist",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "test": "echo \"No tests configured\"",
+    "test:watch": "echo \"No tests configured\"",
+    "test:coverage": "echo \"No tests configured\""
+  },
+  "keywords": [
+    "invect",
+    "express",
+    "workflow",
+    "automation",
+    "api"
+  ],
+  "author": "Invect Team",
+  "license": "MIT",
+  "dependencies": {
+    "@invect/core": "workspace:*",
+    "express": "^4.19.2",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.31.0",
+    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.17",
+    "@types/node": "^20.11.20",
+    "eslint": "^9.31.0",
+    "globals": "^16.3.0",
+    "prettier": "^3.6.2",
+    "tsdown": "^0.21.1",
+    "typescript": "^5.3.3",
+    "typescript-eslint": "^8.36.0",
+    "vitest": "^1.2.2",
+    "supertest": "^6.3.4",
+    "@types/supertest": "^6.0.2"
+  },
+  "peerDependencies": {
+    "express": "^4.18.0"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./router": {
+      "types": "./dist/router/index.d.ts",
+      "import": "./dist/router/index.js",
+      "require": "./dist/router/index.cjs"
+    },
+    "./middleware": {
+      "types": "./dist/middleware/index.d.ts",
+      "import": "./dist/middleware/index.js",
+      "require": "./dist/middleware/index.cjs"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/robase/flow-backend.git",
+    "directory": "pkg/express"
+  },
+  "bugs": {
+    "url": "https://github.com/robase/flow-backend/issues"
+  },
+  "homepage": "https://github.com/robase/flow-backend#readme"
+}

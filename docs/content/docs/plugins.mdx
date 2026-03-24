@@ -1,0 +1,26 @@
+---
+title: Plugins
+description: Official plugins and extension points for adding auth, RBAC, webhooks, and custom capabilities to Invect.
+---
+
+## Plugin System
+
+Invect plugins let you extend the platform without forking the core. A plugin can add database schema, API endpoints, lifecycle hooks, custom actions, frontend UI, or any combination of those pieces.
+
+Use the official plugins when you need common platform features like authentication, access control, or webhook-driven execution. Build your own plugin when you need domain-specific behavior that should live alongside the rest of your Invect integration.
+
+## Official Plugins
+
+<Cards>
+	<Card title="User Auth" href="/docs/plugins/user-auth" description="Add authentication flows, session handling, and protected Invect access." />
+	<Card title="RBAC" href="/docs/plugins/rbac" description="Control who can view, edit, run, and share flows." />
+	<Card title="Webhooks" href="/docs/plugins/webhooks" description="Trigger flows from inbound HTTP events and external systems." />
+</Cards>
+
+## Build Your Own
+
+If the built-in plugins do not cover your use case, Invect exposes a full plugin interface for backend and frontend extensions.
+
+<Cards>
+	<Card title="Building Plugins" href="/docs/plugins/overview" description="Learn the plugin interface, schema model, hooks, and registration flow." />
+</Cards>

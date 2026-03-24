@@ -1,0 +1,141 @@
+---
+title: Programmatic Usage
+description: Execute flows directly from your backend code.
+---
+
+The visual editor is optional. The `Invect` core class exposes every operation as a typed method — build flows in the UI, trigger them from code, or do both.
+
+## Setup
+
+```ts title="worker.ts"
+import { Invect } from '@invect/core';
+
+const core = new Invect({
+  baseDatabaseConfig: {
+    type: 'sqlite',
+    connectionString: process.env.DATABASE_URL || 'file:./dev.db',
+    id: 'main',
+  },
+});
+await core.initialize();
+```
+
+## Executing Flows
+
+### Synchronous execution
+
+Waits for the flow to complete and returns the full result:
+
+```ts
+const result = await core.startFlowRun('flow-id-here', {
+  email: 'user@example.com',
+  data: { key: 'value' },
+});
+
+console.log(result.status);  // 'SUCCESS' | 'FAILED'
+console.log(result.outputs); // Flow output data
+```
+
+### Fire and forget
+
+Returns immediately with the flow run ID. The flow executes in the background:
+
+```ts
+const run = await core.startFlowRunAsync('flow-id-here', inputs);
+// Flow is running — poll getFlowRun(run.id) for status
+```
+
+### Pin to a specific version
+
+```ts
+const result = await core.startFlowRun('flow-id-here', inputs, {
+  version: 3,        // specific version number
+  // version: 'latest',  // always run the latest (default)
+});
+```
+
+### Batch processing
+
+Pause the flow and use the OpenAI/Anthropic batch API for 50% cheaper AI model calls:
+
+```ts
+const result = await core.startFlowRun('flow-id-here', inputs, {
+  useBatchProcessing: true,
+});
+// result.status will be 'PAUSED_FOR_BATCH' — polling resumes it automatically
+```
+
+### Common patterns
+
+```ts title="From a webhook"
+app.post('/webhooks/new-order', async (req, res) => {
+  const run = await core.startFlowRunAsync('order-processing-flow', { order: req.body });
+  res.json({ runId: run.id });
+});
+```
+
+```ts title="From a queue worker"
+import { Worker } from 'bullmq';
+
+const worker = new Worker('workflows', async (job) => {
+  return core.startFlowRun(job.data.flowId, job.data.inputs);
+});
+```
+
+## Managing Flows
+
+```ts
+// Create
+const flow = await core.createFlow({ name: 'My Flow', description: '...' });
+
+// Read
+const flows = await core.listFlows();
+const flow = await core.getFlowById(flowId);
+
+// Delete
+await core.deleteFlow(flowId);
+```
+
+## Managing Versions
+
+Each save in the editor creates a new version. You can list versions and pin executions to any of them:
+
+```ts
+const versions = await core.listFlowVersions(flowId);
+const version = await core.getFlowVersion(flowId, 2); // or 'latest'
+```
+
+## Inspecting Executions
+
+```ts
+const run = await core.getFlowRun(runId);
+console.log(run.status);          // 'SUCCESS' | 'FAILED' | 'PAUSED_FOR_BATCH'
+console.log(run.nodeExecutions);  // per-node traces with inputs, outputs, timing
+
+const runs = await core.listFlowRuns(flowId);
+```
+
+## API Reference
+
+| Method | Description |
+|--------|-------------|
+| `initialize()` | Set up database, register actions, start services |
+| `createFlow(input)` | Create a new flow |
+| `listFlows()` | List all flows |
+| `getFlowById(id)` | Get a flow by ID |
+| `deleteFlow(id)` | Delete a flow |
+| `listFlowVersions(flowId)` | List all versions of a flow |
+| `getFlowVersion(flowId, version)` | Get a specific version (`number` or `'latest'`) |
+| `startFlowRun(flowId, inputs, opts?)` | Execute a flow synchronously |
+| `startFlowRunAsync(flowId, inputs, opts?)` | Execute a flow in the background |
+| `getFlowRun(id)` | Get execution details and per-node traces |
+| `listFlowRuns(flowId)` | List executions for a flow |
+| `createCredential(input)` | Store a credential |
+| `listCredentials()` | List all credentials |
+| `getAgentTools()` | List available agent tools |
+| `getDashboardStats()` | Flow counts, run counts by status, recent activity |
+| `startBatchPolling()` | Start background batch job polling |
+| `stopBatchPolling()` | Stop batch job polling |
+| `startCronScheduler()` | Start the cron trigger scheduler |
+| `shutdown()` | Gracefully shut down (marks in-progress runs as failed) |
+

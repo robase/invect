@@ -1,0 +1,167 @@
+/**
+ * `npx invect migrate` — Apply pending database migrations
+ *
+ * Applies the Invect schema directly to your database. This wraps
+ * Drizzle Kit's migration commands with Invect-aware configuration.
+ *
+ * For development, use `--push` to apply schema changes directly
+ * without generating migration files (uses `drizzle-kit push`).
+ *
+ * Usage:
+ *   npx invect migrate                    # Apply pending SQL migrations
+ *   npx invect migrate --push             # Push schema directly (dev mode)
+ *   npx invect migrate --config ./my.ts   # Explicit config path
+ *   npx invect migrate --yes              # Skip confirmation
+ */
+
+import { Command } from 'commander';
+import path from 'node:path';
+import fs from 'node:fs';
+import pc from 'picocolors';
+import prompts from 'prompts';
+import { execSync } from 'node:child_process';
+import { findConfigPath, loadConfig } from '../utils/config-loader.js';
+
+export const migrateCommand = new Command('migrate')
+  .description('Apply pending database migrations via Drizzle Kit')
+  .option('--config <path>', 'Path to your Invect config file')
+  .option('-y, --yes', 'Skip confirmation prompt')
+  .option('--push', 'Push schema directly without migration files (dev mode)')
+  .action(migrateAction);
+
+/** @internal — exported for testing */
+export async function migrateAction(options: {
+  config?: string;
+  yes?: boolean;
+  push?: boolean;
+}) {
+  console.log(pc.bold('\n🗄️  Invect Migration\n'));
+
+  // ─── Step 1: Find and load config ───────────────────────────────
+  const configPath = findConfigPath(options.config);
+  if (!configPath) {
+    console.error(
+      pc.red('✗ Could not find Invect config file.') +
+        '\n' +
+        pc.dim('  Use --config <path> to specify the config file explicitly.') +
+        '\n\n' +
+        pc.dim('  You can create one with: ' + pc.cyan('npx invect init')) +
+        '\n',
+    );
+    process.exit(1);
+  }
+
+  console.log(pc.dim(`  Config: ${path.relative(process.cwd(), configPath)}`));
+
+  let config;
+  try {
+    config = await loadConfig(configPath);
+  } catch (error) {
+    console.error(pc.red(`✗ ${error instanceof Error ? error.message : String(error)}`));
+    process.exit(1);
+  }
+
+  const dbType = config.baseDatabaseConfig?.type;
+  const dbUrl = config.baseDatabaseConfig?.connectionString;
+
+  if (!dbType) {
+    console.error(
+      pc.red('✗ No baseDatabaseConfig.type found in your config.') +
+        '\n' +
+        pc.dim(
+          '  Expected: baseDatabaseConfig: { type: "sqlite" | "postgresql" | "mysql", ... }',
+        ) +
+        '\n',
+    );
+    process.exit(1);
+  }
+
+  console.log(pc.dim(`  Database: ${dbType}`));
+  if (dbUrl) {
+    const redacted = dbUrl.replace(/:\/\/[^@]+@/, '://***@');
+    console.log(pc.dim(`  Connection: ${redacted}`));
+  }
+
+  const mode = options.push ? 'push' : 'migrate';
+  console.log(pc.dim(`  Mode: ${mode === 'push' ? 'push (direct schema sync)' : 'migrate (SQL migration files)'}`));
+
+  // ─── Step 2: Confirm ───────────────────────────────────────────
+  if (!options.yes) {
+    const message =
+      mode === 'push'
+        ? `Push schema directly to your ${dbType} database?`
+        : `Apply pending migrations to your ${dbType} database?`;
+
+    const response = await prompts({
+      type: 'confirm',
+      name: 'proceed',
+      message,
+      initial: true,
+    });
+
+    if (!response.proceed) {
+      console.log(pc.dim('\n  Cancelled.\n'));
+      process.exit(0);
+    }
+  }
+
+  // ─── Step 3: Run drizzle-kit ────────────────────────────────────
+  console.log(pc.dim(`\n  Running drizzle-kit ${mode}...\n`));
+
+  try {
+    const drizzleConfigFile = detectDrizzleConfig(dbType);
+    const configFlag = drizzleConfigFile ? ` --config ${drizzleConfigFile}` : '';
+    const cmd = `npx drizzle-kit ${mode}${configFlag}`;
+
+    execSync(cmd, {
+      stdio: 'inherit',
+      cwd: process.cwd(),
+    });
+
+    if (mode === 'push') {
+      console.log(pc.bold(pc.green('\n✓ Schema pushed successfully!\n')));
+    } else {
+      console.log(pc.bold(pc.green('\n✓ Migrations applied successfully!\n')));
+    }
+  } catch {
+    console.error(pc.red(`\n✗ drizzle-kit ${mode} failed.`));
+    console.error(
+      pc.dim('  Make sure drizzle-kit is installed and your drizzle config is correct.\n'),
+    );
+
+    if (mode === 'migrate') {
+      console.error(
+        pc.dim('  Have you generated migrations? Run: ') +
+          pc.cyan('npx invect generate') +
+          '\n',
+      );
+    }
+
+    process.exit(1);
+  }
+}
+
+// =============================================================================
+// Helpers
+// =============================================================================
+
+/**
+ * Detect which drizzle.config file to use based on the database type.
+ * Searches for dialect-specific configs first, then falls back to generic.
+ */
+function detectDrizzleConfig(dbType: string): string | null {
+  const candidates: Record<string, string[]> = {
+    sqlite: ['drizzle.config.sqlite.ts', 'drizzle.config.ts'],
+    postgresql: ['drizzle.config.postgres.ts', 'drizzle.config.postgresql.ts', 'drizzle.config.ts'],
+    mysql: ['drizzle.config.mysql.ts', 'drizzle.config.ts'],
+  };
+
+  const searchPaths = candidates[dbType] || ['drizzle.config.ts'];
+  for (const filename of searchPaths) {
+    if (fs.existsSync(path.resolve(process.cwd(), filename))) {
+      return filename;
+    }
+  }
+
+  return null;
+}

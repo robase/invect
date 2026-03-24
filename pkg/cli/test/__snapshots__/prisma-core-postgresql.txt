@@ -1,0 +1,186 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Credentials {
+  id            String    @id @default(uuid())
+  name          String
+  type          String
+  authType      String    @map("auth_type")
+  config        Json
+  description   String?
+  isActive      Boolean   @default(true) @map("is_active")
+  workspaceId   String?   @map("workspace_id")
+  isShared      Boolean   @default(false) @map("is_shared")
+  metadata      Json?
+  lastUsedAt    DateTime? @map("last_used_at") @db.Timestamptz(3)
+  expiresAt     DateTime? @map("expires_at") @db.Timestamptz(3)
+  webhookPath   String?   @map("webhook_path")
+  webhookSecret String?   @map("webhook_secret")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([webhookPath])
+}
+
+model Flows {
+  id                String         @id
+  name              String
+  description       String?
+  tags              Json?
+  isActive          Boolean        @default(true) @map("is_active")
+  liveVersionNumber Int?           @map("live_version_number")
+  createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  flowAccess        FlowAccess[]
+  flowTriggers      FlowTriggers[]
+  flowVersions      FlowVersions[]
+  chatMessages      ChatMessages[]
+  flowRuns          FlowRuns[]
+}
+
+model FlowAccess {
+  id         String    @id @default(uuid())
+  flowId     String    @map("flow_id")
+  userId     String?   @map("user_id")
+  teamId     String?   @map("team_id")
+  permission String    @default("viewer")
+  grantedBy  String?   @map("granted_by")
+  grantedAt  DateTime  @default(now()) @map("granted_at") @db.Timestamptz(3)
+  expiresAt  DateTime? @map("expires_at") @db.Timestamptz(3)
+  flow       Flows     @relation(fields: [flowId], references: [id], onDelete: Cascade)
+
+  @@map("flow_access")
+}
+
+model FlowTriggers {
+  id              String    @id @default(uuid())
+  flowId          String    @map("flow_id")
+  nodeId          String    @map("node_id")
+  type            String
+  isEnabled       Boolean   @default(true) @map("is_enabled")
+  webhookPath     String?   @map("webhook_path")
+  webhookSecret   String?   @map("webhook_secret")
+  cronExpression  String?   @map("cron_expression")
+  cronTimezone    String?   @map("cron_timezone")
+  lastTriggeredAt DateTime? @map("last_triggered_at") @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  flow            Flows     @relation(fields: [flowId], references: [id], onDelete: Cascade)
+
+  @@unique([webhookPath])
+  @@map("flow_triggers")
+}
+
+model FlowVersions {
+  flowId            String   @map("flow_id")
+  version           Int
+  invectDefinition Json     @map("invect_definition")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  createdBy         String?  @map("created_by")
+  flow              Flows    @relation(fields: [flowId], references: [id], onDelete: Cascade)
+
+  @@id("[version, flowId]")
+  @@map("flow_versions")
+}
+
+model ChatMessages {
+  id        String   @id @default(uuid())
+  flowId    String   @map("flow_id")
+  role      String
+  content   String   @default("")
+  toolMeta  Json?    @map("tool_meta")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  flow      Flows    @relation(fields: [flowId], references: [id], onDelete: Cascade)
+
+  @@map("chat_messages")
+}
+
+model FlowRuns {
+  id                  String                @id @default(uuid())
+  flowId              String                @map("flow_id")
+  flowVersion         Int                   @map("flow_version")
+  status              String                @default("PENDING")
+  inputs              Json
+  outputs             Json?
+  error               String?
+  startedAt           DateTime              @default(now()) @map("started_at") @db.Timestamptz(3)
+  completedAt         DateTime?             @map("completed_at") @db.Timestamptz(3)
+  duration            Int?
+  createdBy           String?               @map("created_by")
+  triggerType         String?               @map("trigger_type")
+  triggerId           String?               @map("trigger_id")
+  triggerNodeId       String?               @map("trigger_node_id")
+  triggerData         Json?                 @map("trigger_data")
+  lastHeartbeatAt     DateTime?             @map("last_heartbeat_at") @db.Timestamptz(3)
+  flow                Flows                 @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  nodeExecutions      NodeExecutions[]
+  batchJobs           BatchJobs[]
+  agentToolExecutions AgentToolExecutions[]
+
+  @@map("flow_executions")
+}
+
+model NodeExecutions {
+  id                  String                @id @default(uuid())
+  flowRunId           String                @map("flow_run_id")
+  nodeId              String                @map("node_id")
+  nodeType            String                @map("node_type")
+  status              String                @default("PENDING")
+  inputs              Json
+  outputs             Json?
+  error               String?
+  startedAt           DateTime              @default(now()) @map("started_at") @db.Timestamptz(3)
+  completedAt         DateTime?             @map("completed_at") @db.Timestamptz(3)
+  duration            Int?
+  retryCount          Int                   @default(0) @map("retry_count")
+  flowRun             FlowRuns              @relation(fields: [flowRunId], references: [id], onDelete: Cascade)
+  agentToolExecutions AgentToolExecutions[]
+
+  @@map("execution_traces")
+}
+
+model BatchJobs {
+  id           String    @id @default(uuid())
+  flowRunId    String    @map("flow_run_id")
+  nodeId       String    @map("node_id")
+  provider     String
+  batchId      String?   @map("batch_id")
+  status       String    @default("SUBMITTED")
+  requestData  Json      @map("request_data")
+  responseData Json?     @map("response_data")
+  error        String?
+  submittedAt  DateTime  @default(now()) @map("submitted_at") @db.Timestamptz(3)
+  completedAt  DateTime? @map("completed_at") @db.Timestamptz(3)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  flowRun      FlowRuns  @relation(fields: [flowRunId], references: [id], onDelete: Cascade)
+
+  @@map("batch_jobs")
+}
+
+model AgentToolExecutions {
+  id              String         @id @default(uuid())
+  nodeExecutionId String         @map("node_execution_id")
+  flowRunId       String         @map("flow_run_id")
+  toolId          String         @map("tool_id")
+  toolName        String         @map("tool_name")
+  iteration       Int
+  input           Json
+  output          Json?
+  error           String?
+  success         Boolean
+  startedAt       DateTime       @default(now()) @map("started_at") @db.Timestamptz(3)
+  completedAt     DateTime?      @map("completed_at") @db.Timestamptz(3)
+  duration        Int?
+  nodeExecution   NodeExecutions @relation(fields: [nodeExecutionId], references: [id], onDelete: Cascade)
+  flowRun         FlowRuns       @relation(fields: [flowRunId], references: [id], onDelete: Cascade)
+
+  @@map("agent_tool_executions")
+}
