@@ -235,8 +235,7 @@ export class FlowVersionsModel {
     return {
       version: Number(raw.version),
       flowId: String(raw.flow_id ?? raw.flowId),
-      invectDefinition: (raw.invect_definition ??
-        raw.invectDefinition) as InvectDefinitionRuntime,
+      invectDefinition: (raw.invect_definition ?? raw.invectDefinition) as InvectDefinitionRuntime,
       createdAt: new Date(String(raw.created_at ?? raw.createdAt)).toISOString(),
       createdBy: raw.created_by ? String(raw.created_by) : null,
     };

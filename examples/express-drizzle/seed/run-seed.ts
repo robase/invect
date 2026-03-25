@@ -2049,7 +2049,7 @@ After performing the actions, write a final summary of what you did.`,
         referenceId: 'email_notification',
         params: {
           credentialId: '', // Must be set via UI with a Gmail OAuth2 credential
-          to: 'rhnproctor@gmail.com',
+          to: 'user@example.com',
           subject: 'Invect — Linear Agent Report ({{ trigger_data.source }})',
           body: `Hi Rohan,
 

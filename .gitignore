@@ -59,3 +59,10 @@ lerna-debug.log*
 .github/instructions/nx.instructions.md
 
 .github/copilot-instructions.md
+
+# Test results (ephemeral artifacts with local paths)
+**/test-results.json
+**/results.json
+
+# npm lockfiles (pnpm workspace uses pnpm-lock.yaml)
+**/package-lock.json

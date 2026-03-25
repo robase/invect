@@ -38,12 +38,7 @@ import type {
 
 // Schemas and validation
 import * as Schemas from './types/schemas';
-import {
-  InvectConfig,
-  InvectConfigSchema,
-  PaginatedResponse,
-  QueryOptions,
-} from './types/schemas';
+import { InvectConfig, InvectConfigSchema, PaginatedResponse, QueryOptions } from './types/schemas';
 import {
   CreateFlowVersionRequest,
   createFlowVersionRequestSchema,

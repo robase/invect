@@ -273,10 +273,7 @@ export class AuthorizationService extends EventEmitter {
    * Check if a permission list includes the required permission.
    * Handles admin:* wildcard.
    */
-  private permissionMatches(
-    permissions: InvectPermission[],
-    required: InvectPermission,
-  ): boolean {
+  private permissionMatches(permissions: InvectPermission[], required: InvectPermission): boolean {
     // Admin wildcard grants everything
     if (permissions.includes('admin:*')) {
       return true;

@@ -21,10 +21,7 @@ import { ZodError } from 'zod';
 
 interface InvectHandler {
   GET: (request: Request, context: { params: Promise<{ invect: string[] }> }) => Promise<Response>;
-  POST: (
-    request: Request,
-    context: { params: Promise<{ invect: string[] }> },
-  ) => Promise<Response>;
+  POST: (request: Request, context: { params: Promise<{ invect: string[] }> }) => Promise<Response>;
   PATCH: (
     request: Request,
     context: { params: Promise<{ invect: string[] }> },

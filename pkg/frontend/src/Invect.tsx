@@ -194,12 +194,7 @@ export const Invect = React.memo(
     const hasRouter = useHasRouterContext();
 
     const routes = (
-      <InvectRoutes
-        client={client}
-        apiBaseUrl={apiBaseUrl}
-        basePath={basePath}
-        plugins={plugins}
-      />
+      <InvectRoutes client={client} apiBaseUrl={apiBaseUrl} basePath={basePath} plugins={plugins} />
     );
 
     // If already inside a Router (e.g. Vite + React Router app), render routes directly.

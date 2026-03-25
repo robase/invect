@@ -94,8 +94,7 @@ export class ServiceFactory {
       const verificationOpts = schemaVerification
         ? {
             strict: typeof schemaVerification === 'object' ? schemaVerification.strict : false,
-            plugins: (this.config.plugins ||
-              []) as import('src/types/plugin.types').InvectPlugin[],
+            plugins: (this.config.plugins || []) as import('src/types/plugin.types').InvectPlugin[],
           }
         : undefined;
       const databaseService = new DatabaseService(
