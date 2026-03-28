@@ -26,9 +26,6 @@ interface ExecutionViewState {
   // Logs panel state
   logsExpanded: boolean;
   selectedLogNodeId: string | null;
-
-  // Polling state
-  isPolling: boolean;
 }
 
 interface ExecutionViewActions {
@@ -57,9 +54,6 @@ interface ExecutionViewActions {
   setLogsExpanded: (expanded: boolean) => void;
   selectLogNode: (nodeId: string | null) => void;
 
-  // Polling
-  setPolling: (isPolling: boolean) => void;
-
   // Reset
   reset: () => void;
 }
@@ -78,7 +72,6 @@ const initialState: ExecutionViewState = {
   sortOrder: 'desc',
   logsExpanded: false,
   selectedLogNodeId: null,
-  isPolling: false,
 };
 
 export const useExecutionViewStore: UseBoundStore<StoreApi<ExecutionViewStore>> =
@@ -170,12 +163,6 @@ export const useExecutionViewStore: UseBoundStore<StoreApi<ExecutionViewStore>> 
               state.selectedLogNodeId = nodeId;
             }),
 
-          // Polling
-          setPolling: (isPolling) =>
-            set((state) => {
-              state.isPolling = isPolling;
-            }),
-
           // Reset
           reset: () => set(() => ({ ...initialState })),
         })),
@@ -212,7 +199,6 @@ export const useLogsState = () =>
     setLogsExpanded: s.setLogsExpanded,
     selectLogNode: s.selectLogNode,
   }));
-export const useIsPolling = () => useExecutionViewStore((s) => s.isPolling);
 
 // Combined selectors
 export const useExecutionFilters = () =>

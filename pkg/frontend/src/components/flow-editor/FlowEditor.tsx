@@ -33,6 +33,7 @@ import {
   AgentToolCallbacksProvider,
   type AgentToolCallbacks,
 } from '~/contexts/AgentToolCallbacksContext';
+import { InvectLoader } from '../shared/InvectLoader';
 import { useAgentTools } from '~/api/agent-tools.api';
 import { nanoid } from 'nanoid';
 import { useCopyPaste } from './use-copy-paste';
@@ -97,9 +98,7 @@ export function FlowEditor({ flowId, flowVersion, basePath = '' }: FlowEditorPro
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center w-full h-full">
-        <div className="text-muted-foreground">Loading flow...</div>
-      </div>
+      <InvectLoader className="w-full h-full" iconClassName="h-16" label="Loading flow..." />
     );
   }
 
@@ -775,9 +774,7 @@ export function FlowWorkbenchView({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center w-full h-full">
-        <div className="text-muted-foreground">Loading flow...</div>
-      </div>
+      <InvectLoader className="w-full h-full" iconClassName="h-16" label="Loading flow..." />
     );
   }
 

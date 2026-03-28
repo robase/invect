@@ -4,7 +4,12 @@ import { execFileSync, spawn } from "node:child_process";
 import readline from "node:readline/promises";
 import process from "node:process";
 
-const RESERVED_PORTS = [3000, 3002, 5173];
+const DEFAULT_PLAYWRIGHT_VITE_PORT = Number.parseInt(process.env.PLAYWRIGHT_VITE_PORT ?? "41731", 10);
+const DEFAULT_PLAYWRIGHT_NEXTJS_PORT = Number.parseInt(process.env.PLAYWRIGHT_NEXTJS_PORT ?? "43002", 10);
+const DEFAULT_PLAYWRIGHT_VITE_URL = process.env.PLAYWRIGHT_VITE_URL ?? `http://localhost:${DEFAULT_PLAYWRIGHT_VITE_PORT}`;
+const DEFAULT_PLAYWRIGHT_NEXTJS_URL = process.env.NEXTJS_URL ?? `http://localhost:${DEFAULT_PLAYWRIGHT_NEXTJS_PORT}`;
+
+const RESERVED_PORTS = [DEFAULT_PLAYWRIGHT_VITE_PORT, DEFAULT_PLAYWRIGHT_NEXTJS_PORT];
 const KILL_WAIT_MS = 2_000;
 
 function parseCliArgs(argv) {
@@ -232,7 +237,13 @@ function runPlaywright(args) {
     ["playwright", "test", "--config", "playwright/playwright.config.ts", ...args],
     {
       cwd: process.cwd(),
-      env: process.env,
+      env: {
+        ...process.env,
+        PLAYWRIGHT_VITE_PORT: String(DEFAULT_PLAYWRIGHT_VITE_PORT),
+        PLAYWRIGHT_NEXTJS_PORT: String(DEFAULT_PLAYWRIGHT_NEXTJS_PORT),
+        PLAYWRIGHT_VITE_URL: DEFAULT_PLAYWRIGHT_VITE_URL,
+        NEXTJS_URL: DEFAULT_PLAYWRIGHT_NEXTJS_URL,
+      },
       stdio: "inherit",
     },
   );

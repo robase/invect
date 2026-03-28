@@ -106,7 +106,7 @@ test.describe("Flow Management", () => {
           invectDefinition: {
             nodes: [
               { id: "node-1", type: "core.input", label: "User List", referenceId: "user_list", params: {}, position: { x: 100, y: 200 } },
-              { id: "node-2", type: "core.jq", label: "Filter Admins", referenceId: "filter_admins", params: { query: "." }, position: { x: 350, y: 200 } },
+              { id: "node-2", type: "core.javascript", label: "Filter Admins", referenceId: "filter_admins", params: { code: '$input' }, position: { x: 350, y: 200 } },
               { id: "node-3", type: "core.output", label: "Format Result", referenceId: "format_result", params: {}, position: { x: 600, y: 200 } },
             ],
             edges: [

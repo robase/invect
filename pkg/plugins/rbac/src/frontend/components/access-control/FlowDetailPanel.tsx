@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ExternalLink, Plus, Workflow } from 'lucide-react';
+import { ExternalLink, Plus, Users, Workflow } from 'lucide-react';
 import { useGrantFlowAccess, useRevokeFlowAccess } from '../../hooks/useFlowAccess';
 import { useEffectiveFlowAccess } from '../../hooks/useScopes';
 import type { FlowAccessPermission, Team } from '../../../shared/types';
@@ -41,6 +41,7 @@ export function FlowDetailPanel({
       .filter((record) => record.source === 'direct' && record.teamId)
       .map((record) => record.teamId),
   );
+  const owningTeam = teams.find((team) => team.id === effectiveFlowAccessQuery.data?.scopeId) ?? null;
 
   const accessRows = useMemo(() => {
     const rows: AccessRow[] = effectiveRecords.map((record) => {
@@ -78,6 +79,9 @@ export function FlowDetailPanel({
     return rows;
   }, [effectiveRecords, userMap, teams, isAdmin, grantFlowAccess, revokeFlowAccess]);
 
+  const directRows = accessRows.filter((row) => row.group === 'Direct');
+  const inheritedRows = accessRows.filter((row) => row.group === 'Inherited');
+
   const openFlow = () => {
     const path = window.location.pathname;
     const accessIdx = path.lastIndexOf('/access');
@@ -86,39 +90,85 @@ export function FlowDetailPanel({
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="px-5 py-4 border-b shrink-0 border-imp-border">
-        <div className="flex items-center gap-2">
-          <Workflow className="w-4 h-4 text-imp-primary" />
-          <h2 className="flex-1 min-w-0 text-base font-semibold truncate">{flowName}</h2>
-          {isAdmin && (
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="px-5 py-4 border-b shrink-0 border-imp-border overflow-hidden">
+        <div className="flex items-start gap-3">
+          <div className="flex items-center justify-center flex-none w-10 h-10 rounded-xl bg-imp-primary/10 text-imp-primary">
+            <Workflow className="w-5 h-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h2 className="flex-1 min-w-0 text-base font-semibold truncate">{flowName}</h2>
+            </div>
+            {owningTeam ? (
+              <div className="mt-1 inline-flex items-center gap-1 rounded-full border border-imp-border px-2 py-0.5 text-[11px] text-imp-muted-foreground">
+                <Users className="w-3 h-3" />
+                Inside {owningTeam.name}
+              </div>
+            ) : (
+              <div className="mt-1 inline-flex items-center gap-1 rounded-full border border-imp-border px-2 py-0.5 text-[11px] text-imp-muted-foreground">
+                Root
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5">
+            {isAdmin ? (
+              <button
+                type="button"
+                onClick={() => setShowGrantDialog(true)}
+                className="flex items-center gap-1 rounded-md bg-imp-primary px-2 py-1 text-[11px] font-medium text-imp-primary-foreground hover:bg-imp-primary/90"
+              >
+                <Plus className="w-3 h-3" /> Grant Access
+              </button>
+            ) : null}
             <button
               type="button"
-              onClick={() => setShowGrantDialog(true)}
-              className="flex items-center gap-1 rounded-md bg-imp-primary px-2 py-1 text-[11px] font-medium text-imp-primary-foreground hover:bg-imp-primary/90"
+              onClick={openFlow}
+              className="flex items-center gap-1 rounded-md border border-imp-border px-2 py-1 text-[11px] text-imp-muted-foreground transition-colors hover:border-imp-primary/50 hover:text-imp-foreground"
             >
-              <Plus className="w-3 h-3" /> Grant Access
+              <ExternalLink className="w-3 h-3" /> View
             </button>
-          )}
-          <button
-            type="button"
-            onClick={openFlow}
-            className="flex items-center gap-1 rounded-md border border-imp-border px-2 py-1 text-[11px] text-imp-muted-foreground transition-colors hover:border-imp-primary/50 hover:text-imp-foreground"
-          >
-            <ExternalLink className="w-3 h-3" /> View
-          </button>
+          </div>
         </div>
-        <p className="mt-0.5 text-xs text-imp-muted-foreground">
+        <p className="mt-3 text-xs text-imp-muted-foreground">
           Shows all principals with access and how they got it.
         </p>
       </div>
 
-      <div className="flex-1 px-5 py-4 overflow-y-auto">
-        <AccessTable
-          rows={accessRows}
-          isLoading={effectiveFlowAccessQuery.isLoading}
-          emptyLabel="No access assigned"
-        />
+      <div className="flex-1 px-5 py-4 overflow-y-auto overflow-x-hidden">
+        <div className="space-y-6">
+          <section className="space-y-3">
+            <div>
+              <h3 className="text-sm font-semibold text-imp-foreground">Direct Access</h3>
+              <p className="mt-1 text-xs text-imp-muted-foreground">
+                Grants applied directly to this flow for specific users or teams.
+              </p>
+            </div>
+            <div className="overflow-hidden border rounded-xl border-imp-border bg-imp-background/40">
+              <AccessTable
+                rows={directRows}
+                isLoading={effectiveFlowAccessQuery.isLoading}
+                emptyLabel="No direct access assigned"
+              />
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <div>
+              <h3 className="text-sm font-semibold text-imp-foreground">Inherited Access</h3>
+              <p className="mt-1 text-xs text-imp-muted-foreground">
+                Access inherited from the owning scope and its parent teams.
+              </p>
+            </div>
+            <div className="overflow-hidden border rounded-xl border-imp-border bg-imp-background/40">
+              <AccessTable
+                rows={inheritedRows}
+                isLoading={effectiveFlowAccessQuery.isLoading}
+                emptyLabel="No inherited access"
+              />
+            </div>
+          </section>
+        </div>
       </div>
 
       <FormDialog

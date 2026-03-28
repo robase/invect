@@ -413,6 +413,44 @@ export class InvectController {
   }
 
   /**
+   * GET /flow-runs/:flowRunId/stream - SSE stream of execution events
+   * Core method: ✅ createFlowRunEventStream(flowRunId: string)
+   */
+  @Get('flow-runs/:flowRunId/stream')
+  async streamFlowRun(
+    @Param('flowRunId') flowRunId: string,
+    @Res() res: Response,
+  ) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    try {
+      const stream = this.invect.createFlowRunEventStream(flowRunId);
+      for await (const event of stream) {
+        if (res.destroyed) {
+          break;
+        }
+        const data = JSON.stringify(event);
+        res.write(`event: ${event.type}\ndata: ${data}\n\n`);
+      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Stream failed';
+      if (res.headersSent) {
+        res.write(
+          `event: error\ndata: ${JSON.stringify({ type: 'error', message })}\n\n`,
+        );
+      } else {
+        return res.status(500).json({ error: 'Internal Server Error', message });
+      }
+    } finally {
+      res.end();
+    }
+  }
+
+  /**
    * GET /node-executions - Get all node executions with optional filtering and pagination
    * Core method: ✅ listNodeExecutions(options?: QueryOptions<NodeExecution>)
    */

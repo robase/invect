@@ -59,6 +59,7 @@ import {
 } from './utils/logger';
 import { DatabaseError, ValidationError } from './types/common/errors.types';
 import { FlowRunStatus, NodeExecutionStatus } from './types/base';
+import type { ExecutionStreamEvent } from './services/execution-event-bus';
 
 // Template + JS expression engine
 import { JsExpressionService, getTemplateService } from './services/templating';
@@ -1284,6 +1285,98 @@ export class Invect {
       JSON.stringify(options, null, 2),
     );
     return await this.nodeExecutionsService.listNodeExecutions(options);
+  }
+
+  // =====================================
+  // EXECUTION STREAMING (SSE)
+  // =====================================
+
+  /**
+   * Create an async iterable that yields execution events for a flow run.
+   *
+   * The first event is always a "snapshot" with the current FlowRun and all
+   * NodeExecutions.  Subsequent events are incremental updates.  The stream
+   * ends automatically when the flow run reaches a terminal status.
+   *
+   * Consumers (Express/NestJS/Next.js adapters) iterate this with
+   * `for await (const event of stream)` and write SSE frames.
+   */
+  async *createFlowRunEventStream(
+    flowRunId: string,
+  ): AsyncGenerator<ExecutionStreamEvent, void, undefined> {
+    const bus = this.serviceFactory?.getExecutionEventBus();
+    if (!bus) {
+      throw new Error('ServiceFactory not initialized');
+    }
+
+    // 1. Send initial snapshot
+    const flowRun = await this.flowRunsService.getRunById(flowRunId);
+    const nodeExecutions =
+      await this.nodeExecutionsService.listNodeExecutionsByFlowRunId(flowRunId);
+
+    yield { type: 'snapshot', flowRun, nodeExecutions };
+
+    // If the run is already terminal, close immediately
+    const terminalStatuses = new Set([
+      FlowRunStatus.SUCCESS,
+      FlowRunStatus.FAILED,
+      FlowRunStatus.CANCELLED,
+    ]);
+    if (terminalStatuses.has(flowRun.status)) {
+      yield { type: 'end', flowRun };
+      return;
+    }
+
+    // 2. Forward live events via a queue
+    const queue: ExecutionStreamEvent[] = [];
+    let resolve: (() => void) | null = null;
+    let done = false;
+
+    const unsubscribe = bus.subscribe(flowRunId, (event) => {
+      queue.push(event);
+
+      // Check for terminal flow-run status
+      if (event.type === 'flow_run.updated' && terminalStatuses.has(event.flowRun.status)) {
+        queue.push({ type: 'end', flowRun: event.flowRun });
+        done = true;
+      }
+
+      // Wake up the consumer if it's waiting
+      const wakeUp = resolve;
+      if (wakeUp) {
+        resolve = null;
+        wakeUp();
+      }
+    });
+
+    // 3. Heartbeat interval to keep the connection alive
+    const heartbeatTimer = setInterval(() => {
+      queue.push({ type: 'heartbeat' });
+      if (resolve) {
+        resolve();
+        resolve = null;
+      }
+    }, 15_000);
+
+    try {
+      while (!done) {
+        // Drain whatever is in the queue
+        while (queue.length > 0) {
+          const event = queue.shift()!;
+          yield event;
+          if (event.type === 'end') {
+            return;
+          }
+        }
+        // Wait for more events
+        await new Promise<void>((r) => {
+          resolve = r;
+        });
+      }
+    } finally {
+      clearInterval(heartbeatTimer);
+      unsubscribe();
+    }
   }
 
   // =====================================

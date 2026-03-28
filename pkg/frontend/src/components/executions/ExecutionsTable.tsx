@@ -28,6 +28,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
+import { InvectLoader } from '../shared/InvectLoader';
 
 // Execution status constants with proper typing
 const EXECUTION_STATUSES = [
@@ -339,10 +340,7 @@ export const ExecutionsTable: React.FC<ExecutionsTableProps> = ({ basePath = '' 
   if (executionsLoading || flowsLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="mb-2 text-muted-foreground">Loading executions...</div>
-          <div className="w-6 h-6 mx-auto border-2 border-primary rounded-full border-t-transparent animate-spin"></div>
-        </div>
+        <InvectLoader iconClassName="h-14" label="Loading executions..." />
       </div>
     );
   }

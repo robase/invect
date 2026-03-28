@@ -17,9 +17,7 @@ import { FlowRunStatus, NodeExecutionStatus, ReactFlowNodeData } from '@invect/c
 import { FlowRun } from '@invect/core/types';
 import { Node } from '@xyflow/react';
 import { useTheme } from '~/contexts/ThemeProvider';
-
-// Import React Query hooks
-import { useLatestFlowRun } from '../../api/executions.api';
+import { InvectLoader } from '../shared/InvectLoader';
 
 // Import shared hook
 import { useFlowData } from '../../hooks/use-flow-data';
@@ -61,12 +59,12 @@ export function FlowStatusView({
   const reactFlowInstance = useReactFlow();
   const { resolvedTheme } = useTheme();
 
-  // Get flow data - pass run status to enable polling while execution is active
+  // Get flow data — execution status is streamed via SSE (useFlowRunStream in
+  // FlowRunsView), so we only need a single fetch of the graph structure here.
   const { flowData, loading, queryError, nodes, onNodesChange, edges, onEdgesChange } = useFlowData(
     flowId,
     flowVersion,
     selectedRunId || undefined,
-    selectedRun?.status,
   );
 
   // Build nodeTypes dynamically: start from the base (enum-based) mapping,
@@ -81,9 +79,6 @@ export function FlowStatusView({
     }
     return mapping as NodeTypes;
   }, [nodes]);
-
-  // Get latest execution separately
-  const { data: latestExecution } = useLatestFlowRun(flowId);
 
   // Fit view when logs panel is expanded/collapsed
   React.useEffect(() => {
@@ -134,7 +129,7 @@ export function FlowStatusView({
   // Process nodes for batch execution state management
   const processNodesForBatchExecution = (originalNodes: Node[]) => {
     // If there's no execution or execution is not active, return nodes as-is
-    if (!latestExecution || !latestExecution.status) {
+    if (!selectedRun || !selectedRun.status) {
       return originalNodes;
     }
 
@@ -142,7 +137,7 @@ export function FlowStatusView({
       FlowRunStatus.RUNNING,
       FlowRunStatus.PENDING,
       FlowRunStatus.PAUSED_FOR_BATCH,
-    ].includes(latestExecution.status);
+    ].includes(selectedRun.status);
 
     return originalNodes.map((node) => {
       const processedNode = { ...node };
@@ -187,9 +182,7 @@ export function FlowStatusView({
   // Loading state
   if (loading) {
     return (
-      <div className="flex items-center justify-center w-full h-full">
-        <div className="text-muted-foreground">"Loading flow..."</div>
-      </div>
+      <InvectLoader className="w-full h-full" iconClassName="h-16" label="Loading flow..." />
     );
   }
 

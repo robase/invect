@@ -6,6 +6,7 @@ import { FlowStatusView } from './FlowStatusView';
 import { RunsSidebar } from './RunsSidebar';
 import { LogsPanel } from './logs-panel';
 import { useFlowRuns, useFlowRun, useNodeExecutions } from '../../api/executions.api';
+import { useFlowRunStream } from '../../api/use-flow-run-stream';
 import { useFlowReactFlowData } from '../../api/flows.api';
 import { FlowRun } from '@invect/core/types';
 import { useExecutionLogData, SelectedExecutionAttempt } from './use-execution-log-data';
@@ -34,20 +35,23 @@ export function FlowRunsView({ flowId, flowVersion, basePath }: FlowRunsViewProp
   // Fetch selected run first to get its status for polling
   const { data: selectedRun } = useFlowRun(selectedRunId || '');
 
-  // Fetch runs list - polls when selected run is active
-  const { data: executionsResponse } = useFlowRuns(flowId, selectedRun?.status);
+  // SSE stream — pushes updates into React Query caches for the selected run,
+  // eliminating the need for polling on useFlowRun, useFlowRuns, and useNodeExecutions.
+  useFlowRunStream(flowId, selectedRunId);
+
+  // Fetch runs list - uses cached data from the stream when available
+  const { data: executionsResponse } = useFlowRuns(flowId);
   const runs = executionsResponse?.data ?? [];
 
   const { data: nodeExecutionsData, isLoading: nodeExecutionsLoading } = useNodeExecutions(
     selectedRunId || '',
-    selectedRun?.status,
   );
 
-  // Fetch flow graph data with execution status - polls while execution is active
+  // Fetch flow graph data with execution status — no longer polls; cache is
+  // updated by the SSE stream for node executions, and we derive status locally.
   const { data: flowGraphData } = useFlowReactFlowData(flowId, {
     version: flowVersion,
     flowRunId: selectedRunId || undefined,
-    flowRunStatus: selectedRun?.status, // Pass status to enable polling
   });
 
   const nodeExecutions = nodeExecutionsData ?? [];

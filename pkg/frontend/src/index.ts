@@ -1,10 +1,14 @@
 // Main component exports
 export { Invect } from './Invect';
 export { InvectShell } from './InvectShell';
+export { InvectLoader } from './components/shared/InvectLoader';
+export { InvectLogo } from './components/shared/InvectLogo';
 
 // Export types for better TypeScript support
 export type { InvectProps } from './Invect';
 export type { InvectShellProps } from './InvectShell';
+export type { InvectLoaderProps } from './components/shared/InvectLoader';
+export type { InvectLogoProps } from './components/shared/InvectLogo';
 
 // Plugin system types
 export type {

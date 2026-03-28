@@ -3,7 +3,7 @@
  *
  * Each Playwright WORKER gets its own disposable SQLite database + Express
  * server (same pattern as the platform API tests). The browser still loads
- * the Vite frontend at localhost:5173, but all API calls the browser makes
+ * the Vite frontend at the shared Playwright frontend origin, but all API calls the browser makes
  * are intercepted via page.route() and forwarded to the worker-local server.
  *
  * Key design:
@@ -40,7 +40,7 @@ export { expect };
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const VITE_BASE = "http://localhost:5173";
+const VITE_BASE = process.env.PLAYWRIGHT_VITE_URL ?? "http://localhost:41731";
 const rootDir = path.resolve(__dirname, "../../..");
 const serverCwd = path.join(rootDir, "examples/express-drizzle");
 const serverScript = path.join(serverCwd, "playwright-test-server.ts");
@@ -51,7 +51,7 @@ const isolatedBrowserBase = createSqliteBrowserIsolationTest({
   readyPath: "/invect/credentials",
   serverCwd,
   serverScript,
-  sharedOrigin: "http://localhost:5173",
+  sharedOrigin: VITE_BASE,
 });
 
 // ---------------------------------------------------------------------------

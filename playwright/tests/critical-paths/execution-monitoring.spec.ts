@@ -158,7 +158,7 @@ test.describe("Execution Monitoring", () => {
             invectDefinition: {
               nodes: [
                 { id: "node-1", type: "core.input", label: "User List", referenceId: "user_list", params: {}, position: { x: 100, y: 200 } },
-                { id: "node-2", type: "core.jq", label: "Filter Admins", referenceId: "filter_admins", params: { query: "." }, position: { x: 350, y: 200 } },
+                { id: "node-2", type: "core.javascript", label: "Filter Admins", referenceId: "filter_admins", params: { code: '$input' }, position: { x: 350, y: 200 } },
                 { id: "node-3", type: "core.output", label: "Format Result", referenceId: "format_result", params: {}, position: { x: 600, y: 200 } },
               ],
               edges: [
@@ -442,7 +442,7 @@ apiBase }) => {
     const createdFlow: { id: string } = await createFlowResp.json();
     badFlowId = createdFlow.id;
 
-    // Step 2: Create a flow version with an intentionally invalid JQ query.
+    // Step 2: Create a flow version with intentionally invalid JavaScript.
     const createVersionResp = await request.post(
       `${apiBase}/flows/${badFlowId}/versions`,
       {
@@ -451,9 +451,9 @@ apiBase }) => {
             nodes: [
               {
                 id: "jq-invalid",
-                type: "core.jq",
-                label: "Bad JQ Node",
-                params: { query: "INVALID JQ !!!" },
+                type: "core.javascript",
+                label: "Bad JS Node",
+                params: { code: "return !!!" },
               },
             ],
             edges: [],
@@ -558,7 +558,7 @@ apiBase }) => {
           referenceId: "result",
           params: {
             outputName: "result",
-            outputValue: "{{ delayed_http.status }}",
+            outputValue: "{{ String(delayed_http.status) }}",
           },
           position: { x: 460, y: 200 },
         },
@@ -614,7 +614,7 @@ apiBase }) => {
           referenceId: 'result',
           params: {
             outputName: 'result',
-            outputValue: '{{ delayed_http.status }}',
+            outputValue: '{{ String(delayed_http.status) }}',
           },
           position: { x: 420, y: 200 },
         },
@@ -687,11 +687,11 @@ apiBase }) => {
         },
         {
           id: "jq-normalize",
-          type: "core.jq",
+          type: "core.javascript",
           label: "Normalize Response",
           referenceId: "normalized",
           params: {
-            query: ".delayed_http | { delayed: .data.delayed, seconds: .data.seconds, status: .status }",
+            code: '({ delayed: delayed_http.data.delayed, seconds: delayed_http.data.seconds, status: delayed_http.status })',
           },
           position: { x: 420, y: 180 },
         },
@@ -800,10 +800,10 @@ apiBase }) => {
       nodes: [
         {
           id: "jq-invalid",
-          type: "core.jq",
+          type: "core.javascript",
           label: "Broken Transform",
           referenceId: "broken_output",
-          params: { query: "INVALID JQ !!!" },
+          params: { code: "return !!!" },
           position: { x: 220, y: 220 },
         },
       ],
@@ -825,6 +825,6 @@ apiBase }) => {
     await brokenNodeButton.click();
 
     await expect(page.getByText("Error").first()).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText(/JQ Error|INVALID JQ/i).first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/JavaScript Error|Unexpected token|return !!!/i).first()).toBeVisible({ timeout: 10000 });
   });
 });

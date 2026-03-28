@@ -2,9 +2,9 @@ import { test, expect, assertNoObjectObject, assertValidJson } from "../fixtures
 
 test.describe("Node Config Panel — Template Resolution & Toolbar", () => {
   /**
-   * Scenario 10: Template field with object reference resolves correctly.
+  * Scenario 10: Template field with object reference resolves correctly.
    *
-   * When a Nunjucks template references nested object properties,
+  * When a template expression references nested object properties,
    * the rendered output shows actual values, not [object Object].
    */
   test("template resolves nested object properties without [object Object]", async ({
@@ -30,7 +30,7 @@ test.describe("Node Config Panel — Template Resolution & Toolbar", () => {
 
     const dialog = page.getByRole("dialog");
 
-    // The template field should contain Nunjucks references
+    // The template field should contain template expressions
     // to nested paths like {{ vip_check.order_summary.customer.name }}
     await expect(
       dialog.getByText(/\{\{.*customer\.name.*\}\}/)

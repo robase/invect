@@ -10,7 +10,7 @@ export { expect };
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, "../../..");
-const sharedOrigin = new URL(process.env.NEXTJS_URL ?? "http://localhost:3002").origin;
+const sharedOrigin = new URL(process.env.NEXTJS_URL ?? "http://localhost:43002").origin;
 
 export const test = createSqliteBrowserIsolationTest({
   apiPrefix: "/api/invect",

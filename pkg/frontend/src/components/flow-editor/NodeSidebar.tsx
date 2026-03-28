@@ -8,8 +8,9 @@ import type { ToolDefinition, AddedToolInstance, ToolCategory } from '../nodes/T
 import { ProviderIcon } from '../shared/ProviderIcon';
 import { useFlowEditorStore } from './flow-editor.store';
 import { ActionsSidebar } from './ActionsSidebar';
-import { Search, Loader2, Plus, X, ChevronRight, PanelLeftClose } from 'lucide-react';
+import { Search, Plus, X, ChevronRight, PanelLeftClose } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { InvectLoader } from '../shared/InvectLoader';
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -174,8 +175,7 @@ function NodesSidebar({
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center border-r w-96 border-border bg-card text-card-foreground">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-        <span className="mt-2 text-sm text-muted-foreground">Loading nodes...</span>
+        <InvectLoader iconClassName="h-14" label="Loading nodes..." />
       </div>
     );
   }

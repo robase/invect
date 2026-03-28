@@ -47,7 +47,7 @@ export function RoleSelector({
         <button
           type="button"
           className={cn(
-            'inline-flex min-w-80 w-64 items-center justify-between gap-1 rounded-md border px-2.5 py-1.5 text-sm font-medium capitalize',
+            'inline-flex w-full items-center justify-between gap-1 rounded-md border px-2.5 py-1.5 text-sm font-medium capitalize',
             getPermissionBadgeClasses(value),
           )}
         >
@@ -184,7 +184,7 @@ export function AccessTable({
 
   return (
     <>
-      <table className="w-full text-sm">
+      <table className="w-full text-sm table-fixed">
         <colgroup>
           <col />
           <col className="w-36" />

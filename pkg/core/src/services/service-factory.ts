@@ -15,6 +15,7 @@ import { FlowAccessService } from './auth/flow-access.service';
 import { FlowTriggersService } from './triggers/flow-triggers.service';
 import { CronSchedulerService } from './triggers/cron-scheduler.service';
 import { ChatStreamService } from './chat/chat-stream.service';
+import { ExecutionEventBus, getExecutionEventBus } from './execution-event-bus';
 import { DatabaseError } from 'src/types/common/errors.types';
 import { Logger, InvectConfig } from 'src/types/schemas';
 import { NodeExecutorRegistry } from 'src/nodes/executor-registry';
@@ -43,6 +44,7 @@ export interface CoreServices {
   triggersService: FlowTriggersService;
   cronScheduler: CronSchedulerService;
   chatStreamService: ChatStreamService;
+  executionEventBus: ExecutionEventBus;
 }
 
 /**
@@ -205,6 +207,11 @@ export class ServiceFactory {
         this.invectRef,
       );
 
+      // 6e. Wire execution event bus to services that write state
+      const executionEventBus = getExecutionEventBus();
+      flowRunsService.setEventBus(executionEventBus);
+      nodeExecutionsService.setEventBus(executionEventBus);
+
       // Initialize services
       await Promise.all([
         batchJobsService.initialize(),
@@ -237,6 +244,7 @@ export class ServiceFactory {
         triggersService,
         cronScheduler,
         chatStreamService,
+        executionEventBus,
       };
 
       this.initialized = true;
@@ -365,6 +373,13 @@ export class ServiceFactory {
    */
   getChatStreamService(): ChatStreamService {
     return this.getServices().chatStreamService;
+  }
+
+  /**
+   * Get execution event bus for SSE streaming
+   */
+  getExecutionEventBus(): ExecutionEventBus {
+    return this.getServices().executionEventBus;
   }
 
   /**

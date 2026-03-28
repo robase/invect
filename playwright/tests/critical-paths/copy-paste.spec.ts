@@ -155,7 +155,7 @@ async function selectAllNodes(page: Page) {
 // Test data
 // ---------------------------------------------------------------------------
 
-/** Simple 2-node linear flow: Input → JQ */
+/** Simple 2-node linear flow: Input → JavaScript */
 const TWO_NODE_FLOW = {
   nodes: [
     {
@@ -168,17 +168,17 @@ const TWO_NODE_FLOW = {
     },
     {
       id: "cp-jq",
-      type: "core.jq",
+      type: "core.javascript",
       label: "Transform",
       referenceId: "transform",
-      params: { query: ".data" },
+      params: { code: '({ ...data })' },
       position: { x: 450, y: 200 },
     },
   ],
   edges: [{ id: "cp-edge-1", source: "cp-input", target: "cp-jq" }],
 };
 
-/** 4-node chain flow: Input → JQ → Template → Output */
+/** 4-node chain flow: Input → JavaScript → Template → Output */
 const CHAIN_FLOW = {
   nodes: [
     {
@@ -191,10 +191,10 @@ const CHAIN_FLOW = {
     },
     {
       id: "chain-jq",
-      type: "core.jq",
+      type: "core.javascript",
       label: "Process",
       referenceId: "process",
-      params: { query: ".source" },
+      params: { code: '({ ...source })' },
       position: { x: 350, y: 200 },
     },
     {

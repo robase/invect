@@ -5,6 +5,11 @@
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/preflight.css" layer(base);
 
+/* Scan plugin source files so their Tailwind classes are included in the pre-built CSS */
+@source "../../plugins/auth/src/**/*.{ts,tsx}";
+@source "../../plugins/rbac/src/**/*.{ts,tsx}";
+@source "../../plugins/webhooks/src/**/*.{ts,tsx}";
+
 /* Define layers for Tailwind v4 scoping */
 @layer theme, base, components, utilities;
 

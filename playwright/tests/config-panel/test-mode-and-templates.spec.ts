@@ -1,6 +1,6 @@
 import { test, expect, assertNoObjectObject } from "../fixtures";
 
-test.describe("Node Config Panel — Test Mode & Nunjucks Templates", () => {
+test.describe("Node Config Panel — Test Mode & Template Expressions", () => {
   /**
    * Scenario 4: Edit input JSON manually (Test Mode).
    *
@@ -79,13 +79,13 @@ test.describe("Node Config Panel — Test Mode & Nunjucks Templates", () => {
   });
 
   /**
-   * Scenario 5: Nunjucks templates in form fields.
+  * Scenario 5: Template expressions in form fields.
    *
    * Template String nodes show {{ variable }} syntax in their config,
    * with syntax highlighting. After execution, the output has the
    * resolved value, not raw template syntax.
    */
-  test("nunjucks template resolves correctly after execution", async ({
+  test("template expression resolves correctly after execution", async ({
     page,
     navigateToFlow,
     openNodeConfigPanel,
@@ -105,7 +105,7 @@ test.describe("Node Config Panel — Test Mode & Nunjucks Templates", () => {
     const dialog = page.getByRole("dialog");
 
     // The template field should contain {{ topic }}
-    // Look for the nunjucks template syntax in the config panel's center area
+    // Look for the template syntax in the config panel's center area
     await expect(dialog.getByText("{{ topic }}")).toBeVisible({ timeout: 5_000 });
 
     // Run the template node

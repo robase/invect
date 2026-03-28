@@ -6,6 +6,7 @@ import { FlowRunStatus } from 'src/types/base';
 
 import { NodeExecution } from '../node-executions/node-executions.model';
 import { FlowRun, UpdateFlowRunInput } from './flow-runs.model';
+import type { ExecutionEventBus } from '../execution-event-bus';
 
 export interface FlowInputs {
   [key: string]: unknown;
@@ -38,11 +39,18 @@ export type ExecuteFlowOptions = {
 export class FlowRunsService {
   private initialized: boolean = false;
 
+  private eventBus: ExecutionEventBus | null = null;
+
   constructor(
     private readonly logger: Logger,
     private readonly databaseService: DatabaseService,
     private readonly flowService: FlowsService,
   ) {}
+
+  /** Attach the event bus so state changes are broadcast to SSE subscribers. */
+  setEventBus(bus: ExecutionEventBus): void {
+    this.eventBus = bus;
+  }
 
   /**
    * Initialize the service
@@ -96,6 +104,7 @@ export class FlowRunsService {
       });
 
       this.logger.debug('Flow run created successfully', { flowRunId: flowRun.id });
+      this.eventBus?.emitFlowRunUpdate(flowRun);
       return flowRun;
     } catch (error) {
       this.logger.error('Failed to create flow run', { error });
@@ -329,6 +338,7 @@ export class FlowRunsService {
         flowRunId,
         status: updatedExecution.status,
       });
+      this.eventBus?.emitFlowRunUpdate(updatedExecution);
       return updatedExecution;
     } catch (error) {
       this.logger.error('Failed to update execution status', { flowRunId, status, error });

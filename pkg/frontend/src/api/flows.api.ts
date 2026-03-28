@@ -4,7 +4,6 @@ import { useApiClient } from '../contexts/ApiContext';
 import { queryKeys, getErrorMessage } from './query-keys';
 import { ValidationError, type ReactFlowDataOptions } from './types';
 import {
-  FlowRunStatus,
   type CreateFlowDto,
   type CreateFlowVersionDto,
   type QueryOptions,
@@ -79,60 +78,15 @@ export function useFlowVersions(flowId: string, options?: QueryOptions<FlowVersi
 // React Flow Data Query
 export function useFlowReactFlowData(
   flowId: string,
-  options?: ReactFlowDataOptions & { flowRunStatus?: FlowRunStatus },
+  options?: ReactFlowDataOptions,
 ): ReturnType<typeof useQuery<ReactFlowData, Error>> {
   const apiClient = useApiClient();
-  const flowRunStatus = options?.flowRunStatus;
 
   return useQuery({
     queryKey: queryKeys.reactFlow(flowId, options?.version, options?.flowRunId),
     queryFn: () => apiClient.getFlowReactFlowData(flowId, options),
     enabled: !!flowId,
-    staleTime: options?.flowRunId ? 0 : 1000 * 30, // No stale time when tracking execution
-    // Poll when we have a flowRunId and the run is active
-    refetchInterval: () => {
-      if (!options?.flowRunId || !flowRunStatus) {
-        return false;
-      }
-      // Poll while execution is active
-      if ([FlowRunStatus.RUNNING, FlowRunStatus.PENDING].includes(flowRunStatus)) {
-        return 1000; // Poll every 1 second for real-time updates
-      }
-      if ([FlowRunStatus.PAUSED, FlowRunStatus.PAUSED_FOR_BATCH].includes(flowRunStatus)) {
-        return 10000; // Poll slower for paused executions
-      }
-      return false; // Stop polling when complete
-    },
-    retry: (failureCount, error) => {
-      if (failureCount >= 2) {
-        return false;
-      }
-      if (error instanceof Error && error.message.includes('4')) {
-        return false;
-      }
-      return true;
-    },
-  });
-}
-
-// React Flow Data Query with Execution Status
-export function useFlowReactFlowDataWithExecution(
-  flowId: string,
-  flowRunId: string,
-  enabled: boolean = true,
-  pollingInterval?: number,
-): ReturnType<typeof useQuery<ReactFlowData, Error>> {
-  const apiClient = useApiClient();
-
-  return useQuery({
-    queryKey: queryKeys.reactFlow(flowId, undefined, flowRunId),
-    queryFn: () => {
-      console.log('🔍 Fetching flow data with execution status');
-      return apiClient.getFlowReactFlowData(flowId, { flowRunId: flowRunId });
-    },
-    enabled: enabled && !!flowId && !!flowRunId,
-    staleTime: 0, // Always consider data stale for real-time updates
-    refetchInterval: pollingInterval || false, // Use custom polling interval
+    staleTime: options?.flowRunId ? 0 : 1000 * 30,
     retry: (failureCount, error) => {
       if (failureCount >= 2) {
         return false;

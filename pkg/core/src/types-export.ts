@@ -162,3 +162,14 @@ export { FLOW_VALIDATION_ERROR_TYPES } from './types/validation';
 
 // Dashboard stats type (pure interface — safe for frontend)
 export type { DashboardStats } from './invect-core';
+
+// Execution streaming event types (SSE)
+export type {
+  ExecutionStreamEvent,
+  ExecutionSnapshotEvent,
+  FlowRunUpdatedEvent,
+  NodeExecutionCreatedEvent,
+  NodeExecutionUpdatedEvent,
+  HeartbeatEvent,
+  EndEvent,
+} from './services/execution-event-bus';

@@ -4,29 +4,19 @@ import { useMemo } from 'react';
 import { useApiClient } from '../contexts/ApiContext';
 import { queryKeys, getErrorMessage } from './query-keys';
 import { ValidationError } from './types';
-import { FlowRunStatus, type FlowRun, type FlowInputs } from '@invect/core/types';
+import { type FlowRun, type FlowInputs } from '@invect/core/types';
 
 // Execution Queries
-export function useFlowRuns(flowId: string, activeRunStatus?: FlowRunStatus) {
+// NOTE: Real-time updates are provided by useFlowRunStream (SSE).
+// These hooks only do an initial fetch; the stream writes into the same cache keys.
+
+export function useFlowRuns(flowId: string) {
   const apiClient = useApiClient();
 
   return useQuery({
     queryKey: queryKeys.executions(flowId),
     queryFn: () => apiClient.getFlowRunsByFlowId(flowId),
     enabled: !!flowId,
-    staleTime: 0, // Always fresh for real-time updates
-    refetchInterval: () => {
-      if (!activeRunStatus) {
-        return false;
-      }
-      if ([FlowRunStatus.RUNNING, FlowRunStatus.PENDING].includes(activeRunStatus)) {
-        return 1000;
-      }
-      if ([FlowRunStatus.PAUSED, FlowRunStatus.PAUSED_FOR_BATCH].includes(activeRunStatus)) {
-        return 10000;
-      }
-      return false;
-    },
   });
 }
 
@@ -36,62 +26,16 @@ export function useFlowRun(id: string) {
     queryKey: queryKeys.flowRun(id),
     queryFn: () => apiClient.getFlowRun(id),
     enabled: !!id,
-    refetchInterval: (query) => {
-      const data = query.state.data;
-      if (
-        data &&
-        (data.status === FlowRunStatus.RUNNING || data.status === FlowRunStatus.PENDING)
-      ) {
-        console.log(`🔄 [POLLING] Polling execution ${id} status: ${data.status}`);
-        return 5000;
-      }
-      if (
-        data &&
-        (data.status === FlowRunStatus.PAUSED || data.status === FlowRunStatus.PAUSED_FOR_BATCH)
-      ) {
-        console.log(`⏸️ [POLLING] Polling paused execution ${id} status: ${data.status}`);
-        return 15000;
-      }
-      if (
-        data &&
-        (data.status === FlowRunStatus.SUCCESS ||
-          data.status === FlowRunStatus.FAILED ||
-          data.status === FlowRunStatus.CANCELLED)
-      ) {
-        console.log(
-          `✅ [POLLING] Execution ${id} completed with status: ${data.status} - stopping polls`,
-        );
-        return false;
-      }
-      return false;
-    },
-    staleTime: 0,
   });
 }
 
-export function useNodeExecutions(flowRunId: string, flowRunStatus?: FlowRunStatus) {
+export function useNodeExecutions(flowRunId: string) {
   const apiClient = useApiClient();
 
   return useQuery({
     queryKey: queryKeys.nodeExecutions(flowRunId),
     queryFn: () => apiClient.getNodeExecutionsByFlowRun(flowRunId),
     enabled: !!flowRunId,
-    refetchInterval: () => {
-      if (!flowRunStatus) {
-        return false;
-      }
-
-      if (flowRunStatus === FlowRunStatus.RUNNING || flowRunStatus === FlowRunStatus.PENDING) {
-        return 5000;
-      }
-
-      if (flowRunStatus === FlowRunStatus.PAUSED_FOR_BATCH) {
-        return 15000;
-      }
-
-      return false;
-    },
-    staleTime: 0,
   });
 }
 
@@ -109,49 +53,6 @@ export function useLatestFlowRun(flowId: string) {
   }, [executions]);
 
   return useFlowRun(latestExecution?.id || '');
-}
-
-export function useFlowRunLivePoll(flowId: string, executionId: string) {
-  const apiClient = useApiClient();
-  return useQuery({
-    queryKey: ['flowExecution', flowId, executionId],
-    queryFn: () => apiClient.getFlowRun(executionId),
-    enabled: !!(flowId && executionId),
-    refetchInterval: (query) => {
-      const data = query.state.data;
-      if (
-        data &&
-        (data.status === FlowRunStatus.RUNNING || data.status === FlowRunStatus.PENDING)
-      ) {
-        console.log(
-          `🔄 [POLLING] Polling flow execution ${flowId}/${executionId} status: ${data.status}`,
-        );
-        return 5000;
-      }
-      if (
-        data &&
-        (data.status === FlowRunStatus.PAUSED || data.status === FlowRunStatus.PAUSED_FOR_BATCH)
-      ) {
-        console.log(
-          `⏸️ [POLLING] Polling paused flow execution ${flowId}/${executionId} status: ${data.status}`,
-        );
-        return 15000;
-      }
-      if (
-        data &&
-        (data.status === FlowRunStatus.SUCCESS ||
-          data.status === FlowRunStatus.FAILED ||
-          data.status === FlowRunStatus.CANCELLED)
-      ) {
-        console.log(
-          `✅ [POLLING] Flow execution ${flowId}/${executionId} completed with status: ${data.status} - stopping polls`,
-        );
-        return false;
-      }
-      return false;
-    },
-    staleTime: 0,
-  });
 }
 
 export function useListFlowRuns(

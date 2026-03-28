@@ -2,13 +2,13 @@
 //
 // Validates that the @invect/frontend `<Invect>` component renders correctly
 // when imported and used in a Next.js App Router application.
-// The Next.js example runs on port 3002.
+// The Next.js example runs on the shared Playwright Next.js port.
 //
 // The playwright.config.ts webServer array auto-starts the Next.js server.
 
 import { test, expect } from "./nextjs-frontend.fixtures";
 
-const NEXTJS_URL = process.env.NEXTJS_URL ?? "http://localhost:3002";
+const NEXTJS_URL = process.env.NEXTJS_URL ?? "http://localhost:43002";
 
 test.describe("Next.js Invect Frontend Rendering", () => {
   test("home page loads and links to Invect", async ({ page }) => {

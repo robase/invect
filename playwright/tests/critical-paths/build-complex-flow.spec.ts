@@ -5,7 +5,7 @@
  * Express + Drizzle example app. Walks through every major UI interaction:
  *
  *   1. Create a new flow from the dashboard
- *   2. Open the node palette and add nodes (Input, JQ, If/Else, Template, Output)
+ *   2. Open the node palette and add nodes (Input, JavaScript, If/Else, Template, Flow Output)
  *   3. Connect nodes by dragging edges
  *   4. Configure each node's parameters via the config panel
  *   5. Create a credential and assign it
@@ -23,6 +23,9 @@
 
 import { test, expect } from "./fixtures";
 import type { APIRequestContext, Page } from "@playwright/test";
+
+// Always record video for this mega test, even on success
+test.use({ video: "on" });
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -180,16 +183,16 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
     await inputNodeBtn.first().click();
     await page.waitForTimeout(500);
 
-    // Clear search, search for JQ
+    // Clear search, search for JavaScript
     await searchInput.clear();
-    await searchInput.fill("JQ");
+    await searchInput.fill("JavaScript");
     await page.waitForTimeout(300);
 
-    const jqCard = page.locator(".overflow-y-auto, [data-radix-scroll-area-viewport]")
+    const javascriptCard = page.locator(".overflow-y-auto, [data-radix-scroll-area-viewport]")
       .locator("div")
-      .filter({ hasText: /JQ/i })
+      .filter({ hasText: /JavaScript/i })
       .first();
-    await jqCard.click();
+    await javascriptCard.click();
     await page.waitForTimeout(500);
 
     // Add an If/Else node
@@ -220,14 +223,14 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
     await templateCard.click();
     await page.waitForTimeout(500);
 
-    // Add an Output node
+    // Add a Flow Output node
     await searchInput.clear();
     await searchInput.fill("Output");
     await page.waitForTimeout(300);
 
     const outputCard = page.locator(".overflow-y-auto, [data-radix-scroll-area-viewport]")
       .locator("div")
-      .filter({ hasText: /^Output$/ })
+      .filter({ hasText: /Flow Output/i })
       .first();
     await outputCard.click();
     await page.waitForTimeout(500);
@@ -240,6 +243,18 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
       const count = await getCanvasNodeCount(page);
       expect(count, "Canvas should have at least 6 nodes").toBeGreaterThanOrEqual(6);
     }).toPass({ timeout: 10_000 });
+
+    // Persist the draft so later serial phases can reload the created nodes.
+    const saveButton = page.getByRole("button", { name: /^save$/i }).first();
+    const hasSaveButton = await saveButton.isVisible({ timeout: 3_000 }).catch(() => false);
+
+    if (hasSaveButton) {
+      await saveButton.click();
+    } else {
+      await page.keyboard.press("Meta+S");
+    }
+
+    await expect(page.getByText(/Unsaved Changes/i)).not.toBeVisible({ timeout: 10_000 }).catch(() => {});
   });
 
   // =========================================================================
@@ -303,35 +318,35 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
     await expect(dialog).not.toBeVisible({ timeout: 5_000 });
   });
 
-  test("Phase 3b — configure the JQ node with a transformation query", async ({
+  test("Phase 3b — configure the JavaScript node with a transformation", async ({
     page,
   }) => {
     expect(flowId).toBeTruthy();
     await page.goto(`/invect/flow/${flowId}`);
     await expect(page.locator(".react-flow")).toBeVisible({ timeout: 15_000 });
 
-    // Open JQ node
-    const jqNode = page.locator(".react-flow__node").filter({ hasText: /JQ/i }).first();
-    await expect(jqNode).toBeVisible({ timeout: 10_000 });
-    await jqNode.dblclick();
+    // Open JavaScript node
+    const jsNode = page.locator(".react-flow__node").filter({ hasText: /JavaScript/i }).first();
+    await expect(jsNode).toBeVisible({ timeout: 10_000 });
+    await jsNode.dblclick();
 
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible({ timeout: 5_000 });
 
-    // The JQ node should have a "JQ Query" parameter field
+    // The JavaScript node should have a code parameter field
     // Look for the PARAMETERS section and find code editors within it
     await expect(dialog.getByText("Parameters", { exact: true }).first()).toBeVisible();
 
-    // Find editable CodeMirror editors — the JQ query field
+    // Find editable CodeMirror editors — the JavaScript code field
     const editableEditors = dialog.locator(".cm-editor .cm-content[contenteditable='true']");
     const editableCount = await editableEditors.count();
 
     if (editableCount > 1) {
       // The second editable editor is typically in the configuration panel (first is input panel)
-      const queryEditor = editableEditors.nth(1);
-      await queryEditor.click();
+      const codeEditor = editableEditors.nth(1);
+      await codeEditor.click();
       await page.keyboard.press("Meta+a");
-      await page.keyboard.type('.input | { name: .customer.name, isGold: (.customer.tier == "gold"), total: .orderTotal }', { delay: 1 });
+      await page.keyboard.type('({ name: input.customer.name, isGold: input.customer.tier === "gold", total: input.orderTotal, discount: input.customer.tier === "gold" ? input.orderTotal * 0.1 : 0 })', { delay: 1 });
     }
 
     await page.keyboard.press("Escape");
@@ -433,11 +448,11 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
             },
             {
               id: "mega-jq",
-              type: "core.jq",
+              type: "core.javascript",
               label: "Transform Data",
               referenceId: "transformed",
               params: {
-                query: '.customer_data | { name: .customer.name, isGold: (.customer.tier == "gold"), total: .orderTotal, discount: (if .customer.tier == "gold" then (.orderTotal * 0.1) else 0 end) }',
+                code: '({ name: customer_data.customer.name, isGold: customer_data.customer.tier === "gold", total: customer_data.orderTotal, discount: customer_data.customer.tier === "gold" ? customer_data.orderTotal * 0.1 : 0 })',
               },
               position: { x: 350, y: 200 },
             },
@@ -569,7 +584,7 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
     await closeConfigPanel();
   });
 
-  test("Phase 6b — run the JQ node and verify transformation", async ({
+  test("Phase 6b — run the JavaScript node and verify transformation", async ({
     page,
     openNodeConfigPanel,
     closeConfigPanel,
@@ -580,7 +595,7 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
     await page.goto(`/invect/flow/${flowId}`);
     await expect(page.locator(".react-flow")).toBeVisible({ timeout: 15_000 });
 
-    // Open the Transform Data (JQ) node
+    // Open the Transform Data node
     await openNodeConfigPanel("Transform Data");
 
     const dialog = page.getByRole("dialog");
@@ -595,7 +610,7 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
     // At least one state should be true
     expect(hasData || hasNoData, "Input panel should show data or run prompt").toBeTruthy();
 
-    // Run the JQ node
+    // Run the JavaScript node
     const runBtn = dialog
       .locator("button[data-slot='button']")
       .filter({ hasText: /^Run Node$/ })
@@ -611,7 +626,7 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
     // Check output — should contain transformed data
     const output = await getOutputPanelText();
 
-    // The JQ query produces { name, isGold, total, discount }
+    // The transformation produces { name, isGold, total, discount }
     if (!output.includes("error") && !output.includes("Error")) {
       expect(output).toContain("name");
       expect(output).not.toContain("[object Object]");
@@ -674,14 +689,6 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
 
     const dialog = page.getByRole("dialog");
 
-    // Click into the input editor and type custom JSON to enable test mode
-    const inputEditor = dialog.locator(".cm-editor").first();
-    const editableContent = inputEditor.locator(".cm-content");
-    await editableContent.click();
-
-    // Select all and replace with custom test data
-    await page.keyboard.press("Meta+a");
-
     const customInput = JSON.stringify({
       customer_data: {
         customer: {
@@ -694,7 +701,14 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
         itemCount: 7,
       },
     }, null, 2);
-    await page.keyboard.type(customInput, { delay: 1 });
+
+    const editableContent = dialog.locator('.cm-content[contenteditable="true"]').first();
+    await expect(editableContent).toBeVisible({ timeout: 5_000 });
+    await editableContent.fill(customInput);
+
+    await expect.poll(async () => getInputPanelText()).toContain('Bob Smith');
+
+    await expect(dialog.getByText(/Invalid JSON/i)).not.toBeVisible({ timeout: 5_000 }).catch(() => {});
 
     // TEST badge should appear
     await expect(dialog.getByText("TEST", { exact: true })).toBeVisible({
@@ -723,11 +737,11 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
       expect(output).not.toContain("[object Object]");
     }
 
-    // Click reset to restore original input
-    await resetBtn.click();
+    // Successful execution exits test mode and clears the reset affordance.
     await expect(dialog.getByText("TEST", { exact: true })).not.toBeVisible({
       timeout: 5_000,
     });
+    await expect(resetBtn).not.toBeVisible({ timeout: 5_000 }).catch(() => {});
 
     await closeConfigPanel();
   });
@@ -986,7 +1000,7 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
   // PHASE 13: Inspect a node's template syntax in the config panel
   // =========================================================================
 
-  test("Phase 13 — verify template node shows Nunjucks syntax and resolves", async ({
+  test("Phase 13 — verify template node shows template syntax and resolves", async ({
     page,
     openNodeConfigPanel,
     closeConfigPanel,
@@ -1001,7 +1015,7 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
 
     const dialog = page.getByRole("dialog");
 
-    // Should show Nunjucks template syntax in the config
+    // Should show template syntax in the config
     const hasTemplateVars = await dialog.getByText(/\{\{.*gold_check/).isVisible({ timeout: 5_000 }).catch(() => false)
       || await dialog.getByText(/\{\{.*name/).isVisible({ timeout: 5_000 }).catch(() => false);
 

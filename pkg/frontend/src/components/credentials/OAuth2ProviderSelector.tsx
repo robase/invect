@@ -12,7 +12,6 @@ import { Badge } from '../ui/badge';
 import { ScrollArea } from '../ui/scroll-area';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import {
-  Loader2,
   ExternalLink,
   FileText,
   HardDrive,
@@ -30,6 +29,7 @@ import { cn } from '../../lib/utils';
 import { useOAuth2Providers } from '../../api/credentials.api';
 import { OAuth2ConnectButton } from './OAuth2ConnectButton';
 import type { OAuth2ProviderDefinition, Credential } from '../../api/types';
+import { InvectLoader } from '../shared/InvectLoader';
 
 // Icon mapping for providers
 const providerIcons: Record<string, React.ElementType> = {
@@ -177,7 +177,7 @@ export function OAuth2ProviderSelector({
 
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            <InvectLoader iconClassName="h-14" label="Loading providers..." />
           </div>
         ) : selectedProvider ? (
           // Configuration form for selected provider

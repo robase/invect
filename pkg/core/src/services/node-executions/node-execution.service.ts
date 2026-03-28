@@ -5,17 +5,24 @@ import { NodeExecutionStatus } from 'src/types/base';
 import { PaginatedResponse, QueryOptions } from 'src/types/schemas/pagination-sort-filter';
 import { NodeExecution } from './node-executions.model';
 import type { NodeOutput } from 'src/types/node-io-types';
+import type { ExecutionEventBus } from '../execution-event-bus';
 
 /**
  * Core Execution Trace Service implementation using database models
  */
 export class NodeExecutionService {
   private initialized: boolean = false;
+  private eventBus: ExecutionEventBus | null = null;
 
   constructor(
     private readonly logger: Logger,
     private readonly databaseService: DatabaseService,
   ) {}
+
+  /** Attach the event bus so state changes are broadcast to SSE subscribers. */
+  setEventBus(bus: ExecutionEventBus): void {
+    this.eventBus = bus;
+  }
 
   /**
    * Initialize the service
@@ -61,6 +68,7 @@ export class NodeExecutionService {
         executionId,
         nodeId,
       });
+      this.eventBus?.emitNodeExecutionCreate(trace);
       return trace;
     } catch (error) {
       this.logger.error('Failed to create execution trace', {
@@ -99,6 +107,7 @@ export class NodeExecutionService {
         nodeExecutionId,
         status: updatedTrace.status,
       });
+      this.eventBus?.emitNodeExecutionUpdate(updatedTrace);
       return updatedTrace;
     } catch (error) {
       this.logger.error('Failed to update execution trace', { nodeExecutionId, error });
@@ -162,7 +171,9 @@ export class NodeExecutionService {
     this.logger.debug('Updating node execution status', JSON.stringify({ traceId, status, data }));
 
     try {
-      return await this.databaseService.nodeExecutions.updateTraceStatus(traceId, status, data);
+      const updated = await this.databaseService.nodeExecutions.updateTraceStatus(traceId, status, data);
+      this.eventBus?.emitNodeExecutionUpdate(updated);
+      return updated;
     } catch (error) {
       this.logger.error('Failed to update trace status', { traceId, status, error });
       throw new DatabaseError('Failed to update trace status', { error });

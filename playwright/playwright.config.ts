@@ -3,6 +3,10 @@ import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
 const playwrightArtifactsDir = path.resolve(process.cwd(), "playwright");
+const vitePort = Number.parseInt(process.env.PLAYWRIGHT_VITE_PORT ?? "41731", 10);
+const nextjsPort = Number.parseInt(process.env.PLAYWRIGHT_NEXTJS_PORT ?? "43002", 10);
+const viteBaseUrl = process.env.PLAYWRIGHT_VITE_URL ?? `http://localhost:${vitePort}`;
+const nextjsBaseUrl = process.env.NEXTJS_URL ?? `http://localhost:${nextjsPort}`;
 
 /**
  * Playwright config for Invect cross-platform E2E tests.
@@ -58,7 +62,7 @@ export default defineConfig({
       testMatch: /platform\/(express|nextjs)-frontend\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
-        baseURL: "http://localhost:5173",
+        baseURL: viteBaseUrl,
       },
     },
     /* Other tests (config-panel, credentials, seed, etc.) — shared frontend, isolated backend */
@@ -73,7 +77,7 @@ export default defineConfig({
       ],
       use: {
         ...devices["Desktop Chrome"],
-        baseURL: "http://localhost:5173",
+        baseURL: viteBaseUrl,
       },
     },
     /* Critical-path tests — shared frontend, isolated backend per worker */
@@ -82,7 +86,7 @@ export default defineConfig({
       testMatch: /critical-paths\/.*\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
-        baseURL: "http://localhost:5173",
+        baseURL: viteBaseUrl,
       },
     },
     /* NestJS + Prisma installation test — self-contained (Docker + own server) */
@@ -110,7 +114,7 @@ export default defineConfig({
       timeout: 120_000,
       use: {
         ...devices["Desktop Chrome"],
-        baseURL: "http://localhost:5173",
+        baseURL: viteBaseUrl,
         screenshot: "off",
         video: "off",
         trace: "off",
@@ -124,16 +128,16 @@ export default defineConfig({
    */
   webServer: [
     {
-      command: "pnpm --filter flow-executor run dev",
-      url: "http://localhost:5173",
+      command: `pnpm --filter flow-executor exec vite --force --host localhost --port ${vitePort}`,
+      url: viteBaseUrl,
       reuseExistingServer: !process.env.CI,
       timeout: 30_000,
       stdout: "pipe",
       stderr: "pipe",
     },
     {
-      command: "pnpm --filter invect-nextjs-example exec next dev -p 3002",
-      url: "http://localhost:3002",
+      command: `pnpm --filter invect-nextjs-example exec next dev --hostname localhost -p ${nextjsPort}`,
+      url: nextjsBaseUrl,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
       stdout: "pipe",

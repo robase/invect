@@ -22,6 +22,7 @@ const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, "../..");
 const serverCwd = path.join(rootDir, "examples/express-drizzle");
 const serverScript = path.join(serverCwd, "playwright-test-server.ts");
+const sharedOrigin = process.env.PLAYWRIGHT_VITE_URL ?? "http://localhost:41731";
 const isolatedBrowserBase = createSqliteBrowserIsolationTest({
   apiPrefix: "/invect",
   apiRoutePrefix: "/api/invect",
@@ -29,7 +30,7 @@ const isolatedBrowserBase = createSqliteBrowserIsolationTest({
   readyPath: "/invect/credentials",
   serverCwd,
   serverScript,
-  sharedOrigin: "http://localhost:5173",
+  sharedOrigin,
 });
 
 let activeApiBase = "http://localhost:3000/invect";
@@ -102,12 +103,12 @@ const TEST_FLOW_DEFINITIONS: Record<string, TestFlowDefinition> = {
       },
       {
         id: "jq-filter",
-        type: "core.jq",
+        type: "core.javascript",
         label: "Filter Admins",
         referenceId: "admins",
         params: {
-          query:
-            '.data | { admins: [.users[] | select(.role == "admin") | .name], count: ([.users[] | select(.role == "admin")] | length) }',
+          code:
+            '({ admins: data.users.filter((user) => user.role === "admin").map((user) => user.name), count: data.users.filter((user) => user.role === "admin").length })',
         },
         position: { x: 400, y: 200 },
       },
@@ -117,7 +118,7 @@ const TEST_FLOW_DEFINITIONS: Record<string, TestFlowDefinition> = {
         label: "Format Result",
         referenceId: "result",
         params: {
-          template: 'Found {{ admins.count }} admin(s): {{ admins.admins | join(", ") }}',
+          template: 'Found {{ admins.count }} admin(s): {{ admins.admins.join(", ") }}',
         },
         position: { x: 700, y: 200 },
       },
@@ -176,11 +177,11 @@ const TEST_FLOW_DEFINITIONS: Record<string, TestFlowDefinition> = {
       },
       {
         id: "jq-extract",
-        type: "core.jq",
+        type: "core.javascript",
         label: "Extract User Info",
         referenceId: "user_info",
         params: {
-          query: ".user_data | { name: .name, age: .age, isAdult: (.age >= 18) }",
+          code: '({ name: user_data.name, age: user_data.age, isAdult: user_data.age >= 18 })',
         },
         position: { x: 350, y: 200 },
       },
@@ -283,40 +284,45 @@ const TEST_FLOW_DEFINITIONS: Record<string, TestFlowDefinition> = {
       },
       {
         id: "jq-merge",
-        type: "core.jq",
+        type: "core.javascript",
         label: "Merge Data",
         referenceId: "merged",
         params: {
-          query: `{
-  orderId: .order.orderId,
+          code: `({
+  orderId: order.orderId,
   customer: {
-    id: .customer.customerId,
-    name: .customer.name,
-    email: .customer.email,
-    tier: .customer.tier,
-    totalOrders: .customer.totalOrders
+    id: customer.customerId,
+    name: customer.name,
+    email: customer.email,
+    tier: customer.tier,
+    totalOrders: customer.totalOrders,
   },
-  items: .order.items,
-  shipping: .order.shippingAddress,
-  paymentMethod: .order.paymentMethod
-}`,
+  items: order.items,
+  shipping: order.shippingAddress,
+  paymentMethod: order.paymentMethod,
+})`,
         },
         position: { x: 300, y: 200 },
       },
       {
         id: "jq-totals",
-        type: "core.jq",
+        type: "core.javascript",
         label: "Calculate Totals",
         referenceId: "order_summary",
         params: {
-          query: `.merged + {
-  itemCount: (.merged.items | length),
-  subtotal: ([.merged.items[] | .price * .quantity] | add),
-  tax: (([.merged.items[] | .price * .quantity] | add) * 0.0875),
-  total: (([.merged.items[] | .price * .quantity] | add) * 1.0875),
-  isHighValue: (([.merged.items[] | .price * .quantity] | add) > 500),
-  isVip: (.merged.customer.tier == "VIP")
-}`,
+          code: `(() => {
+  const subtotal = merged.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const tax = subtotal * 0.0875;
+  return {
+    ...merged,
+    itemCount: merged.items.length,
+    subtotal,
+    tax,
+    total: subtotal + tax,
+    isHighValue: subtotal > 500,
+    isVip: merged.customer.tier === "VIP",
+  };
+})()`,
         },
         position: { x: 550, y: 200 },
       },
@@ -336,7 +342,7 @@ const TEST_FLOW_DEFINITIONS: Record<string, TestFlowDefinition> = {
         label: "VIP Welcome",
         referenceId: "vip_message",
         params: {
-          template: `Dear {{ vip_check.order_summary.customer.name }}, your order {{ vip_check.order_summary.orderId }} totals \\\${{ vip_check.order_summary.total | round(2) }} and qualifies for VIP handling.`,
+          template: `Dear {{ vip_check.order_summary.customer.name }}, your order {{ vip_check.order_summary.orderId }} totals \\\${{ Math.round(vip_check.order_summary.total * 100) / 100 }} and qualifies for VIP handling.`,
         },
         position: { x: 1100, y: 50 },
       },
@@ -397,25 +403,25 @@ const TEST_FLOW_DEFINITIONS: Record<string, TestFlowDefinition> = {
       },
       {
         id: "jq-normalize-incident",
-        type: "core.jq",
+        type: "core.javascript",
         label: "Normalize Context",
         referenceId: "incident_context",
         params: {
-          query: `{
-  incidentId: .incident.incidentId,
-  service: .incident.service,
-  priority: .incident.priority,
-  status: .incident.status,
-  impactedCustomers: .incident.impactedCustomers,
-  accountName: .account.accountName,
-  tier: .account.tier,
-  arr: .account.arr,
-  csm: .account.csm,
-  slackChannel: .account.slackChannel,
-  severityScore: ((if .incident.priority == "P1" then 70 else 30 end) + (.incident.impactedCustomers / 2)),
-  needsExecutiveUpdate: (.account.tier == "enterprise" and .incident.priority == "P1"),
-  requiresHotfix: (.incident.priority == "P1" or .incident.impactedCustomers > 100)
-}`,
+          code: `({
+  incidentId: incident.incidentId,
+  service: incident.service,
+  priority: incident.priority,
+  status: incident.status,
+  impactedCustomers: incident.impactedCustomers,
+  accountName: account.accountName,
+  tier: account.tier,
+  arr: account.arr,
+  csm: account.csm,
+  slackChannel: account.slackChannel,
+  severityScore: (incident.priority === "P1" ? 70 : 30) + incident.impactedCustomers / 2,
+  needsExecutiveUpdate: account.tier === "enterprise" && incident.priority === "P1",
+  requiresHotfix: incident.priority === "P1" || incident.impactedCustomers > 100,
+})`,
         },
         position: { x: 320, y: 220 },
       },
@@ -476,7 +482,7 @@ const TEST_FLOW_DEFINITIONS: Record<string, TestFlowDefinition> = {
         referenceId: "dispatch_summary",
         params: {
           outputName: "dispatch_summary",
-          outputValue: `{% if executive_brief %}{{ executive_brief }}{% elif hotfix_plan %}{{ hotfix_plan }}{% else %}{{ monitoring_plan }}{% endif %}`,
+          outputValue: `{{ executive_brief ?? hotfix_plan ?? monitoring_plan }}`,
         },
         position: { x: 1540, y: 290 },
       },

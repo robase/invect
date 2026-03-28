@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { Activity, Loader2 } from 'lucide-react';
+import { Activity } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -10,6 +10,7 @@ import {
 } from '~/components/ui/table';
 import { StatusBadge, formatRelativeTime, formatDuration } from './status-helpers';
 import type { Flow, FlowRun } from '@invect/core/types';
+import { InvectLoader } from '../shared/InvectLoader';
 
 interface RecentActivityTableProps {
   runs: FlowRun[];
@@ -28,10 +29,7 @@ export function RecentActivityTable({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-        Loading activity…
-      </div>
+      <InvectLoader className="py-8" iconClassName="h-10" label="Loading activity..." />
     );
   }
 

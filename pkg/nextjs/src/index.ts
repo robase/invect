@@ -411,6 +411,45 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
         return Response.json(nodeExecutions);
       }
 
+      // GET /flow-runs/:flowRunId/stream - SSE stream of execution events
+      if (method === 'GET' && path.match(/^flow-runs\/[^/]+\/stream$/)) {
+        const flowRunId = path.split('/')[1];
+        const stream = initializedCore.createFlowRunEventStream(flowRunId);
+
+        const encoder = new TextEncoder();
+        const readable = new ReadableStream({
+          async start(controller) {
+            try {
+              for await (const event of stream) {
+                const data = JSON.stringify(event);
+                controller.enqueue(
+                  encoder.encode(`event: ${event.type}\ndata: ${data}\n\n`),
+                );
+              }
+            } catch (error: unknown) {
+              const message =
+                error instanceof Error ? error.message : 'Stream failed';
+              controller.enqueue(
+                encoder.encode(
+                  `event: error\ndata: ${JSON.stringify({ type: 'error', message })}\n\n`,
+                ),
+              );
+            } finally {
+              controller.close();
+            }
+          },
+        });
+
+        return new Response(readable, {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            Connection: 'keep-alive',
+            'X-Accel-Buffering': 'no',
+          },
+        });
+      }
+
       // GET /flows/:flowId/flow-runs
       if (method === 'GET' && path.match(/^flows\/[^/]+\/flow-runs$/)) {
         const flowId = path.split('/')[1];

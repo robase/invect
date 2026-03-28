@@ -667,6 +667,48 @@ export function createInvectRouter(config: InvectConfig): Router {
   );
 
   /**
+   * GET /flow-runs/:flowRunId/stream - SSE stream of execution events
+   * Core method: ✅ createFlowRunEventStream(flowRunId: string)
+   *
+   * Streams node-execution and flow-run updates in real time.
+   * First event is a "snapshot", then incremental updates, ending with "end".
+   */
+  router.get(
+    '/flow-runs/:flowRunId/stream',
+    asyncHandler(async (req: Request, res: Response) => {
+      // SSE headers
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no');
+      res.flushHeaders();
+
+      try {
+        const stream = core.createFlowRunEventStream(req.params.flowRunId);
+
+        for await (const event of stream) {
+          if (res.destroyed) {
+            break;
+          }
+          const data = JSON.stringify(event);
+          res.write(`event: ${event.type}\ndata: ${data}\n\n`);
+        }
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Stream failed';
+        if (res.headersSent) {
+          res.write(
+            `event: error\ndata: ${JSON.stringify({ type: 'error', message })}\n\n`,
+          );
+        } else {
+          return res.status(500).json({ error: 'Internal Server Error', message });
+        }
+      } finally {
+        res.end();
+      }
+    }),
+  );
+
+  /**
    * POST /node-executions/list - Get all node executions with optional filtering and pagination
    * Core method: ✅ listNodeExecutions(options?: QueryOptions<NodeExecution>)
    * Body: QueryOptions<NodeExecution>

@@ -8,14 +8,13 @@ import {
   type EdgeChange,
 } from '@xyflow/react';
 import { useFlowReactFlowData } from '../api/flows.api';
-import { FlowRunStatus, type ReactFlowData } from '@invect/core/types';
+import { type ReactFlowData } from '@invect/core/types';
 
 // Hook that uses the backend React Flow renderer service
 export function useFlowData(
   flowId: string,
   flowVersion?: string,
   flowRunId?: string,
-  flowRunStatus?: FlowRunStatus,
 ): {
   flowData: ReactFlowData | undefined;
   displayVersion: ReactFlowData['version'] | undefined;
@@ -45,7 +44,7 @@ export function useFlowData(
     data: flowData,
     isLoading: loading,
     error: queryError,
-  } = useFlowReactFlowData(flowId, { version: flowVersion, flowRunId, flowRunStatus });
+  } = useFlowReactFlowData(flowId, { version: flowVersion, flowRunId });
 
   // Apply backend data directly when it changes (backend provides positions)
   // But skip if we just saved and the version hasn't actually changed

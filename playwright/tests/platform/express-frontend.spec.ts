@@ -4,11 +4,11 @@
 // Validates that the Vite frontend example correctly communicates with
 // the Express backend.  This is the existing "fullstack" setup:
 //   - Express backend on http://localhost:3000
-//   - Vite frontend on http://localhost:5173
+//   - Vite frontend on the shared Playwright frontend port
 
 import { test, expect } from "../fixtures";
 
-const VITE_URL = "http://localhost:5173";
+const VITE_URL = process.env.PLAYWRIGHT_VITE_URL ?? "http://localhost:41731";
 
 test.describe("Express + Vite Frontend Integration", () => {
   test("dashboard loads and shows statistics from Express backend", async ({

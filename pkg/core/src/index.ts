@@ -301,6 +301,22 @@ export type {
   CreateChatStreamOptions,
 } from './services/chat';
 
+// Execution event bus (SSE streaming)
+export {
+  ExecutionEventBus,
+  getExecutionEventBus,
+  resetExecutionEventBus,
+} from './services/execution-event-bus';
+export type {
+  ExecutionStreamEvent,
+  ExecutionSnapshotEvent,
+  FlowRunUpdatedEvent,
+  NodeExecutionCreatedEvent,
+  NodeExecutionUpdatedEvent,
+  HeartbeatEvent,
+  EndEvent,
+} from './services/execution-event-bus';
+
 // Re-export Graph Node Types and Names
 export { GraphNodeType, GRAPH_NODE_TYPE_NAMES } from './types-fresh';
 
