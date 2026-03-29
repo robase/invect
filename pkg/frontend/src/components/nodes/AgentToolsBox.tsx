@@ -48,22 +48,6 @@ interface AgentToolsBoxProps {
   className?: string;
 }
 
-const categoryColors: Record<ToolCategory, string> = {
-  data: 'text-blue-400 border-blue-500/30 hover:bg-blue-500/10',
-  web: 'text-green-400 border-green-500/30 hover:bg-green-500/10',
-  code: 'text-purple-400 border-purple-500/30 hover:bg-purple-500/10',
-  utility: 'text-orange-400 border-orange-500/30 hover:bg-orange-500/10',
-  custom: 'text-pink-400 border-pink-500/30 hover:bg-pink-500/10',
-};
-
-const categoryIcons: Record<ToolCategory, React.ElementType> = {
-  data: Database,
-  web: Globe,
-  code: Code2,
-  utility: Wrench,
-  custom: Sparkles,
-};
-
 // Maximum visible tools in grid (2 columns x 3 rows)
 const MAX_VISIBLE_TOOLS = 6;
 
@@ -81,14 +65,12 @@ const ToolTile = memo(function ToolTile({
   onToolClick?: (tool: AddedToolInstance) => void;
   onRemoveTool?: (instanceId: string) => void;
 }) {
-  const category = toolDef?.category ?? 'utility';
-  const CategoryIcon = categoryIcons[category];
+
 
   return (
     <div
       className={cn(
         'group relative flex flex-row items-center p-1 gap-1 rounded-md border cursor-pointer transition-colors w-[99px]',
-        categoryColors[category],
       )}
       onClick={() => onToolClick?.(tool)}
       title={tool.name}
@@ -100,9 +82,7 @@ const ToolTile = memo(function ToolTile({
           icon={toolDef?.provider?.icon}
           className="w-5 h-5 shrink-0"
         />
-      ) : (
-        <CategoryIcon className="w-5 h-5 shrink-0" />
-      )}
+      ): null}
       <span className="text-[10px] truncate w-full">{tool.name}</span>
     </div>
   );

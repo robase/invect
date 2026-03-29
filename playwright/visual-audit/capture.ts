@@ -28,7 +28,7 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const VITE_BASE = "http://localhost:5173";
+const VITE_BASE = process.env.PLAYWRIGHT_VITE_URL ?? "http://localhost:41731";
 const OUTPUT_DIR = path.resolve(__dirname, "output");
 const SCREENSHOTS_DIR = path.join(OUTPUT_DIR, "screenshots");
 const DEFAULT_VIEWPORT = { width: 1280, height: 720 };
@@ -147,7 +147,7 @@ const test = createSqliteBrowserIsolationTest({
   readyPath: "/health",
   serverCwd: path.join(rootDir, "examples/express-drizzle"),
   serverScript: path.join(rootDir, "examples/express-drizzle/playwright-test-server.ts"),
-  sharedOrigin: "http://localhost:5173",
+  sharedOrigin: VITE_BASE,
 });
 
 // ─── Main capture test ────────────────────────────────────────────────────
@@ -167,7 +167,10 @@ test.describe("Visual Audit — Screenshot Capture", () => {
       const resp = await request.post(`${apiBase}/flows`, {
         data: { name: flow.name },
       });
-      if (!resp.ok()) continue;
+      if (!resp.ok()) {
+        console.error(`[SEED] Failed to create flow "${flow.name}": ${resp.status()} ${resp.statusText()} — ${await resp.text().catch(() => "(no body)")}`);
+        continue;
+      }
       const created = await resp.json();
       const flowId = created.id;
 
@@ -545,7 +548,7 @@ test.describe("Visual Audit — Screenshot Capture", () => {
     // Mock the chat messages endpoint to return our pre-built conversations.
     // The route is registered AFTER the general API rewrite interceptor,
     // so Playwright checks it first (LIFO order).
-    const chatMsgUrl = `http://localhost:5173/api/invect/chat/messages/${flowId}`;
+    const chatMsgUrl = `${VITE_BASE}/api/invect/chat/messages/${flowId}`;
 
     // ── 16: Single user message ───────────────────────────────────────────
     await page.route(chatMsgUrl, async (route) => {
@@ -751,6 +754,409 @@ test.describe("Visual Audit — Screenshot Capture", () => {
       }
       await takeScreenshot(page, screensById["28-tool-config-panel"]!, `/invect/flow/${withToolsFlowId}`);
     }
+
+    // ── Plugin Pages ──────────────────────────────────────────────────────
+
+    // The RbacProvider needs GET /plugins/auth/me to determine auth state.
+    // Register this mock first so it's available for all plugin page navigations.
+    const pluginApiBase = `${VITE_BASE}/api/invect`;
+
+    const mockAuthMe = {
+      identity: { id: "test-user", name: "Test User", role: "admin", resolvedRole: "admin" },
+      permissions: ["admin:*", "flow:read", "flow:write", "flow:delete"],
+      isAuthenticated: true,
+    };
+    await page.route(`${pluginApiBase}/plugins/auth/me`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(mockAuthMe),
+      });
+    });
+
+    const mockUsers = [
+      { id: "u1", name: "Admin User", email: "admin@company.com", role: "admin", createdAt: new Date(Date.now() - 30 * 86400000).toISOString() },
+      { id: "u2", name: "Jane Developer", email: "jane@company.com", role: "editor", createdAt: new Date(Date.now() - 14 * 86400000).toISOString() },
+      { id: "u3", name: "Bob Viewer", email: "bob@company.com", role: "viewer", createdAt: new Date(Date.now() - 7 * 86400000).toISOString() },
+      { id: "u4", name: "Eve Operator", email: "eve@company.com", role: "operator", createdAt: new Date(Date.now() - 3 * 86400000).toISOString() },
+    ];
+
+    // ════════════════════════════════════════════════════════════════════════
+    // WEBHOOKS PLUGIN FLOW
+    // ════════════════════════════════════════════════════════════════════════
+
+    // ── 29: Webhooks empty state ──────────────────────────────────────────
+    await page.goto(`${VITE_BASE}/invect/webhooks`);
+    await page.waitForTimeout(1500);
+    await takeScreenshot(page, screensById["29-webhooks-empty"]!, "/invect/webhooks");
+
+    // ── 30: Create webhook modal (form) ───────────────────────────────────
+    const newWebhookBtn = page.getByRole("button", { name: /new webhook/i });
+    if (await newWebhookBtn.isVisible().catch(() => false)) {
+      await newWebhookBtn.click();
+      await page.getByRole("dialog").waitFor({ state: "visible", timeout: 5_000 }).catch(() => {});
+      await page.waitForTimeout(400);
+
+      // Fill in some data so the form looks realistic
+      const nameInput = page.locator("#wh-create-name");
+      if (await nameInput.isVisible().catch(() => false)) {
+        await nameInput.fill("Partner API Events");
+      }
+      const descInput = page.locator("#wh-create-desc");
+      if (await descInput.isVisible().catch(() => false)) {
+        await descInput.fill("Receives webhook events from partner integrations");
+      }
+      await page.waitForTimeout(300);
+    }
+    await takeScreenshot(page, screensById["30-webhook-create-form"]!, "/invect/webhooks");
+
+    // ── 31: Create webhook modal (success) ────────────────────────────────
+    const createWhBtn = page.getByRole("button", { name: /create webhook/i });
+    if (await createWhBtn.isVisible().catch(() => false)) {
+      await createWhBtn.click();
+      await page.getByText("Webhook is ready").waitFor({ state: "visible", timeout: 10_000 }).catch(() => {});
+      await page.waitForTimeout(500);
+    }
+    await takeScreenshot(page, screensById["31-webhook-create-success"]!, "/invect/webhooks");
+
+    // Close the success modal
+    const doneBtn = page.getByRole("button", { name: /done/i });
+    if (await doneBtn.isVisible().catch(() => false)) {
+      await doneBtn.click();
+      await page.waitForTimeout(500);
+    }
+
+    // ── 32: Webhooks list (populated) ─────────────────────────────────────
+    await page.waitForTimeout(1000);
+    await takeScreenshot(page, screensById["32-webhooks-list"]!, "/invect/webhooks");
+
+    // ── 33: Webhook detail panel (overview tab) ──────────────────────────
+    const webhookRow = page.locator("button.w-full.text-left").first();
+    if (await webhookRow.isVisible().catch(() => false)) {
+      await webhookRow.click();
+      await page.getByRole("dialog").waitFor({ state: "visible", timeout: 5_000 }).catch(() => {});
+      await page.waitForTimeout(600);
+    }
+    await takeScreenshot(page, screensById["33-webhook-detail-overview"]!, "/invect/webhooks");
+
+    // ── 34: Webhook detail panel (edit tab) ──────────────────────────────
+    const editTab = page.getByRole("dialog").getByRole("button", { name: "Edit" });
+    if (await editTab.isVisible().catch(() => false)) {
+      await editTab.click();
+      await page.waitForTimeout(500);
+    }
+    await takeScreenshot(page, screensById["34-webhook-detail-edit"]!, "/invect/webhooks");
+
+    // Close dialog
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(300);
+
+    // ════════════════════════════════════════════════════════════════════════
+    // AUTH / USERS PLUGIN FLOW
+    // ════════════════════════════════════════════════════════════════════════
+
+    // Mock auth users endpoint for the Users page
+    await page.route(`${pluginApiBase}/plugins/auth/users**`, async (route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ users: mockUsers }),
+        });
+      } else if (route.request().method() === "POST") {
+        const body = JSON.parse(route.request().postData() || "{}");
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ user: { id: "u-new", name: body.name || "New User", email: body.email, role: body.role || "viewer", createdAt: new Date().toISOString() } }),
+        });
+      } else {
+        await route.fallback();
+      }
+    });
+
+    // ── 35: Users page with list ──────────────────────────────────────────
+    await page.goto(`${VITE_BASE}/invect/users`);
+    await page.waitForTimeout(1500);
+    await takeScreenshot(page, screensById["35-users-list"]!, "/invect/users");
+
+    // ── 36: Create user form expanded ─────────────────────────────────────
+    const createUserBtn = page.getByRole("button", { name: /create user/i });
+    if (await createUserBtn.isVisible().catch(() => false)) {
+      await createUserBtn.click();
+      await page.waitForTimeout(400);
+
+      // Fill in form fields for a realistic screenshot
+      const nameField = page.getByPlaceholder("User name");
+      if (await nameField.isVisible().catch(() => false)) {
+        await nameField.fill("Sarah Engineer");
+      }
+      const emailField = page.getByPlaceholder("user@example.com");
+      if (await emailField.isVisible().catch(() => false)) {
+        await emailField.fill("sarah@company.com");
+      }
+      const pwField = page.getByPlaceholder("Min 8 characters");
+      if (await pwField.isVisible().catch(() => false)) {
+        await pwField.fill("securepass123");
+      }
+      await page.waitForTimeout(300);
+    }
+    await takeScreenshot(page, screensById["36-users-create-form"]!, "/invect/users");
+
+    // Close the create form
+    const cancelCreateBtn = page.getByRole("button", { name: "Cancel" });
+    if (await cancelCreateBtn.isVisible().catch(() => false)) {
+      await cancelCreateBtn.click();
+      await page.waitForTimeout(300);
+    }
+
+    await page.unroute(`${pluginApiBase}/plugins/auth/users**`);
+
+    // ── 37: Profile page ──────────────────────────────────────────────────
+    await page.goto(`${VITE_BASE}/invect/profile`);
+    await page.waitForTimeout(1500);
+    await takeScreenshot(page, screensById["37-user-profile"]!, "/invect/profile");
+
+    // ── 38: Sidebar user menu ─────────────────────────────────────────────
+    await page.goto(`${VITE_BASE}/invect`);
+    await waitForDashboard(page);
+    await ensureSidebarExpanded(page);
+    const userMenuLink = page.locator(".imp-sidebar-shell").locator("a, button").filter({ hasText: /Test User/i }).first();
+    if (await userMenuLink.isVisible().catch(() => false)) {
+      await page.waitForTimeout(300);
+    }
+    await takeScreenshot(page, screensById["38-sidebar-user-menu"]!, "/invect");
+
+    // ════════════════════════════════════════════════════════════════════════
+    // RBAC / ACCESS CONTROL PLUGIN FLOW
+    // ════════════════════════════════════════════════════════════════════════
+
+    const now31 = new Date().toISOString();
+    const mockTeams = [
+      { id: "team-eng", name: "Engineering", description: "Engineering team", parentId: null, createdBy: "u1", createdAt: now31, updatedAt: now31 },
+      { id: "team-data", name: "Data Science", description: "Data team", parentId: "team-eng", createdBy: "u1", createdAt: now31, updatedAt: now31 },
+    ];
+
+    const mockScopeTree = {
+      scopes: [
+        {
+          id: "team-eng",
+          name: "Engineering",
+          description: "Engineering team",
+          parentId: null,
+          createdBy: "u1",
+          createdAt: now31,
+          updatedAt: now31,
+          children: [
+            {
+              id: "team-data",
+              name: "Data Science",
+              description: "Data team",
+              parentId: "team-eng",
+              createdBy: "u1",
+              createdAt: now31,
+              updatedAt: now31,
+              children: [],
+              flows: dataPipelineId
+                ? [{ id: dataPipelineId, name: "Data Pipeline", scopeId: "team-data" }]
+                : [],
+              directAccessCount: 2,
+              memberCount: 3,
+              teamPermission: "editor",
+            },
+          ],
+          flows: aiAssistantId
+            ? [{ id: aiAssistantId, name: "AI Assistant", scopeId: "team-eng" }]
+            : [],
+          directAccessCount: 3,
+          memberCount: 5,
+          teamPermission: null,
+        },
+      ],
+      unscopedFlows: [
+        ...(agentEmptyFlowId ? [{ id: agentEmptyFlowId, name: "Empty Agent Flow", scopeId: null }] : []),
+        ...(agentWithToolsFlowId ? [{ id: agentWithToolsFlowId, name: "Agent With Tools", scopeId: null }] : []),
+      ],
+    };
+
+    // Register all RBAC mocks
+    await page.route(`${pluginApiBase}/plugins/rbac/scopes/tree`, async (route) => {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mockScopeTree) });
+    });
+
+    await page.route(`${pluginApiBase}/plugins/rbac/teams`, async (route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ teams: mockTeams }) });
+      } else {
+        await route.fallback();
+      }
+    });
+
+    // Mock team detail when a team is selected (ScopeDetailPanel)
+    await page.route(`${pluginApiBase}/plugins/rbac/teams/team-eng`, async (route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ...mockTeams[0],
+            members: [
+              { id: "m1", teamId: "team-eng", userId: "u1", createdAt: now31 },
+              { id: "m2", teamId: "team-eng", userId: "u2", createdAt: now31 },
+              { id: "m3", teamId: "team-eng", userId: "u3", createdAt: now31 },
+            ],
+          }),
+        });
+      } else {
+        await route.fallback();
+      }
+    });
+
+    // Mock scope access for team-eng
+    await page.route(`${pluginApiBase}/plugins/rbac/scopes/team-eng/access`, async (route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            access: [
+              { id: "sa1", scopeId: "team-eng", userId: "u2", teamId: null, permission: "editor", grantedBy: "u1", grantedAt: now31 },
+              { id: "sa2", scopeId: "team-eng", userId: null, teamId: "team-data", permission: "viewer", grantedBy: "u1", grantedAt: now31 },
+            ],
+          }),
+        });
+      } else {
+        await route.fallback();
+      }
+    });
+
+    // Mock effective flow access for selected flows (FlowDetailPanel)
+    await page.route(`${pluginApiBase}/plugins/rbac/flows/*/effective-access`, async (route) => {
+      const url = route.request().url();
+      const flowIdMatch = url.match(/\/flows\/([^/]+)\/effective-access/);
+      const fId = flowIdMatch?.[1] ?? "unknown";
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          flowId: fId,
+          scopeId: "team-eng",
+          records: [
+            { id: "fa1", flowId: fId, userId: "u1", teamId: null, permission: "owner", source: "direct", grantedBy: null, grantedAt: now31 },
+            { id: "fa2", flowId: fId, userId: "u2", teamId: null, permission: "editor", source: "inherited", scopeId: "team-eng", scopeName: "Engineering", grantedBy: "u1", grantedAt: now31 },
+            { id: "fa3", flowId: fId, userId: "u3", teamId: null, permission: "viewer", source: "inherited", scopeId: "team-data", scopeName: "Data Science", grantedBy: "u1", grantedAt: now31 },
+          ],
+        }),
+      });
+    });
+
+    // Mock flow access for share dialog
+    await page.route(`${pluginApiBase}/plugins/rbac/flows/*/access`, async (route) => {
+      const url = route.request().url();
+      const flowIdMatch = url.match(/\/flows\/([^/]+)\/access/);
+      const fId = flowIdMatch?.[1] ?? "unknown";
+      if (route.request().method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            access: [
+              { id: "da1", flowId: fId, userId: "test-user", teamId: null, permission: "owner", grantedBy: null, grantedAt: now31 },
+              { id: "da2", flowId: fId, userId: "u2", teamId: null, permission: "editor", grantedBy: "test-user", grantedAt: now31 },
+              { id: "da3", flowId: fId, userId: "u3", teamId: null, permission: "viewer", grantedBy: "test-user", grantedAt: now31 },
+            ],
+          }),
+        });
+      } else {
+        await route.fallback();
+      }
+    });
+
+    // Re-register auth users mock (needed by RBAC useUsers hook)
+    await page.route(`${pluginApiBase}/plugins/auth/users**`, async (route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ users: mockUsers }) });
+      } else {
+        await route.fallback();
+      }
+    });
+
+    // ── 39: Access Control page with tree (right pane empty) ──────────────
+    await page.goto(`${VITE_BASE}/invect/access`);
+    await expect(page.getByRole("heading", { name: "Access Control" })).toBeVisible({ timeout: 15_000 }).catch(() => {});
+    await page.waitForTimeout(1500);
+    await takeScreenshot(page, screensById["39-access-control-tree"]!, "/invect/access");
+
+    // ── 40: Team selected — ScopeDetailPanel ─────────────────────────────
+    const engTeam = page.getByText("Engineering").first();
+    if (await engTeam.isVisible().catch(() => false)) {
+      await engTeam.click();
+      await page.waitForTimeout(1000);
+    }
+    await takeScreenshot(page, screensById["40-access-control-team-detail"]!, "/invect/access");
+
+    // ── 41: Flow selected — FlowDetailPanel ──────────────────────────────
+    const flowInTree = page.getByText("AI Assistant").first();
+    if (await flowInTree.isVisible().catch(() => false)) {
+      await flowInTree.click();
+      await page.waitForTimeout(1000);
+    }
+    await takeScreenshot(page, screensById["41-access-control-flow-detail"]!, "/invect/access");
+
+    // Clean up RBAC mocks
+    await page.unroute(`${pluginApiBase}/plugins/rbac/scopes/tree`);
+    await page.unroute(`${pluginApiBase}/plugins/rbac/teams`);
+    await page.unroute(`${pluginApiBase}/plugins/rbac/teams/team-eng`);
+    await page.unroute(`${pluginApiBase}/plugins/rbac/scopes/team-eng/access`);
+    await page.unroute(`${pluginApiBase}/plugins/rbac/flows/*/effective-access`);
+    await page.unroute(`${pluginApiBase}/plugins/rbac/flows/*/access`);
+    await page.unroute(`${pluginApiBase}/plugins/auth/users**`);
+
+    // ── 42: Share button in flow editor header ────────────────────────────
+    if (dataPipelineId) {
+      // Re-register flow access mock for the share dialog
+      await page.route(`${pluginApiBase}/plugins/rbac/flows/*/access`, async (route) => {
+        const url = route.request().url();
+        const flowIdMatch = url.match(/\/flows\/([^/]+)\/access/);
+        const fId = flowIdMatch?.[1] ?? "unknown";
+        if (route.request().method() === "GET") {
+          await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({
+              access: [
+                { id: "da1", flowId: fId, userId: "test-user", teamId: null, permission: "owner", grantedBy: null, grantedAt: now31 },
+                { id: "da2", flowId: fId, userId: "u2", teamId: null, permission: "editor", grantedBy: "test-user", grantedAt: now31 },
+                { id: "da3", flowId: fId, userId: "u3", teamId: null, permission: "viewer", grantedBy: "test-user", grantedAt: now31 },
+              ],
+            }),
+          });
+        } else {
+          await route.fallback();
+        }
+      });
+
+      await page.goto(`${VITE_BASE}/invect/flow/${dataPipelineId}`);
+      await expect(page.locator(".react-flow")).toBeVisible({ timeout: 15_000 });
+      await page.waitForTimeout(1000);
+      await takeScreenshot(page, screensById["42-share-button-flow"]!, `/invect/flow/${dataPipelineId}`);
+
+      // ── 43: Share flow modal ──────────────────────────────────────────
+      const shareBtn = page.getByRole("button", { name: /share/i });
+      if (await shareBtn.isVisible().catch(() => false)) {
+        await shareBtn.click();
+        await page.waitForTimeout(800);
+      }
+      await takeScreenshot(page, screensById["43-share-flow-modal"]!, `/invect/flow/${dataPipelineId}`);
+
+      // Close the share modal
+      await page.keyboard.press("Escape");
+      await page.waitForTimeout(300);
+      await page.unroute(`${pluginApiBase}/plugins/rbac/flows/*/access`);
+    }
+
+    // Clean up auth/me mock
+    await page.unroute(`${pluginApiBase}/plugins/auth/me`);
 
   });
 

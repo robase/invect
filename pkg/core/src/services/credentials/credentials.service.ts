@@ -61,7 +61,6 @@ export interface CredentialUsage {
 
 export interface CredentialWebhookInfo {
   webhookPath: string;
-  webhookSecret: string;
   fullUrl: string;
 }
 
@@ -411,13 +410,12 @@ export class CredentialsService {
   async getWebhookInfo(id: string): Promise<CredentialWebhookInfo | null> {
     const credential = await this.get(id);
 
-    if (!credential.webhookPath || !credential.webhookSecret) {
+    if (!credential.webhookPath) {
       return null;
     }
 
     return {
       webhookPath: credential.webhookPath,
-      webhookSecret: credential.webhookSecret,
       fullUrl: `/webhooks/credentials/${credential.webhookPath}`,
     };
   }
@@ -432,13 +430,12 @@ export class CredentialsService {
     const webhookSecret = randomUUID().replace(/-/g, '');
     const updated = await this.model.enableWebhook(id, webhookPath, webhookSecret);
 
-    if (!updated.webhookPath || !updated.webhookSecret) {
+    if (!updated.webhookPath) {
       throw new Error('Failed to enable webhook for credential');
     }
 
     return {
       webhookPath: updated.webhookPath,
-      webhookSecret: updated.webhookSecret,
       fullUrl: `/webhooks/credentials/${updated.webhookPath}`,
     };
   }

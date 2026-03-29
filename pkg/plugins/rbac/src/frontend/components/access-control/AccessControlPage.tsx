@@ -155,10 +155,14 @@ function FlowTreeRow({
         isDragging && 'opacity-50',
         isSelected && 'bg-imp-primary/10 text-imp-primary ring-1 ring-imp-primary/30',
       )}
-      style={{ paddingLeft: `${depth * 18 + 14}px` }}
+      style={{ paddingLeft: `${depth > 0 ? 16 : 0}px` }}
     >
-      
-      <Workflow className={clsx('h-4 w-4 shrink-0', isSelected ? 'text-imp-primary' : 'text-imp-muted-foreground')} />
+      <Workflow
+        className={clsx(
+          'h-4 w-4 shrink-0',
+          isSelected ? 'text-imp-primary' : 'text-imp-muted-foreground',
+        )}
+      />
       <span className="flex-1 min-w-0 text-sm font-medium truncate">{flow.name}</span>
       <GripVertical className="h-3.5 w-3.5 shrink-0 text-imp-muted-foreground/60 opacity-0 transition-opacity group-hover:opacity-100" />
     </div>
@@ -230,13 +234,10 @@ function ScopeTreeRow({
           'group flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 transition-colors',
           isDragging && 'opacity-50',
           isDropTarget && 'ring-2 ring-imp-primary/30',
-          isSelected
-            ? 'bg-secondary/80 text-imp-primary ring-1 ring-imp-primary/30'
-            : 'bg-secondary/60 hover:bg-accent',
+          isSelected ? 'text-imp-primary ring-1 ring-imp-primary/30' : 'hover:bg-accent',
         )}
-        style={{ paddingLeft: `${depth * 18 + 14}px` }}
+        style={{ paddingLeft: `${depth * 18}px` }}
       >
-        
         {hasChildren ? (
           <button
             type="button"
@@ -246,12 +247,21 @@ function ScopeTreeRow({
             }}
             className="rounded p-0.5 text-imp-muted-foreground hover:bg-imp-muted"
           >
-            {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            {isExpanded ? (
+              <ChevronDown className="w-4 h-4" />
+            ) : (
+              <ChevronRight className="w-4 h-4" />
+            )}
           </button>
         ) : (
           <span className="w-5 shrink-0" />
         )}
-        <Users className={clsx('h-4 w-4 shrink-0', isSelected ? 'text-imp-primary' : 'text-imp-muted-foreground')} />
+        <Users
+          className={clsx(
+            'h-4 w-4 shrink-0',
+            isSelected ? 'text-imp-primary' : 'text-imp-muted-foreground',
+          )}
+        />
         <span className="flex-1 min-w-0 text-sm font-medium truncate">{scope.name}</span>
         {scope.teamPermission ? (
           <span
@@ -267,7 +277,10 @@ function ScopeTreeRow({
       </div>
 
       {isExpanded ? (
-        <div className={clsx('ml-5 space-y-1 border-l', scope.teamPermission ? getPermissionBranchClasses(scope.teamPermission) : 'border-imp-border')}>
+        <div
+          className={clsx('space-y-1 border-l border-imp-border')}
+          style={{ marginLeft: `${depth * 18 + 10}px` }}
+        >
           {scope.flows.map((flow) => (
             <FlowTreeRow
               key={flow.id}
@@ -490,7 +503,6 @@ export function AccessControlPage() {
       title="Access Control"
       subtitle="Manage team hierarchy and flow-level access grants."
       icon={Shield}
-      maxWidth="full"
       actions={newTeamAction}
     >
       {/* Search */}
@@ -507,9 +519,12 @@ export function AccessControlPage() {
       </div>
 
       {/* Two-pane layout */}
-      <div className="grid min-h-[600px] border rounded-lg overflow-hidden" style={{ gridTemplateColumns: '1fr 640px' }}>
+      <div
+        className="grid h-[calc(100vh-220px)] px-2 min-h-[520px] border rounded-lg overflow-hidden"
+        style={{ gridTemplateColumns: '320px 1fr' }}
+      >
         {/* Left: hierarchy tree */}
-        <div className="flex flex-col overflow-hidden">
+        <div className="flex flex-col overflow-hidden bg-imp-muted/20">
           <div
             className="flex-1 p-2 overflow-y-auto"
             onDragOver={(event) => {
@@ -537,7 +552,9 @@ export function AccessControlPage() {
             <div
               className={clsx(
                 'min-h-full rounded-lg py-1 transition-colors',
-                dropTarget === 'root' ? 'border-imp-primary bg-imp-primary/5' : 'border-transparent',
+                dropTarget === 'root'
+                  ? 'border-imp-primary bg-imp-primary/5'
+                  : 'border-transparent',
               )}
             >
               {isLoading ? (
@@ -614,7 +631,10 @@ export function AccessControlPage() {
                         }
                         const canDrop =
                           !(draggedItem.type === 'scope' && draggedItem.id === targetId) &&
-                          !(draggedItem.type === 'scope' && isDescendantScope(scopes, draggedItem.id, targetId));
+                          !(
+                            draggedItem.type === 'scope' &&
+                            isDescendantScope(scopes, draggedItem.id, targetId)
+                          );
                         if (!canDrop) {
                           return;
                         }
@@ -646,14 +666,25 @@ export function AccessControlPage() {
         {/* Right: detail panel */}
         <aside className="flex flex-col overflow-hidden border-l border-imp-border bg-imp-muted/30">
           {!selected ? (
-            <div className="flex flex-col items-center justify-center h-full gap-3 px-6 text-center text-imp-muted-foreground">
-              <Shield className="w-8 h-8 opacity-30" />
+            <div className="flex flex-col items-center justify-center h-full gap-4 px-8 text-center text-imp-muted-foreground">
+              <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-imp-primary/5">
+                <Shield className="w-6 h-6 text-imp-primary/40" />
+              </div>
               <div>
                 <p className="text-sm font-medium text-imp-foreground">Select a team or flow</p>
-                <p className="mt-1 text-sm text-imp-muted-foreground">
-                  Details for the selected item will appear here.
+                <p className="mt-1.5 text-xs text-imp-muted-foreground max-w-[280px]">
+                  Choose an item from the tree to manage its members and permissions.
                 </p>
               </div>
+              {hasTreeItems ? null : isAdmin ? (
+                <button
+                  type="button"
+                  onClick={() => setShowNewTeam(true)}
+                  className="flex items-center gap-1.5 rounded-lg border border-imp-border px-3 py-1.5 text-xs font-medium text-imp-foreground transition-colors hover:border-imp-primary/50 hover:bg-imp-muted/50"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Create your first team
+                </button>
+              ) : null}
             </div>
           ) : selected.kind === 'team' ? (
             <ScopeDetailPanel

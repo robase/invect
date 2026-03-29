@@ -14,10 +14,15 @@ export interface WebhookTrigger {
   name: string;
   description?: string;
   webhookPath: string;
-  webhookSecret: string;
   provider: WebhookProvider;
   isEnabled: boolean;
   allowedMethods: string;
+  /** HMAC signature verification */
+  hmacEnabled: boolean;
+  hmacHeaderName?: string;
+  hmacSecret?: string;
+  /** IP whitelist (comma-separated IPs/CIDRs) */
+  allowedIps?: string;
   flowId?: string;
   nodeId?: string;
   lastTriggeredAt?: string;
@@ -32,6 +37,12 @@ export interface CreateWebhookTriggerInput {
   description?: string;
   provider?: WebhookProvider;
   allowedMethods?: string;
+  /** HMAC signature verification */
+  hmacEnabled?: boolean;
+  hmacHeaderName?: string;
+  hmacSecret?: string;
+  /** IP whitelist (comma-separated IPs/CIDRs) */
+  allowedIps?: string;
   flowId?: string;
   nodeId?: string;
 }
@@ -42,16 +53,23 @@ export interface UpdateWebhookTriggerInput {
   provider?: WebhookProvider;
   isEnabled?: boolean;
   allowedMethods?: string;
+  /** HMAC signature verification */
+  hmacEnabled?: boolean;
+  hmacHeaderName?: string;
+  hmacSecret?: string;
+  /** IP whitelist (comma-separated IPs/CIDRs) */
+  allowedIps?: string;
   flowId?: string;
   nodeId?: string;
 }
 
 export interface WebhookTriggerInfo {
   webhookPath: string;
-  webhookSecret: string;
   fullUrl?: string;
   provider: WebhookProvider;
   isEnabled: boolean;
+  hmacEnabled: boolean;
+  allowedIps?: string;
 }
 
 // ─── Webhook Event (for event log) ──────────────────────────────────

@@ -11,10 +11,13 @@ interface WebhookTriggerRow {
   name: string;
   description: string | null;
   webhook_path: string;
-  webhook_secret: string;
   provider: WebhookProvider;
   is_enabled: boolean | number;
   allowed_methods: string;
+  hmac_enabled: boolean | number;
+  hmac_header_name: string | null;
+  hmac_secret: string | null;
+  allowed_ips: string | null;
   flow_id: string | null;
   node_id: string | null;
   last_triggered_at: string | null;
@@ -27,7 +30,6 @@ interface WebhookTriggerRow {
 export interface CreateWebhookTriggerRecord extends CreateWebhookTriggerInput {
   id: string;
   webhookPath: string;
-  webhookSecret: string;
 }
 
 function toBoolean(value: boolean | number): boolean {
@@ -65,10 +67,13 @@ function mapRow(row: WebhookTriggerRow): WebhookTrigger {
     name: row.name,
     description: row.description ?? undefined,
     webhookPath: row.webhook_path,
-    webhookSecret: row.webhook_secret,
     provider: row.provider,
     isEnabled: toBoolean(row.is_enabled),
     allowedMethods: row.allowed_methods,
+    hmacEnabled: toBoolean(row.hmac_enabled),
+    hmacHeaderName: row.hmac_header_name ?? undefined,
+    hmacSecret: row.hmac_secret ?? undefined,
+    allowedIps: row.allowed_ips ?? undefined,
     flowId: row.flow_id ?? undefined,
     nodeId: row.node_id ?? undefined,
     lastTriggeredAt: row.last_triggered_at ?? undefined,
@@ -89,10 +94,13 @@ export class WebhookTriggersRepository {
          name,
          description,
          webhook_path,
-         webhook_secret,
          provider,
          is_enabled,
          allowed_methods,
+         hmac_enabled,
+         hmac_header_name,
+         hmac_secret,
+         allowed_ips,
          flow_id,
          node_id,
          last_triggered_at,
@@ -114,10 +122,13 @@ export class WebhookTriggersRepository {
          name,
          description,
          webhook_path,
-         webhook_secret,
          provider,
          is_enabled,
          allowed_methods,
+         hmac_enabled,
+         hmac_header_name,
+         hmac_secret,
+         allowed_ips,
          flow_id,
          node_id,
          last_triggered_at,
@@ -141,10 +152,13 @@ export class WebhookTriggersRepository {
          name,
          description,
          webhook_path,
-         webhook_secret,
          provider,
          is_enabled,
          allowed_methods,
+         hmac_enabled,
+         hmac_header_name,
+         hmac_secret,
+         allowed_ips,
          flow_id,
          node_id,
          last_triggered_at,
@@ -169,25 +183,31 @@ export class WebhookTriggersRepository {
          name,
          description,
          webhook_path,
-         webhook_secret,
          provider,
          is_enabled,
          allowed_methods,
+         hmac_enabled,
+         hmac_header_name,
+         hmac_secret,
+         allowed_ips,
          flow_id,
          node_id,
          trigger_count,
          created_at,
          updated_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         input.id,
         input.name,
         input.description ?? null,
         input.webhookPath,
-        input.webhookSecret,
         input.provider ?? 'generic',
         true,
         input.allowedMethods ?? 'POST',
+        input.hmacEnabled ?? false,
+        input.hmacHeaderName ?? null,
+        input.hmacSecret ?? null,
+        input.allowedIps ?? null,
         input.flowId ?? null,
         input.nodeId ?? null,
         0,
@@ -226,6 +246,22 @@ export class WebhookTriggersRepository {
     if (input.allowedMethods !== undefined) {
       updates.push('allowed_methods = ?');
       params.push(input.allowedMethods);
+    }
+    if (input.hmacEnabled !== undefined) {
+      updates.push('hmac_enabled = ?');
+      params.push(input.hmacEnabled);
+    }
+    if (input.hmacHeaderName !== undefined) {
+      updates.push('hmac_header_name = ?');
+      params.push(input.hmacHeaderName ?? null);
+    }
+    if (input.hmacSecret !== undefined) {
+      updates.push('hmac_secret = ?');
+      params.push(input.hmacSecret ?? null);
+    }
+    if (input.allowedIps !== undefined) {
+      updates.push('allowed_ips = ?');
+      params.push(input.allowedIps ?? null);
     }
     if (input.flowId !== undefined) {
       updates.push('flow_id = ?');

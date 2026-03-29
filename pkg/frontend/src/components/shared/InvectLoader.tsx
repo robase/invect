@@ -25,7 +25,7 @@ function resolveLoaderMarkup(
     return INVECT_LOADER_LIGHT_SVG;
   }
 
-  return resolvedTheme === 'dark' ? INVECT_LOADER_LIGHT_SVG : INVECT_LOADER_DARK_SVG;
+  return resolvedTheme === 'dark' ? INVECT_LOADER_DARK_SVG : INVECT_LOADER_LIGHT_SVG;
 }
 
 export const InvectLoader = memo(function InvectLoader({
@@ -47,7 +47,7 @@ export const InvectLoader = memo(function InvectLoader({
           'inline-flex shrink-0 items-center justify-center h-12 [&>svg]:h-full [&>svg]:w-full',
           iconClassName,
         )}
-        style={{ aspectRatio: '430 / 1210' }}
+        style={{ aspectRatio: '109 / 209' }}
         dangerouslySetInnerHTML={{ __html: svgMarkup }}
       />
       {label ? (

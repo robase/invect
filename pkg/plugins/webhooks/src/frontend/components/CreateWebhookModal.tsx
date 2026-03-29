@@ -39,6 +39,10 @@ export const CreateWebhookModal: FC<CreateWebhookModalProps> = ({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [methods, setMethods] = useState('POST');
+  const [hmacEnabled, setHmacEnabled] = useState(false);
+  const [hmacHeaderName, setHmacHeaderName] = useState('');
+  const [hmacSecret, setHmacSecret] = useState('');
+  const [allowedIps, setAllowedIps] = useState('');
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
 
   const createMutation = useCreateWebhookTrigger();
@@ -51,6 +55,10 @@ export const CreateWebhookModal: FC<CreateWebhookModalProps> = ({
       description: description.trim() || undefined,
       provider: 'generic',
       allowedMethods: methods,
+      hmacEnabled,
+      hmacHeaderName: hmacEnabled ? hmacHeaderName.trim() || undefined : undefined,
+      hmacSecret: hmacEnabled ? hmacSecret.trim() || undefined : undefined,
+      allowedIps: allowedIps.trim() || undefined,
       flowId,
       nodeId,
     };
@@ -67,6 +75,10 @@ export const CreateWebhookModal: FC<CreateWebhookModalProps> = ({
     setName('');
     setDescription('');
     setMethods('POST');
+    setHmacEnabled(false);
+    setHmacHeaderName('');
+    setHmacSecret('');
+    setAllowedIps('');
     setCreatedUrl(null);
     onClose();
   };
@@ -152,13 +164,77 @@ export const CreateWebhookModal: FC<CreateWebhookModalProps> = ({
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">Authentication</label>
-                <div className="rounded-lg border border-border bg-muted/30 p-3">
-                  <div className="text-sm font-medium">Unauthenticated endpoint</div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    This creates a generic webhook endpoint that accepts requests without
-                    provider-specific verification.
-                  </p>
+                <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-medium">HMAC Verification</div>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        Verify requests using an HMAC signature header.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setHmacEnabled(!hmacEnabled)}
+                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                        hmacEnabled ? 'bg-primary' : 'bg-muted-foreground/30'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform ${
+                          hmacEnabled ? 'translate-x-4' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                  {hmacEnabled && (
+                    <div className="space-y-3 pt-1">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium" htmlFor="wh-create-hmac-header">
+                          Signature Header Name
+                        </label>
+                        <input
+                          id="wh-create-hmac-header"
+                          type="text"
+                          value={hmacHeaderName}
+                          onChange={(e) => setHmacHeaderName(e.target.value)}
+                          placeholder="e.g. x-signature"
+                          className="h-8 w-full rounded-md border border-input bg-background px-2.5 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/20"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium" htmlFor="wh-create-hmac-secret">
+                          Signing Secret
+                        </label>
+                        <input
+                          id="wh-create-hmac-secret"
+                          type="password"
+                          value={hmacSecret}
+                          onChange={(e) => setHmacSecret(e.target.value)}
+                          placeholder="Enter secret key"
+                          className="h-8 w-full rounded-md border border-input bg-background px-2.5 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/20"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
+              </div>
+
+              {/* IP Whitelist */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="wh-create-ips">
+                  IP Whitelist
+                </label>
+                <input
+                  id="wh-create-ips"
+                  type="text"
+                  value={allowedIps}
+                  onChange={(e) => setAllowedIps(e.target.value)}
+                  placeholder="e.g. 192.168.1.1, 10.0.0.0/24"
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm font-mono shadow-xs placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/20"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Leave empty to allow all IPs. Separate multiple addresses with commas.
+                </p>
               </div>
 
               {/* HTTP Methods */}

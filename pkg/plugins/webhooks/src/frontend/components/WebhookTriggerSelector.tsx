@@ -127,7 +127,6 @@ export const WebhookTriggerSelector: FC<WebhookTriggerSelectorProps> = ({
             </span>
           </div>
           <CopyableField value={`/plugins/webhooks/receive/${selected.webhookPath}`} />
-          <CopyableField value={selected.webhookSecret} masked />
           <a
             href="/invect/webhooks"
             className="text-xs text-primary hover:underline inline-flex items-center gap-1"

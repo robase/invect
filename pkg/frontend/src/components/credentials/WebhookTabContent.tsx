@@ -109,12 +109,6 @@ export function WebhookTabContent({ credentialId }: { credentialId: string }) {
           value={webhookInfo.fullUrl ?? `/webhooks/credentials/${webhookInfo.webhookPath}`}
         />
       </div>
-      <div className="space-y-1">
-        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-          Secret
-        </label>
-        <CopyableField value={webhookInfo.webhookSecret} masked />
-      </div>
     </div>
   );
 }

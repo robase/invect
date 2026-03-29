@@ -93,7 +93,7 @@ export function OptionalRoleSelector({
         <button
           type="button"
           className={cn(
-            'inline-flex w-32 items-center justify-between gap-1 rounded-md border px-2.5 py-1.5 text-sm font-medium capitalize',
+            'inline-flex w-40 items-center justify-between gap-1 rounded-md border px-2.5 py-1.5 text-sm font-medium capitalize',
             value
               ? getPermissionBadgeClasses(value)
               : 'border-imp-border text-imp-muted-foreground hover:bg-imp-muted/50',
@@ -180,7 +180,7 @@ export function AccessTable({
       groups.push({ label: groupLabel, rows: [row] });
     }
   }
-  const hasGroups = groups.length > 1 || (groups.length === 1 && groups[0].label !== '');
+  const hasGroups = groups.length > 1;
 
   return (
     <>
@@ -190,13 +190,6 @@ export function AccessTable({
           <col className="w-36" />
           <col className="w-10" />
         </colgroup>
-        <thead>
-          <tr className="border-b border-imp-border text-[10px] font-medium uppercase tracking-wider text-imp-muted-foreground">
-            <th className="px-3 py-2 font-medium text-left">Name</th>
-            <th className="px-3 py-2 font-medium text-center">Access</th>
-            <th className="px-3 py-2" />
-          </tr>
-        </thead>
         <tbody>
           {groups.map((group) => (
             <Fragment key={group.label || '_default'}>
@@ -210,8 +203,8 @@ export function AccessTable({
                   </td>
                 </tr>
               )}
-              {group.rows.map((row) => (
-                <tr key={row.id} className="border-t border-imp-border hover:bg-imp-muted/20">
+              {group.rows.map((row, rowIndex) => (
+                <tr key={row.id} className={cn('hover:bg-imp-muted/20', rowIndex > 0 && 'border-t border-imp-border')}>
                   <td className="px-3 py-2.5">
                     <div className="flex items-center gap-3">
                       <div
@@ -226,11 +219,18 @@ export function AccessTable({
                           <Users className="h-3.5 w-3.5 text-imp-muted-foreground" />
                         )}
                       </div>
-                      <div className="flex items-center min-w-0 gap-2">
-                        <span className="font-medium truncate">{row.label}</span>
-                        {row.kind === 'team' && (
-                          <span className="shrink-0 rounded border border-imp-border px-1.5 py-0.5 text-[11px] font-medium text-imp-muted-foreground">
-                            Team
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium truncate">{row.label}</span>
+                          {row.kind === 'team' && (
+                            <span className="shrink-0 rounded border border-imp-border px-1.5 py-0.5 text-[11px] font-medium text-imp-muted-foreground">
+                              Team
+                            </span>
+                          )}
+                        </div>
+                        {row.source && row.source !== 'Direct grant' && row.source !== 'Member' && (
+                          <span className="text-[11px] text-imp-muted-foreground">
+                            {row.source}
                           </span>
                         )}
                       </div>

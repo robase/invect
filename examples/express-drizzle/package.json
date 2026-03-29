@@ -21,6 +21,7 @@
     "seed": "tsx seed/run-seed.ts",
     "seed:lotr": "tsx seed/lord-of-rings-quest-seed.ts",
     "seed:teams": "tsx seed/seed-users-teams.ts",
+    "seed:rbac": "tsx seed/seed-rbac-complex.ts",
     "format": "prettier --write \"**/*.ts\"",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",

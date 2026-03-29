@@ -25,7 +25,7 @@ export const SEED_FLOWS = {
     definition: {
       nodes: [
         { id: "n1", type: "core.input", label: "User Data", referenceId: "user_data", params: { variableName: "data", defaultValue: JSON.stringify({ users: [{ name: "Alice", active: true }, { name: "Bob", active: false }] }) }, position: { x: 100, y: 200 } },
-        { id: "n2", type: "core.jq", label: "Transform", referenceId: "transform", params: { query: ".user_data | .users[] | select(.active)" }, position: { x: 380, y: 200 } },
+        { id: "n2", type: "core.javascript", label: "Transform", referenceId: "transform", params: { code: "user_data.users.filter(u => u.active)" }, position: { x: 380, y: 200 } },
         { id: "n3", type: "core.output", label: "Results", referenceId: "results", params: { outputValue: "{{ transform }}" }, position: { x: 660, y: 200 } },
       ],
       edges: [
@@ -92,7 +92,7 @@ export const SEED_FLOWS = {
             addedTools: [
               { instanceId: "va-tool-1", toolId: "math_eval", name: "Math Evaluate", description: "Evaluate mathematical expressions", params: {} },
               { instanceId: "va-tool-2", toolId: "http.request", name: "HTTP Request", description: "Make HTTP requests to external APIs", params: {} },
-              { instanceId: "va-tool-3", toolId: "core.jq", name: "JQ Transform", description: "Transform JSON data with JQ syntax", params: { query: ".data" } },
+              { instanceId: "va-tool-3", toolId: "core.javascript", name: "JS Transform", description: "Transform JSON data with JavaScript", params: { code: "$input.data" } },
             ],
           },
           position: { x: 360, y: 200 },
@@ -280,5 +280,91 @@ export const SCREENS: ScreenDefinition[] = [
     id: "21-editor-dark",
     description: "Flow editor canvas in dark mode showing the node graph with dark theme styling.",
     tags: ["dark-mode", "editor"],
+  },
+
+  // ── Plugin: Webhooks ──────────────────────────────────────────────────────
+  {
+    id: "29-webhooks-empty",
+    description: "Webhooks management page in empty state showing the 'No webhooks yet' message with a create button. Part of the @invect/webhooks plugin.",
+    tags: ["page", "plugin", "webhooks", "empty-state"],
+  },
+  {
+    id: "30-webhook-create-form",
+    description: "Create Webhook modal showing the form with name input, description, authentication info, and HTTP methods selector.",
+    tags: ["modal", "plugin", "webhooks", "create"],
+    focusCropSelector: "[role='dialog']",
+  },
+  {
+    id: "31-webhook-create-success",
+    description: "Create Webhook modal in success state showing the generated webhook URL with copy button and a Done button.",
+    tags: ["modal", "plugin", "webhooks", "create", "success"],
+    focusCropSelector: "[role='dialog']",
+  },
+  {
+    id: "32-webhooks-list",
+    description: "Webhooks page showing a populated list of webhook triggers with name, status dot, auth badge, trigger count, and last triggered time.",
+    tags: ["page", "plugin", "webhooks"],
+  },
+  {
+    id: "33-webhook-detail-overview",
+    description: "Webhook detail panel (Overview tab) showing webhook URL, endpoint secret, methods, authentication mode, linked flow, trigger stats, and enable/disable + delete action buttons.",
+    tags: ["modal", "plugin", "webhooks", "detail", "overview"],
+    focusCropSelector: "[role='dialog']",
+  },
+  {
+    id: "34-webhook-detail-edit",
+    description: "Webhook detail panel (Edit tab) showing editable name, description, and HTTP methods fields with Cancel and Save Changes buttons.",
+    tags: ["modal", "plugin", "webhooks", "detail", "edit"],
+    focusCropSelector: "[role='dialog']",
+  },
+
+  // ── Plugin: Auth / Users ────────────────────────────────────────────────
+  {
+    id: "35-users-list",
+    description: "User management page from the @invect/user-auth plugin showing the admin user table with name, email, role dropdown, and action columns.",
+    tags: ["page", "plugin", "auth", "users"],
+  },
+  {
+    id: "36-users-create-form",
+    description: "User management page with the Create User form expanded, showing name, role selector, email, and password fields.",
+    tags: ["page", "plugin", "auth", "users", "create"],
+  },
+  {
+    id: "37-user-profile",
+    description: "Profile page from the @invect/user-auth plugin showing the current user's avatar, name, email, role badge, user ID, and sign out button.",
+    tags: ["page", "plugin", "auth", "profile"],
+  },
+  {
+    id: "38-sidebar-user-menu",
+    description: "Sidebar footer showing the signed-in user avatar and name from the @invect/user-auth plugin, visible when sidebar is expanded.",
+    tags: ["navigation", "plugin", "auth", "sidebar-footer"],
+  },
+
+  // ── Plugin: RBAC / Access Control ───────────────────────────────────────
+  {
+    id: "39-access-control-tree",
+    description: "Access Control page from the @invect/rbac plugin showing the two-pane layout: left pane has a team/flow hierarchy tree with Engineering and Data Science teams, right pane shows the 'Select a team or flow' empty state.",
+    tags: ["page", "plugin", "rbac", "access-control", "tree"],
+  },
+  {
+    id: "40-access-control-team-detail",
+    description: "Access Control page with a team selected in the tree. Right pane shows the ScopeDetailPanel with team name, breadcrumb path, team role selector, members section, and access grants.",
+    tags: ["page", "plugin", "rbac", "access-control", "team-detail"],
+  },
+  {
+    id: "41-access-control-flow-detail",
+    description: "Access Control page with a flow selected in the tree. Right pane shows the FlowDetailPanel with flow name, breadcrumb path, direct access table, and inherited access table.",
+    tags: ["page", "plugin", "rbac", "access-control", "flow-detail"],
+  },
+  {
+    id: "42-share-button-flow",
+    description: "Flow editor header showing the Share button contributed by the @invect/rbac plugin, alongside the standard flow name, run button, and version controls.",
+    tags: ["editor", "plugin", "rbac", "share-button"],
+  },
+  {
+    id: "43-share-flow-modal",
+    description: "Share Flow modal dialog showing the 'People with access' list with user avatars, permission badges, and revoke buttons, plus the 'Add people' section with user/team selector and permission dropdown.",
+    tags: ["modal", "plugin", "rbac", "share-flow"],
+    focusCropSelector: ".fixed.inset-0",
   },
 ];

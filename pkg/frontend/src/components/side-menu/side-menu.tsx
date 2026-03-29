@@ -14,6 +14,7 @@ export interface AppSideMenuProps {
 
 export function AppSideMenu({ basePath = '' }: AppSideMenuProps) {
   const [isCollapsed, setIsCollapsed] = useState(true);
+  const [tooltipsEnabled, setTooltipsEnabled] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const { resolvedTheme, setTheme } = useTheme();
@@ -67,6 +68,22 @@ export function AppSideMenu({ basePath = '' }: AppSideMenuProps) {
     };
   }, [isCollapsed]);
 
+  useEffect(() => {
+    setTooltipsEnabled(false);
+
+    if (!isCollapsed) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setTooltipsEnabled(true);
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [isCollapsed]);
+
   return (
     <div className="relative w-16 shrink-0">
       <div
@@ -90,12 +107,17 @@ export function AppSideMenu({ basePath = '' }: AppSideMenuProps) {
           {isCollapsed ? (
             <button
               onClick={() => setIsCollapsed(false)}
-              className="flex items-center justify-center w-8 h-8 transition-opacity rounded cursor-pointer bg-primary text-primary-foreground hover:opacity-90"
+              className="flex items-center justify-center w-8 h-8 transition-opacity rounded cursor-pointer text-primary-foreground hover:opacity-90"
             >
-              <InvectLogo iconClassName="h-4" variant="dark" />
+              <InvectLogo iconClassName="h-6" />
             </button>
           ) : (
-            <InvectLogo showLabel iconClassName="h-5" labelClassName="text-lg font-semibold" />
+            <InvectLogo
+              showLabel
+              className="pl-2.5"
+              iconClassName="h-6"
+              // labelClassName="text-lg font-semibold"
+            />
           )}
         </div>
 
@@ -109,22 +131,25 @@ export function AppSideMenu({ basePath = '' }: AppSideMenuProps) {
                 : location.pathname.startsWith(item.href);
 
               return (
-                <Tooltip key={item.label} delayDuration={0}>
+                <Tooltip
+                  key={item.label}
+                  delayDuration={0}
+                  open={tooltipsEnabled ? undefined : false}
+                >
                   <TooltipTrigger asChild>
                     <Link to={item.href} aria-label={item.label}>
                       <Button
                         variant={isActive ? 'secondary' : 'ghost'}
-                        className={cn(
-                          'w-full',
-                          isCollapsed ? 'justify-center px-2' : 'justify-start px-3',
-                        )}
+                        className="justify-start w-full px-0"
                       >
-                        <item.icon className={cn('h-5 w-5', !isCollapsed && 'mr-3')} />
+                        <span className="flex items-center justify-center w-12 shrink-0">
+                          <item.icon className="w-5 h-5" />
+                        </span>
                         {!isCollapsed && <span>{item.label}</span>}
                       </Button>
                     </Link>
                   </TooltipTrigger>
-                  {isCollapsed && (
+                  {isCollapsed && tooltipsEnabled && (
                     <TooltipContent side="right" sideOffset={16}>
                       <p>{item.label}</p>
                     </TooltipContent>
@@ -135,26 +160,29 @@ export function AppSideMenu({ basePath = '' }: AppSideMenuProps) {
           </nav>
 
           {/* Plugin bottom sidebar items + Dark Mode Toggle */}
-          <div className="p-2 border-t border-border space-y-1">
+          <div className="p-2 space-y-1 border-t border-border">
             {pluginBottomItems.map((item) => {
               const isActive = location.pathname.startsWith(item.href);
               return (
-                <Tooltip key={item.label} delayDuration={0}>
+                <Tooltip
+                  key={item.label}
+                  delayDuration={0}
+                  open={tooltipsEnabled ? undefined : false}
+                >
                   <TooltipTrigger asChild>
                     <Link to={item.href} aria-label={item.label}>
                       <Button
                         variant={isActive ? 'secondary' : 'ghost'}
-                        className={cn(
-                          'w-full',
-                          isCollapsed ? 'justify-center px-2' : 'justify-start px-3',
-                        )}
+                        className="justify-start w-full px-0"
                       >
-                        <item.icon className={cn('h-5 w-5', !isCollapsed && 'mr-3')} />
+                        <span className="flex items-center justify-center w-12 shrink-0">
+                          <item.icon className="w-5 h-5" />
+                        </span>
                         {!isCollapsed && <span>{item.label}</span>}
                       </Button>
                     </Link>
                   </TooltipTrigger>
-                  {isCollapsed && (
+                  {isCollapsed && tooltipsEnabled && (
                     <TooltipContent side="right" sideOffset={16}>
                       <p>{item.label}</p>
                     </TooltipContent>
@@ -162,27 +190,22 @@ export function AppSideMenu({ basePath = '' }: AppSideMenuProps) {
                 </Tooltip>
               );
             })}
-            <Tooltip delayDuration={0}>
+            <Tooltip delayDuration={0} open={tooltipsEnabled ? undefined : false}>
               <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  onClick={toggleTheme}
-                  className={cn(
-                    'w-full',
-                    isCollapsed ? 'justify-center px-2' : 'justify-start px-3',
-                  )}
-                >
-                  {resolvedTheme === 'dark' ? (
-                    <Sun className={cn('h-5 w-5', !isCollapsed && 'mr-3')} />
-                  ) : (
-                    <Moon className={cn('h-5 w-5', !isCollapsed && 'mr-3')} />
-                  )}
+                <Button variant="ghost" onClick={toggleTheme} className="justify-start w-full px-0">
+                  <span className="flex items-center justify-center w-12 shrink-0">
+                    {resolvedTheme === 'dark' ? (
+                      <Sun className="w-5 h-5" />
+                    ) : (
+                      <Moon className="w-5 h-5" />
+                    )}
+                  </span>
                   {!isCollapsed && (
                     <span>{resolvedTheme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
                   )}
                 </Button>
               </TooltipTrigger>
-              {isCollapsed && (
+              {isCollapsed && tooltipsEnabled && (
                 <TooltipContent side="right" sideOffset={16}>
                   <p>{resolvedTheme === 'dark' ? 'Light Mode' : 'Dark Mode'}</p>
                 </TooltipContent>

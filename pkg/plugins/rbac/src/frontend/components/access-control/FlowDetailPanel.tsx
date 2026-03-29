@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ExternalLink, Plus, Users, Workflow } from 'lucide-react';
+import { ChevronRight, ExternalLink, Plus, Workflow } from 'lucide-react';
 import { useGrantFlowAccess, useRevokeFlowAccess } from '../../hooks/useFlowAccess';
 import { useEffectiveFlowAccess } from '../../hooks/useScopes';
 import type { FlowAccessPermission, Team } from '../../../shared/types';
@@ -42,17 +42,29 @@ export function FlowDetailPanel({
       .map((record) => record.teamId),
   );
   const owningTeam = teams.find((team) => team.id === effectiveFlowAccessQuery.data?.scopeId) ?? null;
+  const scopePath = useMemo(() => {
+    const path: Team[] = [];
+    let current = owningTeam;
+
+    while (current) {
+      path.unshift(current);
+      current = current.parentId ? teams.find((team) => team.id === current?.parentId) ?? null : null;
+    }
+
+    return path;
+  }, [owningTeam, teams]);
 
   const accessRows = useMemo(() => {
     const rows: AccessRow[] = effectiveRecords.map((record) => {
       const isUser = !!record.userId;
+      const userId = record.userId ?? null;
+      const teamId = record.teamId ?? null;
+
       return {
         id: `${record.source}:${record.id}`,
         label: isUser
-          ? userMap.get(record.userId!)?.name ||
-            userMap.get(record.userId!)?.email ||
-            record.userId!
-          : teams.find((team) => team.id === record.teamId)?.name || record.teamId || 'Unknown',
+          ? userMap.get(userId ?? '')?.name || userMap.get(userId ?? '')?.email || userId || 'Unknown'
+          : teams.find((team) => team.id === teamId)?.name || teamId || 'Unknown',
         kind: isUser ? 'user' : 'team',
         permission: record.permission,
         source: record.source === 'direct' ? 'Direct grant' : `Via ${record.scopeName || 'team'}`,
@@ -62,7 +74,7 @@ export function FlowDetailPanel({
           record.source === 'direct'
             ? (permission) =>
                 grantFlowAccess.mutate({
-                  ...(record.userId ? { userId: record.userId } : { teamId: record.teamId! }),
+                  ...(userId ? { userId } : teamId ? { teamId } : {}),
                   permission,
                 })
             : undefined,
@@ -91,7 +103,7 @@ export function FlowDetailPanel({
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="px-5 py-4 border-b shrink-0 border-imp-border overflow-hidden">
+      <div className="px-5 py-4 overflow-hidden border-b shrink-0 border-imp-border">
         <div className="flex items-start gap-3">
           <div className="flex items-center justify-center flex-none w-10 h-10 rounded-xl bg-imp-primary/10 text-imp-primary">
             <Workflow className="w-5 h-5" />
@@ -100,16 +112,19 @@ export function FlowDetailPanel({
             <div className="flex items-center gap-2">
               <h2 className="flex-1 min-w-0 text-base font-semibold truncate">{flowName}</h2>
             </div>
-            {owningTeam ? (
-              <div className="mt-1 inline-flex items-center gap-1 rounded-full border border-imp-border px-2 py-0.5 text-[11px] text-imp-muted-foreground">
-                <Users className="w-3 h-3" />
-                Inside {owningTeam.name}
+            <div className="mt-1 flex flex-wrap items-center gap-1 text-[11px] text-imp-muted-foreground">
+              <span>Root</span>
+              {scopePath.map((team) => (
+                <div key={team.id} className="flex items-center gap-1">
+                  <ChevronRight className="w-3 h-3" />
+                  <span>{team.name}</span>
+                </div>
+              ))}
+              <div className="flex items-center gap-1">
+                <ChevronRight className="w-3 h-3" />
+                <span className="font-medium text-imp-foreground">{flowName}</span>
               </div>
-            ) : (
-              <div className="mt-1 inline-flex items-center gap-1 rounded-full border border-imp-border px-2 py-0.5 text-[11px] text-imp-muted-foreground">
-                Root
-              </div>
-            )}
+            </div>
           </div>
           <div className="flex items-center gap-1.5">
             {isAdmin ? (
@@ -126,24 +141,19 @@ export function FlowDetailPanel({
               onClick={openFlow}
               className="flex items-center gap-1 rounded-md border border-imp-border px-2 py-1 text-[11px] text-imp-muted-foreground transition-colors hover:border-imp-primary/50 hover:text-imp-foreground"
             >
-              <ExternalLink className="w-3 h-3" /> View
+              <ExternalLink className="w-3 h-3" /> Open in Editor
             </button>
           </div>
         </div>
         <p className="mt-3 text-xs text-imp-muted-foreground">
-          Shows all principals with access and how they got it.
+          All principals with access and how they got it.
         </p>
       </div>
 
-      <div className="flex-1 px-5 py-4 overflow-y-auto overflow-x-hidden">
+      <div className="flex-1 px-5 py-4 overflow-x-hidden overflow-y-auto">
         <div className="space-y-6">
-          <section className="space-y-3">
-            <div>
-              <h3 className="text-sm font-semibold text-imp-foreground">Direct Access</h3>
-              <p className="mt-1 text-xs text-imp-muted-foreground">
-                Grants applied directly to this flow for specific users or teams.
-              </p>
-            </div>
+          <section className="space-y-2">
+            <h3 className="text-sm font-semibold text-imp-foreground">Direct Access</h3>
             <div className="overflow-hidden border rounded-xl border-imp-border bg-imp-background/40">
               <AccessTable
                 rows={directRows}
@@ -153,13 +163,8 @@ export function FlowDetailPanel({
             </div>
           </section>
 
-          <section className="space-y-3">
-            <div>
-              <h3 className="text-sm font-semibold text-imp-foreground">Inherited Access</h3>
-              <p className="mt-1 text-xs text-imp-muted-foreground">
-                Access inherited from the owning scope and its parent teams.
-              </p>
-            </div>
+          <section className="space-y-2">
+            <h3 className="text-sm font-semibold text-imp-foreground">Inherited Access</h3>
             <div className="overflow-hidden border rounded-xl border-imp-border bg-imp-background/40">
               <AccessTable
                 rows={inheritedRows}

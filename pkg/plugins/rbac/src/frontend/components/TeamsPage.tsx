@@ -107,7 +107,7 @@ export function TeamsPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="imp-page flex h-full min-h-0 w-full items-center justify-center overflow-y-auto bg-imp-background text-imp-foreground">
+      <div className="flex items-center justify-center w-full h-full min-h-0 overflow-y-auto imp-page bg-imp-background text-imp-foreground">
         <p className="text-sm text-imp-muted-foreground">Please sign in to access this page.</p>
       </div>
     );
@@ -126,9 +126,9 @@ export function TeamsPage() {
             <button
               type="button"
               onClick={() => setShowCreateForm(!showCreateForm)}
-              className="flex items-center gap-1 rounded bg-imp-primary px-2 py-1 text-xs font-medium text-imp-primary-foreground hover:bg-imp-primary/90"
+              className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-imp-primary text-imp-primary-foreground hover:bg-imp-primary/90"
             >
-              <Plus className="h-3 w-3" />
+              <Plus className="w-3 h-3" />
               New Team
             </button>
           )}
@@ -137,7 +137,7 @@ export function TeamsPage() {
     >
       {/* Create team form */}
       {showCreateForm && (
-        <div className="rounded-lg border border-imp-border bg-imp-card p-3">
+        <div className="p-3 border rounded-lg border-imp-border bg-imp-card">
           <div className="mb-2 text-xs font-medium text-imp-foreground">Create Team</div>
           <div className="space-y-2">
             <input
@@ -169,14 +169,14 @@ export function TeamsPage() {
                 type="button"
                 onClick={handleCreate}
                 disabled={createTeam.isPending || !newTeamName.trim()}
-                className="rounded bg-imp-primary px-3 py-1 text-xs font-medium text-imp-primary-foreground hover:bg-imp-primary/90 disabled:opacity-50"
+                className="px-3 py-1 text-xs font-medium rounded bg-imp-primary text-imp-primary-foreground hover:bg-imp-primary/90 disabled:opacity-50"
               >
                 {createTeam.isPending ? 'Creating…' : 'Create'}
               </button>
               <button
                 type="button"
                 onClick={() => setShowCreateForm(false)}
-                className="rounded px-3 py-1 text-xs text-imp-muted-foreground hover:text-imp-foreground"
+                className="px-3 py-1 text-xs rounded text-imp-muted-foreground hover:text-imp-foreground"
               >
                 Cancel
               </button>
@@ -197,15 +197,15 @@ export function TeamsPage() {
       </div>
 
       {/* Teams list */}
-      <div className="rounded-lg border border-imp-border bg-imp-card">
+      <div className="border rounded-lg border-imp-border bg-imp-card">
         {teamsQuery.isLoading ? (
-          <div className="px-4 py-8 text-center text-sm text-imp-muted-foreground">Loading…</div>
+          <div className="px-4 py-8 text-sm text-center text-imp-muted-foreground">Loading…</div>
         ) : teamsQuery.error ? (
-          <div className="px-4 py-8 text-center text-sm text-red-500">
+          <div className="px-4 py-8 text-sm text-center text-red-500">
             {teamsQuery.error instanceof Error ? teamsQuery.error.message : 'Failed to load teams'}
           </div>
         ) : filteredTeams.length === 0 ? (
-          <div className="px-4 py-8 text-center text-sm text-imp-muted-foreground">
+          <div className="px-4 py-8 text-sm text-center text-imp-muted-foreground">
             {teamSearch
               ? 'No teams match this search.'
               : 'No teams yet. Create one to get started.'}
@@ -219,7 +219,7 @@ export function TeamsPage() {
                   <div className="flex items-center gap-3 px-3 py-2">
                     <button
                       type="button"
-                      className="flex flex-1 items-center gap-3 text-left hover:opacity-80 transition-opacity"
+                      className="flex items-center flex-1 gap-3 text-left transition-opacity hover:opacity-80"
                       onClick={() => setExpandedTeamId(isExpanded ? null : team.id)}
                     >
                       {isExpanded ? (
@@ -228,10 +228,10 @@ export function TeamsPage() {
                         <ChevronRight className="h-3.5 w-3.5 shrink-0 text-imp-muted-foreground" />
                       )}
                       <Users className="h-3.5 w-3.5 shrink-0 text-imp-primary" />
-                      <div className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium">{team.name}</span>
+                      <div className="flex-1 min-w-0">
+                        <span className="block text-sm font-medium truncate">{team.name}</span>
                         {team.description && (
-                          <span className="block truncate text-xs text-imp-muted-foreground">
+                          <span className="block text-xs truncate text-imp-muted-foreground">
                             {team.description}
                           </span>
                         )}
@@ -241,7 +241,7 @@ export function TeamsPage() {
                       <button
                         type="button"
                         onClick={() => handleDelete(team.id)}
-                        className="shrink-0 rounded p-1 text-imp-muted-foreground hover:text-red-500"
+                        className="p-1 rounded shrink-0 text-imp-muted-foreground hover:text-red-500"
                         title="Delete team"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -308,19 +308,19 @@ function TeamMembersPanel({
   };
 
   return (
-    <div className="border-t border-imp-border bg-imp-muted/20 px-3 pb-3 pt-2">
+    <div className="px-3 pt-2 pb-3 border-t border-imp-border bg-imp-muted/20">
       {isLoading ? (
-        <p className="py-3 text-center text-xs text-imp-muted-foreground">Loading…</p>
+        <p className="py-3 text-xs text-center text-imp-muted-foreground">Loading…</p>
       ) : members.length === 0 ? (
         <p className="py-2 text-xs text-imp-muted-foreground">No members yet.</p>
       ) : (
         <div className="mb-2 space-y-1">
           {members.map((member) => (
-            <div key={member.id} className="flex items-center gap-2 rounded px-2 py-1 text-xs">
-              <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-imp-primary/10">
-                <User className="h-3 w-3 text-imp-primary" />
+            <div key={member.id} className="flex items-center gap-2 px-2 py-1 text-xs rounded">
+              <div className="flex items-center justify-center w-5 h-5 rounded-full shrink-0 bg-imp-primary/10">
+                <User className="w-3 h-3 text-imp-primary" />
               </div>
-              <span className="min-w-0 flex-1 truncate">{getUserLabel(member.userId)}</span>
+              <span className="flex-1 min-w-0 truncate">{getUserLabel(member.userId)}</span>
               {isAdmin && (
                 <button
                   type="button"
@@ -328,7 +328,7 @@ function TeamMembersPanel({
                   className="shrink-0 rounded p-0.5 text-imp-muted-foreground hover:text-red-500"
                   title="Remove member"
                 >
-                  <Trash2 className="h-3 w-3" />
+                  <Trash2 className="w-3 h-3" />
                 </button>
               )}
             </div>
@@ -410,7 +410,7 @@ function MemberSearchCombobox({
   }, [open]);
 
   return (
-    <div ref={containerRef} className="relative min-w-0 flex-1">
+    <div ref={containerRef} className="relative flex-1 min-w-0">
       {selectedUser ? (
         <button
           type="button"
@@ -420,15 +420,15 @@ function MemberSearchCombobox({
           }}
           className="flex w-full items-center gap-1.5 rounded border border-imp-border bg-imp-background px-2 py-1 text-xs text-left"
         >
-          <User className="h-3 w-3 shrink-0 text-imp-muted-foreground" />
-          <span className="min-w-0 flex-1 truncate">
+          <User className="w-3 h-3 shrink-0 text-imp-muted-foreground" />
+          <span className="flex-1 min-w-0 truncate">
             {selectedUser.name || selectedUser.email || selectedUser.id}
           </span>
-          <X className="h-3 w-3 shrink-0 text-imp-muted-foreground" />
+          <X className="w-3 h-3 shrink-0 text-imp-muted-foreground" />
         </button>
       ) : (
         <div className="relative">
-          <Search className="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-imp-muted-foreground" />
+          <Search className="absolute w-3 h-3 -translate-y-1/2 pointer-events-none left-2 top-1/2 text-imp-muted-foreground" />
           <input
             ref={inputRef}
             type="text"
@@ -441,14 +441,14 @@ function MemberSearchCombobox({
             }}
             onFocus={() => setOpen(true)}
             placeholder="Search users…"
-            className="w-full rounded border border-imp-border bg-imp-background py-1 pl-6 pr-2 text-xs placeholder:text-imp-muted-foreground"
+            className="w-full py-1 pl-6 pr-2 text-xs border rounded border-imp-border bg-imp-background placeholder:text-imp-muted-foreground"
           />
         </div>
       )}
 
       {open && !selectedUser && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-full rounded-md border border-imp-border bg-imp-background shadow-lg">
-          <div className="max-h-40 overflow-y-auto py-1">
+        <div className="absolute left-0 z-50 w-full mt-1 border rounded-md shadow-lg top-full border-imp-border bg-imp-background">
+          <div className="py-1 overflow-y-auto max-h-40">
             {filtered.length === 0 ? (
               <p className="px-3 py-2 text-xs text-imp-muted-foreground">No users found.</p>
             ) : (
@@ -464,7 +464,7 @@ function MemberSearchCombobox({
                   className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs hover:bg-imp-muted/50 transition-colors"
                 >
                   <User className="h-3.5 w-3.5 shrink-0 text-imp-muted-foreground" />
-                  <span className="min-w-0 flex-1 truncate">{u.name || u.email || u.id}</span>
+                  <span className="flex-1 min-w-0 truncate">{u.name || u.email || u.id}</span>
                 </button>
               ))
             )}

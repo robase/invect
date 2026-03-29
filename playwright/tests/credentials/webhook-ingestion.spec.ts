@@ -31,7 +31,7 @@ test.describe("Webhook Ingestion — Trigger a Flow via Credential Webhook", () 
     expect(infoResp.ok()).toBeTruthy();
     const info = await infoResp.json();
     expect(info).toHaveProperty("webhookPath");
-    expect(info).toHaveProperty("webhookSecret");
+    expect(info).toHaveProperty("fullUrl");
 
     const webhookPath = info.webhookPath;
 

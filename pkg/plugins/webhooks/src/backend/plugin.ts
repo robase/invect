@@ -46,10 +46,13 @@ const WEBHOOK_TRIGGERS_SCHEMA: InvectPluginSchema = {
       name: { type: 'string', required: true },
       description: { type: 'text', required: false },
       webhookPath: { type: 'string', required: true, unique: true },
-      webhookSecret: { type: 'string', required: true },
       provider: { type: 'string', required: true, defaultValue: 'generic' },
       isEnabled: { type: 'boolean', required: true, defaultValue: true },
       allowedMethods: { type: 'string', required: true, defaultValue: 'POST' },
+      hmacEnabled: { type: 'boolean', required: true, defaultValue: false },
+      hmacHeaderName: { type: 'string', required: false },
+      hmacSecret: { type: 'string', required: false },
+      allowedIps: { type: 'text', required: false },
       flowId: { type: 'string', required: false, references: { table: 'flows', field: 'id' } },
       nodeId: { type: 'string', required: false },
       lastTriggeredAt: { type: 'date', required: false },
@@ -93,15 +96,6 @@ function generateWebhookPath(): string {
   return path;
 }
 
-function generateWebhookSecret(): string {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  let secret = '';
-  for (let i = 0; i < 32; i++) {
-    secret += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return secret;
-}
-
 // ─── Plugin Factory ─────────────────────────────────────────────────
 
 export function webhooksPlugin(options?: WebhooksPluginOptions): InvectPlugin {
@@ -137,11 +131,14 @@ export function webhooksPlugin(options?: WebhooksPluginOptions): InvectPlugin {
             name: input.name,
             description: input.description,
             webhookPath: generateWebhookPath(),
-            webhookSecret: generateWebhookSecret(),
             flowId: input.flowId,
             nodeId: input.nodeId,
             provider: input.provider ?? 'generic',
             allowedMethods: input.allowedMethods ?? 'POST',
+            hmacEnabled: input.hmacEnabled ?? false,
+            hmacHeaderName: input.hmacHeaderName,
+            hmacSecret: input.hmacSecret,
+            allowedIps: input.allowedIps,
           };
 
           const trigger = await getRepository(ctx).create(triggerInput);
@@ -252,12 +249,34 @@ export function webhooksPlugin(options?: WebhooksPluginOptions): InvectPlugin {
             const rawBody = typeof ctx.body === 'string' ? ctx.body : JSON.stringify(ctx.body);
             const sigResult = state.signatureService.verify(
               trigger.provider,
-              trigger.webhookSecret,
+              trigger.hmacSecret ?? '',
               rawBody,
               ctx.headers as Record<string, string>,
             );
             if (!sigResult.valid) {
               return { status: 401, body: { error: `Signature verification failed: ${sigResult.error}` } };
+            }
+          } else if (trigger.hmacEnabled && trigger.hmacHeaderName && trigger.hmacSecret) {
+            const rawBody = typeof ctx.body === 'string' ? ctx.body : JSON.stringify(ctx.body);
+            const sigResult = state.signatureService.verifyCustomHmac(
+              trigger.hmacSecret,
+              trigger.hmacHeaderName,
+              rawBody,
+              ctx.headers as Record<string, string>,
+            );
+            if (!sigResult.valid) {
+              return { status: 401, body: { error: `HMAC verification failed: ${sigResult.error}` } };
+            }
+          }
+
+          // IP whitelist check
+          if (trigger.allowedIps) {
+            const clientIp = (ctx.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()
+              || (ctx.headers['x-real-ip'] as string)
+              || '';
+            const allowed = trigger.allowedIps.split(',').map((ip) => ip.trim()).filter(Boolean);
+            if (allowed.length > 0 && !allowed.includes(clientIp)) {
+              return { status: 403, body: { error: 'IP address not allowed' } };
             }
           }
 
@@ -309,10 +328,11 @@ export function webhooksPlugin(options?: WebhooksPluginOptions): InvectPlugin {
           return {
             body: {
               webhookPath: trigger.webhookPath,
-              webhookSecret: trigger.webhookSecret,
               fullUrl,
               provider: trigger.provider,
               isEnabled: trigger.isEnabled,
+              hmacEnabled: trigger.hmacEnabled,
+              allowedIps: trigger.allowedIps,
             },
           };
         },

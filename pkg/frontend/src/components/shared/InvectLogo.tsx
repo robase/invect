@@ -23,7 +23,7 @@ function resolveLogoMarkup(variant: 'theme' | 'dark' | 'light', resolvedTheme: '
     return INVECT_ICON_LIGHT_SVG;
   }
 
-  return resolvedTheme === 'dark' ? INVECT_ICON_LIGHT_SVG : INVECT_ICON_DARK_SVG;
+  return resolvedTheme === 'dark' ? INVECT_ICON_DARK_SVG : INVECT_ICON_LIGHT_SVG;
 }
 
 export const InvectLogo = memo(function InvectLogo({
@@ -39,14 +39,14 @@ export const InvectLogo = memo(function InvectLogo({
   const svgMarkup = resolveLogoMarkup(variant, resolvedTheme);
 
   return (
-    <div className={cn('inline-flex items-center gap-3', className)}>
+    <div className={cn('flex items-center gap-3', className)}>
       <span
         aria-hidden="true"
         className={cn(
-          'inline-flex shrink-0 items-center justify-center h-6 [&>svg]:h-full [&>svg]:w-full',
+          'flex shrink-0 items-center justify-center h-6 [&>svg]:h-full [&>svg]:w-full',
           iconClassName,
         )}
-        style={{ aspectRatio: '430 / 1210' }}
+        style={{ aspectRatio: '109 / 209' }}
         dangerouslySetInnerHTML={{ __html: svgMarkup }}
       />
       {showLabel ? (

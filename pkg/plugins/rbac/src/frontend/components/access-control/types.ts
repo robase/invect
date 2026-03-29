@@ -53,17 +53,3 @@ export function getPermissionBadgeClasses(permission: FlowAccessPermission): str
       return 'border-imp-border text-imp-muted-foreground';
   }
 }
-
-export function getPermissionBranchClasses(permission: FlowAccessPermission): string {
-  switch (permission) {
-    case 'owner':
-      return 'border-amber-500/30';
-    case 'editor':
-      return 'border-blue-500/30';
-    case 'operator':
-      return 'border-emerald-500/30';
-    case 'viewer':
-    default:
-      return 'border-imp-border';
-  }
-}

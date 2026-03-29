@@ -691,9 +691,9 @@ class ApiClient {
 
   async getCredentialWebhookInfo(
     id: string,
-  ): Promise<{ webhookPath: string; webhookSecret: string; fullUrl?: string } | null> {
+  ): Promise<{ webhookPath: string; fullUrl?: string } | null> {
     try {
-      return await this.request<{ webhookPath: string; webhookSecret: string; fullUrl?: string }>(
+      return await this.request<{ webhookPath: string; fullUrl?: string }>(
         `/credentials/${id}/webhook`,
         { headers: { ...this.getUserHeaders() } },
       );
@@ -704,8 +704,8 @@ class ApiClient {
 
   async enableCredentialWebhook(
     id: string,
-  ): Promise<{ webhookPath: string; webhookSecret: string; fullUrl?: string }> {
-    return this.request<{ webhookPath: string; webhookSecret: string; fullUrl?: string }>(
+  ): Promise<{ webhookPath: string; fullUrl?: string }> {
+    return this.request<{ webhookPath: string; fullUrl?: string }>(
       `/credentials/${id}/webhook`,
       {
         method: 'POST',

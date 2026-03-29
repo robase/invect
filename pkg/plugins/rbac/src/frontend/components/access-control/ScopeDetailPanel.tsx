@@ -127,7 +127,7 @@ export function ScopeDetailPanel({
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="px-5 py-4 border-b shrink-0 border-imp-border overflow-hidden">
+      <div className="px-5 py-4 overflow-hidden border-b shrink-0 border-imp-border">
         <div className="flex items-start gap-3">
           <div className="flex items-center justify-center flex-none w-10 h-10 rounded-xl bg-imp-primary/10 text-imp-primary">
             <Users className="w-5 h-5" />
@@ -156,51 +156,36 @@ export function ScopeDetailPanel({
             </div>
           </div>
         </div>
-        {isAdmin ? (
-          <div className="flex flex-wrap items-center gap-1.5 mt-3">
-            <button
-              type="button"
-              onClick={() => setShowMemberDialog(true)}
-              className="flex items-center gap-1 rounded-md border border-imp-border px-2 py-1 text-[11px] text-imp-muted-foreground transition-colors hover:border-imp-primary/50 hover:text-imp-foreground"
-            >
-              <Plus className="w-3 h-3" /> Add Member
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowGrantDialog(true)}
-              className="flex items-center gap-1 rounded-md bg-imp-primary px-2 py-1 text-[11px] font-medium text-imp-primary-foreground hover:bg-imp-primary/90"
-            >
-              <Plus className="w-3 h-3" /> Grant Access
-            </button>
+        <div className="flex items-center justify-between">
+ <p className="mt-3 text-xs text-imp-muted-foreground">
+          Access applies to all flows inside this team and its child teams.
+        </p>
+          {isAdmin ? (
+          <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => setShowDeleteConfirm(true)}
-              className="rounded p-1.5 text-imp-muted-foreground transition-colors hover:bg-red-500/10 hover:text-red-500"
-              title="Delete team"
+              className="flex items-center gap-1.5 rounded-md border border-red-200 px-2.5 py-1.5 text-[11px] font-medium text-red-600 transition-colors hover:bg-red-500/10 dark:border-red-500/20 dark:text-red-400"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 className="w-3 h-3" /> Delete team
             </button>
           </div>
         ) : null}
-        <p className="mt-3 text-xs text-imp-muted-foreground">
-          Access applies to all flows inside this team and its child teams.
-        </p>
+        </div>
+       
+        
       </div>
 
-      <div className="flex-1 px-5 py-4 overflow-y-auto overflow-x-hidden">
+      <div className="flex-1 px-5 py-4 overflow-x-hidden overflow-y-auto">
         <div className="space-y-6">
 
-          <section className="space-y-3">
-            <div>
-              <h3 className="text-sm font-semibold text-imp-foreground">
+          <section className="space-y-2">
+            <h3 className="text-sm font-semibold text-imp-foreground">
                 Team Role on Child Flows
               </h3>
-              <p className="mt-1 text-xs text-imp-muted-foreground">
-                This is the base role this team carries into every flow inside this team and its
-                child teams. If someone also has more specific access elsewhere, they still keep
-                whichever role is higher.
+              <p className="mt-0.5 text-xs text-imp-muted-foreground">
+                Base role applied to every flow inside this team.
               </p>
-            </div>
 
             <OptionalRoleSelector
               value={teamRoleRecord?.permission ?? null}
@@ -221,14 +206,27 @@ export function ScopeDetailPanel({
             />
           </section>
 
+          <section className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-imp-foreground">Members</h3>
+              {isAdmin ? (
+                <button
+                  type="button"
+                  onClick={() => setShowMemberDialog(true)}
+                  className="flex items-center gap-1 rounded-md border border-imp-border px-2 py-1 text-[11px] text-imp-muted-foreground transition-colors hover:border-imp-primary/50 hover:text-imp-foreground"
+                >
+                  <Plus className="w-3 h-3" /> Add Member
+                </button>
+              ) : null}
+            </div>
+            <div className="overflow-hidden border rounded-xl border-imp-border bg-imp-background/40">
+              <AccessTable rows={memberRows} isLoading={isLoading} emptyLabel="No members" />
+            </div>
+          </section>
+
           {childTeams.length > 0 ? (
-            <section className="space-y-3">
-              <div>
-                <h3 className="text-sm font-semibold text-imp-foreground">Sub-teams</h3>
-                <p className="mt-1 text-xs text-imp-muted-foreground">
-                  Teams nested directly under this scope.
-                </p>
-              </div>
+            <section className="space-y-2">
+              <h3 className="text-sm font-semibold text-imp-foreground">Sub-teams</h3>
               <div className="space-y-2">
                 {childTeams.map((team) => (
                   <div
@@ -245,34 +243,6 @@ export function ScopeDetailPanel({
               </div>
             </section>
           ) : null}
-
-          <section className="space-y-3">
-            <div>
-              <h3 className="text-sm font-semibold text-imp-foreground">Members</h3>
-              <p className="mt-1 text-xs text-imp-muted-foreground">
-                Team membership controls who inherits this scope's team role.
-              </p>
-            </div>
-            <div className="overflow-hidden border rounded-xl border-imp-border bg-imp-background/40">
-              <AccessTable rows={memberRows} isLoading={isLoading} emptyLabel="No members" />
-            </div>
-          </section>
-
-          <section className="space-y-3">
-            <div>
-              <h3 className="text-sm font-semibold text-imp-foreground">Direct Access Grants</h3>
-              <p className="mt-1 text-xs text-imp-muted-foreground">
-                Extra user-specific access on top of the team-wide role.
-              </p>
-            </div>
-            <div className="overflow-hidden border rounded-xl border-imp-border bg-imp-background/40">
-              <AccessTable
-                rows={grantRows}
-                isLoading={isLoading}
-                emptyLabel="No direct access grants"
-              />
-            </div>
-          </section>
         </div>
       </div>
 

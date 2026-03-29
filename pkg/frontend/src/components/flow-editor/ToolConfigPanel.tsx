@@ -78,7 +78,7 @@ function DeleteConfirmButton({
         <Button
           variant="ghost"
           size="sm"
-          className="p-0 w-6 h-6 bg-destructive/10 text-destructive hover:text-destructive hover:bg-destructive/20"
+          className="w-6 h-6 p-0 bg-destructive/10 text-destructive hover:text-destructive hover:bg-destructive/20"
           onClick={onConfirm}
           title="Confirm remove"
         >
@@ -87,7 +87,7 @@ function DeleteConfirmButton({
         <Button
           variant="ghost"
           size="sm"
-          className="p-0 w-6 h-6 text-muted-foreground"
+          className="w-6 h-6 p-0 text-muted-foreground"
           onClick={() => setConfirming(false)}
           title="Cancel"
         >
@@ -165,15 +165,21 @@ export const ToolConfigPanel = memo(function ToolConfigPanel({
     const allFields = nodeDefinition?.paramFields ?? [];
     const visibleFields = allFields.filter((field: NodeParamField) => !field.hidden);
     return visibleFields.sort((a: NodeParamField, b: NodeParamField) => {
-      if (a.type === 'credential' && b.type !== 'credential') return -1;
-      if (a.type !== 'credential' && b.type === 'credential') return 1;
+      if (a.type === 'credential' && b.type !== 'credential') {
+        return -1;
+      }
+      if (a.type !== 'credential' && b.type === 'credential') {
+        return 1;
+      }
       return 0;
     });
   }, [nodeDefinition]);
 
   // Compute effective input schema
   const effectiveInputSchema = useMemo(() => {
-    if (!tool?.inputSchema || !instance) return tool?.inputSchema;
+    if (!tool?.inputSchema || !instance) {
+      return tool?.inputSchema;
+    }
 
     const aiChosenModes = (instance.params._aiChosenModes as Record<string, boolean>) ?? {};
     const schema = tool.inputSchema as {
@@ -181,7 +187,9 @@ export const ToolConfigPanel = memo(function ToolConfigPanel({
       required?: string[];
     };
 
-    if (!schema.properties) return schema;
+    if (!schema.properties) {
+      return schema;
+    }
 
     const filteredProperties: Record<string, unknown> = {};
     const staticParams: string[] = [];
@@ -287,14 +295,16 @@ export const ToolConfigPanel = memo(function ToolConfigPanel({
     }
   }, [instance, editDescription, onUpdate]);
 
-  if (!open || !tool || !instance) return null;
+  if (!open || !tool || !instance) {
+    return null;
+  }
 
   const config = categoryConfig[tool.category];
   const Icon = config.icon;
 
   return (
     <>
-      <div className="flex flex-col border-l w-96 border-border bg-card text-card-foreground animate-in slide-in-from-right fade-in duration-200">
+      <div className="flex flex-col duration-200 border-l w-96 border-border bg-card text-card-foreground animate-in slide-in-from-right fade-in">
         {/* Header */}
         <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-border">
           <div className="flex items-center min-w-0 gap-2">
@@ -346,7 +356,7 @@ export const ToolConfigPanel = memo(function ToolConfigPanel({
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   onBlur={handleNameBlur}
-                  className="h-9 text-sm"
+                  className="text-sm h-9"
                 />
               </div>
 
@@ -493,7 +503,9 @@ export const ToolConfigPanel = memo(function ToolConfigPanel({
       <OAuth2ProviderSelector
         open={isOAuth2SelectorOpen}
         onOpenChange={(open) => {
-          if (!open) handleCloseOAuth2Selector();
+          if (!open) {
+            handleCloseOAuth2Selector();
+          }
         }}
         onCredentialCreated={handleCredentialCreated}
         portalContainer={portalContainer}

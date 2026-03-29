@@ -115,6 +115,51 @@ export class WebhookSignatureService {
     return headers[config.eventTypeHeader] || undefined;
   }
 
+  /**
+   * Verify a custom HMAC signature where the user specifies the header name and secret.
+   * Supports hex-encoded SHA-256 signatures, with or without a `sha256=` prefix.
+   */
+  verifyCustomHmac(
+    secret: string,
+    headerName: string,
+    rawBody: string | Buffer,
+    headers: Record<string, string>,
+  ): { valid: boolean; error?: string } {
+    const normalizedHeader = headerName.toLowerCase();
+    const headerValue = headers[normalizedHeader];
+    if (!headerValue) {
+      return { valid: false, error: `Missing signature header: ${headerName}` };
+    }
+
+    try {
+      const expected = createHmac('sha256', secret)
+        .update(typeof rawBody === 'string' ? rawBody : rawBody)
+        .digest('hex');
+
+      // Support optional sha256= prefix
+      const signature = headerValue.startsWith('sha256=')
+        ? headerValue.slice(7)
+        : headerValue;
+
+      const a = Buffer.from(expected, 'utf8');
+      const b = Buffer.from(signature, 'utf8');
+
+      if (a.length !== b.length) {
+        return { valid: false, error: 'Signature length mismatch' };
+      }
+
+      return timingSafeEqual(a, b)
+        ? { valid: true }
+        : { valid: false, error: 'HMAC signature mismatch' };
+    } catch (error) {
+      this.logger.error('Custom HMAC verification error', { headerName, error });
+      return {
+        valid: false,
+        error: error instanceof Error ? error.message : 'Verification failed',
+      };
+    }
+  }
+
   private verifyHmac(
     config: WebhookProviderSignatureConfig,
     secret: string,

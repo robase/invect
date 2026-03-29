@@ -33,6 +33,14 @@ const AUTH_MODE_CONFIG: Record<string, { label: string; color: string }> = {
     label: 'Unauthenticated',
     color: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800/40 dark:text-zinc-400',
   },
+  hmac: {
+    label: 'HMAC',
+    color: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300',
+  },
+  ip_whitelist: {
+    label: 'IP Whitelist',
+    color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+  },
   signed: {
     label: 'Signed',
     color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
@@ -40,10 +48,16 @@ const AUTH_MODE_CONFIG: Record<string, { label: string; color: string }> = {
 };
 
 function getAuthModeConfig(trigger: WebhookTrigger) {
-  if (trigger.provider === 'generic') {
-    return AUTH_MODE_CONFIG.generic;
+  if (trigger.provider !== 'generic') {
+    return AUTH_MODE_CONFIG.signed;
   }
-  return AUTH_MODE_CONFIG.signed;
+  if (trigger.hmacEnabled) {
+    return AUTH_MODE_CONFIG.hmac;
+  }
+  if (trigger.allowedIps) {
+    return AUTH_MODE_CONFIG.ip_whitelist;
+  }
+  return AUTH_MODE_CONFIG.generic;
 }
 
 function formatFullDate(iso?: string): string {
@@ -178,16 +192,36 @@ const OverviewSection: FC<{
       <CopyableField value={`/plugins/webhooks/receive/${trigger.webhookPath}`} />
     </div>
 
-    {/* Signing secret */}
-    <div className="space-y-1">
-      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-        Endpoint Secret
-      </label>
-      <CopyableField value={trigger.webhookSecret} masked />
-      <p className="text-xs text-muted-foreground">
-        Used when signed verification is enabled for this endpoint.
-      </p>
-    </div>
+    {/* HMAC Authentication */}
+    {trigger.hmacEnabled && trigger.hmacHeaderName && (
+      <div className="space-y-1">
+        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          HMAC Authentication
+        </label>
+        <div className="rounded-lg border bg-muted/30 p-3 space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Signature Header</span>
+            <span className="text-sm font-mono">{trigger.hmacHeaderName}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Secret</span>
+            <CopyableField value={trigger.hmacSecret ?? ''} masked />
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* IP Whitelist */}
+    {trigger.allowedIps && (
+      <div className="space-y-1">
+        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          IP Whitelist
+        </label>
+        <div className="rounded-lg border bg-muted/30 p-3">
+          <span className="text-sm font-mono break-all">{trigger.allowedIps}</span>
+        </div>
+      </div>
+    )}
 
     {/* Info grid */}
     <div className="grid grid-cols-2 gap-4 py-2">
@@ -292,6 +326,10 @@ const EditSection: FC<{
   const [name, setName] = useState(trigger.name);
   const [description, setDescription] = useState(trigger.description ?? '');
   const [methods, setMethods] = useState(trigger.allowedMethods);
+  const [hmacEnabled, setHmacEnabled] = useState(trigger.hmacEnabled);
+  const [hmacHeaderName, setHmacHeaderName] = useState(trigger.hmacHeaderName ?? '');
+  const [hmacSecret, setHmacSecret] = useState(trigger.hmacSecret ?? '');
+  const [allowedIps, setAllowedIps] = useState(trigger.allowedIps ?? '');
   const updateMutation = useUpdateWebhookTrigger();
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -303,6 +341,10 @@ const EditSection: FC<{
       name: name.trim(),
       description: description.trim() || undefined,
       allowedMethods: methods,
+      hmacEnabled,
+      hmacHeaderName: hmacEnabled ? hmacHeaderName.trim() || undefined : undefined,
+      hmacSecret: hmacEnabled ? hmacSecret.trim() || undefined : undefined,
+      allowedIps: allowedIps.trim() || undefined,
     };
     updateMutation.mutate(input, { onSuccess });
   };
@@ -337,11 +379,76 @@ const EditSection: FC<{
         />
       </div>
 
-      <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
-        <div className="text-sm font-medium">Authentication</div>
+      {/* HMAC Authentication */}
+      <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-sm font-medium">HMAC Authentication</div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Verify incoming requests using an HMAC signature header.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setHmacEnabled(!hmacEnabled)}
+            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+              hmacEnabled ? 'bg-primary' : 'bg-muted-foreground/30'
+            }`}
+          >
+            <span
+              className={`pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform ${
+                hmacEnabled ? 'translate-x-4' : 'translate-x-0'
+              }`}
+            />
+          </button>
+        </div>
+        {hmacEnabled && (
+          <div className="space-y-3 pt-1">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium" htmlFor="wh-edit-hmac-header">
+                Signature Header Name
+              </label>
+              <input
+                id="wh-edit-hmac-header"
+                type="text"
+                value={hmacHeaderName}
+                onChange={(e) => setHmacHeaderName(e.target.value)}
+                placeholder="e.g. x-signature"
+                className="h-8 w-full rounded-md border border-input bg-background px-2.5 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/20"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium" htmlFor="wh-edit-hmac-secret">
+                Signing Secret
+              </label>
+              <input
+                id="wh-edit-hmac-secret"
+                type="password"
+                value={hmacSecret}
+                onChange={(e) => setHmacSecret(e.target.value)}
+                placeholder="Enter secret key"
+                className="h-8 w-full rounded-md border border-input bg-background px-2.5 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/20"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* IP Whitelist */}
+      <div className="space-y-2">
+        <label className="text-sm font-medium" htmlFor="wh-edit-ips">
+          IP Whitelist
+        </label>
+        <textarea
+          id="wh-edit-ips"
+          rows={2}
+          value={allowedIps}
+          onChange={(e) => setAllowedIps(e.target.value)}
+          placeholder="Comma-separated IPs, e.g. 192.168.1.1, 10.0.0.0/24"
+          className="w-full min-h-16 rounded-md border border-input bg-background px-3 py-2 text-sm font-mono shadow-xs placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/20 field-sizing-content"
+        />
         <p className="text-xs text-muted-foreground">
-          This endpoint is currently configured as {getAuthModeConfig(trigger).label.toLowerCase()}.
-          Provider-specific verification is not configured from this screen.
+          Leave empty to allow all IPs. Separate multiple addresses with commas.
         </p>
       </div>
 
