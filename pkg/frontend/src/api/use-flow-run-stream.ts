@@ -28,10 +28,7 @@ import type {
  * The stream closes automatically when the run reaches a terminal status,
  * when the component unmounts, or when flowRunId changes.
  */
-export function useFlowRunStream(
-  flowId: string,
-  flowRunId: string | null | undefined,
-): void {
+export function useFlowRunStream(flowId: string, flowRunId: string | null | undefined): void {
   const queryClient = useQueryClient();
   const apiClient = useApiClient();
   const abortRef = useRef<AbortController | null>(null);
@@ -69,7 +66,9 @@ export function useFlowRunStream(
 
         while (!cancelled) {
           const { done, value } = await reader.read();
-          if (done) break;
+          if (done) {
+            break;
+          }
 
           buffer += decoder.decode(value, { stream: true });
 
@@ -78,7 +77,9 @@ export function useFlowRunStream(
           buffer = lines.pop() ?? '';
 
           for (const line of lines) {
-            if (!line.startsWith('data: ')) continue;
+            if (!line.startsWith('data: ')) {
+              continue;
+            }
 
             const json = line.slice(6);
             let event: ExecutionStreamEvent;
@@ -122,10 +123,7 @@ function applyEvent(
     case 'snapshot': {
       // Seed both caches from the initial snapshot
       queryClient.setQueryData(queryKeys.flowRun(flowRunId), event.flowRun);
-      queryClient.setQueryData(
-        queryKeys.nodeExecutions(flowRunId),
-        event.nodeExecutions,
-      );
+      queryClient.setQueryData(queryKeys.nodeExecutions(flowRunId), event.nodeExecutions);
       patchRunsList(queryClient, flowId, event.flowRun);
       // Invalidate the React Flow graph so it re-renders with execution status
       invalidateReactFlow(queryClient, flowId);
@@ -140,29 +138,27 @@ function applyEvent(
     }
 
     case 'node_execution.created': {
-      queryClient.setQueryData<NodeExecution[]>(
-        queryKeys.nodeExecutions(flowRunId),
-        (prev) => {
-          if (!prev) return [event.nodeExecution];
-          // Avoid duplicates (defensive)
-          if (prev.some((ne) => ne.id === event.nodeExecution.id)) return prev;
-          return [...prev, event.nodeExecution];
-        },
-      );
+      queryClient.setQueryData<NodeExecution[]>(queryKeys.nodeExecutions(flowRunId), (prev) => {
+        if (!prev) {
+          return [event.nodeExecution];
+        }
+        // Avoid duplicates (defensive)
+        if (prev.some((ne) => ne.id === event.nodeExecution.id)) {
+          return prev;
+        }
+        return [...prev, event.nodeExecution];
+      });
       invalidateReactFlow(queryClient, flowId);
       break;
     }
 
     case 'node_execution.updated': {
-      queryClient.setQueryData<NodeExecution[]>(
-        queryKeys.nodeExecutions(flowRunId),
-        (prev) => {
-          if (!prev) return [event.nodeExecution];
-          return prev.map((ne) =>
-            ne.id === event.nodeExecution.id ? event.nodeExecution : ne,
-          );
-        },
-      );
+      queryClient.setQueryData<NodeExecution[]>(queryKeys.nodeExecutions(flowRunId), (prev) => {
+        if (!prev) {
+          return [event.nodeExecution];
+        }
+        return prev.map((ne) => (ne.id === event.nodeExecution.id ? event.nodeExecution : ne));
+      });
       invalidateReactFlow(queryClient, flowId);
       break;
     }
@@ -186,27 +182,23 @@ function patchRunsList(
   flowId: string,
   flowRun: FlowRun,
 ): void {
-  queryClient.setQueryData<PaginatedResponse<FlowRun>>(
-    queryKeys.executions(flowId),
-    (prev) => {
-      if (!prev) return prev;
-      const idx = prev.data.findIndex((r) => r.id === flowRun.id);
-      if (idx === -1) {
-        // New run — prepend
-        return { ...prev, data: [flowRun, ...prev.data] };
-      }
-      const updated = [...prev.data];
-      updated[idx] = flowRun;
-      return { ...prev, data: updated };
-    },
-  );
+  queryClient.setQueryData<PaginatedResponse<FlowRun>>(queryKeys.executions(flowId), (prev) => {
+    if (!prev) {
+      return prev;
+    }
+    const idx = prev.data.findIndex((r) => r.id === flowRun.id);
+    if (idx === -1) {
+      // New run — prepend
+      return { ...prev, data: [flowRun, ...prev.data] };
+    }
+    const updated = [...prev.data];
+    updated[idx] = flowRun;
+    return { ...prev, data: updated };
+  });
 }
 
 /** Invalidate the React Flow graph query so it re-fetches with updated execution status. */
-function invalidateReactFlow(
-  queryClient: ReturnType<typeof useQueryClient>,
-  flowId: string,
-): void {
+function invalidateReactFlow(queryClient: ReturnType<typeof useQueryClient>, flowId: string): void {
   // Invalidate all reactFlow queries for this flow (any version / any flowRunId)
   queryClient.invalidateQueries({
     queryKey: ['flows', flowId, 'react-flow'],

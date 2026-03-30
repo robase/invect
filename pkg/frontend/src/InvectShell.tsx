@@ -33,7 +33,7 @@ export interface InvectShellProps {
   children: ReactNode;
   /**
    * Theme mode. 'system' follows OS preference.
-   * @default 'system'
+   * @default 'dark'
    */
   theme?: 'light' | 'dark' | 'system';
   /**
@@ -43,7 +43,7 @@ export interface InvectShellProps {
 }
 
 export const InvectShell = React.memo(
-  ({ children, theme = 'system', className }: InvectShellProps) => {
+  ({ children, theme = 'dark', className }: InvectShellProps) => {
     return (
       <ThemeProvider defaultTheme={theme} storageKey="invect-ui-theme" className={className}>
         {children}

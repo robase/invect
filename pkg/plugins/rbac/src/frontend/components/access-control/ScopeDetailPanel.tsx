@@ -42,8 +42,8 @@ export function ScopeDetailPanel({
   const [showMemberDialog, setShowMemberDialog] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [permission, setPermission] = useState<FlowAccessPermission>('viewer');
-  const [grantUserId, setGrantUserId] = useState<string | null>(null);
-  const [memberUserId, setMemberUserId] = useState<string | null>(null);
+  const [grantUserIds, setGrantUserIds] = useState<string[]>([]);
+  const [memberUserIds, setMemberUserIds] = useState<string[]>([]);
 
   const members = scopeQuery.data?.members ?? [];
   const scopeAccess = scopeAccessQuery.data?.access ?? [];
@@ -120,7 +120,9 @@ export function ScopeDetailPanel({
     let current = teams.find((team) => team.id === scopeId) ?? null;
     while (current) {
       path.unshift(current);
-      current = current.parentId ? teams.find((team) => team.id === current?.parentId) ?? null : null;
+      current = current.parentId
+        ? (teams.find((team) => team.id === current?.parentId) ?? null)
+        : null;
     }
     return path;
   }, [teams, scopeId]);
@@ -135,12 +137,16 @@ export function ScopeDetailPanel({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <h2 className="flex-1 min-w-0 text-base font-semibold truncate">{scopeName}</h2>
-              {teamRoleRecord?.permission ? (
-                <span
-                  className={`inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium ${getPermissionBadgeClasses(teamRoleRecord.permission)}`}
-                >
-                  {formatPermissionLabel(teamRoleRecord.permission)}
-                </span>
+              {isAdmin ? (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="flex items-center gap-1.5 rounded-md border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-500/10 dark:border-red-500/20 dark:text-red-400"
+                  >
+                    <Trash2 className="w-4 h-4" /> Delete team
+                  </button>
+                </div>
               ) : null}
             </div>
             <div className="flex flex-wrap items-center gap-1 mt-1 text-[11px] text-imp-muted-foreground">
@@ -148,7 +154,9 @@ export function ScopeDetailPanel({
               {scopePath.map((team) => (
                 <div key={team.id} className="flex items-center gap-1">
                   <ChevronRight className="w-3 h-3" />
-                  <span className={team.id === scopeId ? 'font-medium text-imp-foreground' : undefined}>
+                  <span
+                    className={team.id === scopeId ? 'font-medium text-imp-foreground' : undefined}
+                  >
                     {team.name}
                   </span>
                 </div>
@@ -157,53 +165,44 @@ export function ScopeDetailPanel({
           </div>
         </div>
         <div className="flex items-center justify-between">
- <p className="mt-3 text-xs text-imp-muted-foreground">
-          Access applies to all flows inside this team and its child teams.
-        </p>
-          {isAdmin ? (
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setShowDeleteConfirm(true)}
-              className="flex items-center gap-1.5 rounded-md border border-red-200 px-2.5 py-1.5 text-[11px] font-medium text-red-600 transition-colors hover:bg-red-500/10 dark:border-red-500/20 dark:text-red-400"
-            >
-              <Trash2 className="w-3 h-3" /> Delete team
-            </button>
-          </div>
-        ) : null}
+          <p className="mt-3 text-xs text-imp-muted-foreground">
+            Access applies to all flows inside this team and its child teams.
+          </p>
         </div>
-       
-        
       </div>
 
       <div className="flex-1 px-5 py-4 overflow-x-hidden overflow-y-auto">
         <div className="space-y-6">
+          <section>
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <h3 className="text-sm font-semibold text-imp-foreground">
+                  Team Role on Child Flows
+                </h3>
+                <p className="mt-0.5 text-xs text-imp-muted-foreground">
+                  Base role applied to every flow inside this team.
+                </p>
+              </div>
+              <div className="shrink-0">
+                <OptionalRoleSelector
+                  value={teamRoleRecord?.permission ?? null}
+                  emptyLabel="No team role"
+                  onChange={(nextPermission) => {
+                    if (nextPermission === null) {
+                      if (teamRoleRecord) {
+                        revokeScopeAccess.mutate(teamRoleRecord.id);
+                      }
+                      return;
+                    }
 
-          <section className="space-y-2">
-            <h3 className="text-sm font-semibold text-imp-foreground">
-                Team Role on Child Flows
-              </h3>
-              <p className="mt-0.5 text-xs text-imp-muted-foreground">
-                Base role applied to every flow inside this team.
-              </p>
-
-            <OptionalRoleSelector
-              value={teamRoleRecord?.permission ?? null}
-              emptyLabel="No team role"
-              onChange={(nextPermission) => {
-                if (nextPermission === null) {
-                  if (teamRoleRecord) {
-                    revokeScopeAccess.mutate(teamRoleRecord.id);
-                  }
-                  return;
-                }
-
-                grantScopeAccess.mutate({
-                  teamId: scopeId,
-                  permission: nextPermission,
-                });
-              }}
-            />
+                    grantScopeAccess.mutate({
+                      teamId: scopeId,
+                      permission: nextPermission,
+                    });
+                  }}
+                />
+              </div>
+            </div>
           </section>
 
           <section className="space-y-2">
@@ -213,9 +212,9 @@ export function ScopeDetailPanel({
                 <button
                   type="button"
                   onClick={() => setShowMemberDialog(true)}
-                  className="flex items-center gap-1 rounded-md border border-imp-border px-2 py-1 text-[11px] text-imp-muted-foreground transition-colors hover:border-imp-primary/50 hover:text-imp-foreground"
+                  className="flex items-center gap-1.5 rounded-md border border-imp-border px-3 py-1.5 text-xs font-medium text-imp-muted-foreground transition-colors hover:border-imp-primary/50 hover:text-imp-foreground"
                 >
-                  <Plus className="w-3 h-3" /> Add Member
+                  <Plus className="w-4 h-4" /> Add Member
                 </button>
               ) : null}
             </div>
@@ -251,32 +250,33 @@ export function ScopeDetailPanel({
         onClose={() => setShowGrantDialog(false)}
         title="Grant Scope Access"
       >
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-3">
           <MemberCombobox
             users={users}
             excludeIds={existingScopeUserIds}
-            selectedUserId={grantUserId}
-            onSelect={setGrantUserId}
+            selectedUserIds={grantUserIds}
+            onSelect={setGrantUserIds}
           />
-          <RoleSelector value={permission} onChange={setPermission} />
-          <button
-            type="button"
-            onClick={() => {
-              if (!grantUserId) {
-                return;
-              }
-              grantScopeAccess.mutate({
-                userId: grantUserId,
-                permission,
-              });
-              setGrantUserId(null);
-              setShowGrantDialog(false);
-            }}
-            disabled={!grantUserId || grantScopeAccess.isPending}
-            className="rounded bg-imp-primary px-2.5 py-1 text-xs font-medium text-imp-primary-foreground hover:bg-imp-primary/90 disabled:opacity-50"
-          >
-            Grant
-          </button>
+          <div className="flex items-center gap-2">
+            <RoleSelector value={permission} onChange={setPermission} />
+            <button
+              type="button"
+              onClick={() => {
+                if (grantUserIds.length === 0) {
+                  return;
+                }
+                for (const userId of grantUserIds) {
+                  grantScopeAccess.mutate({ userId, permission });
+                }
+                setGrantUserIds([]);
+                setShowGrantDialog(false);
+              }}
+              disabled={grantUserIds.length === 0 || grantScopeAccess.isPending}
+              className="ml-auto rounded-md bg-imp-primary px-4 py-2 text-sm font-semibold text-imp-primary-foreground hover:bg-imp-primary/90 disabled:opacity-50"
+            >
+              Grant
+            </button>
+          </div>
         </div>
       </FormDialog>
 
@@ -285,25 +285,27 @@ export function ScopeDetailPanel({
         onClose={() => setShowMemberDialog(false)}
         title="Add Team Member"
       >
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-3">
           <MemberCombobox
             users={users}
             excludeIds={existingMemberIds}
-            selectedUserId={memberUserId}
-            onSelect={setMemberUserId}
+            selectedUserIds={memberUserIds}
+            onSelect={setMemberUserIds}
           />
           <button
             type="button"
             onClick={() => {
-              if (!memberUserId) {
+              if (memberUserIds.length === 0) {
                 return;
               }
-              addTeamMember.mutate({ userId: memberUserId });
-              setMemberUserId(null);
+              for (const userId of memberUserIds) {
+                addTeamMember.mutate({ userId });
+              }
+              setMemberUserIds([]);
               setShowMemberDialog(false);
             }}
-            disabled={!memberUserId || addTeamMember.isPending}
-            className="rounded bg-imp-primary px-2.5 py-1 text-xs font-medium text-imp-primary-foreground hover:bg-imp-primary/90 disabled:opacity-50"
+            disabled={memberUserIds.length === 0 || addTeamMember.isPending}
+            className="rounded-md bg-imp-primary px-4 py-2 text-sm font-semibold text-imp-primary-foreground hover:bg-imp-primary/90 disabled:opacity-50"
           >
             Add
           </button>

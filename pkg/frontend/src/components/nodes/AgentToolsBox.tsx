@@ -65,8 +65,6 @@ const ToolTile = memo(function ToolTile({
   onToolClick?: (tool: AddedToolInstance) => void;
   onRemoveTool?: (instanceId: string) => void;
 }) {
-
-
   return (
     <div
       className={cn(
@@ -82,7 +80,7 @@ const ToolTile = memo(function ToolTile({
           icon={toolDef?.provider?.icon}
           className="w-5 h-5 shrink-0"
         />
-      ): null}
+      ) : null}
       <span className="text-[10px] truncate w-full">{tool.name}</span>
     </div>
   );

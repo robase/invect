@@ -73,6 +73,7 @@ export function useGrantFlowAccess(flowId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rbac', 'flow-access', flowId] });
+      queryClient.invalidateQueries({ queryKey: ['rbac', 'effective-flow-access', flowId] });
     },
   });
 }

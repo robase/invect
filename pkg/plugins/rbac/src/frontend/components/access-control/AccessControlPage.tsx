@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { clsx } from 'clsx';
 import {
   ChevronDown,
@@ -15,28 +15,21 @@ import { PageLayout } from '@invect/frontend';
 import { useRbac } from '../../providers/RbacProvider';
 import { useTeams, useCreateTeam } from '../../hooks/useTeams';
 import { useScopeTree, usePreviewMove } from '../../hooks/useScopes';
-import type { FlowSummary, MovePreviewResponse, ScopeTreeNode } from '../../../shared/types';
-import type { AuthUser, PendingMove, SelectedItem } from './types';
-import {
-  formatPermissionLabel,
-  getPermissionBadgeClasses,
-  getPermissionBranchClasses,
-} from './types';
+import type { FlowSummary, ScopeTreeNode } from '../../../shared/types';
+import type { AuthUser, SelectedItem } from './types';
+import { formatPermissionLabel, getPermissionBadgeClasses } from './types';
 import { useUsers } from './useUsers';
 import { ScopeDetailPanel } from './ScopeDetailPanel';
 import { FlowDetailPanel } from './FlowDetailPanel';
 import { MoveConfirmationDialog } from './MoveConfirmationDialog';
+import {
+  useAccessControlStore,
+  canDropOnTarget,
+  collectScopeIds,
+  type HierarchyDragItem,
+} from '../../stores/accessControlStore';
 
-type HierarchyDragItem = {
-  type: 'scope' | 'flow';
-  id: string;
-  name: string;
-  parentId: string | null;
-};
-
-function collectScopeIds(scopes: ScopeTreeNode[]): string[] {
-  return scopes.flatMap((scope) => [scope.id, ...collectScopeIds(scope.children)]);
-}
+// ─── Tree helpers ─────────────────────────────────────────────────────────────
 
 function findScopeNode(scopes: ScopeTreeNode[], scopeId: string): ScopeTreeNode | null {
   for (const scope of scopes) {
@@ -51,43 +44,17 @@ function findScopeNode(scopes: ScopeTreeNode[], scopeId: string): ScopeTreeNode 
   return null;
 }
 
-function scopeContains(scope: ScopeTreeNode, potentialChildId: string): boolean {
-  for (const child of scope.children) {
-    if (child.id === potentialChildId || scopeContains(child, potentialChildId)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function isDescendantScope(
-  scopes: ScopeTreeNode[],
-  draggedScopeId: string,
-  potentialTargetId: string,
-): boolean {
-  const draggedScope = findScopeNode(scopes, draggedScopeId);
-  if (!draggedScope) {
-    return false;
-  }
-  return scopeContains(draggedScope, potentialTargetId);
-}
-
 function filterScopes(scopes: ScopeTreeNode[], query: string): ScopeTreeNode[] {
   return scopes.reduce<ScopeTreeNode[]>((acc, scope) => {
-    const normalizedDescription = scope.description?.toLowerCase() ?? '';
     const matchesScope =
-      scope.name.toLowerCase().includes(query) || normalizedDescription.includes(query);
+      scope.name.toLowerCase().includes(query) ||
+      (scope.description?.toLowerCase().includes(query) ?? false);
     const matchingChildren = filterScopes(scope.children, query);
     const matchingFlows = scope.flows.filter((flow) => flow.name.toLowerCase().includes(query));
 
     if (matchesScope || matchingChildren.length > 0 || matchingFlows.length > 0) {
-      acc.push({
-        ...scope,
-        children: matchingChildren,
-        flows: matchingFlows,
-      });
+      acc.push({ ...scope, children: matchingChildren, flows: matchingFlows });
     }
-
     return acc;
   }, []);
 }
@@ -108,31 +75,28 @@ function findSelectedName(
   const stack = [...flows];
   const scopeStack = [...scopes];
   while (scopeStack.length > 0) {
-    const current = scopeStack.pop()!;
+    const current = scopeStack.pop();
+    if (!current) {
+      break;
+    }
     stack.push(...current.flows);
     scopeStack.push(...current.children);
   }
-
   return stack.find((flow) => flow.id === selected.id)?.name ?? selected.name;
 }
 
+// ─── FlowTreeRow ──────────────────────────────────────────────────────────────
+
 function FlowTreeRow({
   flow,
-  depth,
   isSelected,
-  draggedItem,
   onSelect,
-  onDragStart,
-  onDragEnd,
 }: {
   flow: FlowSummary;
-  depth: number;
   isSelected: boolean;
-  draggedItem: HierarchyDragItem | null;
   onSelect: (flow: FlowSummary) => void;
-  onDragStart: (item: HierarchyDragItem) => void;
-  onDragEnd: () => void;
 }) {
+  const { draggedItem, startDrag, endDrag } = useAccessControlStore();
   const isDragging = draggedItem?.type === 'flow' && draggedItem.id === flow.id;
 
   return (
@@ -140,22 +104,16 @@ function FlowTreeRow({
       draggable
       onDragStart={(event) => {
         event.dataTransfer.effectAllowed = 'move';
-        onDragStart({
-          type: 'flow',
-          id: flow.id,
-          name: flow.name,
-          parentId: flow.scopeId ?? null,
-        });
+        startDrag({ type: 'flow', id: flow.id, name: flow.name, parentId: flow.scopeId ?? null });
       }}
-      onDragEnd={onDragEnd}
+      onDragEnd={endDrag}
       onClick={() => onSelect(flow)}
       className={clsx(
-        'group flex cursor-pointer items-center gap-2 rounded-md px-3 py-1.5 transition-colors',
+        'group flex cursor-pointer items-center gap-2 rounded-md px-4 py-1.5 transition-colors',
         'hover:bg-imp-muted/50',
-        isDragging && 'opacity-50',
+        isDragging && 'opacity-40',
         isSelected && 'bg-imp-primary/10 text-imp-primary ring-1 ring-imp-primary/30',
       )}
-      style={{ paddingLeft: `${depth > 0 ? 16 : 0}px` }}
     >
       <Workflow
         className={clsx(
@@ -169,81 +127,101 @@ function FlowTreeRow({
   );
 }
 
+// ─── ScopeTreeRow ─────────────────────────────────────────────────────────────
+
 function ScopeTreeRow({
   scope,
   allScopes,
   depth,
-  expandedNodes,
-  selected,
-  draggedItem,
-  dropTarget,
-  onToggle,
   onSelectScope,
   onSelectFlow,
-  onDragStart,
-  onDragEnd,
-  onDragOverTarget,
-  onDragLeaveTarget,
-  onDropTarget,
+  onTriggerMove,
 }: {
   scope: ScopeTreeNode;
   allScopes: ScopeTreeNode[];
   depth: number;
-  expandedNodes: Set<string>;
-  selected: SelectedItem | null;
-  draggedItem: HierarchyDragItem | null;
-  dropTarget: string | null;
-  onToggle: (scopeId: string) => void;
   onSelectScope: (scope: ScopeTreeNode) => void;
   onSelectFlow: (flow: FlowSummary) => void;
-  onDragStart: (item: HierarchyDragItem) => void;
-  onDragEnd: () => void;
-  onDragOverTarget: (targetId: string, event: React.DragEvent<HTMLDivElement>) => void;
-  onDragLeaveTarget: (targetId: string) => void;
-  onDropTarget: (targetId: string, event: React.DragEvent<HTMLDivElement>) => void;
+  onTriggerMove: (item: HierarchyDragItem, targetId: string | null) => void;
 }) {
+  const {
+    draggedItem,
+    dropTarget,
+    selected,
+    expandedNodes,
+    startDrag,
+    endDrag,
+    setDropTarget,
+    toggleNode,
+  } = useAccessControlStore();
+
   const isExpanded = expandedNodes.has(scope.id);
   const isSelected = selected?.kind === 'team' && selected.id === scope.id;
   const isDragging = draggedItem?.type === 'scope' && draggedItem.id === scope.id;
   const hasChildren = scope.children.length > 0 || scope.flows.length > 0;
-  const canDrop =
-    draggedItem !== null &&
-    !(draggedItem.type === 'scope' && draggedItem.id === scope.id) &&
-    !(draggedItem.type === 'scope' && isDescendantScope(allScopes, draggedItem.id, scope.id));
+
+  const canDrop = draggedItem !== null && canDropOnTarget(draggedItem, scope.id, allScopes);
   const isDropTarget = dropTarget === scope.id && canDrop;
 
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!draggedItem || !canDrop) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    if (dropTarget !== scope.id) {
+      setDropTarget(scope.id);
+    }
+  };
+
+  // Use relatedTarget to avoid clearing the drop highlight when entering a child node.
+  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+    const related = event.relatedTarget as Node | null;
+    if (related && event.currentTarget.contains(related)) {
+      return;
+    }
+    if (dropTarget === scope.id) {
+      setDropTarget(null);
+    }
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!draggedItem || !canDrop) {
+      return;
+    }
+    onTriggerMove(draggedItem, scope.id);
+  };
+
   return (
-    <div>
+    <div onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
       <div
         draggable
         onDragStart={(event) => {
           event.dataTransfer.effectAllowed = 'move';
-          onDragStart({
+          startDrag({
             type: 'scope',
             id: scope.id,
             name: scope.name,
             parentId: scope.parentId ?? null,
           });
         }}
-        onDragEnd={onDragEnd}
-        onDragOver={(event) => onDragOverTarget(scope.id, event)}
-        onDragLeave={() => onDragLeaveTarget(scope.id)}
-        onDrop={(event) => onDropTarget(scope.id, event)}
+        onDragEnd={endDrag}
         onClick={() => onSelectScope(scope)}
         className={clsx(
           'group flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 transition-colors',
-          isDragging && 'opacity-50',
-          isDropTarget && 'ring-2 ring-imp-primary/30',
+          isDragging && 'opacity-40',
+          isDropTarget && 'ring-2 ring-imp-primary/40 bg-imp-primary/5',
           isSelected ? 'text-imp-primary ring-1 ring-imp-primary/30' : 'hover:bg-accent',
         )}
-        style={{ paddingLeft: `${depth * 18}px` }}
       >
         {hasChildren ? (
           <button
             type="button"
             onClick={(event) => {
               event.stopPropagation();
-              onToggle(scope.id);
+              toggleNode(scope.id);
             }}
             className="rounded p-0.5 text-imp-muted-foreground hover:bg-imp-muted"
           >
@@ -277,20 +255,13 @@ function ScopeTreeRow({
       </div>
 
       {isExpanded ? (
-        <div
-          className={clsx('space-y-1 border-l border-imp-border')}
-          style={{ marginLeft: `${depth * 18 + 10}px` }}
-        >
+        <div className="space-y-1 border-l border-imp-border" style={{ marginLeft: '22px' }}>
           {scope.flows.map((flow) => (
             <FlowTreeRow
               key={flow.id}
               flow={flow}
-              depth={depth + 1}
               isSelected={selected?.kind === 'flow' && selected.id === flow.id}
-              draggedItem={draggedItem}
               onSelect={onSelectFlow}
-              onDragStart={onDragStart}
-              onDragEnd={onDragEnd}
             />
           ))}
           {scope.children.map((child) => (
@@ -299,18 +270,9 @@ function ScopeTreeRow({
               scope={child}
               allScopes={allScopes}
               depth={depth + 1}
-              expandedNodes={expandedNodes}
-              selected={selected}
-              draggedItem={draggedItem}
-              dropTarget={dropTarget}
-              onToggle={onToggle}
               onSelectScope={onSelectScope}
               onSelectFlow={onSelectFlow}
-              onDragStart={onDragStart}
-              onDragEnd={onDragEnd}
-              onDragOverTarget={onDragOverTarget}
-              onDragLeaveTarget={onDragLeaveTarget}
-              onDropTarget={onDropTarget}
+              onTriggerMove={onTriggerMove}
             />
           ))}
         </div>
@@ -341,38 +303,56 @@ export function AccessControlPage() {
   const createTeam = useCreateTeam();
   const previewMove = usePreviewMove();
 
-  const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState<SelectedItem | null>(null);
-  const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
-  const [movePreview, setMovePreview] = useState<MovePreviewResponse | null>(null);
-  const [moveError, setMoveError] = useState<string | null>(null);
-  const [showNewTeam, setShowNewTeam] = useState(false);
-  const [newTeamName, setNewTeamName] = useState('');
-  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
-  const [draggedItem, setDraggedItem] = useState<HierarchyDragItem | null>(null);
-  const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const {
+    selected,
+    setSelected,
+    search,
+    setSearch,
+    expandedNodes,
+    expandAll,
+    showNewTeam,
+    setShowNewTeam,
+    newTeamName,
+    setNewTeamName,
+    draggedItem,
+    dropTarget,
+    setDropTarget,
+    endDrag,
+    pendingMove,
+    setPendingMove,
+    movePreview,
+    setMovePreview,
+    moveError,
+    setMoveError,
+    clearMove,
+  } = useAccessControlStore();
 
   const scopes = scopeTreeQuery.data?.scopes ?? EMPTY_SCOPES;
   const unscopedFlows = scopeTreeQuery.data?.unscopedFlows ?? EMPTY_FLOWS;
 
+  // Auto-expand everything when tree first loads
   useEffect(() => {
-    setExpandedNodes(new Set(collectScopeIds(scopes)));
-  }, [scopes]);
+    if (scopes.length > 0 && expandedNodes.size === 0) {
+      expandAll(collectScopeIds(scopes));
+    }
+  }, [scopes]); // expanding on load — intentionally tracks scopes only
+
+  useEffect(() => {
+    scopeTreeQuery.refetch();
+  }, []); // fires once on mount
 
   const normalizedSearch = search.trim().toLowerCase();
-  const filteredScopes = useMemo(() => {
-    if (!normalizedSearch) {
-      return scopes;
-    }
-    return filterScopes(scopes, normalizedSearch);
-  }, [scopes, normalizedSearch]);
-
-  const filteredUnscopedFlows = useMemo(() => {
-    if (!normalizedSearch) {
-      return unscopedFlows;
-    }
-    return unscopedFlows.filter((flow) => flow.name.toLowerCase().includes(normalizedSearch));
-  }, [unscopedFlows, normalizedSearch]);
+  const filteredScopes = useMemo(
+    () => (normalizedSearch ? filterScopes(scopes, normalizedSearch) : scopes),
+    [scopes, normalizedSearch],
+  );
+  const filteredUnscopedFlows = useMemo(
+    () =>
+      normalizedSearch
+        ? unscopedFlows.filter((f) => f.name.toLowerCase().includes(normalizedSearch))
+        : unscopedFlows,
+    [unscopedFlows, normalizedSearch],
+  );
 
   const selectedName = useMemo(
     () => findSelectedName(scopes, unscopedFlows, selected),
@@ -381,32 +361,18 @@ export function AccessControlPage() {
 
   const hasTreeItems = filteredScopes.length > 0 || filteredUnscopedFlows.length > 0;
 
-  const handleMovePreview = useCallback(
+  // Called when a valid drop lands on a target scope (or null = root)
+  const handleTriggerMove = useCallback(
     async (item: HierarchyDragItem, targetScopeId: string | null) => {
-      if (item.type === 'scope' && item.parentId === targetScopeId) {
-        setDraggedItem(null);
-        setDropTarget(null);
+      endDrag();
+
+      if (!canDropOnTarget(item, targetScopeId, scopes)) {
         return;
       }
 
-      if (item.type === 'flow' && item.parentId === targetScopeId) {
-        setDraggedItem(null);
-        setDropTarget(null);
-        return;
-      }
-
-      const move: PendingMove = {
-        type: item.type,
-        id: item.id,
-        name: item.name,
-        targetScopeId,
-      };
-
-      setPendingMove(move);
+      setPendingMove({ type: item.type, id: item.id, name: item.name, targetScopeId });
       setMovePreview(null);
       setMoveError(null);
-      setDraggedItem(null);
-      setDropTarget(null);
 
       try {
         const preview = await previewMove.mutateAsync({
@@ -419,12 +385,8 @@ export function AccessControlPage() {
         setMoveError(err instanceof Error ? err.message : 'Failed to preview move');
       }
     },
-    [previewMove],
+    [scopes, endDrag, previewMove, setPendingMove, setMovePreview, setMoveError],
   );
-
-  useEffect(() => {
-    scopeTreeQuery.refetch();
-  }, []);
 
   if (!isAuthenticated) {
     return (
@@ -440,73 +402,14 @@ export function AccessControlPage() {
 
   const isLoading = scopeTreeQuery.isLoading;
 
-  const newTeamAction = isAdmin ? (
-    showNewTeam ? (
-      <div className="flex items-center gap-1.5">
-        <input
-          value={newTeamName}
-          onChange={(event) => setNewTeamName(event.target.value)}
-          placeholder="Team name"
-          className="px-2.5 py-1.5 text-xs border rounded-lg border-imp-border bg-imp-background"
-          autoFocus
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && newTeamName.trim()) {
-              createTeam.mutate({ name: newTeamName.trim() });
-              setNewTeamName('');
-              setShowNewTeam(false);
-            }
-            if (event.key === 'Escape') {
-              setShowNewTeam(false);
-              setNewTeamName('');
-            }
-          }}
-        />
-        <button
-          type="button"
-          onClick={() => {
-            if (!newTeamName.trim()) {
-              return;
-            }
-            createTeam.mutate({ name: newTeamName.trim() });
-            setNewTeamName('');
-            setShowNewTeam(false);
-          }}
-          disabled={!newTeamName.trim()}
-          className="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-imp-primary text-imp-primary-foreground hover:bg-imp-primary/90 disabled:opacity-50"
-        >
-          Create
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setShowNewTeam(false);
-            setNewTeamName('');
-          }}
-          className="px-2.5 py-1.5 text-xs rounded-lg text-imp-muted-foreground hover:text-imp-foreground"
-        >
-          Cancel
-        </button>
-      </div>
-    ) : (
-      <button
-        type="button"
-        onClick={() => setShowNewTeam(true)}
-        className="flex items-center gap-1 rounded-lg bg-imp-primary px-3 py-1.5 text-xs font-medium text-imp-primary-foreground hover:bg-imp-primary/90"
-      >
-        <Plus className="h-3.5 w-3.5" /> New Team
-      </button>
-    )
-  ) : null;
-
   return (
     <PageLayout
       title="Access Control"
       subtitle="Manage team hierarchy and flow-level access grants."
       icon={Shield}
-      actions={newTeamAction}
     >
-      {/* Search */}
-      <div className="flex items-center gap-3">
+      {/* Search + New Team */}
+      <div className="flex items-center gap-2">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute w-3.5 h-3.5 pointer-events-none left-3 top-1/2 -translate-y-1/2 text-imp-muted-foreground" />
           <input
@@ -516,27 +419,89 @@ export function AccessControlPage() {
             className="w-full py-2 pr-3 text-sm border rounded-lg outline-none pl-9 border-imp-border bg-imp-background placeholder:text-imp-muted-foreground focus:border-imp-primary/50"
           />
         </div>
+        {isAdmin ? (
+          showNewTeam ? (
+            <div className="flex items-center gap-1.5">
+              <input
+                value={newTeamName}
+                onChange={(event) => setNewTeamName(event.target.value)}
+                placeholder="Team name"
+                className="px-2.5 py-2 text-sm border rounded-lg border-imp-border bg-imp-background"
+                autoFocus
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && newTeamName.trim()) {
+                    createTeam.mutate({ name: newTeamName.trim() });
+                    setNewTeamName('');
+                    setShowNewTeam(false);
+                  }
+                  if (event.key === 'Escape') {
+                    setShowNewTeam(false);
+                    setNewTeamName('');
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (!newTeamName.trim()) {
+                    return;
+                  }
+                  createTeam.mutate({ name: newTeamName.trim() });
+                  setNewTeamName('');
+                  setShowNewTeam(false);
+                }}
+                disabled={!newTeamName.trim()}
+                className="px-3 py-2 text-sm font-medium rounded-lg bg-imp-primary text-imp-primary-foreground hover:bg-imp-primary/90 disabled:opacity-50"
+              >
+                Create
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowNewTeam(false);
+                  setNewTeamName('');
+                }}
+                className="px-3 py-2 text-sm rounded-lg text-imp-muted-foreground hover:text-imp-foreground"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowNewTeam(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-imp-border px-3 py-2 text-sm font-medium text-imp-muted-foreground hover:border-imp-primary/50 hover:text-imp-foreground"
+            >
+              <Plus className="w-4 h-4" /> New Team
+            </button>
+          )
+        ) : null}
       </div>
 
       {/* Two-pane layout */}
       <div
-        className="grid h-[calc(100vh-220px)] px-2 min-h-[520px] border rounded-lg overflow-hidden"
+        className="grid h-[calc(100vh-220px)] min-h-130 border rounded-lg overflow-hidden"
         style={{ gridTemplateColumns: '320px 1fr' }}
       >
         {/* Left: hierarchy tree */}
         <div className="flex flex-col overflow-hidden bg-imp-muted/20">
           <div
-            className="flex-1 p-2 overflow-y-auto"
+            className="flex-1 px-1 py-2 overflow-y-auto"
             onDragOver={(event) => {
               if (!draggedItem) {
                 return;
               }
-              event.preventDefault();
-              if (dropTarget !== 'root') {
+              // Root-level drop zone: only activate when not over a child scope row
+              if (dropTarget === null) {
+                event.preventDefault();
                 setDropTarget('root');
               }
             }}
-            onDragLeave={() => {
+            onDragLeave={(event) => {
+              const related = event.relatedTarget as Node | null;
+              if (related && event.currentTarget.contains(related)) {
+                return;
+              }
               if (dropTarget === 'root') {
                 setDropTarget(null);
               }
@@ -546,15 +511,15 @@ export function AccessControlPage() {
               if (!draggedItem) {
                 return;
               }
-              handleMovePreview(draggedItem, null);
+              handleTriggerMove(draggedItem, null);
             }}
           >
             <div
               className={clsx(
                 'min-h-full rounded-lg py-1 transition-colors',
                 dropTarget === 'root'
-                  ? 'border-imp-primary bg-imp-primary/5'
-                  : 'border-transparent',
+                  ? 'bg-imp-primary/5 ring-1 ring-imp-primary/20 ring-inset'
+                  : '',
               )}
             >
               {isLoading ? (
@@ -579,17 +544,10 @@ export function AccessControlPage() {
                     <FlowTreeRow
                       key={flow.id}
                       flow={flow}
-                      depth={0}
                       isSelected={selected?.kind === 'flow' && selected.id === flow.id}
-                      draggedItem={draggedItem}
                       onSelect={(nextFlow) =>
                         setSelected({ kind: 'flow', id: nextFlow.id, name: nextFlow.name })
                       }
-                      onDragStart={setDraggedItem}
-                      onDragEnd={() => {
-                        setDraggedItem(null);
-                        setDropTarget(null);
-                      }}
                     />
                   ))}
 
@@ -599,62 +557,13 @@ export function AccessControlPage() {
                       scope={scope}
                       allScopes={scopes}
                       depth={0}
-                      expandedNodes={expandedNodes}
-                      selected={selected}
-                      draggedItem={draggedItem}
-                      dropTarget={dropTarget}
-                      onToggle={(scopeId) => {
-                        setExpandedNodes((previous) => {
-                          const next = new Set(previous);
-                          if (next.has(scopeId)) {
-                            next.delete(scopeId);
-                          } else {
-                            next.add(scopeId);
-                          }
-                          return next;
-                        });
-                      }}
                       onSelectScope={(nextScope) =>
                         setSelected({ kind: 'team', id: nextScope.id, name: nextScope.name })
                       }
                       onSelectFlow={(nextFlow) =>
                         setSelected({ kind: 'flow', id: nextFlow.id, name: nextFlow.name })
                       }
-                      onDragStart={setDraggedItem}
-                      onDragEnd={() => {
-                        setDraggedItem(null);
-                        setDropTarget(null);
-                      }}
-                      onDragOverTarget={(targetId, event) => {
-                        if (!draggedItem) {
-                          return;
-                        }
-                        const canDrop =
-                          !(draggedItem.type === 'scope' && draggedItem.id === targetId) &&
-                          !(
-                            draggedItem.type === 'scope' &&
-                            isDescendantScope(scopes, draggedItem.id, targetId)
-                          );
-                        if (!canDrop) {
-                          return;
-                        }
-                        event.preventDefault();
-                        if (dropTarget !== targetId) {
-                          setDropTarget(targetId);
-                        }
-                      }}
-                      onDragLeaveTarget={(targetId) => {
-                        if (dropTarget === targetId) {
-                          setDropTarget(null);
-                        }
-                      }}
-                      onDropTarget={(targetId, event) => {
-                        event.preventDefault();
-                        if (!draggedItem) {
-                          return;
-                        }
-                        handleMovePreview(draggedItem, targetId);
-                      }}
+                      onTriggerMove={handleTriggerMove}
                     />
                   ))}
                 </div>
@@ -713,7 +622,7 @@ export function AccessControlPage() {
           pendingMove={pendingMove}
           preview={movePreview}
           error={moveError}
-          onClose={() => setPendingMove(null)}
+          onClose={clearMove}
         />
       ) : null}
     </PageLayout>

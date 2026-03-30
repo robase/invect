@@ -447,22 +447,63 @@ async function listAllEffectiveFlowAccessRecords(
   );
   const scopeNames = new Map(scopeRows.map((row) => [row.id, row.name]));
 
-  return [
-    ...directRecords,
-    ...inheritedRows.map<EffectiveAccessRecord>((record) => ({
-      id: record.id,
-      flowId,
-      userId: record.userId,
-      teamId: record.teamId,
-      permission: record.permission,
-      grantedBy: record.grantedBy,
-      grantedAt: record.grantedAt,
-      expiresAt: null,
-      source: 'inherited',
-      scopeId: record.scopeId,
-      scopeName: scopeNames.get(record.scopeId) ?? null,
-    })),
+  // For team-based inherited grants, expand into per-member user records so the
+  // UI shows individual users rather than team entities.
+  const teamIds = [
+    ...new Set(inheritedRows.map((r) => r.teamId).filter((id): id is string => !!id)),
   ];
+  const teamMembersByTeamId = new Map<string, string[]>();
+  if (teamIds.length > 0) {
+    const memberRows = await db.query<{ team_id: string; user_id: string }>(
+      `SELECT team_id, user_id FROM rbac_team_members WHERE team_id IN (${createInClause(teamIds.length)})`,
+      teamIds,
+    );
+    for (const row of memberRows) {
+      const members = teamMembersByTeamId.get(row.team_id) ?? [];
+      members.push(row.user_id);
+      teamMembersByTeamId.set(row.team_id, members);
+    }
+  }
+
+  const expandedInherited: EffectiveAccessRecord[] = [];
+  for (const record of inheritedRows) {
+    const scopeName = scopeNames.get(record.scopeId) ?? null;
+    if (record.teamId) {
+      // Expand team grant → one record per team member
+      const members = teamMembersByTeamId.get(record.teamId) ?? [];
+      for (const userId of members) {
+        expandedInherited.push({
+          id: `${record.id}:${userId}`,
+          flowId,
+          userId,
+          teamId: null,
+          permission: record.permission,
+          grantedBy: record.grantedBy,
+          grantedAt: record.grantedAt,
+          expiresAt: null,
+          source: 'inherited',
+          scopeId: record.scopeId,
+          scopeName,
+        });
+      }
+    } else {
+      expandedInherited.push({
+        id: record.id,
+        flowId,
+        userId: record.userId,
+        teamId: null,
+        permission: record.permission,
+        grantedBy: record.grantedBy,
+        grantedAt: record.grantedAt,
+        expiresAt: null,
+        source: 'inherited',
+        scopeId: record.scopeId,
+        scopeName,
+      });
+    }
+  }
+
+  return [...directRecords, ...expandedInherited];
 }
 
 function buildAccessKey(record: { userId?: string | null; teamId?: string | null }): string {

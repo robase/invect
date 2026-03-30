@@ -97,9 +97,7 @@ export function FlowEditor({ flowId, flowVersion, basePath = '' }: FlowEditorPro
   const [rightPanelElement, setRightPanelElement] = useState<React.ReactNode>(null);
 
   if (loading) {
-    return (
-      <InvectLoader className="w-full h-full" iconClassName="h-16" label="Loading flow..." />
-    );
+    return <InvectLoader className="w-full h-full" iconClassName="h-16" label="Loading flow..." />;
   }
 
   return (
@@ -773,9 +771,7 @@ export function FlowWorkbenchView({
   }, [nodeDefinitions]);
 
   if (loading) {
-    return (
-      <InvectLoader className="w-full h-full" iconClassName="h-16" label="Loading flow..." />
-    );
+    return <InvectLoader className="w-full h-full" iconClassName="h-16" label="Loading flow..." />;
   }
 
   if (queryError) {

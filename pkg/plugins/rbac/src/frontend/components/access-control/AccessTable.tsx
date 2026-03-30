@@ -204,7 +204,13 @@ export function AccessTable({
                 </tr>
               )}
               {group.rows.map((row, rowIndex) => (
-                <tr key={row.id} className={cn('hover:bg-imp-muted/20', rowIndex > 0 && 'border-t border-imp-border')}>
+                <tr
+                  key={row.id}
+                  className={cn(
+                    'hover:bg-imp-muted/20',
+                    rowIndex > 0 && 'border-t border-imp-border',
+                  )}
+                >
                   <td className="px-3 py-2.5">
                     <div className="flex items-center gap-3">
                       <div
@@ -318,11 +324,11 @@ export function AccessTable({
             <DialogTitle className="text-sm font-semibold">{removalDialogCopy?.title}</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-imp-muted-foreground">{removalDialogCopy?.body}</p>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="justify-between w-full sm:gap-2">
             <button
               type="button"
               onClick={() => setPendingRemovalRow(null)}
-              className="rounded-md border border-imp-border px-3 py-1.5 text-xs font-medium text-imp-muted-foreground hover:text-imp-foreground"
+              className="rounded-md mr-auto border border-imp-border px-3 py-1.5 text-xs font-medium text-imp-muted-foreground hover:text-imp-foreground"
             >
               Cancel
             </button>

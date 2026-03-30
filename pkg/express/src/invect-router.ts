@@ -696,9 +696,7 @@ export function createInvectRouter(config: InvectConfig): Router {
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Stream failed';
         if (res.headersSent) {
-          res.write(
-            `event: error\ndata: ${JSON.stringify({ type: 'error', message })}\n\n`,
-          );
+          res.write(`event: error\ndata: ${JSON.stringify({ type: 'error', message })}\n\n`);
         } else {
           return res.status(500).json({ error: 'Internal Server Error', message });
         }

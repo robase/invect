@@ -192,7 +192,7 @@ export function TeamsPage() {
           value={teamSearch}
           onChange={(e) => setTeamSearch(e.target.value)}
           placeholder="Search teams…"
-          className="w-full rounded-lg border border-imp-border bg-imp-card py-1.5 pl-8 pr-3 text-sm outline-none ring-0 placeholder:text-imp-muted-foreground focus:border-imp-primary/50"
+          className="w-full rounded-lg border border-imp-border bg-transparent py-2 pl-9 pr-3 text-sm outline-none placeholder:text-imp-muted-foreground focus:border-imp-primary/50"
         />
       </div>
 

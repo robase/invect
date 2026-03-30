@@ -101,10 +101,7 @@ export class ExecutionEventBus {
    * Subscribe to events for a specific flow run.
    * Returns an unsubscribe function.
    */
-  subscribe(
-    flowRunId: string,
-    callback: (event: ExecutionStreamEvent) => void,
-  ): () => void {
+  subscribe(flowRunId: string, callback: (event: ExecutionStreamEvent) => void): () => void {
     const channel = `run:${flowRunId}`;
     this.emitter.on(channel, callback);
     return () => {
@@ -115,10 +112,7 @@ export class ExecutionEventBus {
   /**
    * Subscribe to all run-level events for a specific flow (e.g. runs list updates).
    */
-  subscribeFlow(
-    flowId: string,
-    callback: (event: ExecutionStreamEvent) => void,
-  ): () => void {
+  subscribeFlow(flowId: string, callback: (event: ExecutionStreamEvent) => void): () => void {
     const channel = `flow:${flowId}`;
     this.emitter.on(channel, callback);
     return () => {

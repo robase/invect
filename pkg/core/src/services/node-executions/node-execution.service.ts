@@ -171,7 +171,11 @@ export class NodeExecutionService {
     this.logger.debug('Updating node execution status', JSON.stringify({ traceId, status, data }));
 
     try {
-      const updated = await this.databaseService.nodeExecutions.updateTraceStatus(traceId, status, data);
+      const updated = await this.databaseService.nodeExecutions.updateTraceStatus(
+        traceId,
+        status,
+        data,
+      );
       this.eventBus?.emitNodeExecutionUpdate(updated);
       return updated;
     } catch (error) {

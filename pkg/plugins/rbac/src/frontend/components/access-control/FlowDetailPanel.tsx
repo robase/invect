@@ -27,7 +27,7 @@ export function FlowDetailPanel({
   const grantFlowAccess = useGrantFlowAccess(flowId);
   const revokeFlowAccess = useRevokeFlowAccess(flowId);
   const [showGrantDialog, setShowGrantDialog] = useState(false);
-  const [principalSelection, setPrincipalSelection] = useState<PrincipalSelection | null>(null);
+  const [principalSelections, setPrincipalSelections] = useState<PrincipalSelection[]>([]);
   const [permission, setPermission] = useState<FlowAccessPermission>('viewer');
 
   const effectiveRecords = effectiveFlowAccessQuery.data?.records ?? [];
@@ -41,14 +41,17 @@ export function FlowDetailPanel({
       .filter((record) => record.source === 'direct' && record.teamId)
       .map((record) => record.teamId),
   );
-  const owningTeam = teams.find((team) => team.id === effectiveFlowAccessQuery.data?.scopeId) ?? null;
+  const owningTeam =
+    teams.find((team) => team.id === effectiveFlowAccessQuery.data?.scopeId) ?? null;
   const scopePath = useMemo(() => {
     const path: Team[] = [];
     let current = owningTeam;
 
     while (current) {
       path.unshift(current);
-      current = current.parentId ? teams.find((team) => team.id === current?.parentId) ?? null : null;
+      current = current.parentId
+        ? (teams.find((team) => team.id === current?.parentId) ?? null)
+        : null;
     }
 
     return path;
@@ -63,11 +66,14 @@ export function FlowDetailPanel({
       return {
         id: `${record.source}:${record.id}`,
         label: isUser
-          ? userMap.get(userId ?? '')?.name || userMap.get(userId ?? '')?.email || userId || 'Unknown'
+          ? userMap.get(userId ?? '')?.name ||
+            userMap.get(userId ?? '')?.email ||
+            userId ||
+            'Unknown'
           : teams.find((team) => team.id === teamId)?.name || teamId || 'Unknown',
         kind: isUser ? 'user' : 'team',
         permission: record.permission,
-        source: record.source === 'direct' ? 'Direct grant' : `Via ${record.scopeName || 'team'}`,
+        source: record.source === 'direct' ? 'Direct grant' : `via ${record.scopeName || 'team'}`,
         group: record.source === 'direct' ? 'Direct' : 'Inherited',
         canRemove: record.source === 'direct' && isAdmin,
         onPermissionChange:
@@ -127,21 +133,12 @@ export function FlowDetailPanel({
             </div>
           </div>
           <div className="flex items-center gap-1.5">
-            {isAdmin ? (
-              <button
-                type="button"
-                onClick={() => setShowGrantDialog(true)}
-                className="flex items-center gap-1 rounded-md bg-imp-primary px-2 py-1 text-[11px] font-medium text-imp-primary-foreground hover:bg-imp-primary/90"
-              >
-                <Plus className="w-3 h-3" /> Grant Access
-              </button>
-            ) : null}
             <button
               type="button"
               onClick={openFlow}
-              className="flex items-center gap-1 rounded-md border border-imp-border px-2 py-1 text-[11px] text-imp-muted-foreground transition-colors hover:border-imp-primary/50 hover:text-imp-foreground"
+              className="flex items-center gap-1.5 rounded-md border border-imp-border px-3 py-1.5 text-xs font-medium text-imp-muted-foreground transition-colors hover:border-imp-primary/50 hover:text-imp-foreground"
             >
-              <ExternalLink className="w-3 h-3" /> Open in Editor
+              <ExternalLink className="w-4 h-4" /> Open in Editor
             </button>
           </div>
         </div>
@@ -153,7 +150,18 @@ export function FlowDetailPanel({
       <div className="flex-1 px-5 py-4 overflow-x-hidden overflow-y-auto">
         <div className="space-y-6">
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold text-imp-foreground">Direct Access</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-imp-foreground">Direct Access</h3>
+              {isAdmin ? (
+                <button
+                  type="button"
+                  onClick={() => setShowGrantDialog(true)}
+                  className="flex items-center gap-1.5 rounded-md border border-imp-border px-3 py-1.5 text-xs font-medium text-imp-muted-foreground transition-colors hover:border-imp-primary/50 hover:text-imp-foreground"
+                >
+                  <Plus className="w-4 h-4" /> Grant Access
+                </button>
+              ) : null}
+            </div>
             <div className="overflow-hidden border rounded-xl border-imp-border bg-imp-background/40">
               <AccessTable
                 rows={directRows}
@@ -181,36 +189,38 @@ export function FlowDetailPanel({
         onClose={() => setShowGrantDialog(false)}
         title="Grant Flow Access"
       >
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-3">
           <PrincipalCombobox
             users={users}
             teams={teams}
             excludeUserIds={existingDirectUserIds}
             excludeTeamIds={existingDirectTeamIds}
-            selection={principalSelection}
-            onSelect={setPrincipalSelection}
+            selections={principalSelections}
+            onSelect={setPrincipalSelections}
           />
-          <RoleSelector value={permission} onChange={setPermission} />
-          <button
-            type="button"
-            onClick={() => {
-              if (!principalSelection) {
-                return;
-              }
-              grantFlowAccess.mutate({
-                ...(principalSelection.type === 'user'
-                  ? { userId: principalSelection.id }
-                  : { teamId: principalSelection.id }),
-                permission,
-              });
-              setPrincipalSelection(null);
-              setShowGrantDialog(false);
-            }}
-            disabled={!principalSelection || grantFlowAccess.isPending}
-            className="rounded bg-imp-primary px-2.5 py-1 text-xs font-medium text-imp-primary-foreground hover:bg-imp-primary/90 disabled:opacity-50"
-          >
-            Grant
-          </button>
+          <div className="flex items-center gap-2">
+            <RoleSelector value={permission} onChange={setPermission} />
+            <button
+              type="button"
+              onClick={() => {
+                if (principalSelections.length === 0) {
+                  return;
+                }
+                for (const sel of principalSelections) {
+                  grantFlowAccess.mutate({
+                    ...(sel.type === 'user' ? { userId: sel.id } : { teamId: sel.id }),
+                    permission,
+                  });
+                }
+                setPrincipalSelections([]);
+                setShowGrantDialog(false);
+              }}
+              disabled={principalSelections.length === 0 || grantFlowAccess.isPending}
+              className="ml-auto rounded-md bg-imp-primary px-4 py-2 text-sm font-semibold text-imp-primary-foreground hover:bg-imp-primary/90 disabled:opacity-50"
+            >
+              Grant
+            </button>
+          </div>
         </div>
       </FormDialog>
     </div>

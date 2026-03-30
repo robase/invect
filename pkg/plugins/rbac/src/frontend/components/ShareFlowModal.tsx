@@ -99,10 +99,18 @@ export function ShareFlowModal({ flowId, onClose }: ShareFlowModalProps) {
     }
   };
 
-  const handleChangeRole = async (accessId: string, record: typeof accessRecords[0], newRole: FlowAccessPermission) => {
+  const handleChangeRole = async (
+    accessId: string,
+    record: (typeof accessRecords)[0],
+    newRole: FlowAccessPermission,
+  ) => {
     try {
       await grantAccess.mutateAsync({
-        ...(record.userId ? { userId: record.userId } : record.teamId ? { teamId: record.teamId } : {}),
+        ...(record.userId
+          ? { userId: record.userId }
+          : record.teamId
+            ? { teamId: record.teamId }
+            : {}),
         permission: newRole,
       });
       setOpenRoleDropdown(null);
@@ -185,7 +193,9 @@ export function ShareFlowModal({ flowId, onClose }: ShareFlowModalProps) {
                         <>
                           <button
                             type="button"
-                            onClick={() => setOpenRoleDropdown(isRoleDropdownOpen ? null : record.id)}
+                            onClick={() =>
+                              setOpenRoleDropdown(isRoleDropdownOpen ? null : record.id)
+                            }
                             className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize transition-colors hover:bg-imp-muted/50 ${getPermissionColor(record.permission)}`}
                           >
                             {record.permission}
@@ -193,7 +203,10 @@ export function ShareFlowModal({ flowId, onClose }: ShareFlowModalProps) {
                           </button>
                           {isRoleDropdownOpen && (
                             <>
-                              <div className="fixed inset-0 z-10" onClick={() => setOpenRoleDropdown(null)} />
+                              <div
+                                className="fixed inset-0 z-10"
+                                onClick={() => setOpenRoleDropdown(null)}
+                              />
                               <div className="absolute right-0 top-full z-20 mt-1 w-36 rounded-lg border border-imp-border bg-imp-background py-1 shadow-lg">
                                 {PERMISSION_OPTIONS.map((opt) => (
                                   <button

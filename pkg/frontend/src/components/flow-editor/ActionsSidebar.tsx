@@ -1,6 +1,6 @@
 import React, { memo, useMemo, useState, useEffect } from 'react';
 import { Button } from '../ui/button';
-import { Input } from '../ui/input';
+
 import { ScrollArea } from '../ui/scroll-area';
 import { ProviderIcon } from '../shared/ProviderIcon';
 import type { ToolDefinition, AddedToolInstance, ToolCategory } from '../nodes/ToolSelectorModal';
@@ -221,12 +221,13 @@ export function ActionsSidebar({
       {/* Search */}
       <div className="px-4 pt-3 pb-2 space-y-2 border-b border-border">
         <div className="relative">
-          <Search className="absolute w-4 h-4 -translate-y-1/2 left-3 top-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search actions..."
+          <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 pointer-events-none text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search actions…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-8 text-xs pl-9"
+            className="h-8 w-full rounded-lg border border-border bg-transparent pl-9 pr-3 text-xs outline-none placeholder:text-muted-foreground focus:border-primary/50"
           />
           {searchQuery && (
             <button

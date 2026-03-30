@@ -4,7 +4,7 @@ import { Link } from 'react-router';
 import { Plus, Shield, Clock, AlertCircle, Search, Loader2, ChevronRight } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
-import { Input } from '../components/ui/input';
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -132,12 +132,13 @@ export const Credentials: React.FC<CredentialsProps> = ({ basePath: _basePath = 
       {credentials.length > 0 && (
         <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center">
           <div className="relative flex-1 max-w-sm">
-            <Search className="absolute w-4 h-4 text-muted-foreground left-3 top-1/2 -translate-y-1/2" />
-            <Input
-              placeholder="Search credentials..."
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 pointer-events-none text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search credentials…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+              className="w-full rounded-lg border border-border bg-transparent py-2 pl-9 pr-3 text-sm outline-none placeholder:text-muted-foreground focus:border-primary/50"
             />
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">

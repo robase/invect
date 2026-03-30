@@ -28,9 +28,7 @@ export function RecentActivityTable({
   const flowMap = new Map(flows.map((f) => [f.id, f]));
 
   if (isLoading) {
-    return (
-      <InvectLoader className="py-8" iconClassName="h-10" label="Loading activity..." />
-    );
+    return <InvectLoader className="py-8" iconClassName="h-10" label="Loading activity..." />;
   }
 
   if (runs.length === 0) {

@@ -9,7 +9,9 @@ import {
   BarChart3,
   Key,
   History,
+  Search,
 } from 'lucide-react';
+import { useState, useMemo } from 'react';
 import { PageLayout } from '../components/PageLayout';
 import { useFlows, useDashboardStats, useCreateFlow } from '../api/flows.api';
 import { Button } from '../components/ui/button';
@@ -31,6 +33,23 @@ export const Home = ({ basePath = '' }: HomeProps) => {
   const { data: flowsResponse, isLoading: flowsLoading, error } = useFlows();
   const flows = flowsResponse?.data ?? [];
   const createFlowMutation = useCreateFlow();
+  const [flowSearch, setFlowSearch] = useState('');
+  const [flowPage, setFlowPage] = useState(1);
+  const FLOWS_PAGE_SIZE = 8;
+
+  const filteredFlows = useMemo(() => {
+    if (!flowSearch.trim()) {
+      return flows;
+    }
+    const q = flowSearch.toLowerCase();
+    return flows.filter((f) => f.name.toLowerCase().includes(q));
+  }, [flows, flowSearch]);
+
+  const totalFlowPages = Math.max(1, Math.ceil(filteredFlows.length / FLOWS_PAGE_SIZE));
+  const paginatedFlows = filteredFlows.slice(
+    (flowPage - 1) * FLOWS_PAGE_SIZE,
+    flowPage * FLOWS_PAGE_SIZE,
+  );
 
   const recentRuns = statsData?.recentRuns ?? [];
 
@@ -132,26 +151,30 @@ export const Home = ({ basePath = '' }: HomeProps) => {
       {/* ── Main Grid: Flows + Recent Activity ──────────────── */}
       <div className="grid gap-6 lg:grid-cols-5">
         {/* ── Flows List (3/5) ────────────────────────────────── */}
-        <div className="lg:col-span-3 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold">
-              Flows{!flowsLoading && ` (${flows.length})`}
+        <div className="space-y-4 lg:col-span-3">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-base font-semibold shrink-0">
+              Flows
+              {!flowsLoading && ` (${filteredFlows.length}${flowSearch ? `/${flows.length}` : ''})`}
             </h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs"
-              onClick={handleCreateFlow}
-              disabled={createFlowMutation.isPending}
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              Add
-            </Button>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 pointer-events-none text-muted-foreground" />
+              <input
+                type="text"
+                value={flowSearch}
+                onChange={(e) => {
+                  setFlowSearch(e.target.value);
+                  setFlowPage(1);
+                }}
+                placeholder="Search flows…"
+                className="py-2 pr-3 text-sm bg-transparent border rounded-lg outline-none w-72 border-border pl-9 placeholder:text-muted-foreground focus:border-primary/50"
+              />
+            </div>
           </div>
 
           {flowsLoading && (
             <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               Loading flows…
             </div>
           )}
@@ -159,11 +182,11 @@ export const Home = ({ basePath = '' }: HomeProps) => {
           {!flowsLoading && flows.length === 0 && !error && (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
-                <div className="rounded-full bg-muted p-4 mb-4">
-                  <Plus className="h-8 w-8 text-muted-foreground" />
+                <div className="p-4 mb-4 rounded-full bg-muted">
+                  <Plus className="w-8 h-8 text-muted-foreground" />
                 </div>
-                <h3 className="text-sm font-medium mb-1">No flows yet</h3>
-                <p className="text-xs text-muted-foreground mb-4 max-w-xs text-center">
+                <h3 className="mb-1 text-sm font-medium">No flows yet</h3>
+                <p className="max-w-xs mb-4 text-xs text-center text-muted-foreground">
                   Create your first workflow to get started with automation.
                 </p>
                 <Button
@@ -184,21 +207,58 @@ export const Home = ({ basePath = '' }: HomeProps) => {
 
           {!flowsLoading && flows.length > 0 && (
             <div className="space-y-2">
-              {flows.map((flow) => (
-                <FlowCard key={flow.id} flow={flow} basePath={basePath} />
-              ))}
+              {filteredFlows.length === 0 ? (
+                <p className="py-6 text-sm text-center text-muted-foreground">
+                  No flows match &ldquo;{flowSearch}&rdquo;
+                </p>
+              ) : (
+                paginatedFlows.map((flow) => (
+                  <FlowCard key={flow.id} flow={flow} basePath={basePath} />
+                ))
+              )}
+            </div>
+          )}
+
+          {/* Flows Pagination */}
+          {!flowsLoading && filteredFlows.length > 0 && (
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>
+                {filteredFlows.length} flow{filteredFlows.length !== 1 ? 's' : ''}
+                {flowSearch ? ` matching “${flowSearch}”` : ''}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFlowPage((p) => Math.max(1, p - 1))}
+                  disabled={flowPage === 1}
+                  className="rounded-md border border-border px-2.5 py-1 hover:bg-muted disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                <span>
+                  {flowPage} / {totalFlowPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setFlowPage((p) => Math.min(totalFlowPages, p + 1))}
+                  disabled={flowPage === totalFlowPages}
+                  className="rounded-md border border-border px-2.5 py-1 hover:bg-muted disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           )}
         </div>
 
         {/* ── Recent Activity (2/5) ───────────────────────────── */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="space-y-4 lg:col-span-2">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold">Recent Activity</h2>
             <Button variant="ghost" size="sm" className="text-xs" asChild>
               <Link to={`${basePath}/executions`}>
                 View all
-                <ArrowRight className="ml-1 h-3 w-3" />
+                <ArrowRight className="w-3 h-3 ml-1" />
               </Link>
             </Button>
           </div>

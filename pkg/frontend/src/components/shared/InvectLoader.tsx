@@ -13,10 +13,7 @@ export interface InvectLoaderProps {
   variant?: 'theme' | 'dark' | 'light';
 }
 
-function resolveLoaderMarkup(
-  variant: 'theme' | 'dark' | 'light',
-  resolvedTheme: 'dark' | 'light',
-) {
+function resolveLoaderMarkup(variant: 'theme' | 'dark' | 'light', resolvedTheme: 'dark' | 'light') {
   if (variant === 'dark') {
     return INVECT_LOADER_DARK_SVG;
   }

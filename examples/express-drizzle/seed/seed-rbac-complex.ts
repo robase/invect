@@ -426,7 +426,9 @@ async function main() {
   for (const u of USERS) {
     insertUser.run(randomUUID(), u.name, u.email, u.role, now, now);
     const row = selectUser.get(u.email);
-    if (!row) throw new Error(`Failed to resolve user id for ${u.email}`);
+    if (!row) {
+      throw new Error(`Failed to resolve user id for ${u.email}`);
+    }
     userIds.set(u.email, row.id);
     insertAccount.run(randomUUID(), u.email, row.id, hashedPw, now, now);
     console.log(`  ✓ ${u.name} <${u.email}>`);
@@ -439,9 +441,10 @@ async function main() {
   const teamNames = TEAMS.map((t) => t.name);
   const placeholders = teamNames.map(() => '?').join(', ');
   const existingRows = db
-    .prepare<string[], { id: string; name: string }>(
-      `SELECT id, name FROM rbac_teams WHERE name IN (${placeholders})`,
-    )
+    .prepare<
+      string[],
+      { id: string; name: string }
+    >(`SELECT id, name FROM rbac_teams WHERE name IN (${placeholders})`)
     .all(...teamNames);
 
   if (existingRows.length > 0) {
@@ -449,9 +452,10 @@ async function main() {
     const ph = ids.map(() => '?').join(', ');
     db.prepare(`UPDATE flows SET scope_id = NULL WHERE scope_id IN (${ph})`).run(...ids);
     db.prepare(`DELETE FROM flow_access WHERE team_id IN (${ph})`).run(...ids);
-    db.prepare(
-      `DELETE FROM rbac_scope_access WHERE scope_id IN (${ph}) OR team_id IN (${ph})`,
-    ).run(...ids, ...ids);
+    db.prepare(`DELETE FROM rbac_scope_access WHERE scope_id IN (${ph}) OR team_id IN (${ph})`).run(
+      ...ids,
+      ...ids,
+    );
     db.prepare(`DELETE FROM rbac_team_members WHERE team_id IN (${ph})`).run(...ids);
     db.prepare(`DELETE FROM rbac_teams WHERE id IN (${ph})`).run(...ids);
     console.log(`  ↺ Removed ${ids.length} stale team rows`);
@@ -461,7 +465,9 @@ async function main() {
   console.log('\n👥 Seeding teams…');
 
   const teamIds = new Map<string, string>(); // name → id
-  for (const t of TEAMS) teamIds.set(t.name, randomUUID());
+  for (const t of TEAMS) {
+    teamIds.set(t.name, randomUUID());
+  }
 
   const insertTeam = db.prepare(`
     INSERT OR REPLACE INTO rbac_teams (id, name, description, parent_id, created_by, created_at, updated_at)
@@ -491,7 +497,9 @@ async function main() {
 
     for (const email of t.memberEmails) {
       const uid = userIds.get(email);
-      if (uid) insertMember.run(randomUUID(), teamIds.get(t.name)!, uid, now);
+      if (uid) {
+        insertMember.run(randomUUID(), teamIds.get(t.name)!, uid, now);
+      }
     }
   }
 
@@ -550,7 +558,9 @@ async function main() {
 
   // Scope-level team-role grants (inherited by all flows in scope + children)
   for (const t of TEAMS) {
-    if (!t.teamRole) continue;
+    if (!t.teamRole) {
+      continue;
+    }
     insertScopeAccess.run(
       randomUUID(),
       teamIds.get(t.name)!,
@@ -566,10 +576,14 @@ async function main() {
   // Direct flow-level grants
   for (const [index, flowId] of createdFlowIds.entries()) {
     const f = FLOWS[index];
-    if (!f?.directGrants?.length) continue;
+    if (!f?.directGrants?.length) {
+      continue;
+    }
     for (const g of f.directGrants) {
       const uid = userIds.get(g.email);
-      if (!uid) continue;
+      if (!uid) {
+        continue;
+      }
       insertAccess.run(randomUUID(), flowId, uid, null, g.permission, adminId, now);
     }
     const names = f.directGrants.map((g) => `${g.email.split('@')[0]}(${g.permission})`).join(', ');
@@ -583,7 +597,9 @@ async function main() {
   console.log(`   ${USERS.length} users  (password: "${PASSWORD}")`);
   console.log(`   ${TEAMS.length} teams  (3 pillars, up to 3 levels deep)`);
   console.log(`   ${FLOWS.length} flows  (19 scoped + 3 unscoped)`);
-  console.log(`   All users: alice/bob/carol/dave/eva/frank/grace/hiro/isabella/jake/karen/leo @example.com`);
+  console.log(
+    `   All users: alice/bob/carol/dave/eva/frank/grace/hiro/isabella/jake/karen/leo @example.com`,
+  );
 }
 
 main().catch((err) => {

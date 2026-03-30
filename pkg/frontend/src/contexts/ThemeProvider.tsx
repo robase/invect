@@ -32,7 +32,7 @@ function getSystemTheme(): ResolvedTheme {
 
 export function ThemeProvider({
   children,
-  defaultTheme = 'system',
+  defaultTheme = 'dark',
   storageKey = 'invect-ui-theme',
   className,
 }: ThemeProviderProps) {

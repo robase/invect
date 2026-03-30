@@ -702,16 +702,11 @@ class ApiClient {
     }
   }
 
-  async enableCredentialWebhook(
-    id: string,
-  ): Promise<{ webhookPath: string; fullUrl?: string }> {
-    return this.request<{ webhookPath: string; fullUrl?: string }>(
-      `/credentials/${id}/webhook`,
-      {
-        method: 'POST',
-        headers: { ...this.getUserHeaders() },
-      },
-    );
+  async enableCredentialWebhook(id: string): Promise<{ webhookPath: string; fullUrl?: string }> {
+    return this.request<{ webhookPath: string; fullUrl?: string }>(`/credentials/${id}/webhook`, {
+      method: 'POST',
+      headers: { ...this.getUserHeaders() },
+    });
   }
 
   // =====================================

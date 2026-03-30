@@ -84,7 +84,7 @@ const InvectLayout = React.memo(
     }
 
     return (
-      <ThemeProvider defaultTheme="light" storageKey="invect-ui-theme">
+      <ThemeProvider defaultTheme="dark" storageKey="invect-ui-theme">
         {content}
       </ThemeProvider>
     );

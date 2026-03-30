@@ -49,13 +49,17 @@
     "react-dom": ">=18.0.0",
     "@tanstack/react-query": ">=5.0.0",
     "clsx": ">=2.0.0",
-    "tailwind-merge": ">=2.0.0"
+    "tailwind-merge": ">=2.0.0",
+    "zustand": ">=4.0.0"
   },
   "peerDependenciesMeta": {
     "@invect/frontend": {
       "optional": true
     },
     "clsx": {
+      "optional": true
+    },
+    "zustand": {
       "optional": true
     },
     "tailwind-merge": {
@@ -84,7 +88,8 @@
     "react-dom": "^18.3.1",
     "tsdown": "^0.21.1",
     "typescript": "^5.3.3",
-    "vitest": "^1.2.2"
+    "vitest": "^1.2.2",
+    "zustand": "^4.5.7"
   },
   "repository": {
     "type": "git",

@@ -181,9 +181,7 @@ export function FlowStatusView({
 
   // Loading state
   if (loading) {
-    return (
-      <InvectLoader className="w-full h-full" iconClassName="h-16" label="Loading flow..." />
-    );
+    return <InvectLoader className="w-full h-full" iconClassName="h-16" label="Loading flow..." />;
   }
 
   // Error state

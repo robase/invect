@@ -16,7 +16,7 @@ export function FlowCard({ flow, basePath }: FlowCardProps) {
 
   return (
     <div
-      className="group flex items-center justify-between rounded-lg border bg-card p-4 transition-all hover:shadow-sm hover:border-primary/20 cursor-pointer"
+      className="flex items-center justify-between px-4 py-3 transition-all border rounded-lg cursor-pointer group bg-card hover:shadow-sm hover:border-primary/20"
       onClick={() => navigate(`${basePath}/flow/${flow.id}`)}
     >
       <div className="flex-1 min-w-0">
@@ -25,7 +25,7 @@ export function FlowCard({ flow, basePath }: FlowCardProps) {
           {latestRun && <StatusBadge status={latestRun.status} />}
         </div>
         <div className="mt-1.5 flex items-center gap-3 text-xs text-muted-foreground">
-          {flow.description && <span className="truncate max-w-[300px]">{flow.description}</span>}
+          {flow.description && <span className="truncate max-w-75">{flow.description}</span>}
           {latestRun ? (
             <span className="shrink-0">Last run {formatRelativeTime(latestRun.startedAt)}</span>
           ) : (
@@ -33,28 +33,28 @@ export function FlowCard({ flow, basePath }: FlowCardProps) {
           )}
         </div>
       </div>
-      <div className="flex items-center gap-2 ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center gap-2 ml-4 transition-opacity opacity-0 group-hover:opacity-100">
         <Button
           size="sm"
           variant="outline"
-          className="h-7 text-xs"
+          className="text-xs h-7"
           onClick={(e) => {
             e.stopPropagation();
             navigate(`${basePath}/flow/${flow.id}`);
           }}
         >
-          <Edit className="h-3 w-3 mr-1" />
+          <Edit className="w-3 h-3 mr-1" />
           Edit
         </Button>
         <Button
           size="sm"
           variant="outline"
-          className="h-7 text-xs"
+          className="text-xs h-7"
           asChild
           onClick={(e) => e.stopPropagation()}
         >
           <Link to={`${basePath}/flow/${flow.id}/runs`}>
-            <History className="h-3 w-3 mr-1" />
+            <History className="w-3 h-3 mr-1" />
             Runs
           </Link>
         </Button>

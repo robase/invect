@@ -417,10 +417,7 @@ export class InvectController {
    * Core method: ✅ createFlowRunEventStream(flowRunId: string)
    */
   @Get('flow-runs/:flowRunId/stream')
-  async streamFlowRun(
-    @Param('flowRunId') flowRunId: string,
-    @Res() res: Response,
-  ) {
+  async streamFlowRun(@Param('flowRunId') flowRunId: string, @Res() res: Response) {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -439,9 +436,7 @@ export class InvectController {
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Stream failed';
       if (res.headersSent) {
-        res.write(
-          `event: error\ndata: ${JSON.stringify({ type: 'error', message })}\n\n`,
-        );
+        res.write(`event: error\ndata: ${JSON.stringify({ type: 'error', message })}\n\n`);
       } else {
         return res.status(500).json({ error: 'Internal Server Error', message });
       }

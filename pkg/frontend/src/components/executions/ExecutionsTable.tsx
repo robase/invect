@@ -21,6 +21,7 @@ import {
   ChevronUp,
   ChevronDown,
   Play,
+  Search,
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -253,16 +254,39 @@ interface ExecutionsTableProps {
 
 export const ExecutionsTable: React.FC<ExecutionsTableProps> = ({ basePath = '' }) => {
   const navigate = useNavigate();
-  const [flowFilter, setFlowFilter] = useState<string | undefined>(undefined);
+  const [flowSearch, setFlowSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [sortBy, setSortBy] = useState<string>('startedAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  // Get flows for the filter dropdown
+  // Get flows for name lookup
   const { data: flowsResponse, isLoading: flowsLoading } = useFlows();
   const flows = flowsResponse?.data ?? [];
+
+  // Create flow lookup map
+  const flowMap = useMemo(() => {
+    const map = new Map<string, { name: string }>();
+    flows.forEach((flow: Flow) => {
+      map.set(flow.id, { name: flow.name });
+    });
+    return map;
+  }, [flows]);
+
+  // Resolve flowFilter: find the flow whose name matches the search
+  const flowFilter = useMemo(() => {
+    const q = flowSearch.trim().toLowerCase();
+    if (!q) return undefined;
+    const match = flows.find((f: Flow) => f.name.toLowerCase().includes(q));
+    return match?.id;
+  }, [flowSearch, flows]);
+
+  // When search changes, reset page
+  const handleFlowSearchChange = (value: string) => {
+    setFlowSearch(value);
+    setPage(1);
+  };
 
   // Get all executions with filters, pagination, and sorting applied
   const {
@@ -277,20 +301,13 @@ export const ExecutionsTable: React.FC<ExecutionsTableProps> = ({ basePath = '' 
   const hasPreviousPage = pagination ? pagination.page > 1 : false;
   const hasNextPage = pagination ? pagination.page < pagination.totalPages : false;
 
-  // Create flow lookup map
-  const flowMap = useMemo(() => {
-    const map = new Map<string, { name: string }>();
-    flows.forEach((flow: Flow) => {
-      map.set(flow.id, { name: flow.name });
-    });
-    return map;
-  }, [flows]);
-
   const clearFilters = () => {
-    setFlowFilter(undefined);
+    setFlowSearch('');
     setStatusFilter(undefined);
-    setPage(1); // Reset to first page when clearing filters
+    setPage(1);
   };
+
+  const hasActiveFilters = flowSearch.trim() || statusFilter;
 
   const handleSort = (field: string) => {
     // If clicking the same field, toggle order. Otherwise, default to desc for new fields.
@@ -335,8 +352,6 @@ export const ExecutionsTable: React.FC<ExecutionsTableProps> = ({ basePath = '' 
     </TableHead>
   );
 
-  const hasActiveFilters = flowFilter || statusFilter;
-
   if (executionsLoading || flowsLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -361,64 +376,47 @@ export const ExecutionsTable: React.FC<ExecutionsTableProps> = ({ basePath = '' 
   return (
     <div className="space-y-6">
       {/* Header and Filters */}
-      <div>
-        <div className="flex items-center gap-4">
-          {/* Flow Filter */}
-          <div className="flex items-center gap-2">
-            <Select
-              value={flowFilter || 'ALL'}
-              onValueChange={(value) => setFlowFilter(value === 'ALL' ? undefined : value)}
-            >
-              <SelectTrigger className="w-48 bg-card">
-                <SelectValue placeholder="Filter by flow" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All flows</SelectItem>
-                {flows.map((flow: Flow) => (
-                  <SelectItem key={flow.id} value={flow.id}>
-                    {flow.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Status Filter */}
-          <div className="flex items-center gap-2">
-            <Select
-              value={statusFilter || 'ALL'}
-              onValueChange={(value) => setStatusFilter(value === 'ALL' ? undefined : value)}
-            >
-              <SelectTrigger className="w-48 bg-card">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All statuses</SelectItem>
-                {EXECUTION_STATUSES.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {status}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Clear Filters */}
-          {hasActiveFilters && (
-            <Button variant="outline" size="sm" onClick={clearFilters}>
-              <X className="w-4 h-4 mr-2" />
-              Clear filters
-            </Button>
-          )}
-
-          {/* Sort Indicator */}
-          {sortBy !== 'startedAt' && (
-            <div className="px-2 py-1 text-xs text-muted-foreground bg-muted rounded">
-              Sorted by {sortBy === 'endedAt' ? 'duration' : sortBy} (
-              {sortOrder === 'asc' ? 'ascending' : 'descending'})
-            </div>
-          )}
+      <div className="flex items-center gap-2">
+        {/* Flow search */}
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 pointer-events-none text-muted-foreground" />
+          <input
+            type="text"
+            value={flowSearch}
+            onChange={(e) => handleFlowSearchChange(e.target.value)}
+            placeholder="Search by flow name…"
+            className="w-full rounded-lg border border-border bg-transparent py-2 pl-9 pr-3 text-sm outline-none placeholder:text-muted-foreground focus:border-primary/50"
+          />
         </div>
+
+        {/* Status Filter */}
+        <Select
+          value={statusFilter || 'ALL'}
+          onValueChange={(value) => {
+            setStatusFilter(value === 'ALL' ? undefined : value);
+            setPage(1);
+          }}
+        >
+          <SelectTrigger className="w-40 bg-transparent">
+            <SelectValue placeholder="All statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All statuses</SelectItem>
+            {EXECUTION_STATUSES.map((status) => (
+              <SelectItem key={status} value={status}>
+                {status}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Clear Filters */}
+        {hasActiveFilters && (
+          <Button variant="outline" size="sm" onClick={clearFilters}>
+            <X className="w-4 h-4 mr-2" />
+            Clear
+          </Button>
+        )}
       </div>
 
       {/* Executions Table */}
@@ -547,7 +545,7 @@ export const ExecutionsTable: React.FC<ExecutionsTableProps> = ({ basePath = '' 
       )}
 
       {/* Pagination Controls */}
-      {pagination && pagination.totalPages > 1 && (
+      {pagination && (
         <div className="flex items-center justify-between py-4">
           <div className="text-sm text-muted-foreground">
             Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}

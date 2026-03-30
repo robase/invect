@@ -8,6 +8,13 @@
       "when": 1773527871754,
       "tag": "0000_wide_leader",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1774824892346,
+      "tag": "0001_lively_arclight",
+      "breakpoints": true
     }
   ]
 }

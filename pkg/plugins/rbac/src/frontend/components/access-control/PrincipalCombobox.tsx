@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { User, Users, X } from 'lucide-react';
 import type { Team } from '../../../shared/types';
 import type { AuthUser, PrincipalSelection } from './types';
@@ -8,21 +8,28 @@ export function PrincipalCombobox({
   teams,
   excludeUserIds,
   excludeTeamIds,
-  selection,
+  selections,
   onSelect,
 }: {
   users: AuthUser[];
   teams: Team[];
   excludeUserIds: Set<string | null | undefined>;
   excludeTeamIds: Set<string | null | undefined>;
-  selection: PrincipalSelection | null;
-  onSelect: (selection: PrincipalSelection | null) => void;
+  selections: PrincipalSelection[];
+  onSelect: (selections: PrincipalSelection[]) => void;
 }) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const selectedUserIds = new Set(selections.filter((s) => s.type === 'user').map((s) => s.id));
+  const selectedTeamIds = new Set(selections.filter((s) => s.type === 'team').map((s) => s.id));
 
   const filteredUsers = users.filter((user) => {
     if (excludeUserIds.has(user.id)) {
+      return false;
+    }
+    if (selectedUserIds.has(user.id)) {
       return false;
     }
     const haystack = `${user.name || ''} ${user.email || ''} ${user.id}`.toLowerCase();
@@ -33,97 +40,143 @@ export function PrincipalCombobox({
     if (excludeTeamIds.has(team.id)) {
       return false;
     }
+    if (selectedTeamIds.has(team.id)) {
+      return false;
+    }
     const haystack = `${team.name} ${team.description || ''}`.toLowerCase();
     return haystack.includes(query.toLowerCase());
   });
 
-  const selectedLabel = selection
-    ? selection.type === 'user'
-      ? users.find((user) => user.id === selection.id)?.name ||
-        users.find((user) => user.id === selection.id)?.email ||
-        selection.id
-      : teams.find((team) => team.id === selection.id)?.name || selection.id
-    : '';
+  const toggle = (sel: PrincipalSelection) => {
+    const exists = selections.some((s) => s.type === sel.type && s.id === sel.id);
+    onSelect(
+      exists
+        ? selections.filter((s) => !(s.type === sel.type && s.id === sel.id))
+        : [...selections, sel],
+    );
+  };
+
+  const getLabel = (sel: PrincipalSelection): string => {
+    if (sel.type === 'user') {
+      const user = users.find((u) => u.id === sel.id);
+      return user?.name || user?.email || sel.id;
+    }
+    return teams.find((t) => t.id === sel.id)?.name || sel.id;
+  };
 
   return (
-    <div className="relative flex-1 min-w-0">
-      {selection ? (
-        <button
-          type="button"
-          onClick={() => onSelect(null)}
-          className="flex items-center w-full gap-2 px-2 py-1 text-xs text-left border rounded border-imp-border bg-imp-background"
-        >
-          {selection.type === 'user' ? <User className="w-3 h-3" /> : <Users className="w-3 h-3" />}
-          <span className="flex-1 min-w-0 truncate">{selectedLabel}</span>
-          <X className="w-3 h-3 text-imp-muted-foreground" />
-        </button>
-      ) : (
-        <>
-          <input
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              setOpen(true);
-            }}
-            onFocus={() => setOpen(true)}
-            placeholder="Search users or teams…"
-            className="w-full px-2 py-1 text-xs border rounded border-imp-border bg-imp-background placeholder:text-imp-muted-foreground"
-          />
-          {open && (
-            <div className="absolute left-0 z-20 w-full mt-1 overflow-y-auto border rounded-md shadow-lg top-full max-h-52 border-imp-border bg-imp-background">
-              {filteredTeams.length === 0 && filteredUsers.length === 0 ? (
-                <div className="px-3 py-2 text-xs text-imp-muted-foreground">No matches.</div>
-              ) : (
+    <div
+      ref={containerRef}
+      className="relative"
+      onBlur={(e) => {
+        if (!containerRef.current?.contains(e.relatedTarget as Node)) {
+          setOpen(false);
+        }
+      }}
+    >
+      <div
+        className="flex min-h-[2.5rem] w-full cursor-text flex-wrap gap-1.5 rounded-md border border-imp-border bg-imp-background px-2 py-1.5 focus-within:border-imp-primary/50"
+        onClick={() => setOpen(true)}
+      >
+        {selections.map((sel) => (
+          <span
+            key={`${sel.type}:${sel.id}`}
+            className="inline-flex items-center gap-1 rounded-md border border-imp-border bg-imp-muted px-2 py-0.5 text-xs font-medium text-imp-foreground"
+          >
+            {sel.type === 'user' ? (
+              <User className="h-3 w-3 shrink-0 text-imp-muted-foreground" />
+            ) : (
+              <Users className="h-3 w-3 shrink-0 text-imp-muted-foreground" />
+            )}
+            <span className="max-w-[140px] truncate">{getLabel(sel)}</span>
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={(e) => {
+                e.stopPropagation();
+                toggle(sel);
+              }}
+              className="ml-0.5 text-imp-muted-foreground hover:text-imp-foreground"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </span>
+        ))}
+        <input
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          placeholder={selections.length === 0 ? 'Search users or teams…' : 'Add more…'}
+          className="min-w-[120px] flex-1 bg-transparent text-sm outline-none placeholder:text-imp-muted-foreground"
+        />
+      </div>
+      {open && (
+        <div className="absolute left-0 z-20 mt-1 w-full overflow-y-auto rounded-md border border-imp-border bg-imp-background shadow-lg top-full max-h-52">
+          {filteredTeams.length === 0 && filteredUsers.length === 0 ? (
+            <div className="px-3 py-2 text-xs text-imp-muted-foreground">
+              {query ? 'No matches.' : 'No more users or teams to add.'}
+            </div>
+          ) : (
+            <>
+              {filteredTeams.length > 0 && (
                 <>
-                  {filteredTeams.length > 0 && (
-                    <>
-                      <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-imp-muted-foreground">
-                        Teams
-                      </div>
-                      {filteredTeams.map((team) => (
-                        <button
-                          key={team.id}
-                          type="button"
-                          onClick={() => {
-                            onSelect({ type: 'team', id: team.id });
-                            setOpen(false);
-                            setQuery('');
-                          }}
-                          className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs hover:bg-imp-muted/50"
-                        >
-                          <Users className="h-3.5 w-3.5 text-imp-muted-foreground" />
-                          <span className="truncate">{team.name}</span>
-                        </button>
-                      ))}
-                    </>
-                  )}
-                  {filteredUsers.length > 0 && (
-                    <>
-                      <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-imp-muted-foreground">
-                        Users
-                      </div>
-                      {filteredUsers.map((user) => (
-                        <button
-                          key={user.id}
-                          type="button"
-                          onClick={() => {
-                            onSelect({ type: 'user', id: user.id });
-                            setOpen(false);
-                            setQuery('');
-                          }}
-                          className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs hover:bg-imp-muted/50"
-                        >
-                          <User className="h-3.5 w-3.5 text-imp-muted-foreground" />
-                          <span className="truncate">{user.name || user.email || user.id}</span>
-                        </button>
-                      ))}
-                    </>
-                  )}
+                  <div className="px-3 py-1 text-[10px] font-medium uppercase tracking-wider text-imp-muted-foreground">
+                    Teams
+                  </div>
+                  {filteredTeams.map((team) => (
+                    <button
+                      key={team.id}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        toggle({ type: 'team', id: team.id });
+                        setQuery('');
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-imp-muted/50"
+                    >
+                      <Users className="h-4 w-4 shrink-0 text-imp-muted-foreground" />
+                      <span className="truncate font-medium">{team.name}</span>
+                    </button>
+                  ))}
                 </>
               )}
-            </div>
+              {filteredUsers.length > 0 && (
+                <>
+                  <div className="px-3 py-1 text-[10px] font-medium uppercase tracking-wider text-imp-muted-foreground">
+                    Users
+                  </div>
+                  {filteredUsers.map((user) => (
+                    <button
+                      key={user.id}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        toggle({ type: 'user', id: user.id });
+                        setQuery('');
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-imp-muted/50"
+                    >
+                      <User className="h-4 w-4 shrink-0 text-imp-muted-foreground" />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-medium">
+                          {user.name || user.email || user.id}
+                        </div>
+                        {user.name && user.email && (
+                          <div className="truncate text-xs text-imp-muted-foreground">
+                            {user.email}
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </>
+              )}
+            </>
           )}
-        </>
+        </div>
       )}
     </div>
   );

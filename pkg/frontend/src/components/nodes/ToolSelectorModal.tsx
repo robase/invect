@@ -3,7 +3,7 @@
 import { memo, useState, useMemo, useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
-import { Input } from '../ui/input';
+
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { Badge } from '../ui/badge';
@@ -433,12 +433,13 @@ export const ToolSelectorModal = memo(function ToolSelectorModal({
               {/* Search bar */}
               <div className="flex gap-3">
                 <div className="relative flex-1">
-                  <Search className="absolute w-4 h-4 -translate-y-1/2 left-3 top-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search tools by name, description, or tag..."
+                  <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 pointer-events-none text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Search tools by name, description, or tag…"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
+                    className="w-full rounded-lg border border-border bg-transparent py-2 pl-9 pr-3 text-sm outline-none placeholder:text-muted-foreground focus:border-primary/50"
                   />
                   {searchQuery && (
                     <button

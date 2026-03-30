@@ -422,13 +422,10 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
             try {
               for await (const event of stream) {
                 const data = JSON.stringify(event);
-                controller.enqueue(
-                  encoder.encode(`event: ${event.type}\ndata: ${data}\n\n`),
-                );
+                controller.enqueue(encoder.encode(`event: ${event.type}\ndata: ${data}\n\n`));
               }
             } catch (error: unknown) {
-              const message =
-                error instanceof Error ? error.message : 'Stream failed';
+              const message = error instanceof Error ? error.message : 'Stream failed';
               controller.enqueue(
                 encoder.encode(
                   `event: error\ndata: ${JSON.stringify({ type: 'error', message })}\n\n`,
