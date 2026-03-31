@@ -114,7 +114,7 @@ const NodeLoadingPlaceholder = memo(
           </div>
         </div>
 
-        {/* Standard output handle - visible */
+        {/* Standard output handle - visible */}
         <Handle
           id="output"
           type="source"
@@ -246,7 +246,7 @@ export const UniversalNode = memo(({ data, selected }: NodeProps) => {
         </div>
       </div>
 
-      {/* Output Handles */
+      {/* Output Handles */}
       {outputHandleConfigs.map(({ output, topPercent }) => {
         // Show labels when there are multiple outputs (e.g., If/Else True/False)
         const showLabel = outputs.length > 1;

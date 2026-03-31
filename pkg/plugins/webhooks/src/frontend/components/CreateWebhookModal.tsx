@@ -195,6 +195,7 @@ export const CreateWebhookModal: FC<CreateWebhookModalProps> = ({
                         <input
                           id="wh-create-hmac-header"
                           type="text"
+                          autoComplete="off"
                           value={hmacHeaderName}
                           onChange={(e) => setHmacHeaderName(e.target.value)}
                           placeholder="e.g. x-signature"
@@ -208,6 +209,7 @@ export const CreateWebhookModal: FC<CreateWebhookModalProps> = ({
                         <input
                           id="wh-create-hmac-secret"
                           type="password"
+                          autoComplete="new-password"
                           value={hmacSecret}
                           onChange={(e) => setHmacSecret(e.target.value)}
                           placeholder="Enter secret key"

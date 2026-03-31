@@ -54,7 +54,7 @@ const EMPTY_TOOLS: AddedToolInstance[] = [];
 // Node dimensions (must match max-w/h in UniversalNode / AgentNode)
 const NODE_WIDTH = 240;
 const NODE_HEIGHT = 60;
-const PLACEMENT_OFFSET = 40; // px to step when a collision is detected
+const PLACEMENT_OFFSET = 80; // Larger than NODE_HEIGHT so a single step always clears collisions
 
 /**
  * Finds a position that doesn't overlap any existing node, stepping down-right
@@ -668,13 +668,24 @@ export function FlowWorkbenchView({
       const displayName = generateUniqueDisplayName(baseDisplayName, currentNodes);
       const referenceId = generateUniqueReferenceId(displayName, currentNodes);
 
-      // Place at viewport centre, then step until no overlap
-      const viewportCenter = reactFlowInstance.screenToFlowPosition({
-        x: window.innerWidth / 2,
-        y: window.innerHeight / 2,
-      });
-      const startX = viewportCenter.x - NODE_WIDTH / 2;
-      const startY = viewportCenter.y - NODE_HEIGHT / 2;
+      // Determine starting position for placement:
+      // - No nodes: use viewport center so the first node appears where the user is looking
+      // - Has nodes: cascade from the last added node to guarantee visible separation
+      let startX: number;
+      let startY: number;
+      if (currentNodes.length === 0) {
+        const viewportCenter = reactFlowInstance.screenToFlowPosition({
+          x: window.innerWidth / 2,
+          y: window.innerHeight / 2,
+        });
+        startX = Math.round(viewportCenter.x - NODE_WIDTH / 2);
+        startY = Math.round(viewportCenter.y - NODE_HEIGHT / 2);
+      } else {
+        const lastNode = currentNodes[currentNodes.length - 1];
+        startX = lastNode.position.x + PLACEMENT_OFFSET;
+        startY = lastNode.position.y + PLACEMENT_OFFSET;
+      }
+
       const position = findNonOverlappingPosition(startX, startY, currentNodes);
 
       const newNode: Node = {

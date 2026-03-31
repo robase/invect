@@ -30,8 +30,8 @@ export function SignInPage({
       <div className="flex w-full max-w-sm flex-col gap-6">
         {/* Header: logo + title + subtitle */}
         <div className="flex flex-col items-center gap-2 text-center">
-          <div className="flex size-8 items-center justify-center rounded-md">
-            <ImpLogo className="size-6" />
+          <div className="flex items-center justify-center">
+            <ImpLogo className="h-10 w-auto" />
           </div>
           <h1 className="text-xl font-bold">{title}</h1>
           <p className="text-sm text-imp-muted-foreground">{subtitle}</p>
@@ -67,22 +67,26 @@ export function SignInPage({
 }
 
 // ─────────────────────────────────────────────────────────────
-// Internal: Invect logo (workflow bolt icon)
+// Internal: Imperat logo
 // ─────────────────────────────────────────────────────────────
 
 function ImpLogo({ className }: { className?: string }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
+      viewBox="0 0 109 209"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="9"
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
     >
-      <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" />
+      <path d="M31.7735 104.5L4.50073 18.7859L54.5007 33.0716L31.7735 104.5Z" />
+      <path d="M54.5007 4.5L104.501 18.7857L54.5007 33.0714L4.50073 18.7857L54.5007 4.5Z" />
+      <path d="M4.50073 190.214L54.5007 33.0716L104.501 18.7859L4.50073 190.214Z" />
+      <path d="M54.5007 204.5L81.4238 104.5L104.501 18.7859L4.50073 190.214L54.5007 204.5Z" />
+      <path d="M54.5007 204.5L81.4238 104.5L104.501 190.214L54.5007 204.5Z" />
     </svg>
   );
 }
