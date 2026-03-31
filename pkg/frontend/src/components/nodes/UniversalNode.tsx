@@ -110,11 +110,11 @@ const NodeLoadingPlaceholder = memo(
             <div className="text-xs font-semibold tracking-tight truncate text-card-foreground">
               {label}
             </div>
-            <div className="text-xs tracking-tight truncate text-muted-foreground">{nodeType}</div>
+            <div className="text-xs font-mono tracking-tight truncate text-muted-foreground">{nodeType}</div>
           </div>
         </div>
 
-        {/* Standard output handle - visible */}
+        {/* Standard output handle - visible */
         <Handle
           id="output"
           type="source"
@@ -157,7 +157,11 @@ export const UniversalNode = memo(({ data, selected }: NodeProps) => {
 
   // Get display name from node data or fall back to definition label
   const label = typedData.display_name || definition.label || 'Unknown Node';
-  const iconColorClass = DEFAULT_CATEGORY_COLOR;
+  const providerId = definition.provider?.id;
+  const iconColorClass =
+    providerId === 'core' || providerId === 'triggers'
+      ? 'bg-accent text-primary'
+      : DEFAULT_CATEGORY_COLOR;
 
   // Get handle definitions from the node definition (source of truth)
   const inputHandle = definition.input;
@@ -238,11 +242,11 @@ export const UniversalNode = memo(({ data, selected }: NodeProps) => {
           <div className="text-xs font-semibold tracking-tight truncate text-card-foreground">
             {label}
           </div>
-          <div className="text-xs tracking-tight truncate text-muted-foreground">{nodeType}</div>
+          <div className="text-xs font-mono tracking-tight truncate text-muted-foreground">{nodeType}</div>
         </div>
       </div>
 
-      {/* Output Handles */}
+      {/* Output Handles */
       {outputHandleConfigs.map(({ output, topPercent }) => {
         // Show labels when there are multiple outputs (e.g., If/Else True/False)
         const showLabel = outputs.length > 1;

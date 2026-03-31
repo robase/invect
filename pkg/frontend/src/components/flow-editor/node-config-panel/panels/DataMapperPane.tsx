@@ -185,7 +185,9 @@ function JsExpressionEditor({
 
   // Recreate editor when theme changes (same pattern as CodeMirrorJsonEditor)
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current) {
+      return;
+    }
 
     const state = EditorState.create({
       doc: value,
@@ -209,7 +211,9 @@ function JsExpressionEditor({
   // Sync external value changes (e.g., reset)
   useEffect(() => {
     const view = viewRef.current;
-    if (!view) return;
+    if (!view) {
+      return;
+    }
     const currentDoc = view.state.doc.toString();
     if (currentDoc !== value) {
       view.dispatch({
@@ -250,7 +254,7 @@ function MapperPreview({
 
   if (!result) {
     return (
-      <div className="px-3 py-2 text-xs text-muted-foreground italic">
+      <div className="px-3 py-2 text-xs italic text-muted-foreground">
         Write an expression and press Preview to see results.
       </div>
     );
@@ -260,7 +264,7 @@ function MapperPreview({
     return (
       <div className="flex items-start gap-2 px-3 py-2">
         <AlertCircle className="w-3.5 h-3.5 text-destructive mt-0.5 shrink-0" />
-        <span className="text-xs text-destructive font-mono break-all">{result.error}</span>
+        <span className="font-mono text-xs break-all text-destructive">{result.error}</span>
       </div>
     );
   }
@@ -304,7 +308,9 @@ function MapperPreview({
 }
 
 function formatPreviewResult(value: unknown): string {
-  if (value === undefined || value === null) return String(value);
+  if (value === undefined || value === null) {
+    return String(value);
+  }
   try {
     const json = JSON.stringify(value, null, 2);
     // Truncate long outputs (show first ~60 lines)
@@ -336,14 +342,18 @@ export function DataMapperPane({
 
   const updateField = useCallback(
     <K extends keyof MapperConfig>(key: K, newValue: MapperConfig[K]) => {
-      if (!value) return;
+      if (!value) {
+        return;
+      }
       onChange({ ...value, [key]: newValue });
     },
     [value, onChange],
   );
 
   const handleTestPreview = useCallback(() => {
-    if (!value?.expression || !onTestMapper) return;
+    if (!value?.expression || !onTestMapper) {
+      return;
+    }
     onTestMapper({
       expression: value.expression,
       incomingData: inputData ?? {},
@@ -353,14 +363,16 @@ export function DataMapperPane({
 
   // Variable hints
   const variablesHint = useMemo(() => {
-    if (availableVariables.length === 0) return null;
+    if (availableVariables.length === 0) {
+      return null;
+    }
     return availableVariables.slice(0, 5).join(', ');
   }, [availableVariables]);
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-background">
       {/* Content */}
-      <ScrollArea className="flex-1 min-h-0">
+      <ScrollArea className="flex-1 h-full min-h-0">
         <div className="p-3 space-y-3 text-xs">
           {!enabled ? (
             <p className="text-muted-foreground">

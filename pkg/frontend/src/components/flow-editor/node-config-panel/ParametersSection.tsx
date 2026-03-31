@@ -13,6 +13,8 @@ interface ParametersSectionProps {
   portalContainer?: HTMLElement | null;
   /** Action / node type id — passed through to ConfigFieldWithTemplate for dynamic option loading. */
   nodeType?: string;
+  /** Input data from upstream nodes — passed through for autocomplete in code fields. */
+  inputData?: Record<string, unknown>;
 }
 
 /**
@@ -34,6 +36,7 @@ export const ParametersSection = ({
   emptyMessage,
   portalContainer,
   nodeType,
+  inputData,
 }: ParametersSectionProps) => {
   const templateModes = getTemplateModes(formValues);
   const [showExtended, setShowExtended] = useState(false);
@@ -85,6 +88,7 @@ export const ParametersSection = ({
       portalContainer={portalContainer}
       nodeType={nodeType}
       formValues={formValues}
+      inputData={inputData}
     />
   );
 

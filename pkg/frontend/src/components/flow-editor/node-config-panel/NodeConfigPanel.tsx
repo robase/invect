@@ -1,6 +1,13 @@
 import { useMemo, useCallback, useState } from 'react';
 import { GraphNodeType, type ReactFlowNodeData } from '@invect/core/types';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '../../ui/dialog';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '../../ui/dialog';
+import { X } from 'lucide-react';
 import { ResizablePanelGroup, ResizableHandle } from '../../ui/resizable';
 import { cn } from '../../../lib/utils';
 import { useNodeRegistry } from '../../../contexts/NodeRegistryContext';
@@ -94,7 +101,9 @@ export function NodeConfigPanel({
 
   const handleMapperChange = useCallback(
     (config: typeof mapperConfig) => {
-      if (!nodeId) return;
+      if (!nodeId) {
+        return;
+      }
       updateNodeDataInStore(nodeId, { mapper: config } as Partial<ReactFlowNodeData>);
     },
     [nodeId, updateNodeDataInStore],
@@ -253,6 +262,7 @@ export function NodeConfigPanel({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
           container={portalContainer}
+          showCloseButton={false}
           className={cn(
             'h-[90vh] max-h-[90vh] overflow-hidden flex flex-col p-0 bg-card border-border',
             'sm:max-w-[95vw] w-[95vw]',
@@ -310,6 +320,7 @@ export function NodeConfigPanel({
                   modelStatusMessage={modelStatusMessage}
                   portalContainer={portalContainer}
                   upstreamVariables={upstream.upstreamVariables}
+                  inputData={parsedInputData}
                   headerLabel={displayName}
                   onHeaderLabelChange={handleLabelChange}
                   headerNodeTypeLabel={nodeTypeLabel}
@@ -331,6 +342,10 @@ export function NodeConfigPanel({
           ) : (
             <div className="text-sm text-muted-foreground">Select a node to configure.</div>
           )}
+          <DialogClose className="absolute bottom-4 right-4 z-50 flex items-center gap-1.5 rounded-full bg-foreground/10 hover:bg-foreground/15 backdrop-blur-sm px-3 py-1.5 text-xs font-medium text-foreground/70 hover:text-foreground transition-colors shadow-md">
+            <X className="w-3.5 h-3.5" />
+            Close
+          </DialogClose>
         </DialogContent>
       </Dialog>
 

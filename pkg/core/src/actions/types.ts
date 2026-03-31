@@ -430,6 +430,14 @@ export interface ActionDefinition<TParams = unknown> {
   /** Search / filter tags */
   tags?: string[];
 
+  /**
+   * Lucide icon name for this specific action.
+   * When set, overrides `provider.icon` for the node definition.
+   * Use this to give each core node a contextually meaningful icon
+   * instead of inheriting the generic provider icon.
+   */
+  icon?: string;
+
   /** Sub-category inside the provider */
   actionCategory?: ActionCategory;
 

@@ -281,7 +281,10 @@ function NodeCard({
   node: NodeDefinition;
   onAddNode: (type: string) => void;
 }) {
-  const bgColor = 'bg-muted text-muted-foreground';
+  const bgColor =
+    node.provider?.id === 'core' || node.provider?.id === 'triggers'
+      ? 'bg-accent text-primary'
+      : 'bg-muted text-muted-foreground';
 
   // Check if this node type has reached its maxInstances limit
   const storeNodes = useFlowEditorStore((s) => s.nodes);

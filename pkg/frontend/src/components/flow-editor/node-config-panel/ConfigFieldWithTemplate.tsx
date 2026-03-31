@@ -8,6 +8,7 @@ import type { NodeParamField } from '../../../types/node-definition.types';
 import { cn } from '../../../lib/utils';
 import { DroppableInput } from './DroppableInput';
 import { DynamicSelectField } from './DynamicSelectField';
+import { CodeMirrorJsEditor } from '../../ui/codemirror-js-editor';
 
 interface ConfigFieldWithTemplateProps {
   field: NodeParamField;
@@ -20,6 +21,8 @@ interface ConfigFieldWithTemplateProps {
   nodeType?: string;
   /** All current form values — needed for dynamic option loading. */
   formValues?: Record<string, unknown>;
+  /** Input data from upstream nodes — used for autocomplete in code fields. */
+  inputData?: Record<string, unknown>;
 }
 
 /**
@@ -51,6 +54,7 @@ export const ConfigFieldWithTemplate = ({
   portalContainer,
   nodeType,
   formValues,
+  inputData,
 }: ConfigFieldWithTemplateProps) => {
   if (field.hidden) {
     return null;
@@ -96,19 +100,39 @@ export const ConfigFieldWithTemplate = ({
     </div>
   );
 
+  // Code fields: render a JavaScript editor with syntax highlighting and autocomplete
+  if (field.type === 'code') {
+    const codeValue =
+      typeof value === 'string'
+        ? value
+        : value === null || value === undefined
+          ? ''
+          : String(value);
+    return (
+      <div className="flex flex-col gap-1.5">
+        {fieldHeader}
+        <CodeMirrorJsEditor
+          value={codeValue}
+          onChange={(newValue) => onChange(newValue)}
+          placeholder={field.placeholder}
+          inputData={inputData}
+        />
+      </div>
+    );
+  }
+
   // Template mode: render a DroppableInput for Nunjucks templates
   if (effectiveTemplateMode) {
     // Determine if this should be multiline based on original field type
-    const isMultiline = field.type === 'textarea' || field.type === 'json' || field.type === 'code';
-    const rows =
-      field.type === 'code' ? 8 : field.type === 'json' ? 6 : field.type === 'textarea' ? 3 : 1;
+    const isMultiline = field.type === 'textarea' || field.type === 'json';
+    const rows = field.type === 'json' ? 6 : field.type === 'textarea' ? 3 : 1;
 
     return (
       <div className={cn('flex flex-col gap-1.5', isMultiline && 'flex-1 min-h-0')}>
         {fieldHeader}
         <DroppableInput
           id={field.name}
-          className={cn('py-[5px] text-xs font-mono', isMultiline && 'min-h-0 flex-1')}
+          className={cn('text-xs font-mono', isMultiline && 'min-h-0 flex-1')}
           multiline={isMultiline}
           rows={rows}
           fillAvailableHeight={isMultiline}

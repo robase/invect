@@ -74,7 +74,9 @@ const AgentNodeLoadingPlaceholder = memo(
             <div className="text-xs font-semibold text-card-foreground truncate tracking-tight">
               {label}
             </div>
-            <div className="text-xs text-muted-foreground truncate tracking-tight">AGENT</div>
+            <div className="text-xs font-mono text-muted-foreground truncate tracking-tight">
+              AGENT
+            </div>
           </div>
         </div>
 
@@ -214,7 +216,9 @@ export const AgentNode = memo(({ id, data, selected }: NodeProps) => {
             <div className="text-xs font-semibold text-card-foreground truncate tracking-tight">
               {label}
             </div>
-            <div className="text-xs text-muted-foreground truncate tracking-tight">{nodeType}</div>
+            <div className="text-xs font-mono text-muted-foreground truncate tracking-tight">
+              {nodeType}
+            </div>
           </div>
         </div>
 

@@ -428,7 +428,6 @@ export function CodeMirrorNunjucksEditor({
   }, [value]);
 
   // Calculate height based on rows
-  const minHeight = multiline ? `${rows * 1.5}em` : '2.25rem';
   const maxHeight = multiline ? `${Math.max(rows * 2, 8)}em` : '2.25rem';
 
   return (
@@ -444,8 +443,8 @@ export function CodeMirrorNunjucksEditor({
       )}
       style={
         fillAvailableHeight
-          ? { minHeight, height: '100%', overflow: 'hidden' }
-          : { minHeight, maxHeight, overflow: 'hidden' }
+          ? { height: '100%', overflow: 'hidden' }
+          : { maxHeight, overflow: 'hidden' }
       }
     />
   );

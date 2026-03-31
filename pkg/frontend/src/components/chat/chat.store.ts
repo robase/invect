@@ -50,14 +50,14 @@ export interface ChatStreamEvent {
 }
 
 export interface ChatSettings {
-  /** Max tool-calling steps per message (1-50, default 8) */
+  /** Max tool-calling steps per message (1-200, default 50) */
   maxSteps: number;
   /** Selected credential ID for the chat assistant LLM provider */
   credentialId: string | null;
 }
 
 const DEFAULT_CHAT_SETTINGS: ChatSettings = {
-  maxSteps: 8,
+  maxSteps: 50,
   credentialId: null,
 };
 

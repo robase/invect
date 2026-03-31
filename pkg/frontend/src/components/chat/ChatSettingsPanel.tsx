@@ -44,7 +44,7 @@ export function ChatSettingsPanel({ onClose }: ChatSettingsPanelProps) {
       </div>
 
       {/* Description */}
-      <div className="px-4 py-2 text-xs text-muted-foreground border-b bg-muted/30">
+      <div className="px-4 py-2 text-xs border-b text-muted-foreground bg-muted/30">
         Configure how the AI assistant behaves. Settings are saved locally in your browser.
       </div>
 
@@ -123,21 +123,21 @@ function LlmCredentialSetting({
         <label className="text-sm font-medium text-foreground">LLM Credential</label>
       </div>
 
-      <p className="text-xs text-muted-foreground leading-relaxed">
+      <p className="text-xs leading-relaxed text-muted-foreground">
         Select the API credential the assistant uses. Only credentials with type{' '}
         <span className="font-medium">LLM Provider</span> are shown.
       </p>
 
       {/* Credential selector */}
       <div className="space-y-1.5">
-        <label className="text-xs text-muted-foreground flex items-center gap-1">
+        <label className="flex items-center gap-1 text-xs text-muted-foreground">
           <Key className="size-3" />
           Credential
         </label>
         {isLoading ? (
-          <div className="text-xs text-muted-foreground py-2">Loading credentials…</div>
+          <div className="py-2 text-xs text-muted-foreground">Loading credentials…</div>
         ) : credentials.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/30 p-4 text-xs text-muted-foreground space-y-3">
+          <div className="p-4 space-y-3 text-xs border border-dashed rounded-lg border-muted-foreground/30 bg-muted/30 text-muted-foreground">
             <div className="space-y-1">
               <p className="font-medium text-foreground">No LLM credentials yet</p>
               <p>Add an API key for OpenAI, Anthropic, or OpenRouter to get started.</p>
@@ -211,7 +211,7 @@ function MaxStepsSetting({
 
   const handleBlur = useCallback(() => {
     const num = parseInt(localValue, 10);
-    if (!isNaN(num) && num >= 1 && num <= 50) {
+    if (!isNaN(num) && num >= 1 && num <= 200) {
       onChange(num);
       setLocalValue(String(num));
     } else {
@@ -236,25 +236,25 @@ function MaxStepsSetting({
           id="max-steps"
           type="number"
           min={1}
-          max={50}
+          max={200}
           value={localValue}
           onChange={(e) => setLocalValue(e.target.value)}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
-          className="w-16 h-8 rounded-md border bg-background px-2 text-sm text-center focus:outline-none focus:ring-1 focus:ring-primary"
+          className="w-16 h-8 px-2 text-sm text-center border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary"
         />
       </div>
-      <p className="text-xs text-muted-foreground leading-relaxed">
+      <p className="text-xs leading-relaxed text-muted-foreground">
         Maximum number of tool-calling iterations the assistant can perform per message. Higher
         values let the assistant handle more complex multi-step tasks but take longer.
         <br />
-        <span className="text-muted-foreground/70">Default: 8 · Range: 1–50</span>
+        <span className="text-muted-foreground/70">Default: 50 · Range: 1-200</span>
       </p>
 
       {/* Quick presets */}
       <div className="flex items-center gap-2 pt-1">
-        <span className="text-xs text-muted-foreground mr-1">Presets:</span>
-        {[4, 8, 16, 30, 50].map((preset) => (
+        <span className="mr-1 text-xs text-muted-foreground">Presets:</span>
+        {[25, 50, 100, 150, 200].map((preset) => (
           <button
             key={preset}
             type="button"

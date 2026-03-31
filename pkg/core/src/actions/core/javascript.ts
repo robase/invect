@@ -29,6 +29,7 @@ export const javascriptAction = defineAction({
   description:
     'Transform and process data using JavaScript. Upstream node outputs are available as local variables.',
   provider: CORE_PROVIDER,
+  icon: 'Braces',
   tags: [
     'javascript',
     'js',

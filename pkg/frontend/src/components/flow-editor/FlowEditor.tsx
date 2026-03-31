@@ -51,6 +51,36 @@ const FIT_VIEW_OPTIONS = {
 // Stable empty array to avoid re-render cascades when no tool panel node is selected
 const EMPTY_TOOLS: AddedToolInstance[] = [];
 
+// Node dimensions (must match max-w/h in UniversalNode / AgentNode)
+const NODE_WIDTH = 240;
+const NODE_HEIGHT = 60;
+const PLACEMENT_OFFSET = 40; // px to step when a collision is detected
+
+/**
+ * Finds a position that doesn't overlap any existing node, stepping down-right
+ * by PLACEMENT_OFFSET until a clear spot is found.
+ */
+function findNonOverlappingPosition(
+  startX: number,
+  startY: number,
+  existingNodes: Node[],
+): { x: number; y: number } {
+  let x = Math.round(startX);
+  let y = Math.round(startY);
+
+  const overlaps = (cx: number, cy: number) =>
+    existingNodes.some(
+      (n) => Math.abs(n.position.x - cx) < NODE_WIDTH && Math.abs(n.position.y - cy) < NODE_HEIGHT,
+    );
+
+  while (overlaps(x, y)) {
+    x += PLACEMENT_OFFSET;
+    y += PLACEMENT_OFFSET;
+  }
+
+  return { x, y };
+}
+
 export interface FlowEditorProps {
   flowId: string;
   flowVersion?: string;
@@ -638,10 +668,19 @@ export function FlowWorkbenchView({
       const displayName = generateUniqueDisplayName(baseDisplayName, currentNodes);
       const referenceId = generateUniqueReferenceId(displayName, currentNodes);
 
+      // Place at viewport centre, then step until no overlap
+      const viewportCenter = reactFlowInstance.screenToFlowPosition({
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2,
+      });
+      const startX = viewportCenter.x - NODE_WIDTH / 2;
+      const startY = viewportCenter.y - NODE_HEIGHT / 2;
+      const position = findNonOverlappingPosition(startX, startY, currentNodes);
+
       const newNode: Node = {
         id,
         type,
-        position: { x: 250, y: 150 },
+        position,
         data: {
           display_name: displayName,
           reference_id: referenceId,
@@ -652,7 +691,7 @@ export function FlowWorkbenchView({
 
       addNodeToStore(newNode);
     },
-    [getNodeDefinition, addNodeToStore],
+    [getNodeDefinition, addNodeToStore, reactFlowInstance],
   );
 
   React.useEffect(() => {

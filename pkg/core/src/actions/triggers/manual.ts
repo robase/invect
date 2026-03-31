@@ -46,6 +46,7 @@ export const manualTriggerAction = defineAction({
     'Start this flow manually from the UI or via the API. ' +
     'Optionally define expected input fields with default values.',
   provider: TRIGGERS_PROVIDER,
+  icon: 'Play',
   noInput: true,
   maxInstances: 1,
   tags: [

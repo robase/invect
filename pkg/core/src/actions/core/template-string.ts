@@ -18,6 +18,7 @@ export const templateStringAction = defineAction({
   name: 'Template String',
   description: 'Replace variables in a text template using {{ variable }} syntax',
   provider: CORE_PROVIDER,
+  icon: 'FileCode2',
   tags: [
     'template',
     'string',

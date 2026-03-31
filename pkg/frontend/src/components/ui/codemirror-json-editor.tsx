@@ -278,7 +278,9 @@ const slotGutter = gutter({
   class: 'cm-slot-gutter',
   markers: (view) => {
     const slots = view.state.field(upstreamSlotsField);
-    if (slots.length === 0) return RangeSet.empty;
+    if (slots.length === 0) {
+      return RangeSet.empty;
+    }
 
     const slotsByKey = new Map(slots.map((s) => [s.key, s]));
     const builder = new RangeSetBuilder<GutterMarker>();
@@ -296,14 +298,20 @@ const slotGutter = gutter({
   domEventHandlers: {
     click: (view, line) => {
       const slots = view.state.field(upstreamSlotsField);
-      if (slots.length === 0) return false;
+      if (slots.length === 0) {
+        return false;
+      }
 
       const lineText = view.state.doc.lineAt(line.from).text;
       const key = findTopLevelKeyOnLine(lineText);
-      if (!key) return false;
+      if (!key) {
+        return false;
+      }
 
       const slot = slots.find((s) => s.key === key);
-      if (!slot || slot.status === 'loading') return false;
+      if (!slot || slot.status === 'loading') {
+        return false;
+      }
 
       if (slotCallbackRef) {
         slotCallbackRef(slot);
@@ -336,7 +344,9 @@ const slotValueDecorations = ViewPlugin.fromClass(
 
     build(view: EditorView): DecorationSet {
       const slots = view.state.field(upstreamSlotsField);
-      if (slots.length === 0) return Decoration.none;
+      if (slots.length === 0) {
+        return Decoration.none;
+      }
 
       const slotsByKey = new Map(slots.map((s) => [s.key, s]));
       const builder = new RangeSetBuilder<Decoration>();
@@ -344,10 +354,14 @@ const slotValueDecorations = ViewPlugin.fromClass(
       for (let i = 1; i <= view.state.doc.lines; i++) {
         const line = view.state.doc.line(i);
         const key = findTopLevelKeyOnLine(line.text);
-        if (!key) continue;
+        if (!key) {
+          continue;
+        }
 
         const slot = slotsByKey.get(key);
-        if (!slot) continue;
+        if (!slot) {
+          continue;
+        }
 
         if (slot.status === 'idle') {
           builder.add(line.from, line.from, Decoration.line({ class: 'cm-slot-idle-line' }));
@@ -448,7 +462,9 @@ const slotGutterStyles = `
 
 let slotStylesInjected = false;
 function injectSlotStyles() {
-  if (slotStylesInjected) return;
+  if (slotStylesInjected) {
+    return;
+  }
   const style = document.createElement('style');
   style.setAttribute('data-codemirror-slots', 'true');
   style.textContent = slotGutterStyles;
@@ -625,7 +641,9 @@ export function CodeMirrorJsonEditor({
   // Push upstream slot data into the editor state
   useEffect(() => {
     const view = viewRef.current;
-    if (!view || !hasSlots) return;
+    if (!view || !hasSlots) {
+      return;
+    }
 
     view.dispatch({
       effects: setUpstreamSlots.of(upstreamSlots ?? []),
@@ -643,7 +661,7 @@ export function CodeMirrorJsonEditor({
     <div
       ref={containerRef}
       className={cn(
-        'rounded-md border bg-background overflow-hidden h-full flex flex-col [&_.cm-editor]:flex-1 [&_.cm-editor]:min-h-0 [&_.cm-scroller]:overflow-auto',
+        'bg-background overflow-hidden h-full flex flex-col [&_.cm-editor]:flex-1 [&_.cm-editor]:min-h-0 [&_.cm-scroller]:overflow-auto',
         readOnly && 'cursor-default',
         className,
       )}
@@ -723,11 +741,11 @@ function SlotPopover({
           </span>
         </div>
         <div className="flex items-center gap-2.5 px-3 py-2">
-          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+          <div className="flex items-center justify-center w-6 h-6 rounded-md shrink-0 bg-primary/10 text-primary">
             <Icon className="w-3.5 h-3.5" />
           </div>
           <div className="flex flex-col gap-0.5 min-w-0">
-            <span className="text-xs font-medium text-popover-foreground truncate">
+            <span className="text-xs font-medium truncate text-popover-foreground">
               {slot.sourceLabel}
             </span>
             <span className="text-[11px] text-muted-foreground capitalize leading-snug">

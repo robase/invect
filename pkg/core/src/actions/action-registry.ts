@@ -350,7 +350,7 @@ export function actionToNodeDefinition<T = unknown>(action: ActionDefinition<T>)
     label: action.name,
     description: action.description,
     category,
-    icon: action.provider.icon,
+    icon: action.icon ?? action.provider.icon,
     provider: {
       id: action.provider.id,
       name: action.provider.name,

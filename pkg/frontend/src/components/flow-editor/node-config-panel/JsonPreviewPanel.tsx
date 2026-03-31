@@ -57,9 +57,9 @@ export const JsonPreviewPanel = ({
   }, [value]);
 
   return (
-    <div className="flex flex-col h-full min-h-0 overflow-hidden border rounded-lg border-border bg-background">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden bg-background">
       {/* Toolbar header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-muted/30 shrink-0">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center px-3 py-2 border-b border-border bg-muted/30 shrink-0">
         <div className="flex items-center gap-2">
           {icon || <Braces className="w-3.5 h-3.5 text-muted-foreground" />}
           <span className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">
@@ -70,9 +70,9 @@ export const JsonPreviewPanel = ({
               TEST
             </span>
           )}
-          {toolbarExtra}
         </div>
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center justify-center">{toolbarExtra}</div>
+        <div className="flex items-center gap-0.5 justify-end">
           {isTestMode && onReset && (
             <Button
               variant="ghost"

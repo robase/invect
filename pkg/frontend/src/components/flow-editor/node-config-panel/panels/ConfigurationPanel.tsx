@@ -34,6 +34,8 @@ interface ConfigurationPanelProps {
    * Available upstream node reference IDs for loop variable suggestions
    */
   upstreamVariables?: string[];
+  /** Input data from upstream nodes — for autocomplete in code fields. */
+  inputData?: Record<string, unknown>;
   /** Node header props — rendered as the panel header */
   headerLabel?: string;
   onHeaderLabelChange?: (value: string) => void;
@@ -62,6 +64,7 @@ export function ConfigurationPanel({
   modelStatusMessage,
   portalContainer,
   upstreamVariables = [],
+  inputData,
   headerLabel,
   onHeaderLabelChange,
   headerNodeTypeLabel,
@@ -99,7 +102,7 @@ export function ConfigurationPanel({
 
   return (
     <ResizablePanel defaultSize={30} minSize={20} className="h-full">
-      <div className="imp-node-config-root flex flex-col h-full overflow-hidden border rounded-lg border-border bg-background">
+      <div className="flex flex-col h-full overflow-hidden imp-node-config-root bg-background">
         {/* Node identity header */}
         {headerLabel !== undefined && (
           <div className="flex items-center gap-2 px-3 py-2 border-b border-border shrink-0">
@@ -117,8 +120,8 @@ export function ConfigurationPanel({
               value={headerLabel}
               onChange={onHeaderLabelChange ?? (() => {})}
               placeholder="Untitled Node"
-              displayClassName="text-xs font-semibold truncate"
-              inputClassName="text-xs font-semibold h-auto py-0.5 px-1"
+              displayClassName="text-sm font-semibold truncate"
+              inputClassName="text-sm font-semibold h-auto py-0.5 px-1"
             />
             {headerNodeTypeLabel && (
               <span className="text-[10px] text-muted-foreground capitalize shrink-0">
@@ -127,11 +130,13 @@ export function ConfigurationPanel({
             )}
             <div className="flex-1" />
             <Button
-              variant="ghost"
+              variant="default"
               size="sm"
-              className="h-6 px-2 gap-1 shrink-0 text-[11px] text-muted-foreground hover:text-foreground"
+              className="h-8 px-3 gap-1.5 shrink-0 text-xs font-semibold"
               onClick={() => {
-                if (!runDisabled && !isRunning && onRunNode) onRunNode();
+                if (!runDisabled && !isRunning && onRunNode) {
+                  onRunNode();
+                }
               }}
               disabled={runDisabled || isRunning}
             >
@@ -197,6 +202,7 @@ export function ConfigurationPanel({
                 emptyMessage={parametersEmptyMessage}
                 portalContainer={portalContainer}
                 nodeType={nodeType}
+                inputData={inputData}
               />
             </div>
 

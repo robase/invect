@@ -88,11 +88,11 @@ export function InputPanel({
   portalContainer,
 }: InputPanelProps) {
   const [mapperOpen, setMapperOpen] = useState(() => mapperValue?.enabled ?? false);
-  const [mapperHeight, setMapperHeight] = useState(260);
+  const [mapperHeight, setMapperHeight] = useState(320);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const previousMapperEnabledRef = useRef(mapperValue?.enabled ?? false);
   const collapsedMapperHeight = 28;
-  const resizeHandleHeight = 8;
+  const resizeHandleHeight = 2;
   const minInputHeight = 160;
   const minExpandedMapperHeight = 180;
 
@@ -166,7 +166,7 @@ export function InputPanel({
   return (
     <ResizablePanel defaultSize={25} minSize={15} className="h-full">
       {hasMapper ? (
-        <div ref={containerRef} className="flex h-full min-h-0 flex-col">
+        <div ref={containerRef} className="flex flex-col h-full min-h-0">
           <div
             className="min-h-0"
             style={{
@@ -187,21 +187,25 @@ export function InputPanel({
               onRunSlot={onRunSlot}
               icon={<LogIn className="w-3.5 h-3.5 text-muted-foreground" />}
               toolbarExtra={
-                unresolvedCount > 0 && onRunAll ? (
+                onRunAll ? (
                   <Button
-                    variant="ghost"
+                    variant="default"
                     size="sm"
-                    className="h-5 px-1.5 text-[10px] gap-0.5"
+                    className="h-5 px-1.5 text-[10px] gap-0.5 font-semibold"
                     onClick={onRunAll}
-                    disabled={isAnyLoading}
-                    title={`Run all ${unresolvedCount} unresolved upstream node${unresolvedCount > 1 ? 's' : ''}`}
+                    disabled={isAnyLoading || unresolvedCount === 0}
+                    title={
+                      unresolvedCount > 0
+                        ? `Run all ${unresolvedCount} unresolved upstream node${unresolvedCount > 1 ? 's' : ''}`
+                        : 'No upstream nodes to run'
+                    }
                   >
                     {isAnyLoading ? (
                       <Loader2 className="w-2.5 h-2.5 animate-spin" />
                     ) : (
                       <Play className="w-2.5 h-2.5" />
                     )}
-                    Run all ({unresolvedCount})
+                    Run all
                   </Button>
                 ) : null
               }
@@ -210,22 +214,22 @@ export function InputPanel({
 
           {mapperOpen ? (
             <div
-              className="bg-border relative flex h-2 shrink-0 cursor-row-resize items-center justify-center after:absolute after:left-0 after:top-1/2 after:h-1 after:w-full after:-translate-y-1/2"
+              className="relative flex items-center justify-center h-0.5 bg-border shrink-0 cursor-row-resize after:absolute after:left-0 after:top-1/2 after:h-1 after:w-full after:-translate-y-1/2"
               onPointerDown={handleResizeStart}
             >
-              <div className="bg-border z-10 flex h-4 w-6 items-center justify-center rounded-xs border">
+              <div className="z-10 flex items-center justify-center w-6 h-4 border opacity-100 bg-primary-foreground rounded-xs">
                 <GripHorizontal className="size-2.5" />
               </div>
             </div>
           ) : null}
 
           <div
-            className="min-h-0 border-t border-border bg-background"
+            className="min-h-0 border-border bg-background"
             style={{ height: `${currentMapperHeight}px` }}
           >
-            <div className="flex h-full min-h-0 flex-col">
+            <div className="flex flex-col h-full min-h-0">
               <div
-                className="flex h-7 shrink-0 cursor-pointer select-none items-center justify-between px-3 hover:bg-muted/60 transition-colors"
+                className="flex items-center justify-between px-3 transition-colors cursor-pointer select-none h-7 shrink-0 hover:bg-muted/60"
                 onClick={toggleMapperAccordion}
               >
                 <div className="flex items-center gap-1.5">
@@ -272,7 +276,7 @@ export function InputPanel({
               </div>
 
               {mapperOpen ? (
-                <div className="min-h-0 flex-1">
+                <div className="flex-1 min-h-0">
                   <DataMapperPane
                     value={mapperValue}
                     onChange={onMapperChange!}
@@ -302,21 +306,25 @@ export function InputPanel({
           onRunSlot={onRunSlot}
           icon={<LogIn className="w-3.5 h-3.5 text-muted-foreground" />}
           toolbarExtra={
-            unresolvedCount > 0 && onRunAll ? (
+            onRunAll ? (
               <Button
-                variant="ghost"
+                variant="default"
                 size="sm"
-                className="h-5 px-1.5 text-[10px] gap-0.5"
+                className="h-5 px-1.5 text-[10px] gap-0.5 font-semibold"
                 onClick={onRunAll}
-                disabled={isAnyLoading}
-                title={`Run all ${unresolvedCount} unresolved upstream node${unresolvedCount > 1 ? 's' : ''}`}
+                disabled={isAnyLoading || unresolvedCount === 0}
+                title={
+                  unresolvedCount > 0
+                    ? `Run all ${unresolvedCount} unresolved upstream node${unresolvedCount > 1 ? 's' : ''}`
+                    : 'No upstream nodes to run'
+                }
               >
                 {isAnyLoading ? (
                   <Loader2 className="w-2.5 h-2.5 animate-spin" />
                 ) : (
                   <Play className="w-2.5 h-2.5" />
                 )}
-                Run all ({unresolvedCount})
+                Run all
               </Button>
             ) : null
           }

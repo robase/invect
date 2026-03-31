@@ -40,9 +40,7 @@ const getEdgeStyles = (data?: BatchFlowEdgeData, selected?: boolean) => {
     return {
       ...baseStyle,
       stroke: 'var(--edge-selected-stroke, #3b82f6)', // Blue for selected, uses CSS variable for theme awareness
-      fill: 'var(--edge-selected-stroke, #3b82f6)', // Fill with the same blue color
       strokeWidth: 3,
-      filter: 'drop-shadow(0 0 8px var(--edge-selected-glow, rgba(59, 130, 246, 0.6)))', // Glow effect
     };
   }
 

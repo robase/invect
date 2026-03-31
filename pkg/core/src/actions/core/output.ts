@@ -19,6 +19,7 @@ export const outputAction = defineAction({
   name: 'Flow Output',
   description: 'Return data from the flow',
   provider: CORE_PROVIDER,
+  icon: 'LogOut',
   tags: ['output', 'return', 'result', 'end', 'response', 'data'],
 
   params: {
