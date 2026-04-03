@@ -1,10 +1,14 @@
 name: Deploy Docs to GitHub Pages
 
+env:
+  CUSTOM_DOMAIN: invect.dev
+
 on:
   push:
     branches: [main]
     paths:
       - 'docs/**'
+      - '.github/workflows/deploy-docs.yml'
   workflow_dispatch:
 
 permissions:
@@ -25,16 +29,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/configure-pages@v5
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      - run: npm ci
+      - name: Install docs dependencies
+        run: npm install
 
       - name: Build docs
-        run: npx next build
+        run: npm run build
         env:
-          DOCS_BASE_PATH: '' # Set to '/flow-backend' if using project pages
+          DOCS_BASE_PATH: ''
+
+      - name: Disable Jekyll processing
+        run: touch out/.nojekyll
+
+      - name: Configure custom domain
+        run: printf '%s\n' "$CUSTOM_DOMAIN" > out/CNAME
 
       - uses: actions/upload-pages-artifact@v3
         with:
