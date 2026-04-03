@@ -1,5 +1,14 @@
 # @invect/express
 
+## 0.1.4
+
+### Patch Changes
+
+- Fix workspace:\* references in published packages by switching to pnpm publish -r
+
+- Updated dependencies []:
+  - @invect/core@0.1.4
+
 ## 0.1.3
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # @invect/cli
 
+## 0.1.4
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @invect/core@0.1.4
+
 ## 0.1.3
 
 ### Patch Changes

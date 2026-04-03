@@ -1,6 +1,6 @@
 {
   "name": "@invect/express",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Express.js integration package for Invect Core",
   "main": "dist/index.cjs",
   "module": "dist/index.js",

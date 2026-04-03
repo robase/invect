@@ -59,12 +59,20 @@ const FRAMEWORKS = [
 type Framework = (typeof FRAMEWORKS)[number];
 
 const DATABASES = [
-  { name: 'SQLite (better-sqlite3)', id: 'sqlite', dependency: 'better-sqlite3' },
+  { name: 'SQLite', id: 'sqlite', dependency: 'better-sqlite3' },
   { name: 'PostgreSQL', id: 'postgresql', dependency: 'postgres' },
   { name: 'MySQL', id: 'mysql', dependency: 'mysql2' },
 ] as const;
 
 type Database = (typeof DATABASES)[number];
+
+const SCHEMA_TOOLS = [
+  { name: 'Drizzle ORM', id: 'drizzle', description: 'TypeScript ORM with type-safe schema' },
+  { name: 'Prisma', id: 'prisma', description: 'Schema-first ORM' },
+  { name: 'Raw SQL', id: 'sql', description: 'Plain SQL migration file — bring your own migration tool' },
+] as const;
+
+type SchemaTool = (typeof SCHEMA_TOOLS)[number];
 
 // =============================================================================
 // Command
@@ -156,16 +164,81 @@ export const initCommand = new Command('init')
 
     console.log(pc.dim(`  Database: ${database.name}`));
 
+    // 3. Schema tool selection
+    step('Schema Management');
+
+    // Auto-detect existing setup
+    const existingDrizzleConfig = findExistingDrizzleConfig();
+    const existingPrismaSchema = findExistingPrismaSchema();
+
+    let schemaTool: SchemaTool;
+    let existingSchemaPath: string | null = null;
+
+    if (existingDrizzleConfig) {
+      console.log(pc.dim(`  Detected: Drizzle (${existingDrizzleConfig})`));
+      schemaTool = SCHEMA_TOOLS.find((s) => s.id === 'drizzle')!;
+
+      const detected = parseDrizzleConfig(existingDrizzleConfig);
+      if (detected?.schemaPath) {
+        existingSchemaPath = detected.schemaPath;
+        console.log(pc.dim(`  Schema: ${path.relative(process.cwd(), existingSchemaPath)}`));
+      }
+    } else if (existingPrismaSchema) {
+      console.log(pc.dim(`  Detected: Prisma (${existingPrismaSchema})`));
+      schemaTool = SCHEMA_TOOLS.find((s) => s.id === 'prisma')!;
+      existingSchemaPath = path.resolve(process.cwd(), existingPrismaSchema);
+    } else {
+      schemaTool = await askSchemaTool();
+    }
+
+    console.log(pc.dim(`  Tool: ${schemaTool.name}`));
+
+    // Ask for existing schema path if not auto-detected
+    if (!existingSchemaPath && schemaTool.id !== 'sql') {
+      const schemaFile = schemaTool.id === 'drizzle'
+        ? findExistingDrizzleSchemaFile()
+        : null;
+
+      if (schemaFile) {
+        console.log(pc.dim(`  Found existing schema: ${schemaFile}`));
+        existingSchemaPath = path.resolve(process.cwd(), schemaFile);
+      } else {
+        const { customPath } = await prompts({
+          type: 'text',
+          name: 'customPath',
+          message: `Path to existing ${schemaTool.name} schema file? (leave empty to create new)`,
+          initial: '',
+        });
+
+        if (customPath && customPath.trim()) {
+          existingSchemaPath = path.resolve(process.cwd(), customPath.trim());
+          if (!fs.existsSync(existingSchemaPath)) {
+            console.log(pc.dim(`  File doesn't exist yet — will create it`));
+          }
+        }
+      }
+    }
+
     // 4. Install dependencies
     step('Install Dependencies');
 
-    const depsToInstall: string[] = ['@invect/core', 'drizzle-orm'];
-    const devDepsToInstall: string[] = ['drizzle-kit', '@invect/cli'];
+    const depsToInstall: string[] = ['@invect/core'];
+    const devDepsToInstall: string[] = ['@invect/cli'];
 
     // Database driver
     if (!(database.dependency in allDeps)) {
       depsToInstall.push(database.dependency);
     }
+
+    // ORM-specific dependencies
+    if (schemaTool.id === 'drizzle') {
+      if (!('drizzle-orm' in allDeps)) depsToInstall.push('drizzle-orm');
+      if (!('drizzle-kit' in allDeps)) devDepsToInstall.push('drizzle-kit');
+    } else if (schemaTool.id === 'prisma') {
+      if (!('prisma' in allDeps)) devDepsToInstall.push('prisma');
+      if (!('@prisma/client' in allDeps)) depsToInstall.push('@prisma/client');
+    }
+    // Raw SQL: no extra ORM deps
 
     // Framework adapter
     if (framework.adapterPackage && !(framework.adapterPackage in allDeps)) {
@@ -183,6 +256,8 @@ export const initCommand = new Command('init')
     if (devDepsToInstall.length > 0) {
       console.log(pc.dim(`  Dev dependencies: ${devDepsToInstall.join(', ')}`));
     }
+
+    let installSucceeded = false;
 
     const { shouldInstall } = await prompts({
       type: 'confirm',
@@ -202,8 +277,14 @@ export const initCommand = new Command('init')
           console.log(pc.dim(`  $ ${devCmd}`));
           execSync(devCmd, { stdio: 'inherit', cwd: process.cwd() });
         }
+
+        installSucceeded = true;
       } catch {
-        console.error(pc.yellow('  ⚠ Package installation failed. You can install manually later.'));
+        console.error(pc.yellow('  ⚠ Package installation failed. You can install manually later:'));
+        console.log(pc.dim(`    ${getInstallCommand(pm, depsToInstall, false)}`));
+        if (devDepsToInstall.length > 0) {
+          console.log(pc.dim(`    ${getInstallCommand(pm, devDepsToInstall, true)}`));
+        }
       }
     }
 
@@ -245,19 +326,15 @@ export const initCommand = new Command('init')
       console.log(pc.green(`  ✓ Created .env with INVECT_ENCRYPTION_KEY`));
     }
 
-    // 7. Setup Drizzle
-    step('Setup Drizzle');
+    // 7. Setup ORM config (Drizzle only — Prisma/SQL don't need one from us)
+    if (schemaTool.id === 'drizzle' && !existingDrizzleConfig) {
+      step('Setup Drizzle');
 
-    const existingDrizzleConfig = findExistingDrizzleConfig();
-    const schemaDir = fs.existsSync(path.join(process.cwd(), 'src'))
-      ? './src/database'
-      : './database';
+      const defaultSchemaPath = existingSchemaPath
+        ? path.relative(process.cwd(), existingSchemaPath)
+        : `${configDir === 'src' ? './src/database' : './database'}/schema.ts`;
 
-    if (existingDrizzleConfig) {
-      console.log(pc.dim(`  Found existing ${existingDrizzleConfig} — Invect tables will be appended to your schema`));
-    } else {
-      const schemaPath = `${schemaDir}/schema.ts`;
-      const drizzleConfigCode = generateDrizzleConfigFile(database, schemaPath);
+      const drizzleConfigCode = generateDrizzleConfigFile(database, defaultSchemaPath);
       fs.writeFileSync(
         path.join(process.cwd(), 'drizzle.config.ts'),
         drizzleConfigCode,
@@ -272,21 +349,44 @@ export const initCommand = new Command('init')
     const { shouldGenerate } = await prompts({
       type: 'confirm',
       name: 'shouldGenerate',
-      message: existingDrizzleConfig
-        ? 'Append Invect tables to your existing schema now?'
-        : 'Generate database schema files now?',
+      message: schemaTool.id === 'sql'
+        ? 'Generate SQL migration file now?'
+        : existingSchemaPath
+          ? 'Append Invect tables to your existing schema now?'
+          : 'Generate schema files now?',
       initial: true,
     });
 
     if (shouldGenerate) {
       try {
         const { generateAction } = await import('./generate.js');
-        await generateAction({
-          config: configPath,
-          output: schemaDir,
-          dialect: database.id,
-          yes: true,
-        });
+        const outputDir = configDir === 'src' ? './src/database' : './database';
+
+        if (schemaTool.id === 'sql') {
+          await generateAction({
+            config: configPath,
+            output: '.',
+            adapter: 'sql',
+            dialect: database.id,
+            yes: true,
+          });
+        } else if (schemaTool.id === 'prisma') {
+          await generateAction({
+            config: configPath,
+            output: '',
+            adapter: 'prisma',
+            dialect: database.id,
+            schema: existingSchemaPath || undefined,
+            yes: true,
+          });
+        } else {
+          await generateAction({
+            config: configPath,
+            output: outputDir,
+            dialect: database.id,
+            yes: true,
+          });
+        }
       } catch (error) {
         console.error(
           pc.yellow('  ⚠ Schema generation failed. You can run it manually later:') +
@@ -321,7 +421,16 @@ export const initCommand = new Command('init')
 
     if (!shouldGenerate) {
       nextSteps.push(`  ${n++}. Run ${pc.cyan('npx invect-cli generate')} to create schema files`);
-      nextSteps.push(`  ${n++}. Run ${pc.cyan('npx drizzle-kit push')} to apply the schema`);
+    }
+
+    if (!shouldGenerate || !installSucceeded) {
+      if (schemaTool.id === 'drizzle') {
+        nextSteps.push(`  ${n++}. Run ${pc.cyan('npx drizzle-kit push')} to apply the schema`);
+      } else if (schemaTool.id === 'prisma') {
+        nextSteps.push(`  ${n++}. Run ${pc.cyan('npx prisma db push')} to apply the schema`);
+      } else {
+        nextSteps.push(`  ${n++}. Run the generated SQL file against your database`);
+      }
     }
 
     if (framework.id === 'express') {
@@ -379,6 +488,26 @@ async function askDatabase(): Promise<Database> {
   }
 
   return DATABASES.find((d) => d.id === database)!;
+}
+
+async function askSchemaTool(): Promise<SchemaTool> {
+  const { tool } = await prompts({
+    type: 'select',
+    name: 'tool',
+    message: 'How do you want to manage your database schema?',
+    choices: SCHEMA_TOOLS.map((s) => ({
+      title: s.name,
+      description: s.description,
+      value: s.id,
+    })),
+  });
+
+  if (!tool) {
+    console.log(pc.dim('\n  Cancelled.\n'));
+    process.exit(0);
+  }
+
+  return SCHEMA_TOOLS.find((s) => s.id === tool)!;
 }
 
 // =============================================================================
@@ -497,4 +626,74 @@ export default defineConfig({
 ${dbCredentials[database.id]}
 });
 `;
+}
+
+function findExistingPrismaSchema(): string | null {
+  const candidates = [
+    'prisma/schema.prisma',
+    'schema.prisma',
+  ];
+  for (const file of candidates) {
+    if (fs.existsSync(path.join(process.cwd(), file))) {
+      return file;
+    }
+  }
+  return null;
+}
+
+/**
+ * Search common locations for an existing Drizzle schema file.
+ */
+function findExistingDrizzleSchemaFile(): string | null {
+  const candidates = [
+    'db/schema.ts',
+    'src/db/schema.ts',
+    'src/database/schema.ts',
+    'database/schema.ts',
+    'lib/db/schema.ts',
+    'src/lib/db/schema.ts',
+  ];
+  for (const file of candidates) {
+    if (fs.existsSync(path.join(process.cwd(), file))) {
+      return file;
+    }
+  }
+  return null;
+}
+
+/**
+ * Parse drizzle.config.ts to extract schema path and dialect via regex.
+ */
+function parseDrizzleConfig(configFile: string): {
+  schemaPath: string | null;
+  dialect: 'sqlite' | 'postgresql' | 'mysql' | null;
+} | null {
+  const configPath = path.resolve(process.cwd(), configFile);
+  let content: string;
+  try {
+    content = fs.readFileSync(configPath, 'utf-8');
+  } catch {
+    return null;
+  }
+
+  let schemaPath: string | null = null;
+  const schemaMatch = content.match(/schema\s*:\s*['"]([^'"]+)['"]/);
+  if (schemaMatch) {
+    schemaPath = schemaMatch[1]!;
+    if (!schemaPath.endsWith('.ts') && !schemaPath.endsWith('.js')) {
+      schemaPath += '.ts';
+    }
+    schemaPath = path.resolve(process.cwd(), schemaPath);
+  }
+
+  let dialect: 'sqlite' | 'postgresql' | 'mysql' | null = null;
+  const dialectMatch = content.match(/dialect\s*:\s*['"]([^'"]+)['"]/);
+  if (dialectMatch) {
+    const d = dialectMatch[1]!.toLowerCase();
+    if (d === 'sqlite') dialect = 'sqlite';
+    else if (d === 'postgresql' || d === 'pg' || d === 'postgres') dialect = 'postgresql';
+    else if (d === 'mysql') dialect = 'mysql';
+  }
+
+  return { schemaPath, dialect };
 }

@@ -73,7 +73,7 @@
     "clean": "rm -rf dist && pnpm --filter '@invect/*' run clean",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "pnpm build && changeset publish"
+    "release": "pnpm build && pnpm publish -r --access public --no-git-checks"
   },
   "keywords": [
     "invect",

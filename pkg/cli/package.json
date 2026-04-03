@@ -1,6 +1,6 @@
 {
   "name": "@invect/cli",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "type": "module",
   "description": "CLI for managing Invect database schemas, migrations, and project setup",
   "bin": {

@@ -236,6 +236,9 @@ export {
   generateSqliteSchemaAppend,
   generatePostgresSchemaAppend,
   generateMysqlSchemaAppend,
+  generateSqliteRawSql,
+  generatePostgresRawSql,
+  generateMysqlRawSql,
 } from './database/schema-generator';
 export type { AppendSchemaResult } from './database/schema-generator';
 export { generateFullPrismaSchema, generatePrismaModels } from './database/prisma-schema-generator';

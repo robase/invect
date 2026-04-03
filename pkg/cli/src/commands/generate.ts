@@ -69,11 +69,11 @@ export async function generateAction(options: {
 
   // ─── Step 0: Detect adapter ─────────────────────────────────────
   const adapter = (options.adapter || 'drizzle').toLowerCase();
-  if (adapter !== 'drizzle' && adapter !== 'prisma') {
+  if (adapter !== 'drizzle' && adapter !== 'prisma' && adapter !== 'sql') {
     console.error(
       pc.red(`✗ Unknown adapter "${options.adapter}".`) +
         '\n' +
-        pc.dim('  Supported adapters: drizzle (default), prisma\n'),
+        pc.dim('  Supported adapters: drizzle (default), prisma, sql\n'),
     );
     process.exit(1);
   }
@@ -113,6 +113,11 @@ export async function generateAction(options: {
   }
 
   // ─── Step 2: Route to adapter ────────────────────────────────────
+  if (adapter === 'sql') {
+    await runSqlMode(config, options);
+    return;
+  }
+
   if (adapter === 'prisma') {
     await runPrismaMode(config, options);
     return;
@@ -852,6 +857,98 @@ function printNextSteps(): void {
     pc.dim('    3. Run ') +
       pc.cyan('npx invect-cli migrate') +
       pc.dim(' to apply them'),
+  );
+  console.log('');
+}
+
+// =============================================================================
+// SQL Mode — generate raw SQL migration file
+// =============================================================================
+
+async function runSqlMode(
+  config: Awaited<ReturnType<typeof loadConfig>>,
+  options: { output: string; dialect?: string; yes?: boolean },
+) {
+  const dialect = normalizeDialect(options.dialect);
+  if (!dialect) {
+    console.error(
+      pc.red('✗ --dialect is required for the sql adapter.') +
+        '\n' +
+        pc.dim('  Use --dialect sqlite, --dialect postgresql, or --dialect mysql\n'),
+    );
+    process.exit(1);
+  }
+
+  console.log(pc.dim(`  Adapter: ${pc.cyan('Raw SQL')}`));
+  console.log(pc.dim(`  Dialect: ${pc.white(dialect)}`));
+
+  const { generateRawSql } = await import('../generators/sql.js');
+
+  let sqlResult;
+  try {
+    sqlResult = await generateRawSql({
+      plugins: config.plugins,
+      dialect,
+      outputDir: options.output || '.',
+    });
+  } catch (error) {
+    console.error(pc.red(`\n✗ SQL generation failed:`));
+    console.error(pc.dim(`  ${error instanceof Error ? error.message : String(error)}\n`));
+    process.exit(1);
+  }
+
+  const { result, stats } = sqlResult;
+
+  console.log(pc.dim(`  Plugins: ${config.plugins.length} loaded`));
+  console.log(pc.dim(`  Tables:  ${stats.totalTables} total (${stats.coreTableCount} core${stats.pluginTableCount > 0 ? `, ${stats.pluginTableCount} plugin` : ''})`));
+
+  if (result.code === undefined) {
+    console.log(pc.bold(pc.green('\n✓ SQL migration file is already up to date.\n')));
+    return;
+  }
+
+  const rel = path.relative(process.cwd(), result.fileName);
+  console.log('');
+  console.log(pc.bold('  Files:'));
+  if (result.overwrite) {
+    console.log(pc.yellow(`    ~ ${rel}`) + pc.dim(' (will update)'));
+  } else {
+    console.log(pc.green(`    + ${rel}`) + pc.dim(' (will create)'));
+  }
+
+  // Confirm
+  if (!options.yes) {
+    console.log('');
+    const response = await prompts({
+      type: 'confirm',
+      name: 'proceed',
+      message: result.overwrite
+        ? `Update ${pc.cyan(rel)}?`
+        : `Create ${pc.cyan(rel)}?`,
+      initial: true,
+    });
+
+    if (!response.proceed) {
+      console.log(pc.dim('\n  Cancelled.\n'));
+      return;
+    }
+  }
+
+  // Write file
+  const dir = path.dirname(result.fileName);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(result.fileName, result.code, 'utf-8');
+
+  console.log(
+    pc.bold(pc.green(`\n✓ SQL migration file ${result.overwrite ? 'updated' : 'created'}: ${rel}\n`)),
+  );
+
+  console.log(pc.dim('  Next steps:'));
+  console.log(
+    pc.dim('    1. Review the generated SQL file'),
+  );
+  console.log(
+    pc.dim('    2. Run it against your database using your preferred tool'),
   );
   console.log('');
 }

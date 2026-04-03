@@ -1,5 +1,13 @@
 # @invect/user-auth
 
+## 0.1.3
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @invect/core@0.1.4
+  - @invect/frontend@0.1.3
+
 ## 0.1.2
 
 ### Patch Changes
