@@ -1,5 +1,13 @@
 # @invect/webhooks
 
+## 0.1.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @invect/core@0.1.3
+  - @invect/frontend@0.1.2
+
 ## 0.1.1
 
 ### Patch Changes
