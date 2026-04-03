@@ -13,22 +13,22 @@ import { z, ZodType } from 'zod/v4';
 // =============================================================================
 
 /** Schema for a string variable in node output */
-export const stringVariableSchema = z.object({
+const stringVariableSchema = z.object({
   value: z.string(),
   type: z.literal('string'),
 });
 
 /** Schema for an object variable in node output */
-export const objectVariableSchema = z.object({
+const objectVariableSchema = z.object({
   value: z.union([z.record(z.string(), z.unknown()), z.array(z.unknown())]),
   type: z.literal('object'),
 });
 
 /** Schema for a variable that can be either string or object */
-export const anyVariableSchema = z.union([stringVariableSchema, objectVariableSchema]);
+const anyVariableSchema = z.union([stringVariableSchema, objectVariableSchema]);
 
 /** Schema for the variables object (record of named outputs) */
-export const variablesRecordSchema = z.record(z.string(), anyVariableSchema);
+const variablesRecordSchema = z.record(z.string(), anyVariableSchema);
 
 // =============================================================================
 // OUTPUT SCHEMA FACTORY
@@ -55,7 +55,7 @@ export function createOutputSchema<
 }
 
 /** Infer the TypeScript type from an output schema */
-export type InferOutputType<T extends ZodType> = z.infer<T>;
+type InferOutputType<T extends ZodType> = z.infer<T>;
 
 // =============================================================================
 // DEFAULT OUTPUT SCHEMA
@@ -65,12 +65,10 @@ export type InferOutputType<T extends ZodType> = z.infer<T>;
  * Default output schema for nodes that don't define their own.
  * Uses a flexible structure that accepts any valid node output.
  */
-export const defaultOutputSchema = z.object({
+const defaultOutputSchema = z.object({
   nodeType: z.string(),
   data: z.object({
     variables: variablesRecordSchema,
     metadata: z.record(z.string(), z.unknown()).optional(),
   }),
 });
-
-export type DefaultNodeOutput = z.infer<typeof defaultOutputSchema>;

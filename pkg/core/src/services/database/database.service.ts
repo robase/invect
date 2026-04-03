@@ -53,7 +53,7 @@ type MysqlDbLike = {
 /**
  * Describes tables that a plugin needs checked at startup.
  */
-export interface PluginTableRequirement {
+interface PluginTableRequirement {
   pluginId: string;
   pluginName: string;
   tables: string[];
@@ -204,8 +204,8 @@ export class DatabaseService {
     this._adapter = createAdapterFromConnection(this.connection);
     this._database = new Database(this.connection, this.logger, this._adapter);
 
-    // --- Step 5: Run detailed schema verification (opt-in) ---
-    // This checks columns, not just tables. Controlled by config.schemaVerification.
+    // --- Step 5: Run detailed schema verification ---
+    // Always checks columns exist, not just tables.
     if (this.schemaVerificationOptions) {
       await verifySchema(this.connection, this.logger, this.schemaVerificationOptions);
     }

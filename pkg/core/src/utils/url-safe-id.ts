@@ -1,12 +1,12 @@
 const DEFAULT_URL_SAFE_ALPHABET =
-  '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_';
+  '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_' as const;
 
-export interface UrlSafeIdGeneratorOptions {
+interface UrlSafeIdGeneratorOptions {
   alphabet?: string;
   size?: number;
 }
 
-export type UrlSafeIdGenerator = (length?: number) => string;
+type UrlSafeIdGenerator = (length?: number) => string;
 
 /**
  * Returns a function that generates URL-safe IDs using a fixed alphabet/size.
@@ -24,7 +24,7 @@ export function createUrlSafeIdGenerator(
 /**
  * Generates a URL-safe identifier using secure randomness.
  */
-export function generateUrlSafeId(length = 21, alphabet = DEFAULT_URL_SAFE_ALPHABET): string {
+function generateUrlSafeId(length = 21, alphabet: string = DEFAULT_URL_SAFE_ALPHABET): string {
   if (!Number.isInteger(length) || length <= 0) {
     throw new Error('ID length must be a positive integer');
   }
@@ -77,5 +77,3 @@ function validateAlphabet(alphabet: string): void {
     throw new Error('Alphabet must be a non-empty string');
   }
 }
-
-export { DEFAULT_URL_SAFE_ALPHABET };

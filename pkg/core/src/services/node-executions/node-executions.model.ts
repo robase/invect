@@ -48,7 +48,7 @@ export interface UpdateNodeExecutionInput {
 /**
  * Execution trace query parameters
  */
-export interface NodeExecutionQuery {
+interface NodeExecutionQuery {
   nodeExecutionId?: string;
   nodeId?: string;
   status?: NodeExecutionStatus;

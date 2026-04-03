@@ -12,7 +12,6 @@
  */
 
 import type { Logger } from 'src/types/schemas';
-import type { InvectConfig } from 'src/types/schemas';
 import type { InvectIdentity } from 'src/types/auth.types';
 import type { ActionRegistry } from 'src/actions';
 import type { ProviderAdapter } from '../ai/provider-adapter';
@@ -54,7 +53,6 @@ export class ChatStreamService {
 
   constructor(
     private readonly logger: Logger,
-    private readonly config: InvectConfig,
     private readonly credentialsService: CredentialsService,
     private readonly flowsService: FlowsService,
     private readonly flowVersionsService: FlowVersionsService,
@@ -63,7 +61,7 @@ export class ChatStreamService {
     private readonly invect: unknown,
   ) {
     // Parse and apply defaults to chat config
-    this.chatConfig = ChatConfigSchema.parse(this.config.chat ?? {});
+    this.chatConfig = ChatConfigSchema.parse({});
     this.toolkit = new ChatToolkit(logger);
 
     logger.info(

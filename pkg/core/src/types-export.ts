@@ -75,13 +75,7 @@ export type {
   NodeExecutionHookResult,
 } from './types/plugin.types';
 
-export type {
-  queryDatabasesConfigSchema as DatabaseConfig,
-  ExecutionConfig,
-  LoggingConfig,
-  Logger,
-  InvectDatabaseConfig,
-} from './types/schemas';
+export type { ExecutionConfig, LoggingConfig, Logger, InvectDatabaseConfig } from './types/schemas';
 
 // Re-export scoped logging types
 export type { LogLevel, LogScopeName, ScopedLoggingConfig } from './utils/logger';

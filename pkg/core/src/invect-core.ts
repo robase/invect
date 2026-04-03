@@ -46,9 +46,8 @@ import {
   InvectDefinition,
   invectDefinitionSchema,
 } from './services/flow-versions/schemas-fresh';
-import type { CreateFlowRequest } from './types/schemas/flow/create-flow.schema';
 import { FlowValidationResult } from './types/validation';
-import type { UpdateFlowInput } from './services/flows/flows.model';
+import type { CreateFlowInput, UpdateFlowInput } from './services/flows/flows.model';
 
 // Utilities and errors
 import {
@@ -109,7 +108,6 @@ import type {
   AuthorizationContext,
   AuthorizationResult,
   AuthEvent,
-  InvectAuthConfig,
 } from './types/auth.types';
 
 type PostgreSqlClientLike = {
@@ -298,9 +296,8 @@ export class Invect {
     // because console.debug() always outputs regardless of configured level.
     this.config.logger = this.loggerManager.getBasicLogger();
 
-    // Initialize authorization service
+    // Initialize authorization service with defaults (plugins configure via hooks)
     this.authService = createAuthorizationService({
-      config: this.config.auth as InvectAuthConfig | undefined,
       logger: this.config.logger,
     });
 
@@ -468,30 +465,23 @@ export class Invect {
 
   /**
    * Check if flow access table is enabled.
+   * Always returns true — flow access service is always available.
+   * @deprecated Use flow access methods directly.
    */
   isFlowAccessTableEnabled(): boolean {
-    return !!this.config.auth?.useFlowAccessTable;
+    return true;
   }
 
   /**
    * Grant access to a flow for a user or team.
-   * Requires useFlowAccessTable: true in config.
    *
    * @example
    * ```typescript
-   * // Grant editor access to a user
    * await invect.grantFlowAccess({
    *   flowId: 'flow_123',
    *   userId: 'user_456',
    *   permission: 'editor',
    *   grantedBy: currentUser.id,
-   * });
-   *
-   * // Grant viewer access to a team
-   * await invect.grantFlowAccess({
-   *   flowId: 'flow_123',
-   *   teamId: 'team_abc',
-   *   permission: 'viewer',
    * });
    * ```
    */
@@ -504,78 +494,45 @@ export class Invect {
     expiresAt?: Date | string;
   }) {
     this.ensureInitialized();
-    const flowAccessService = this.serviceFactory.getFlowAccessService();
-    if (!flowAccessService) {
-      throw new Error(
-        'Flow access table not enabled. Set auth.useFlowAccessTable: true in config.',
-      );
-    }
-    return flowAccessService.grantAccess(input);
+    return this.serviceFactory.getFlowAccessService().grantAccess(input);
   }
 
   /**
    * Revoke a specific flow access record.
-   * Requires useFlowAccessTable: true in config.
    */
   async revokeFlowAccess(accessId: string) {
     this.ensureInitialized();
-    const flowAccessService = this.serviceFactory.getFlowAccessService();
-    if (!flowAccessService) {
-      throw new Error(
-        'Flow access table not enabled. Set auth.useFlowAccessTable: true in config.',
-      );
-    }
-    return flowAccessService.revokeAccess(accessId);
+    return this.serviceFactory.getFlowAccessService().revokeAccess(accessId);
   }
 
   /**
    * Revoke all access to a flow for a specific user or team.
-   * Requires useFlowAccessTable: true in config.
    */
   async revokeFlowAccessForUserOrTeam(flowId: string, userId?: string, teamId?: string) {
     this.ensureInitialized();
-    const flowAccessService = this.serviceFactory.getFlowAccessService();
-    if (!flowAccessService) {
-      throw new Error(
-        'Flow access table not enabled. Set auth.useFlowAccessTable: true in config.',
-      );
-    }
-    return flowAccessService.revokeAccessForUserOrTeam(flowId, userId, teamId);
+    return this.serviceFactory
+      .getFlowAccessService()
+      .revokeAccessForUserOrTeam(flowId, userId, teamId);
   }
 
   /**
    * List all access records for a flow.
-   * Requires useFlowAccessTable: true in config.
    */
   async listFlowAccess(flowId: string) {
     this.ensureInitialized();
-    const flowAccessService = this.serviceFactory.getFlowAccessService();
-    if (!flowAccessService) {
-      throw new Error(
-        'Flow access table not enabled. Set auth.useFlowAccessTable: true in config.',
-      );
-    }
-    return flowAccessService.listFlowAccess(flowId);
+    return this.serviceFactory.getFlowAccessService().listFlowAccess(flowId);
   }
 
   /**
    * Get all flows a user has access to (directly or via teams).
-   * Requires useFlowAccessTable: true in config.
    */
   async getAccessibleFlowIds(userId: string, teamIds: string[] = []) {
     this.ensureInitialized();
-    const flowAccessService = this.serviceFactory.getFlowAccessService();
-    if (!flowAccessService) {
-      throw new Error(
-        'Flow access table not enabled. Set auth.useFlowAccessTable: true in config.',
-      );
-    }
-    return flowAccessService.getAccessibleFlowIds(userId, teamIds);
+    return this.serviceFactory.getFlowAccessService().getAccessibleFlowIds(userId, teamIds);
   }
 
   /**
    * Check if a user has access to a flow with at least the required permission.
-   * Requires useFlowAccessTable: true in config.
    */
   async hasFlowAccess(
     flowId: string,
@@ -584,28 +541,17 @@ export class Invect {
     requiredPermission: 'owner' | 'editor' | 'operator' | 'viewer' = 'viewer',
   ) {
     this.ensureInitialized();
-    const flowAccessService = this.serviceFactory.getFlowAccessService();
-    if (!flowAccessService) {
-      throw new Error(
-        'Flow access table not enabled. Set auth.useFlowAccessTable: true in config.',
-      );
-    }
-    return flowAccessService.hasFlowAccess(flowId, userId, teamIds, requiredPermission);
+    return this.serviceFactory
+      .getFlowAccessService()
+      .hasFlowAccess(flowId, userId, teamIds, requiredPermission);
   }
 
   /**
    * Get the highest permission level a user has for a flow.
-   * Requires useFlowAccessTable: true in config.
    */
   async getFlowPermission(flowId: string, userId: string, teamIds: string[] = []) {
     this.ensureInitialized();
-    const flowAccessService = this.serviceFactory.getFlowAccessService();
-    if (!flowAccessService) {
-      throw new Error(
-        'Flow access table not enabled. Set auth.useFlowAccessTable: true in config.',
-      );
-    }
-    return flowAccessService.getFlowPermission(flowId, userId, teamIds);
+    return this.serviceFactory.getFlowAccessService().getFlowPermission(flowId, userId, teamIds);
   }
 
   // =====================================
@@ -847,7 +793,7 @@ export class Invect {
   /**
    * Create a new flow
    */
-  async createFlow(flowData: CreateFlowRequest): Promise<Flow> {
+  async createFlow(flowData: CreateFlowInput): Promise<Flow> {
     this.config.logger.debug(
       'createFlow called with arguments:',
       JSON.stringify(flowData, null, 2),

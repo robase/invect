@@ -995,7 +995,7 @@ export function generatePostgresRawSql(schema: MergedSchema): string {
       }
     }
   }
-  if (lines.length > 3) lines.push(``);
+  if (lines.length > 3) {lines.push(``);}
 
   for (const table of schema.tables) {
     lines.push(generateRawSqlTable(table, 'postgresql'));
@@ -1038,7 +1038,7 @@ function generateRawSqlTable(
 
   for (const [fieldName, field] of Object.entries(definition.fields)) {
     const colName = toSnakeCase(fieldName);
-    let colType = rawSqlColumnType(field, dialect, dbTableName, colName);
+    const colType = rawSqlColumnType(field, dialect, dbTableName, colName);
     let colDef = `  ${quoteIdent(colName, dialect)} ${colType}`;
 
     if (field.primaryKey && !hasCompositePK) {
@@ -1080,7 +1080,7 @@ function generateRawSqlTable(
 }
 
 function quoteIdent(name: string, dialect: 'sqlite' | 'postgresql' | 'mysql'): string {
-  if (dialect === 'mysql') return `\`${name}\``;
+  if (dialect === 'mysql') {return `\`${name}\``;}
   return `"${name}"`;
 }
 
@@ -1091,25 +1091,42 @@ function rawSqlColumnType(
   colName: string,
 ): string {
   if (isEnumType(field.type)) {
-    if (dialect === 'sqlite') return 'TEXT';
-    if (dialect === 'postgresql') return `${tableName}_${colName}`;
+    if (dialect === 'sqlite') {return 'TEXT';}
+    if (dialect === 'postgresql') {return `${tableName}_${colName}`;}
     // MySQL inline enum
     return `ENUM(${field.type.map((v) => `'${v}'`).join(', ')})`;
   }
 
   const typeMap: Record<string, Record<string, string>> = {
     sqlite: {
-      string: 'TEXT', text: 'TEXT', uuid: 'TEXT', number: 'INTEGER',
-      bigint: 'INTEGER', boolean: 'INTEGER', date: 'TEXT', json: 'TEXT',
+      string: 'TEXT',
+      text: 'TEXT',
+      uuid: 'TEXT',
+      number: 'INTEGER',
+      bigint: 'INTEGER',
+      boolean: 'INTEGER',
+      date: 'TEXT',
+      json: 'TEXT',
     },
     postgresql: {
-      string: 'TEXT', text: 'TEXT', uuid: 'UUID', number: 'INTEGER',
-      bigint: 'BIGINT', boolean: 'BOOLEAN', date: 'TIMESTAMP WITH TIME ZONE', json: 'JSONB',
+      string: 'TEXT',
+      text: 'TEXT',
+      uuid: 'UUID',
+      number: 'INTEGER',
+      bigint: 'BIGINT',
+      boolean: 'BOOLEAN',
+      date: 'TIMESTAMP WITH TIME ZONE',
+      json: 'JSONB',
     },
     mysql: {
-      string: `VARCHAR(${field.maxLength || 255})`, text: 'TEXT', uuid: 'VARCHAR(36)',
-      number: 'INT', bigint: 'BIGINT', boolean: 'BOOLEAN',
-      date: 'TIMESTAMP', json: 'JSON',
+      string: `VARCHAR(${field.maxLength || 255})`,
+      text: 'TEXT',
+      uuid: 'VARCHAR(36)',
+      number: 'INT',
+      bigint: 'BIGINT',
+      boolean: 'BOOLEAN',
+      date: 'TIMESTAMP',
+      json: 'JSON',
     },
   };
 
@@ -1121,22 +1138,22 @@ function rawSqlDefault(
   field: PluginFieldAttribute,
   dialect: 'sqlite' | 'postgresql' | 'mysql',
 ): string | null {
-  if (field.defaultValue === undefined) return null;
+  if (field.defaultValue === undefined) {return null;}
   if (field.defaultValue === 'uuid()') {
-    if (dialect === 'postgresql') return `gen_random_uuid()`;
+    if (dialect === 'postgresql') {return `gen_random_uuid()`;}
     // SQLite/MySQL: no built-in UUID default; omit (app generates)
     return null;
   }
   if (field.defaultValue === 'now()') {
-    if (dialect === 'sqlite') return `CURRENT_TIMESTAMP`;
-    if (dialect === 'postgresql') return `NOW()`;
+    if (dialect === 'sqlite') {return `CURRENT_TIMESTAMP`;}
+    if (dialect === 'postgresql') {return `NOW()`;}
     return `CURRENT_TIMESTAMP`;
   }
   if (typeof field.defaultValue === 'boolean') {
-    if (dialect === 'sqlite') return field.defaultValue ? '1' : '0';
+    if (dialect === 'sqlite') {return field.defaultValue ? '1' : '0';}
     return field.defaultValue ? 'TRUE' : 'FALSE';
   }
-  if (typeof field.defaultValue === 'number') return String(field.defaultValue);
-  if (typeof field.defaultValue === 'string') return `'${field.defaultValue}'`;
+  if (typeof field.defaultValue === 'number') {return String(field.defaultValue);}
+  if (typeof field.defaultValue === 'string') {return `'${field.defaultValue}'`;}
   return null;
 }

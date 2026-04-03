@@ -43,7 +43,7 @@ export interface ProviderCapabilities {
 /**
  * Configuration for creating an adapter
  */
-export interface ProviderAdapterConfig {
+interface ProviderAdapterConfig {
   apiKey: string;
   defaultModel?: string;
   baseURL?: string;
@@ -53,7 +53,7 @@ export interface ProviderAdapterConfig {
 /**
  * Normalized tool format for conversion
  */
-export interface NormalizedTool {
+interface NormalizedTool {
   id: string;
   name: string;
   description: string;

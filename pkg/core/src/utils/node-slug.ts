@@ -19,7 +19,7 @@ export function generateNodeSlug(label: string | undefined | null, fallbackId: s
   return slug;
 }
 
-export type NodeSlugMetadata = {
+type NodeSlugMetadata = {
   slug: string;
   label: string;
   nodeId: string;

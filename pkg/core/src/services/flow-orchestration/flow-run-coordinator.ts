@@ -16,7 +16,7 @@ import { GraphService } from '../graph.service';
 import { BatchStatus } from '../ai/base-client';
 import { NodeExecutionCoordinator } from './node-execution-coordinator';
 
-export type FlowRunCoordinatorDeps = {
+type FlowRunCoordinatorDeps = {
   logger: Logger;
   flowRunsService: FlowRunsService;
   nodeExecutionCoordinator: NodeExecutionCoordinator;

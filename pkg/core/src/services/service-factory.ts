@@ -26,7 +26,7 @@ import type { PluginHookRunner } from 'src/types/plugin.types';
 /**
  * Core Services container
  */
-export interface CoreServices {
+interface CoreServices {
   flowsService: FlowsService;
   flowVersionsService: FlowVersionsService;
   flowRunsService: FlowRunsService;
@@ -40,7 +40,7 @@ export interface CoreServices {
   reactFlowRendererService: ReactFlowRendererService;
   credentialsService: CredentialsService;
   agentToolExecutionService: AgentToolExecutionService;
-  flowAccessService: FlowAccessService | null;
+  flowAccessService: FlowAccessService;
   triggersService: FlowTriggersService;
   cronScheduler: CronSchedulerService;
   chatStreamService: ChatStreamService;
@@ -90,15 +90,11 @@ export class ServiceFactory {
 
     try {
       // 1. Create database service first (no dependencies)
-      // Schema verification is opt-in via config.schemaVerification.
-      // It only checks that required tables/columns exist — does NOT run migrations.
-      const schemaVerification = this.config.schemaVerification;
-      const verificationOpts = schemaVerification
-        ? {
-            strict: typeof schemaVerification === 'object' ? schemaVerification.strict : false,
-            plugins: (this.config.plugins || []) as import('src/types/plugin.types').InvectPlugin[],
-          }
-        : undefined;
+      // Schema verification always runs on startup to catch missing tables/columns.
+      const verificationOpts = {
+        strict: false,
+        plugins: (this.config.plugins || []) as import('src/types/plugin.types').InvectPlugin[],
+      };
       const databaseService = new DatabaseService(
         this.config.baseDatabaseConfig,
         this.logger,
@@ -147,15 +143,11 @@ export class ServiceFactory {
       // 5c. Create agent tool execution service
       const agentToolExecutionService = new AgentToolExecutionService(this.logger, databaseService);
 
-      // 5d. Create flow access service if enabled
-      let flowAccessService: FlowAccessService | null = null;
-      if (this.config.auth?.useFlowAccessTable) {
-        flowAccessService = new FlowAccessService({
-          adapter: databaseService.adapter,
-          logger: this.logger,
-        });
-        this.logger.info('Flow access table enabled - using Invect-managed flow permissions');
-      }
+      // 5d. Create flow access service (always available; plugins like RBAC activate it)
+      const flowAccessService = new FlowAccessService({
+        adapter: databaseService.adapter,
+        logger: this.logger,
+      });
 
       // 5e. Create triggers service (needs orchestration, wired after orchestration is created)
       // Placeholder — we wire the real orchestrationService reference below.
@@ -199,7 +191,6 @@ export class ServiceFactory {
       // 6d. Create chat stream service
       const chatStreamService = new ChatStreamService(
         this.logger,
-        this.config,
         credentialsService,
         flowsService,
         flowVersionsService,
@@ -348,9 +339,8 @@ export class ServiceFactory {
 
   /**
    * Get flow access service (for Invect-managed flow permissions).
-   * Returns null if useFlowAccessTable is not enabled.
    */
-  getFlowAccessService(): FlowAccessService | null {
+  getFlowAccessService(): FlowAccessService {
     return this.getServices().flowAccessService;
   }
 

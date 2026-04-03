@@ -52,11 +52,6 @@ export type FlowValidationResult =
       warnings?: FlowValidationWarning[];
     };
 
-export interface FlowValidationErrorResponse {
-  message: string;
-  validation: FlowValidationResult;
-}
-
 // ─── Error / Warning type constants ──────────────────────────────────────────
 //
 // Errors  = will cause execution to crash or throw (the flow cannot run).

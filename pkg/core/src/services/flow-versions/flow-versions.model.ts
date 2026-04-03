@@ -8,14 +8,14 @@ import { FlowVersion } from '../../database';
 /**
  * Input for updating a flow version (limited fields)
  */
-export interface UpdateFlowVersionInput {
+interface UpdateFlowVersionInput {
   invectDefinition?: InvectDefinitionRuntime;
 }
 
 /**
  * Flow version with optional composite key for database operations
  */
-export interface FlowVersionKey {
+interface FlowVersionKey {
   version: number;
   flowId: string;
 }
@@ -23,7 +23,7 @@ export interface FlowVersionKey {
 /**
  * Flow version query parameters
  */
-export interface FlowVersionQuery {
+interface FlowVersionQuery {
   flowId: string;
   version?: number | 'latest';
   limit?: number;

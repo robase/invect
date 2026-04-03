@@ -17,12 +17,6 @@ export const invectConfig: InvectConfig = {
     id: 'main',
     name: 'Acme Dashboard DB',
   },
-  auth: {
-    enabled: false,
-    defaultRole: 'viewer',
-    onAuthFailure: 'throw',
-    useFlowAccessTable: true,
-  },
   logging: {
     level: 'info',
   },

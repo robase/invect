@@ -51,7 +51,7 @@ import type {
   BatchPollResult,
 } from './ai-types';
 
-export type BulkBatchPollResult = Record<string, BatchResult>;
+type BulkBatchPollResult = Record<string, BatchResult>;
 
 /**
  * Base AI Client - Central orchestration layer.

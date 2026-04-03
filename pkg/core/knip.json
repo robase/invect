@@ -1,0 +1,36 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "entry": [
+    "src/index.ts",
+    "src/types-export.ts",
+    "src/database/schema-sqlite.ts",
+    "src/database/schema-postgres.ts",
+    "src/database/schema-mysql.ts",
+    "src/database/core-schema.ts",
+    "src/database/schema-merger.ts",
+    "src/database/schema-generator.ts"
+  ],
+  "project": ["src/**/*.ts"],
+  "paths": {
+    "src/*": ["src/*"]
+  },
+  "ignore": [
+    "tests/**",
+    "e2e/**",
+    "dist/**",
+    "drizzle/**",
+    "src/**/*.test.ts",
+    "src/**/*.spec.ts"
+  ],
+  "ignoreDependencies": [
+    "nanoid",
+    "uuid",
+    "dotenv",
+    "fsevents",
+    "chokidar",
+    "better-sqlite3",
+    "mysql2",
+    "postgres",
+    "pg"
+  ]
+}

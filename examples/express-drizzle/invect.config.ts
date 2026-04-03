@@ -18,12 +18,6 @@ export const invectConfig: InvectConfig = {
     type: 'sqlite',
     connectionString: process.env.DB_FILE_NAME || 'file:./dev.db',
   },
-  auth: {
-    enabled: false,
-    defaultRole: 'viewer',
-    onAuthFailure: 'throw',
-    useFlowAccessTable: true,
-  },
   logging: {
     level: 'info',
   },

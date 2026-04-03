@@ -44,7 +44,7 @@ export interface UpdateFlowInput {
 /**
  * Flow query parameters
  */
-export interface FlowQuery {
+interface FlowQuery {
   name?: string;
   tags?: string[];
   isActive?: boolean;

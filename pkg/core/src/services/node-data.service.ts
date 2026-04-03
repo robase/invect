@@ -189,13 +189,7 @@ export class NodeDataService {
    */
   getAvailableDatabases(): InvectDatabaseConfig[] {
     this.ensureInitialized();
-
-    // User will provide a list of databases in the invect config
-    if (!this.config.queryDatabases || this.config.queryDatabases.length === 0) {
-      return [this.config.baseDatabaseConfig];
-    }
-
-    return this.config.queryDatabases;
+    return [this.config.baseDatabaseConfig];
   }
 
   async runTemplateReplacement(

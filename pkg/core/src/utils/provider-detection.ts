@@ -31,7 +31,7 @@ function normalizeProviderString(value?: string | null): string | null {
   return value.trim().toUpperCase();
 }
 
-export function detectProviderFromString(value?: string | null): BatchProvider | null {
+function detectProviderFromString(value?: string | null): BatchProvider | null {
   const normalized = normalizeProviderString(value);
   if (!normalized) {
     return null;
@@ -50,7 +50,7 @@ export function detectProviderFromString(value?: string | null): BatchProvider |
   return null;
 }
 
-export function detectProviderFromUrl(url?: string | null): BatchProvider | null {
+function detectProviderFromUrl(url?: string | null): BatchProvider | null {
   if (!url) {
     return null;
   }

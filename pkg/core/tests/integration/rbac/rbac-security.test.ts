@@ -319,7 +319,6 @@ describe('RBAC Plugin — Security Red Team', () => {
         id: 'rbac-test',
       },
       logging: { level: 'warn' },
-      auth: { useFlowAccessTable: true },
       plugins: [plugin],
     });
     await invect.initialize();

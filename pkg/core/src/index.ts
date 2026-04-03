@@ -252,13 +252,7 @@ export type {
 export { generateNodeSlug } from './utils/node-slug';
 
 // Re-export configuration types
-export type {
-  queryDatabasesConfigSchema as DatabaseConfig,
-  ExecutionConfig,
-  LoggingConfig,
-  Logger,
-  InvectDatabaseConfig,
-} from './types/schemas';
+export type { ExecutionConfig, LoggingConfig, Logger, InvectDatabaseConfig } from './types/schemas';
 
 // Re-export scoped logging utilities
 export {

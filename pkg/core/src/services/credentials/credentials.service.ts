@@ -53,13 +53,13 @@ export interface CredentialFilters {
   includeShared?: boolean;
 }
 
-export interface CredentialUsage {
+interface CredentialUsage {
   flowsCount: number;
   nodesCount: number;
   lastUsedAt: string | null;
 }
 
-export interface CredentialWebhookInfo {
+interface CredentialWebhookInfo {
   webhookPath: string;
   fullUrl: string;
 }

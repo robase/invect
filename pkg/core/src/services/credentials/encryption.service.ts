@@ -11,12 +11,12 @@ const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;
 const SALT_LENGTH = 32;
 
-export interface EncryptionConfig {
+interface EncryptionConfig {
   /** Master encryption key (should be loaded from environment variable) */
   masterKey: string;
 }
 
-export interface EncryptedData {
+interface EncryptedData {
   /** Encrypted data as base64 string */
   ciphertext: string;
   /** Initialization vector as base64 string */

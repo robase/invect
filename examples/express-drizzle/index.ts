@@ -40,12 +40,6 @@ app.use(
       type: 'sqlite', // Example, adjust based on your setup
       connectionString: sqliteConnectionString,
     },
-    auth: {
-      enabled: false,
-      defaultRole: 'viewer',
-      onAuthFailure: 'throw',
-      useFlowAccessTable: true,
-    },
     logging: {
       level: 'debug', // Default to info level, use 'debug' for verbose logging
       scopes: {
