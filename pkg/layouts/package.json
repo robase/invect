@@ -1,6 +1,6 @@
 {
   "name": "@invect/layouts",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "Shared layout utilities for Invect graph positioning",
   "main": "dist/index.cjs",
@@ -18,7 +18,6 @@
   ],
   "scripts": {
     "build": "tsdown",
-    "prepublishOnly": "pnpm run build",
     "build:watch": "tsdown --watch",
     "dev": "tsdown --watch",
     "clean": "rm -rf dist",

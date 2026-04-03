@@ -1,6 +1,6 @@
 {
   "name": "@invect/nextjs",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Next.js integration for Invect",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
@@ -17,7 +17,6 @@
   ],
   "scripts": {
     "build": "tsdown && npm run build:types",
-    "prepublishOnly": "pnpm run build",
     "build:types": "tsc --emitDeclarationOnly --outDir dist",
     "dev": "tsdown --watch",
     "clean": "rm -rf dist",

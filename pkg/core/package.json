@@ -1,6 +1,6 @@
 {
   "name": "@invect/core",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "description": "Framework-agnostic core package for Invect workflow execution engine",
   "main": "dist/index.cjs",
@@ -35,7 +35,6 @@
   },
   "scripts": {
     "build": "tsdown",
-    "prepublishOnly": "pnpm run build",
     "build:watch": "tsdown --watch",
     "dev": "tsdown --watch",
     "clean": "rm -rf dist",

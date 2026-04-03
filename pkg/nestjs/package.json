@@ -1,6 +1,6 @@
 {
   "name": "@invect/nestjs",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "A NestJS module for executing Invect workflows with batch processing capabilities",
   "author": "robase",
@@ -41,7 +41,6 @@
   "scripts": {
     "build": "tsdown src/index.ts && tsc --emitDeclarationOnly --outDir dist",
     "build:nest": "nest build",
-    "prepublishOnly": "pnpm run build",
     "format": "prettier --write \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",

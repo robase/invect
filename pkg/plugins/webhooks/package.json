@@ -1,6 +1,6 @@
 {
   "name": "@invect/webhooks",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Webhook trigger plugin for Invect — adds webhook management, ingestion, signature verification, and a dedicated webhooks UI page",
   "main": "dist/backend/index.cjs",
   "module": "dist/backend/index.mjs",
@@ -11,7 +11,6 @@
   ],
   "scripts": {
     "build": "tsdown && tsc --emitDeclarationOnly --outDir dist",
-    "prepublishOnly": "pnpm run build",
     "build:w": "tsdown --watch",
     "dev": "tsdown --watch",
     "clean": "rm -rf dist",
@@ -32,7 +31,7 @@
     "@invect/core": "workspace:*"
   },
   "peerDependencies": {
-    "@invect/frontend": ">=0.1.0",
+    "@invect/frontend": ">=0.1.1",
     "react": ">=18.0.0",
     "react-dom": ">=18.0.0",
     "react-router": ">=7.0.0",

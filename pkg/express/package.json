@@ -1,6 +1,6 @@
 {
   "name": "@invect/express",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Express.js integration package for Invect Core",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
@@ -11,7 +11,6 @@
   ],
   "scripts": {
     "build": "tsdown",
-    "prepublishOnly": "pnpm run build",
     "build:w": "tsdown --watch",
     "dev": "tsdown --watch",
     "clean": "rm -rf dist",

@@ -1,6 +1,6 @@
 {
   "name": "@invect/frontend",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "Complete React components and routes for Invect workflow management",
   "main": "dist/index.js",
@@ -31,8 +31,7 @@
     "lint:fix": "eslint src/**/*.{ts,tsx} --fix",
     "clean": "rm -rf dist",
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",
-    "test": "echo \"No tests configured\"",
-    "prepublishOnly": "pnpm run clean && pnpm run build"
+    "test": "echo \"No tests configured\""
   },
   "keywords": [
     "react-router",
