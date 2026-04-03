@@ -53,7 +53,7 @@ export const categoryConfig: Record<
   },
 };
 
-export const categoryIcons: Record<ToolCategory, React.ElementType> = {
+const categoryIcons: Record<ToolCategory, React.ElementType> = {
   data: Database,
   web: Globe,
   code: Code2,

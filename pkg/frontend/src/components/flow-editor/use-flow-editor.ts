@@ -245,7 +245,7 @@ export function useFlowEditor({ flowId, version, basePath = '' }: UseFlowEditorO
  * Hook for node CRUD operations in the flow editor.
  * Uses Zustand store for immediate local updates.
  */
-export function useNodeOperations() {
+function useNodeOperations() {
   const { getNodeDefinition } = useNodeRegistry();
   const store = useFlowEditorStore();
   const { nodes, addNode, removeNode, updateNodeData } = store;
@@ -326,7 +326,7 @@ export function useNodeOperations() {
 /**
  * Hook for edge operations in the flow editor.
  */
-export function useEdgeOperations() {
+function useEdgeOperations() {
   const store = useFlowEditorStore();
   const { edges, addEdge, removeEdge, onConnect } = store;
 
@@ -341,7 +341,7 @@ export function useEdgeOperations() {
 /**
  * Hook for selection state in the flow editor.
  */
-export function useFlowSelection() {
+function useFlowSelection() {
   const store = useFlowEditorStore();
   const { selectedNodeId, configPanelOpen, selectNode, openConfigPanel, closeConfigPanel, nodes } =
     store;
@@ -365,7 +365,7 @@ export function useFlowSelection() {
  * Combined hook that provides all flow editor functionality.
  * This is the main hook components should use.
  */
-export function useFlowEditorFull(options: UseFlowEditorOptions) {
+function useFlowEditorFull(options: UseFlowEditorOptions) {
   const editor = useFlowEditor(options);
   const nodeOps = useNodeOperations();
   const edgeOps = useEdgeOperations();

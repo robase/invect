@@ -22,7 +22,7 @@ import pc from 'picocolors';
  * Minimal config shape — we only need plugins + baseDatabaseConfig
  * for schema generation. We don't need the full Zod-validated config.
  */
-export interface ResolvedConfig {
+interface ResolvedConfig {
   /** The resolved plugins array */
   plugins: Array<{
     id: string;

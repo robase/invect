@@ -2,12 +2,9 @@
 
 // Export new Invect-inspired components
 export { BatchFlowEdge, defaultEdgeOptions } from './BatchFlowEdge';
-export { BaseSidebar } from '../sidebar/BaseSidebar';
 export { LayoutSelector } from './LayoutSelector';
 
 export { langflowColors, type NodeStatus } from './styleUtils';
-
-// Export types
 export type { BatchFlowEdgeData } from './BatchFlowEdge';
 
 // Import types from core

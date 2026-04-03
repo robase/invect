@@ -20,7 +20,7 @@ export function createContextAwareNodes(): Record<string, React.ComponentType<an
  * Build a context-aware node type mapping that includes both static types
  * and dynamically registered action-based types.
  */
-export function createContextAwareNodesFromDefinitions(
+function createContextAwareNodesFromDefinitions(
   nodeTypes: string[],
 ): Record<string, React.ComponentType<any>> {
   const base = createContextAwareNodes();

@@ -77,7 +77,7 @@ export function isTokenExpired(credential: Credential): boolean {
 
 // ── Edit form auth type helpers ────────────────────────────────────────
 
-export const ALL_AUTH_TYPES: { value: CredentialAuthType; label: string }[] = [
+const ALL_AUTH_TYPES: { value: CredentialAuthType; label: string }[] = [
   { value: 'bearer', label: 'Bearer Token' },
   { value: 'apiKey', label: 'API Key' },
   { value: 'basic', label: 'Basic Auth' },

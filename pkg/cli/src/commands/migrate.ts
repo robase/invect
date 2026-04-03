@@ -30,7 +30,7 @@ export const migrateCommand = new Command('migrate')
   .action(migrateAction);
 
 /** @internal — exported for testing */
-export async function migrateAction(options: {
+async function migrateAction(options: {
   config?: string;
   yes?: boolean;
   push?: boolean;

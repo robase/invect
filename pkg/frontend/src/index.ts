@@ -31,9 +31,8 @@ export type { ApiProviderProps } from './contexts/ApiContext';
 // OAuth2 callback handler - needed for OAuth2 redirects
 export { OAuth2CallbackHandler } from './components/credentials/OAuth2ConnectButton';
 
-// Experimental v2 flow editor shell (mock-ui layout integration)
+// Flow editor shell
 export { FlowEditor } from './components/flow-editor/FlowEditor';
-export { FlowEditor as FlowEditorV2 } from './components/flow-editor/FlowEditor';
 
 // Standard page layout for non-editor pages
 export { PageLayout } from './components/PageLayout';

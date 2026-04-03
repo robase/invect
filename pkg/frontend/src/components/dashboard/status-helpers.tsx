@@ -39,7 +39,7 @@ export function formatDuration(ms: number): string {
   return remainMin > 0 ? `${hours}h ${remainMin}m` : `${hours}h`;
 }
 
-export function statusColor(status: string) {
+function statusColor(status: string) {
   switch (status) {
     case 'SUCCESS':
       return 'text-emerald-600 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950/40 dark:border-emerald-800';
@@ -58,7 +58,7 @@ export function statusColor(status: string) {
   }
 }
 
-export function StatusIcon({ status, className }: { status: string; className?: string }) {
+function StatusIcon({ status, className }: { status: string; className?: string }) {
   const base = cn('h-3.5 w-3.5', className);
   switch (status) {
     case 'SUCCESS':

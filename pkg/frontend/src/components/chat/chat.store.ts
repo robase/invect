@@ -417,10 +417,10 @@ export const useChatStore = create<ChatStore>()(
 
 // Selector hooks
 export const useChatOpen = () => useChatStore((s) => s.isOpen);
-export const useChatMessages = () => useChatStore((s) => s.messages);
-export const useChatStreaming = () => useChatStore((s) => s.isStreaming);
-export const useChatStreamingText = () => useChatStore((s) => s.streamingText);
-export const useChatError = () => useChatStore((s) => s.error);
-export const useChatPendingPrompt = () => useChatStore((s) => s.pendingPrompt);
-export const useChatSettingsPanelOpen = () => useChatStore((s) => s.isSettingsPanelOpen);
-export const useChatSettings = () => useChatStore((s) => s.settings);
+const useChatMessages = () => useChatStore((s) => s.messages);
+const useChatStreaming = () => useChatStore((s) => s.isStreaming);
+const useChatStreamingText = () => useChatStore((s) => s.streamingText);
+const useChatError = () => useChatStore((s) => s.error);
+const useChatPendingPrompt = () => useChatStore((s) => s.pendingPrompt);
+const useChatSettingsPanelOpen = () => useChatStore((s) => s.isSettingsPanelOpen);
+const useChatSettings = () => useChatStore((s) => s.settings);

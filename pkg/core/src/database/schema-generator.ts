@@ -995,7 +995,9 @@ export function generatePostgresRawSql(schema: MergedSchema): string {
       }
     }
   }
-  if (lines.length > 3) {lines.push(``);}
+  if (lines.length > 3) {
+    lines.push(``);
+  }
 
   for (const table of schema.tables) {
     lines.push(generateRawSqlTable(table, 'postgresql'));
@@ -1080,7 +1082,9 @@ function generateRawSqlTable(
 }
 
 function quoteIdent(name: string, dialect: 'sqlite' | 'postgresql' | 'mysql'): string {
-  if (dialect === 'mysql') {return `\`${name}\``;}
+  if (dialect === 'mysql') {
+    return `\`${name}\``;
+  }
   return `"${name}"`;
 }
 
@@ -1091,8 +1095,12 @@ function rawSqlColumnType(
   colName: string,
 ): string {
   if (isEnumType(field.type)) {
-    if (dialect === 'sqlite') {return 'TEXT';}
-    if (dialect === 'postgresql') {return `${tableName}_${colName}`;}
+    if (dialect === 'sqlite') {
+      return 'TEXT';
+    }
+    if (dialect === 'postgresql') {
+      return `${tableName}_${colName}`;
+    }
     // MySQL inline enum
     return `ENUM(${field.type.map((v) => `'${v}'`).join(', ')})`;
   }
@@ -1138,22 +1146,36 @@ function rawSqlDefault(
   field: PluginFieldAttribute,
   dialect: 'sqlite' | 'postgresql' | 'mysql',
 ): string | null {
-  if (field.defaultValue === undefined) {return null;}
+  if (field.defaultValue === undefined) {
+    return null;
+  }
   if (field.defaultValue === 'uuid()') {
-    if (dialect === 'postgresql') {return `gen_random_uuid()`;}
+    if (dialect === 'postgresql') {
+      return `gen_random_uuid()`;
+    }
     // SQLite/MySQL: no built-in UUID default; omit (app generates)
     return null;
   }
   if (field.defaultValue === 'now()') {
-    if (dialect === 'sqlite') {return `CURRENT_TIMESTAMP`;}
-    if (dialect === 'postgresql') {return `NOW()`;}
+    if (dialect === 'sqlite') {
+      return `CURRENT_TIMESTAMP`;
+    }
+    if (dialect === 'postgresql') {
+      return `NOW()`;
+    }
     return `CURRENT_TIMESTAMP`;
   }
   if (typeof field.defaultValue === 'boolean') {
-    if (dialect === 'sqlite') {return field.defaultValue ? '1' : '0';}
+    if (dialect === 'sqlite') {
+      return field.defaultValue ? '1' : '0';
+    }
     return field.defaultValue ? 'TRUE' : 'FALSE';
   }
-  if (typeof field.defaultValue === 'number') {return String(field.defaultValue);}
-  if (typeof field.defaultValue === 'string') {return `'${field.defaultValue}'`;}
+  if (typeof field.defaultValue === 'number') {
+    return String(field.defaultValue);
+  }
+  if (typeof field.defaultValue === 'string') {
+    return `'${field.defaultValue}'`;
+  }
   return null;
 }

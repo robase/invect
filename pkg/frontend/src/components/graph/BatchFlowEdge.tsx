@@ -208,13 +208,13 @@ export const BatchFlowEdge = memo(function BatchFlowEdge(props: EdgeProps) {
 BatchFlowEdge.displayName = 'BatchFlowEdge';
 
 // Predefined edge types matching Invect's patterns
-export const edgeTypes = {
+const edgeTypes = {
   // invect: BatchFlowEdge,
   default: BatchFlowEdge,
 };
 
 // Edge creation utilities
-export const createBatchFlowEdge = (
+const createBatchFlowEdge = (
   id: string,
   source: string,
   target: string,
