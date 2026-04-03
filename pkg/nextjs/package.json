@@ -1,6 +1,6 @@
 {
   "name": "@invect/nextjs",
-  "version": "0.1.4",
+  "version": "0.0.1",
   "description": "Next.js integration for Invect",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
