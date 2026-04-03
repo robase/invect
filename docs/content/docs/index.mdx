@@ -22,26 +22,20 @@ Unlike standalone workflow tools that require separate infrastructure, Invect sh
 
 ## Architecture
 
-```
-┌─────────────────────────────────────┐
-│          @invect/core              │
-│  ┌───────────────────────────────┐  │
-│  │  Invect class                │  │
-│  │  - initialize()               │  │
-│  │  - createFlow()               │  │
-│  │  - startFlowRun()             │  │
-│  │  - 40+ methods                │  │
-│  └───────────────────────────────┘  │
-│           ▲    ▲    ▲               │
-└───────────┼────┼────┼───────────────┘
-            │    │    │
-  ┌─────────┘    │    └─────────┐
-  │              │              │
-┌─▼──────┐ ┌────▼─────┐ ┌─────▼────┐
-│Express │ │  NestJS  │ │ Next.js  │
-│ Router │ │  Module  │ │  Actions │
-└────────┘ └──────────┘ └──────────┘
-```
+<Mermaid
+  chart={`flowchart TB
+    core["@invect/core"]
+    invect["Invect class<br/>- initialize()<br/>- createFlow()<br/>- startFlowRun()<br/>- 40+ methods"]
+    express["Express<br/>Router"]
+    nestjs["NestJS<br/>Module"]
+    nextjs["Next.js<br/>Actions"]
+
+    core --> invect
+    express --> core
+    nestjs --> core
+    nextjs --> core
+  `}
+/>
 
 All business logic lives in `@invect/core`. Framework packages are thin adapters that wrap the core — each under 500 lines.
 

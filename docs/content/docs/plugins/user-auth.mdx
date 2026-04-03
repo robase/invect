@@ -12,23 +12,16 @@ description: Add user authentication to Invect with better-auth.
 - **Role mapping** — better-auth roles map to Invect's RBAC (admin, editor, viewer).
 - **Zero custom middleware** — Works with Express, NestJS, and Next.js via the plugin system.
 
-```
-┌──────────────────────────────────────────────────────┐
-│                      Invect                         │
-│                                                      │
-│  ┌────────────────────────────────────────────────┐  │
-│  │          @invect/plugin-auth                  │  │
-│  │                                                │  │
-│  │  onRequest → auth.api.getSession() → identity  │  │
-│  │  /plugins/auth/* → auth.handler()              │  │
-│  └────────────────────────────────────────────────┘  │
-│                        │                             │
-│           ┌────────────▼──────────────┐              │
-│           │      better-auth          │              │
-│           │  (your configured instance) │             │
-│           └───────────────────────────┘              │
-└──────────────────────────────────────────────────────┘
-```
+<Mermaid
+  chart={`flowchart TB
+    invect["Invect"]
+    plugin["@invect/user-auth<br/>onRequest -> auth.api.getSession() -> identity<br/>/plugins/auth/* -> auth.handler()"]
+    auth["better-auth<br/>(your configured instance)"]
+
+    invect --> plugin
+    plugin --> auth
+  `}
+/>
 
 ## Installation
 
@@ -154,17 +147,14 @@ On every Invect API request:
 3. If a valid session exists, the better-auth `user` is mapped to an `InvectIdentity`.
 4. Invect's built-in RBAC engine uses that identity for permission checks.
 
-```
-Request → onAuthorize hook → auth.api.getSession()
-                                    │
-                   ┌────────────────┴────────────────┐
-                   │ Valid session                    │ No session
-                   ▼                                 ▼
-          Map user → InvectIdentity          Return null (401)
-                   │
-                   ▼
-          Invect RBAC checks permissions
-```
+<Mermaid
+  chart={`flowchart TD
+    request["Request"] --> authorize["onAuthorize hook"] --> session["auth.api.getSession()"]
+    session -->|Valid session| identity["Map user -> InvectIdentity"]
+    session -->|No session| unauthorized["Return null (401)"]
+    identity --> rbac["Invect RBAC checks permissions"]
+  `}
+/>
 
 ### Identity Mapping
 

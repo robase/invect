@@ -15,21 +15,24 @@ Plugins are the primary extension mechanism for Invect. A single plugin can add 
 
 Plugins are plain objects that conform to the `InvectPlugin` interface. They require no build step, no separate process, and no runtime dependency beyond `@invect/core`.
 
-```
-┌─────────────────────────────────────────────────┐
-│                   Invect Core                  │
-│                                                 │
-│  ┌───────────┐  ┌───────────┐  ┌────────────┐  │
-│  │  Plugin A  │  │  Plugin B  │  │  Plugin C  │  │
-│  │  (schema)  │  │  (hooks)   │  │  (actions) │  │
-│  └───────────┘  └───────────┘  └────────────┘  │
-│         │              │               │        │
-│    ┌────▼────┐    ┌────▼────┐     ┌────▼────┐   │
-│    │ Tables  │    │Execution│     │  Nodes  │   │
-│    │ Merged  │    │Lifecycle│     │ & Tools │   │
-│    └─────────┘    └─────────┘     └─────────┘   │
-└─────────────────────────────────────────────────┘
-```
+<Mermaid
+  chart={`flowchart TB
+    core["Invect Core"]
+    pluginA["Plugin A<br/>(schema)"]
+    pluginB["Plugin B<br/>(hooks)"]
+    pluginC["Plugin C<br/>(actions)"]
+    tables["Tables<br/>Merged"]
+    lifecycle["Execution<br/>Lifecycle"]
+    tools["Nodes<br/>& Tools"]
+
+    core --> pluginA
+    core --> pluginB
+    core --> pluginC
+    pluginA --> tables
+    pluginB --> lifecycle
+    pluginC --> tools
+  `}
+/>
 
 ## Quick Start
 
