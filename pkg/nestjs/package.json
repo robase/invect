@@ -1,6 +1,6 @@
 {
   "name": "@invect/nestjs",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "type": "module",
   "description": "A NestJS module for executing Invect workflows with batch processing capabilities",
   "author": "robase",
@@ -31,9 +31,13 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/robase/flow-backend.git",
+    "url": "https://github.com/robase/invect.git",
     "directory": "pkg/nestjs"
   },
+  "bugs": {
+    "url": "https://github.com/robase/invect/issues"
+  },
+  "homepage": "https://invect.dev",
   "scripts": {
     "build": "tsdown src/index.ts && tsc --emitDeclarationOnly --outDir dist",
     "build:nest": "nest build",
@@ -93,5 +97,8 @@
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

@@ -1,7 +1,9 @@
 {
   "name": "@invect/rbac",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "RBAC plugin for Invect — adds role-based access control UI, flow sharing, and permission management. Requires @invect/user-auth.",
+  "author": "robase",
+  "license": "MIT",
   "type": "module",
   "main": "dist/backend/index.cjs",
   "module": "dist/backend/index.mjs",
@@ -44,7 +46,7 @@
   },
   "peerDependencies": {
     "@invect/user-auth": ">=0.1.0",
-    "@invect/frontend": ">=2.0.0",
+    "@invect/frontend": ">=0.1.0",
     "react": ">=18.0.0",
     "react-dom": ">=18.0.0",
     "@tanstack/react-query": ">=5.0.0",
@@ -93,7 +95,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/robase/flow-backend.git",
+    "url": "https://github.com/robase/invect.git",
     "directory": "pkg/plugins/rbac"
+  },
+  "bugs": {
+    "url": "https://github.com/robase/invect/issues"
+  },
+  "homepage": "https://invect.dev",
+  "publishConfig": {
+    "access": "public"
   }
 }

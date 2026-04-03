@@ -1,6 +1,6 @@
 {
   "name": "@invect/cli",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "type": "module",
   "description": "CLI for managing Invect database schemas, migrations, and project setup",
   "bin": {
@@ -51,9 +51,18 @@
     "migration",
     "drizzle"
   ],
+  "author": "robase",
+  "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/robase/flow-backend.git",
+    "url": "https://github.com/robase/invect.git",
     "directory": "pkg/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/robase/invect/issues"
+  },
+  "homepage": "https://invect.dev",
+  "publishConfig": {
+    "access": "public"
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@invect/frontend",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "type": "module",
   "description": "Complete React components and routes for Invect workflow management",
   "main": "dist/index.js",
@@ -43,7 +43,7 @@
     "typescript",
     "components"
   ],
-  "author": "Invect Team",
+  "author": "robase",
   "license": "MIT",
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.0",
@@ -115,7 +115,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/robase/flow-backend.git",
+    "url": "https://github.com/robase/invect.git",
     "directory": "pkg/frontend"
+  },
+  "bugs": {
+    "url": "https://github.com/robase/invect/issues"
+  },
+  "homepage": "https://invect.dev",
+  "publishConfig": {
+    "access": "public"
   }
 }

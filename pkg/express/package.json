@@ -1,6 +1,6 @@
 {
   "name": "@invect/express",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Express.js integration package for Invect Core",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
@@ -30,7 +30,7 @@
     "automation",
     "api"
   ],
-  "author": "Invect Team",
+  "author": "robase",
   "license": "MIT",
   "dependencies": {
     "@invect/core": "workspace:*",
@@ -74,11 +74,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/robase/flow-backend.git",
+    "url": "https://github.com/robase/invect.git",
     "directory": "pkg/express"
   },
   "bugs": {
-    "url": "https://github.com/robase/flow-backend/issues"
+    "url": "https://github.com/robase/invect/issues"
   },
-  "homepage": "https://github.com/robase/flow-backend#readme"
+  "homepage": "https://invect.dev",
+  "publishConfig": {
+    "access": "public"
+  }
 }

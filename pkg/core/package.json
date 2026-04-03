@@ -1,6 +1,6 @@
 {
   "name": "@invect/core",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "type": "module",
   "description": "Framework-agnostic core package for Invect workflow execution engine",
   "main": "dist/index.cjs",
@@ -103,9 +103,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/robase/flow-backend.git",
+    "url": "https://github.com/robase/invect.git",
     "directory": "pkg/core"
   },
+  "bugs": {
+    "url": "https://github.com/robase/invect/issues"
+  },
+  "homepage": "https://invect.dev",
+  "author": "robase",
   "keywords": [
     "workflow",
     "automation",

@@ -1,6 +1,7 @@
 {
   "name": "invect",
-  "version": "2.0.0",
+  "version": "0.0.1",
+  "private": true,
   "type": "module",
   "description": "Complete workflow management system with React frontend and NestJS backend",
   "main": "dist/index.cjs",
@@ -70,9 +71,9 @@
     "lint": "pnpm -r run lint --fix",
     "typecheck": "pnpm -r run typecheck",
     "clean": "rm -rf dist && pnpm --filter '@invect/*' run clean",
-    "changeset": "pnpm changeset",
-    "version-packages": "pnpm changeset version",
-    "release": "pnpm build && pnpm changeset publish"
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "pnpm build && changeset publish"
   },
   "keywords": [
     "invect",
@@ -87,7 +88,7 @@
     "Invect",
     "components"
   ],
-  "author": "Invect Team",
+  "author": "robase",
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0",
@@ -95,12 +96,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/flow-backend.git"
+    "url": "https://github.com/robase/invect.git"
   },
   "bugs": {
-    "url": "https://github.com/your-username/flow-backend/issues"
+    "url": "https://github.com/robase/invect/issues"
   },
-  "homepage": "https://github.com/your-username/flow-backend#readme",
+  "homepage": "https://invect.dev",
   "peerDependencies": {
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",

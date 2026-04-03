@@ -1,6 +1,6 @@
 {
   "name": "@invect/layouts",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "type": "module",
   "description": "Shared layout utilities for Invect graph positioning",
   "main": "dist/index.cjs",
@@ -48,11 +48,18 @@
     "dagre",
     "graph"
   ],
-  "author": "Invect Team",
+  "author": "robase",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/robase/flow-backend.git",
+    "url": "https://github.com/robase/invect.git",
     "directory": "pkg/layouts"
+  },
+  "bugs": {
+    "url": "https://github.com/robase/invect/issues"
+  },
+  "homepage": "https://invect.dev",
+  "publishConfig": {
+    "access": "public"
   }
 }
