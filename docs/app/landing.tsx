@@ -585,7 +585,7 @@ const landingStyles = `
   .landing .code-dot.red { background: #3a3a3a; }
   .landing .code-dot.yellow { background: #3a3a3a; }
   .landing .code-dot.green { background: #3a3a3a; }
-  .landing .code-block pre { padding: 20px; font-size: 13px; line-height: 1.7; overflow-x: auto; white-space: pre; }
+  .landing .code-block pre { padding: 20px; font-size: 14px; line-height: 1.7; overflow-x: auto; white-space: pre; }
   .landing .code-block .keyword { color: #d6a4f1; }
   .landing .code-block .string { color: #98e087; }
   .landing .code-block .type { color: #f0c96e; }
