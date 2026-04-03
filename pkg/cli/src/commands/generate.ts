@@ -1,5 +1,5 @@
 /**
- * `npx invect generate` — Generate Drizzle schema files
+ * `npx invect-cli generate` — Generate Drizzle schema files
  *
  * Merges the core Invect schema with all plugin schemas, then generates
  * the three dialect-specific Drizzle ORM schema files:
@@ -12,11 +12,11 @@
  * ORM tooling after schema generation.
  *
  * Usage:
- *   npx invect generate                    # Auto-detect config
- *   npx invect generate --config ./my.ts   # Explicit config path
- *   npx invect generate --output ./db      # Custom output directory
- *   npx invect generate --yes              # Skip confirmation
- *   npx invect generate --dialect sqlite   # Generate only one dialect
+ *   npx invect-cli generate                    # Auto-detect config
+ *   npx invect-cli generate --config ./my.ts   # Explicit config path
+ *   npx invect-cli generate --output ./db      # Custom output directory
+ *   npx invect-cli generate --yes              # Skip confirmation
+ *   npx invect-cli generate --dialect sqlite   # Generate only one dialect
  */
 
 import { Command } from 'commander';
@@ -88,7 +88,7 @@ export async function generateAction(options: {
         '\n' +
         pc.dim('  Use --config <path> to specify the config file explicitly.') +
         '\n\n' +
-        pc.dim('  You can create one with: ' + pc.cyan('npx invect init')) +
+        pc.dim('  You can create one with: ' + pc.cyan('npx invect-cli init')) +
         '\n',
     );
     process.exit(1);
@@ -115,7 +115,7 @@ export async function generateAction(options: {
   // ─── Step 2: Route to adapter ────────────────────────────────────
   if (adapter === 'prisma') {
     await runPrismaMode(config, options);
-    process.exit(0);
+    return;
   }
 
   // ─── Step 2a: Drizzle — Determine mode (append vs separate files) ─────────
@@ -161,8 +161,6 @@ export async function generateAction(options: {
   } else {
     await runSeparateFilesMode(config, options);
   }
-
-  process.exit(0);
 }
 
 // =============================================================================
@@ -206,7 +204,7 @@ async function runPrismaMode(
 
   if (result.code === undefined) {
     console.log(pc.bold(pc.green('\n✓ Prisma schema is already up to date.\n')));
-    process.exit(0);
+    return;
   }
 
   const rel = path.relative(process.cwd(), result.fileName);
@@ -232,7 +230,7 @@ async function runPrismaMode(
 
     if (!response.proceed) {
       console.log(pc.dim('\n  Cancelled.\n'));
-      process.exit(0);
+      return;
     }
   }
 
@@ -388,7 +386,7 @@ async function runAppendMode(
   // We only skip when the final assembled content is identical to the file on disk.
   if (currentFileContent === finalContent) {
     printSummaryAlreadyUpToDate();
-    process.exit(0);
+    return;
   }
 
   // Show what will happen
@@ -419,7 +417,7 @@ async function runAppendMode(
 
     if (!response.proceed) {
       console.log(pc.dim('\n  Cancelled.\n'));
-      process.exit(0);
+      return;
     }
   }
 
@@ -512,7 +510,7 @@ async function runSeparateFilesMode(
 
   if (!hasChanges) {
     console.log(pc.bold(pc.green('\n✓ Schema files are already up to date.\n')));
-    process.exit(0);
+    return;
   }
 
   console.log('');
@@ -540,7 +538,7 @@ async function runSeparateFilesMode(
 
     if (!response.proceed) {
       console.log(pc.dim('\n  Cancelled.\n'));
-      process.exit(0);
+      return;
     }
   }
 
@@ -758,7 +756,7 @@ async function runDrizzleKitGenerate(): Promise<void> {
     console.log(
       pc.bold(pc.green('\n✓ SQL migrations generated.\n')) +
         pc.dim('  Run ') +
-        pc.cyan('npx invect migrate') +
+        pc.cyan('npx invect-cli migrate') +
         pc.dim(' to apply them.\n'),
     );
   } catch {
@@ -852,7 +850,7 @@ function printNextSteps(): void {
   );
   console.log(
     pc.dim('    3. Run ') +
-      pc.cyan('npx invect migrate') +
+      pc.cyan('npx invect-cli migrate') +
       pc.dim(' to apply them'),
   );
   console.log('');

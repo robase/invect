@@ -1,11 +1,11 @@
 /**
  * Invect configuration — used by the Express server and the Invect CLI.
  *
- * Run `npx invect generate` to regenerate the Drizzle schema files
+ * Run `npx invect-cli generate` to regenerate the Drizzle schema files
  * whenever plugins are added or removed.
  */
 
-import { betterAuthPlugin } from '@invect/user-auth';
+import { userAuth } from '@invect/user-auth';
 import { rbacPlugin } from '@invect/rbac';
 import { webhooksPlugin } from '@invect/webhooks';
 import type { InvectConfig } from '@invect/core';
@@ -43,7 +43,7 @@ export const invectConfig: InvectConfig = {
       : []),
   ],
   plugins: [
-    betterAuthPlugin({
+    userAuth({
       onSessionError: 'continue',
       trustedOrigins: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
       betterAuthOptions: {

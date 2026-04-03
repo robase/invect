@@ -304,7 +304,7 @@ describe('Schema Verification', () => {
       await verifySchema(connection, logger);
 
       const warnCall = logger.warn.mock.calls[0]?.[0] as string;
-      expect(warnCall).toContain('npx invect generate');
+      expect(warnCall).toContain('npx invect-cli generate');
       expect(warnCall).toContain('npx drizzle-kit push');
       expect(warnCall).toContain('Missing tables');
     });

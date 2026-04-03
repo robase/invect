@@ -1,7 +1,7 @@
 /**
  * Invect CLI configuration file.
  *
- * The CLI (`npx invect generate`) loads this file to discover:
+ * The CLI (`npx invect-cli generate`) loads this file to discover:
  *   - Database type and connection string
  *   - Plugins and their schemas
  *

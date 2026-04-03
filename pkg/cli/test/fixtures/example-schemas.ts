@@ -12,7 +12,7 @@ import type { InvectPluginSchema } from '@invect/core';
 
 // =============================================================================
 // 0. Better Auth — auth tables (user, session, account, verification)
-//    Mirrors the schema exported by @invect/user-auth's BETTER_AUTH_SCHEMA
+//    Mirrors the schema exported by @invect/user-auth's USER_AUTH_SCHEMA
 // =============================================================================
 
 export const betterAuthSchema: InvectPluginSchema = {
@@ -85,7 +85,7 @@ export const betterAuthSchema: InvectPluginSchema = {
   },
 };
 
-export const betterAuthPlugin = {
+export const userAuthPlugin = {
   id: 'better-auth',
   name: 'Better Auth',
   schema: betterAuthSchema,

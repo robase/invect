@@ -499,14 +499,14 @@ export class DatabaseService {
     lines.push(
       'To fix this, run:',
       '',
-      '  npx invect generate   # generate schema files (core + plugins)',
+      '  npx invect-cli generate   # generate schema files (core + plugins)',
       '  npx drizzle-kit push   # push schema to the database',
       '',
       'Or if you use migrations:',
       '',
-      '  npx invect generate   # generate schema files',
+      '  npx invect-cli generate   # generate schema files',
       '  npx drizzle-kit generate',
-      '  npx invect migrate    # apply migrations',
+      '  npx invect-cli migrate    # apply migrations',
       '',
       'The Invect CLI reads your invect.config.ts to discover installed',
       'plugins and generates the correct schema for all of them.',
@@ -608,7 +608,7 @@ export class DatabaseService {
       lines.push(
         'To fix this, run:',
         '',
-        '  npx invect generate   # generate schema files (core + plugins)',
+        '  npx invect-cli generate   # generate schema files (core + plugins)',
         '  npx drizzle-kit push   # push schema to the database',
         '',
         'The Invect CLI reads your invect.config.ts, discovers all plugins',
@@ -618,7 +618,7 @@ export class DatabaseService {
 
     lines.push(
       '',
-      'If a plugin defines a schema, `npx invect generate` will include it',
+      'If a plugin defines a schema, `npx invect-cli generate` will include it',
       'automatically. For plugins with externally-managed tables, see the',
       "plugin's README for additional schema setup instructions.",
       '',

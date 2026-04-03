@@ -207,9 +207,11 @@ export interface BetterAuthPassthroughOptions {
 // ---------------------------------------------------------------------------
 
 /**
- * Configuration for the Better Auth Invect plugin.
+ * Configuration for the User Auth Invect plugin.
+ *
+ * Wraps a [better-auth](https://better-auth.com) instance as an Invect plugin.
  */
-export interface BetterAuthPluginOptions {
+export interface UserAuthPluginOptions {
   /**
    * A configured better-auth instance (the return value of `betterAuth()`).
    *
@@ -220,12 +222,12 @@ export interface BetterAuthPluginOptions {
    * @example
    * ```ts
    * // Simple: let the plugin manage better-auth internally
-   * betterAuthPlugin({ globalAdmins: [{ email: 'admin@example.com', pw: 'secret' }] });
+   * userAuth({ globalAdmins: [{ email: 'admin@example.com', pw: 'secret' }] });
    *
    * // Advanced: provide your own instance for full control
    * import { betterAuth } from 'better-auth';
    * const auth = betterAuth({ ... });
-   * betterAuthPlugin({ auth });
+   * userAuth({ auth });
    * ```
    */
   auth?: BetterAuthInstance;
@@ -335,7 +337,7 @@ export interface BetterAuthPluginOptions {
    *
    * @example
    * ```ts
-   * betterAuthPlugin({
+   * userAuth({
    *   betterAuthOptions: {
    *     session: { expiresIn: 60 * 60 * 24 * 30 }, // 30 days
    *     advanced: { useSecureCookies: true },

@@ -11,11 +11,11 @@
  *   secret    — Generate a secure encryption key
  *
  * Usage:
- *   npx invect init
- *   npx invect generate
- *   npx invect migrate
- *   npx invect info
- *   npx invect secret
+ *   npx invect-cli init
+ *   npx invect-cli generate
+ *   npx invect-cli migrate
+ *   npx invect-cli info
+ *   npx invect-cli secret
  */
 
 import { Command } from 'commander';

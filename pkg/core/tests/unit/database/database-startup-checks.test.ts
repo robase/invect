@@ -110,7 +110,7 @@ describe('DatabaseService startup checks', () => {
       expect(logger.error).toHaveBeenCalled();
       const errorCall = logger.error.mock.calls[0][0] as string;
       expect(errorCall).toContain('DATABASE NOT READY');
-      expect(errorCall).toContain('npx invect generate');
+      expect(errorCall).toContain('npx invect-cli generate');
     });
 
     it('should throw with helpful message when some tables are missing', async () => {
@@ -272,7 +272,7 @@ describe('DatabaseService startup checks', () => {
           id: 'my-plugin',
           name: 'My Plugin',
           requiredTables: ['my_table'],
-          setupInstructions: 'Run `npx invect generate` then `npx drizzle-kit push`',
+          setupInstructions: 'Run `npx invect-cli generate` then `npx drizzle-kit push`',
         },
       ];
       const service = new DatabaseService(
@@ -285,7 +285,7 @@ describe('DatabaseService startup checks', () => {
       await expect(service.initialize()).rejects.toThrow();
 
       const errorCall = logger.error.mock.calls[0][0] as string;
-      expect(errorCall).toContain('npx invect generate');
+      expect(errorCall).toContain('npx invect-cli generate');
     });
 
     it('should succeed when all plugin tables exist', async () => {

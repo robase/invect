@@ -24,7 +24,7 @@
     "db:studio": "npx prisma studio",
     "db:generate": "npx prisma generate",
     "db:seed": "npx ts-node prisma/seed.ts",
-    "invect:generate": "npx invect generate --adapter prisma --config invect.config.ts --dialect postgresql --yes",
+    "invect:generate": "npx invect-cli generate --adapter prisma --config invect.config.ts --dialect postgresql --yes",
     "invect:push": "npx prisma db push"
   },
   "dependencies": {

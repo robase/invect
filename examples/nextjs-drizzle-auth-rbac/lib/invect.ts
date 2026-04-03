@@ -1,11 +1,11 @@
 /**
  * Invect configuration — wired into the Next.js API route handler.
  *
- * This file is ALSO read by the Invect CLI (`npx invect generate`)
+ * This file is ALSO read by the Invect CLI (`npx invect-cli generate`)
  * to discover plugins and their schemas for code generation.
  */
 
-import { betterAuthPlugin } from '@invect/user-auth';
+import { userAuth } from '@invect/user-auth';
 import { rbacPlugin } from '@invect/rbac';
 import { invectAuth } from './auth';
 import type { InvectConfig } from '@invect/core';
@@ -55,7 +55,7 @@ export const invectConfig: InvectConfig = {
       : []),
   ],
   plugins: [
-    betterAuthPlugin({
+    userAuth({
       auth: invectAuth,
       onSessionError: 'continue',
       globalAdmins: [

@@ -186,7 +186,7 @@ export function mergeSchemas(plugins: InvectPlugin[]): MergedSchema {
 }
 
 // =============================================================================
-// Diff Utilities (for `npx invect generate --diff` preview)
+// Diff Utilities (for `npx invect-cli generate --diff` preview)
 // =============================================================================
 
 export interface SchemaDiff {

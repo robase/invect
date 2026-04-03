@@ -32,7 +32,7 @@ import {
   pluginB,
   conflictPluginA,
   conflictPluginB,
-  betterAuthPlugin,
+  userAuthPlugin,
 } from './fixtures/example-schemas';
 
 // =============================================================================
@@ -136,7 +136,7 @@ describe('generate core-only schema (no plugins)', () => {
 // =============================================================================
 
 describe('generate with better-auth plugin', () => {
-  const { sqlite, postgres, mysql, merged } = generateAll([betterAuthPlugin]);
+  const { sqlite, postgres, mysql, merged } = generateAll([userAuthPlugin]);
 
   it('should include all 4 better-auth tables', () => {
     for (const tableName of ['user', 'session', 'account', 'verification']) {

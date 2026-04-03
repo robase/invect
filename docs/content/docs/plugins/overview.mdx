@@ -235,7 +235,7 @@ Plugin fields are merged with core fields during schema generation. Conflicts (t
 After defining your plugin schema, run the CLI to generate dialect-specific Drizzle files:
 
 ```bash
-npx invect generate
+npx invect-cli generate
 ```
 
 This reads the core schema plus all plugin schemas and produces:
@@ -249,7 +249,7 @@ This reads the core schema plus all plugin schemas and produces:
 Use `schema:diff` to see what a plugin would add without writing files:
 
 ```bash
-npx invect schema:diff
+npx invect-cli schema:diff
 ```
 
 ---

@@ -73,7 +73,7 @@ export const generateDrizzleSchema: SchemaGenerator = async ({
 /**
  * Generate all three Drizzle schema files at once.
  *
- * This is the main entry point used by `npx invect generate`.
+ * This is the main entry point used by `npx invect-cli generate`.
  * Returns results for all three dialects.
  */
 export async function generateAllDrizzleSchemas(options: {

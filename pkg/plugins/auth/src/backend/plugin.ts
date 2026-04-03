@@ -6,7 +6,7 @@ import type {
   InvectPluginSchema,
 } from '@invect/core';
 import type {
-  BetterAuthPluginOptions,
+  UserAuthPluginOptions,
   BetterAuthContext,
   BetterAuthUser,
   BetterAuthSession,
@@ -428,14 +428,14 @@ function getErrorLogDetails(error: unknown): Record<string, unknown> {
 /**
  * Abstract schema for better-auth's database tables.
  *
- * These definitions allow the Invect CLI (`npx invect generate`) to include
+ * These definitions allow the Invect CLI (`npx invect-cli generate`) to include
  * the better-auth tables when generating Drizzle/Prisma schema files.
  *
  * The shapes match better-auth's default table structure. If your better-auth
  * config adds extra fields (e.g., via plugins like `twoFactor`, `organization`),
  * you can extend these in your own config.
  */
-export const BETTER_AUTH_SCHEMA: InvectPluginSchema = {
+export const USER_AUTH_SCHEMA: InvectPluginSchema = {
   user: {
     tableName: 'user',
     order: 1,
@@ -529,7 +529,7 @@ export const BETTER_AUTH_SCHEMA: InvectPluginSchema = {
  */
 async function createInternalBetterAuth(
   invectConfig: Record<string, unknown>,
-  options: BetterAuthPluginOptions,
+  options: UserAuthPluginOptions,
   logger: PluginLoggerLike,
 ): Promise<BetterAuthInstance> {
   // 1. Dynamic-import better-auth (peer dependency)
@@ -740,11 +740,11 @@ async function createMySQLPool(connectionString: string) {
  * @example
  * ```ts
  * // Simple: let the plugin manage better-auth internally
- * import { betterAuthPlugin } from '@invect/user-auth';
+ * import { userAuth } from '@invect/user-auth';
  *
  * app.use('/invect', createInvectRouter({
  *   databaseUrl: 'file:./dev.db',
- *   plugins: [betterAuthPlugin({
+ *   plugins: [userAuth({
  *     globalAdmins: [{ email: 'admin@co.com', pw: 'secret' }],
  *   })],
  * }));
@@ -754,7 +754,7 @@ async function createMySQLPool(connectionString: string) {
  * ```ts
  * // Advanced: provide your own better-auth instance
  * import { betterAuth } from 'better-auth';
- * import { betterAuthPlugin } from '@invect/user-auth';
+ * import { userAuth } from '@invect/user-auth';
  *
  * const auth = betterAuth({
  *   database: { ... },
@@ -764,11 +764,11 @@ async function createMySQLPool(connectionString: string) {
  *
  * app.use('/invect', createInvectRouter({
  *   databaseUrl: 'file:./dev.db',
- *   plugins: [betterAuthPlugin({ auth })],
+ *   plugins: [userAuth({ auth })],
  * }));
  * ```
  */
-export function betterAuthPlugin(options: BetterAuthPluginOptions): InvectPlugin {
+export function userAuth(options: UserAuthPluginOptions): InvectPlugin {
   const {
     prefix = DEFAULT_PREFIX,
     mapUser: customMapUser,
@@ -938,13 +938,13 @@ export function betterAuthPlugin(options: BetterAuthPluginOptions): InvectPlugin
 
     // Abstract schema for better-auth tables — the CLI reads this to generate
     // Drizzle/Prisma schema files that include auth tables automatically.
-    schema: BETTER_AUTH_SCHEMA,
+    schema: USER_AUTH_SCHEMA,
 
     // Also declare requiredTables for the startup existence check.
     requiredTables: ['user', 'session', 'account', 'verification'],
     setupInstructions:
-      'Run `npx invect generate` to add the better-auth tables to your schema, ' +
-      'then `npx drizzle-kit push` (or `npx invect migrate`) to apply.',
+      'Run `npx invect-cli generate` to add the better-auth tables to your schema, ' +
+      'then `npx drizzle-kit push` (or `npx invect-cli migrate`) to apply.',
 
     endpoints: [
       // ── Auth Info (specific routes must come BEFORE the catch-all proxy) ───
@@ -1509,7 +1509,7 @@ export function betterAuthPlugin(options: BetterAuthPluginOptions): InvectPlugin
 
       if (globalAdmins.length === 0) {
         pluginContext.logger.debug(
-          'No global admins configured. Pass `globalAdmins` to betterAuthPlugin(...) to seed admin access.',
+          'No global admins configured. Pass `globalAdmins` to userAuth(...) to seed admin access.',
         );
         return;
       }

@@ -14,7 +14,7 @@ pnpm add @invect/user-auth better-auth
 
 ```ts
 import { betterAuth } from 'better-auth';
-import { betterAuthPlugin } from '@invect/user-auth';
+import { userAuth } from '@invect/user-auth';
 import { createInvectRouter } from '@invect/express';
 
 // 1. Configure better-auth
@@ -27,7 +27,7 @@ const auth = betterAuth({
 app.use('/invect', createInvectRouter({
   databaseUrl: 'file:./dev.db',
   plugins: [
-    betterAuthPlugin({
+    userAuth({
       auth,
       globalAdmins: [
         {
@@ -77,7 +77,7 @@ function SignInPage() {
 
 | Entry Point | Import | Content |
 |-------------|--------|---------|
-| `@invect/user-auth` | `import { betterAuthPlugin } from '@invect/user-auth'` | Backend plugin (Node.js) |
+| `@invect/user-auth` | `import { userAuth } from '@invect/user-auth'` | Backend plugin (Node.js) |
 | `@invect/user-auth/ui` | `import { AuthProvider, useAuth } from '@invect/user-auth/ui'` | Frontend components (Browser) |
 | `@invect/user-auth/types` | `import type { AuthUser } from '@invect/user-auth/types'` | Shared types |
 

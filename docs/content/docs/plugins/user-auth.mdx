@@ -66,7 +66,7 @@ export const auth = betterAuth({
 <Tab value="Express">
 ```ts
 import { createInvectRouter } from '@invect/express';
-import { betterAuthPlugin } from '@invect/user-auth';
+import { userAuth } from '@invect/user-auth';
 import { auth } from './auth';
 
 app.use('/invect', createInvectRouter({
@@ -76,7 +76,7 @@ app.use('/invect', createInvectRouter({
     id: 'main',
   },
   plugins: [
-    betterAuthPlugin({ auth }),
+    userAuth({ auth }),
   ],
 }));
 ```
@@ -84,7 +84,7 @@ app.use('/invect', createInvectRouter({
 <Tab value="NestJS">
 ```ts
 import { InvectModule } from '@invect/nestjs';
-import { betterAuthPlugin } from '@invect/user-auth';
+import { userAuth } from '@invect/user-auth';
 import { auth } from './auth';
 
 @Module({
@@ -96,7 +96,7 @@ import { auth } from './auth';
         id: 'main',
       },
       plugins: [
-        betterAuthPlugin({ auth }),
+        userAuth({ auth }),
       ],
     }),
   ],
@@ -107,7 +107,7 @@ export class AppModule {}
 <Tab value="Next.js">
 ```ts
 import { createInvectHandler } from '@invect/nextjs';
-import { betterAuthPlugin } from '@invect/user-auth';
+import { userAuth } from '@invect/user-auth';
 import { auth } from './auth';
 
 export const handler = createInvectHandler({
@@ -117,7 +117,7 @@ export const handler = createInvectHandler({
     id: 'main',
   },
   plugins: [
-    betterAuthPlugin({ auth }),
+    userAuth({ auth }),
   ],
 });
 ```
@@ -189,7 +189,7 @@ Default role mapping:
 ### Full Options
 
 ```ts
-betterAuthPlugin({
+userAuth({
   // Required: your better-auth instance
   auth: auth,
 
@@ -225,7 +225,7 @@ betterAuthPlugin({
 Override `mapUser` to pull teams, permissions, or metadata from your better-auth user:
 
 ```ts
-betterAuthPlugin({
+userAuth({
   auth,
   mapUser: async (user, session) => {
     // Fetch team memberships from your database
@@ -253,7 +253,7 @@ betterAuthPlugin({
 If you don't need full identity customization, just map roles:
 
 ```ts
-betterAuthPlugin({
+userAuth({
   auth,
   mapRole: (betterAuthRole) => {
     switch (betterAuthRole) {

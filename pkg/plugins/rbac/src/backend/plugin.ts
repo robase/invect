@@ -45,7 +45,7 @@ import type {
  * ```ts
  * import { resolveTeamIds } from '@invect/rbac/backend';
  *
- * betterAuthPlugin({
+ * userAuth({
  *   auth,
  *   mapUser: async (user, session) => ({
  *     id: user.id,
@@ -705,7 +705,7 @@ export function rbacPlugin(options: RbacPluginOptions = {}): InvectPlugin {
     setupInstructions:
       'The RBAC plugin requires better-auth tables (user, session). ' +
       'Make sure @invect/user-auth is configured, then run ' +
-      '`npx invect generate` followed by `npx drizzle-kit push`.',
+      '`npx invect-cli generate` followed by `npx drizzle-kit push`.',
 
     // ─── Initialization ───────────────────────────────────────
 
@@ -715,7 +715,7 @@ export function rbacPlugin(options: RbacPluginOptions = {}): InvectPlugin {
         ctx.logger.warn(
           'RBAC plugin requires the @invect/user-auth plugin. ' +
             'RBAC will work with reduced functionality (no session resolution). ' +
-            'Make sure betterAuthPlugin() is registered before rbacPlugin().',
+            'Make sure userAuth() is registered before rbacPlugin().',
         );
       }
 

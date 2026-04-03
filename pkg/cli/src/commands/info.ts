@@ -1,13 +1,13 @@
 /**
- * `npx invect info` — Display diagnostic information
+ * `npx invect-cli info` — Display diagnostic information
  *
  * Shows system info, detected frameworks, database config,
  * installed plugins, and schema status.
  *
  * Usage:
- *   npx invect info
- *   npx invect info --config ./my.ts
- *   npx invect info --json
+ *   npx invect-cli info
+ *   npx invect-cli info --config ./my.ts
+ *   npx invect-cli info --json
  */
 
 import { Command } from 'commander';

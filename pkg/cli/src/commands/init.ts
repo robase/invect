@@ -1,5 +1,5 @@
 /**
- * `npx invect init` — Initialize Invect in your project
+ * `npx invect-cli init` — Initialize Invect in your project
  *
  * Interactive setup wizard that:
  *   1. Detects your framework (Express, NestJS, Next.js)
@@ -9,9 +9,9 @@
  *   5. Creates a starter route handler
  *
  * Usage:
- *   npx invect init
- *   npx invect init --framework express
- *   npx invect init --database sqlite
+ *   npx invect-cli init
+ *   npx invect-cli init --framework express
+ *   npx invect-cli init --database sqlite
  */
 
 import { Command } from 'commander';
@@ -245,69 +245,63 @@ export const initCommand = new Command('init')
       console.log(pc.green(`  ✓ Created .env with INVECT_ENCRYPTION_KEY`));
     }
 
-    // 7. Generate database schema
+    // 7. Setup Drizzle
+    step('Setup Drizzle');
+
+    const existingDrizzleConfig = findExistingDrizzleConfig();
+    const schemaDir = fs.existsSync(path.join(process.cwd(), 'src'))
+      ? './src/database'
+      : './database';
+
+    if (existingDrizzleConfig) {
+      console.log(pc.dim(`  Found existing ${existingDrizzleConfig} — Invect tables will be appended to your schema`));
+    } else {
+      const schemaPath = `${schemaDir}/schema.ts`;
+      const drizzleConfigCode = generateDrizzleConfigFile(database, schemaPath);
+      fs.writeFileSync(
+        path.join(process.cwd(), 'drizzle.config.ts'),
+        drizzleConfigCode,
+        'utf-8',
+      );
+      console.log(pc.green(`  ✓ Created drizzle.config.ts`));
+    }
+
+    // 8. Generate database schema
     step('Generate Database Schema');
 
     const { shouldGenerate } = await prompts({
       type: 'confirm',
       name: 'shouldGenerate',
-      message: 'Generate database schema files now?',
+      message: existingDrizzleConfig
+        ? 'Append Invect tables to your existing schema now?'
+        : 'Generate database schema files now?',
       initial: true,
     });
 
     if (shouldGenerate) {
       try {
         const { generateAction } = await import('./generate.js');
-        const schemaDir = fs.existsSync(path.join(process.cwd(), 'src'))
-          ? './src/database'
-          : './database';
         await generateAction({
           config: configPath,
           output: schemaDir,
+          dialect: database.id,
           yes: true,
         });
       } catch (error) {
         console.error(
           pc.yellow('  ⚠ Schema generation failed. You can run it manually later:') +
             '\n' +
-            pc.dim(`    npx invect generate\n`),
+            pc.dim(`    npx invect-cli generate\n`),
         );
       }
     } else {
       console.log(
         pc.dim(
           '  Skipped. Run ' +
-            pc.cyan('npx invect generate') +
+            pc.cyan('npx invect-cli generate') +
             ' when ready.',
         ),
       );
-    }
-
-    // 8. Optionally run migration for SQLite (immediate usability)
-    if (database.id === 'sqlite' && shouldGenerate) {
-      const { shouldMigrate } = await prompts({
-        type: 'confirm',
-        name: 'shouldMigrate',
-        message: 'Run database migration now? (creates the SQLite database)',
-        initial: true,
-      });
-
-      if (shouldMigrate) {
-        try {
-          const { migrateAction } = await import('./migrate.js');
-          await migrateAction({
-            config: configPath,
-            yes: true,
-            push: true, // Use push for quick dev setup
-          });
-        } catch {
-          console.error(
-            pc.yellow('  ⚠ Migration failed. You can run it manually:') +
-              '\n' +
-              pc.dim('    npx invect migrate\n'),
-          );
-        }
-      }
     }
 
     // 9. Summary
@@ -326,9 +320,9 @@ export const initCommand = new Command('init')
     }
 
     if (!shouldGenerate) {
-      nextSteps.push(`  ${n++}. Run ${pc.cyan('npx invect generate')} to create schema files`);
+      nextSteps.push(`  ${n++}. Run ${pc.cyan('npx invect-cli generate')} to create schema files`);
+      nextSteps.push(`  ${n++}. Run ${pc.cyan('npx drizzle-kit push')} to apply the schema`);
     }
-    nextSteps.push(`  ${n++}. Run ${pc.cyan('npx invect migrate')} to apply the schema`);
 
     if (framework.id === 'express') {
       nextSteps.push(`  ${n++}. Mount the router: ${pc.cyan("app.use('/invect', createInvectRouter(config))")}`);
@@ -459,4 +453,48 @@ function getInstallCommand(pm: string, packages: string[], isDev: boolean): stri
   const flag = flags[pm] || '';
   const cmd = pm === 'npm' ? 'npm install' : `${pm} add`;
   return `${cmd} ${flag} ${packages.join(' ')}`.replace(/\s+/g, ' ').trim();
+}
+
+function findExistingDrizzleConfig(): string | null {
+  const candidates = [
+    'drizzle.config.ts',
+    'drizzle.config.js',
+    'drizzle.config.mjs',
+  ];
+  for (const file of candidates) {
+    if (fs.existsSync(path.join(process.cwd(), file))) {
+      return file;
+    }
+  }
+  return null;
+}
+
+function generateDrizzleConfigFile(database: Database, schemaPath: string): string {
+  const dbCredentials: Record<string, string> = {
+    sqlite: `  dbCredentials: {
+    url: process.env.DATABASE_URL || './dev.db',
+  },`,
+    postgresql: `  dbCredentials: {
+    url: process.env.DATABASE_URL || 'postgresql://localhost:5432/invect',
+  },`,
+    mysql: `  dbCredentials: {
+    url: process.env.DATABASE_URL || 'mysql://root@localhost:3306/invect',
+  },`,
+  };
+
+  const dialectMap: Record<string, string> = {
+    sqlite: 'sqlite',
+    postgresql: 'postgresql',
+    mysql: 'mysql',
+  };
+
+  return `import { defineConfig } from 'drizzle-kit';
+
+export default defineConfig({
+  out: './drizzle',
+  schema: '${schemaPath}',
+  dialect: '${dialectMap[database.id]}',
+${dbCredentials[database.id]}
+});
+`;
 }

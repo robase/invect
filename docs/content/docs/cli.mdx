@@ -8,7 +8,7 @@ description: Commands for the Invect CLI — init, generate, migrate, and more.
 The Invect CLI handles project setup, schema generation, and database migrations. It reads your `invect.config.ts` to know which plugins and database you're using, then generates the correct schema files.
 
 ```bash
-npx invect <command> [options]
+npx invect-cli <command> [options]
 ```
 
 ## Commands
@@ -18,7 +18,7 @@ npx invect <command> [options]
 Interactive setup wizard that scaffolds Invect into your project.
 
 ```bash
-npx invect init
+npx invect-cli init
 ```
 
 The wizard walks through:
@@ -45,7 +45,7 @@ The wizard walks through:
 Generate Drizzle schema files from the merged core + plugin schemas.
 
 ```bash
-npx invect generate
+npx invect-cli generate
 ```
 
 This reads your config, merges the core schema with any plugin schemas, and writes three dialect-specific Drizzle files:
@@ -68,7 +68,7 @@ Run this whenever you add a plugin that defines new tables or after upgrading In
 **Example with options:**
 
 ```bash
-npx invect generate --output ./db --dialect sqlite --yes
+npx invect-cli generate --output ./db --dialect sqlite --yes
 ```
 
 ---
@@ -78,13 +78,13 @@ npx invect generate --output ./db --dialect sqlite --yes
 Apply the generated schema to your database using Drizzle Kit.
 
 ```bash
-npx invect migrate
+npx invect-cli migrate
 ```
 
 For development, use `--push` to apply changes directly without creating SQL migration files:
 
 ```bash
-npx invect migrate --push
+npx invect-cli migrate --push
 ```
 
 **Options:**
@@ -102,7 +102,7 @@ npx invect migrate --push
 Generate a cryptographically secure encryption key.
 
 ```bash
-npx invect secret
+npx invect-cli secret
 ```
 
 Outputs a 32-byte base64 key for `INVECT_ENCRYPTION_KEY`. This key is used for AES-256-GCM encryption of stored credentials (API keys, OAuth2 tokens).
@@ -123,7 +123,7 @@ Outputs a 32-byte base64 key for `INVECT_ENCRYPTION_KEY`. This key is used for A
 Display diagnostic information about your Invect setup.
 
 ```bash
-npx invect info
+npx invect-cli info
 ```
 
 Shows system details, detected frameworks, loaded plugins, and schema status. Useful for troubleshooting and bug reports.
@@ -197,19 +197,19 @@ The standard flow when setting up or updating Invect:
 
 ```bash
 # 1. Generate schema files from config
-npx invect generate
+npx invect-cli generate
 
 # 2. Apply schema to your database
-npx invect migrate --push    # Development
-npx invect migrate           # Production (creates SQL migration files)
+npx invect-cli migrate --push    # Development
+npx invect-cli migrate           # Production (creates SQL migration files)
 ```
 
 After adding a plugin with new tables:
 
 ```bash
 # Regenerate to include the plugin's tables
-npx invect generate
+npx invect-cli generate
 
 # Apply the updated schema
-npx invect migrate --push
+npx invect-cli migrate --push
 ```

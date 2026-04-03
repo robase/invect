@@ -59,14 +59,14 @@ Invect does **not** run migrations automatically. You control when and how the s
 
 ```bash
 # 1. Generate Drizzle schema files from core + plugin schemas
-npx invect generate
+npx invect-cli generate
 
 # 2. Apply the schema to your database
-npx invect migrate --push    # Development — applies directly
-npx invect migrate           # Production — creates SQL migration files
+npx invect-cli migrate --push    # Development — applies directly
+npx invect-cli migrate           # Production — creates SQL migration files
 ```
 
-Run `npx invect generate` whenever you add a plugin with new tables or upgrade Invect. Then run `npx invect migrate` to apply the changes.
+Run `npx invect-cli generate` whenever you add a plugin with new tables or upgrade Invect. Then run `npx invect-cli migrate` to apply the changes.
 
 ### Schema Verification
 
@@ -101,7 +101,7 @@ If verification fails, you'll see a message telling you exactly which tables or 
 | `flow_triggers` | Webhook and cron trigger configuration |
 | `chat_messages` | Chat message history for conversational flows |
 
-Plugins can add their own tables or extend existing ones. Run `npx invect generate` after adding a plugin to include its tables in the schema.
+Plugins can add their own tables or extend existing ones. Run `npx invect-cli generate` after adding a plugin to include its tables in the schema.
 
 ## Using Your Existing Database
 

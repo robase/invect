@@ -1,11 +1,10 @@
 {
   "name": "@invect/cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "CLI for managing Invect database schemas, migrations, and project setup",
   "bin": {
-    "invect": "./dist/index.js",
-    "@invect/cli": "./dist/index.js"
+    "invect-cli": "./dist/index.js"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

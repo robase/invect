@@ -110,7 +110,9 @@ const NodeLoadingPlaceholder = memo(
             <div className="text-xs font-semibold tracking-tight truncate text-card-foreground">
               {label}
             </div>
-            <div className="text-xs font-mono tracking-tight truncate text-muted-foreground">{nodeType}</div>
+            <div className="text-xs font-mono tracking-tight truncate text-muted-foreground">
+              {nodeType}
+            </div>
           </div>
         </div>
 
@@ -242,7 +244,9 @@ export const UniversalNode = memo(({ data, selected }: NodeProps) => {
           <div className="text-xs font-semibold tracking-tight truncate text-card-foreground">
             {label}
           </div>
-          <div className="text-xs font-mono tracking-tight truncate text-muted-foreground">{nodeType}</div>
+          <div className="text-xs font-mono tracking-tight truncate text-muted-foreground">
+            {nodeType}
+          </div>
         </div>
       </div>
 

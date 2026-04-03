@@ -619,7 +619,7 @@ export interface InvectPlugin {
    * The Invect CLI generates the concrete Drizzle schema files
    * from core + plugin schemas combined.
    *
-   * Run `npx invect generate` after adding/changing plugin schemas.
+   * Run `npx invect-cli generate` after adding/changing plugin schemas.
    */
   schema?: InvectPluginSchema;
 

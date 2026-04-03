@@ -251,8 +251,8 @@ export const InvectConfigSchema = z.object({
    * Plugins are plain objects satisfying the `InvectPlugin` interface.
    * They are initialized in array order during `Invect.initialize()`.
    *
-   * Database schema changes from plugins require running `npx invect generate`
-   * to regenerate the Drizzle schema files, then `npx invect migrate` to apply.
+   * Database schema changes from plugins require running `npx invect-cli generate`
+   * to regenerate the Drizzle schema files, then `npx invect-cli migrate` to apply.
    *
    * @example
    * ```typescript
@@ -275,7 +275,7 @@ export const InvectConfigSchema = z.object({
    * required tables and columns. This does NOT run migrations — the
    * developer is responsible for applying schema changes via the CLI:
    *
-   *   npx invect generate    # regenerate schema files
+   *   npx invect-cli generate    # regenerate schema files
    *   npx drizzle-kit push    # apply via Drizzle
    *   npx prisma db push      # apply via Prisma
    *

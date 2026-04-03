@@ -1,5 +1,5 @@
 /**
- * Invect Config — used by `npx invect generate --adapter prisma`
+ * Invect Config — used by `npx invect-cli generate --adapter prisma`
  *
  * This file tells the CLI which plugins are active so it can merge
  * their schemas into the existing Prisma schema.

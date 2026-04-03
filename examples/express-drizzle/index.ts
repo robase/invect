@@ -3,7 +3,7 @@ import express from 'express';
 import type { ErrorRequestHandler } from 'express';
 import cors from 'cors';
 import { createInvectRouter } from '@invect/express';
-import { betterAuthPlugin } from '@invect/user-auth';
+import { userAuth } from '@invect/user-auth';
 import { rbacPlugin } from '@invect/rbac';
 import { webhooksPlugin } from '@invect/webhooks';
 import { startExternalApiMocks, stopExternalApiMocks } from './mock-external-apis';
@@ -90,7 +90,7 @@ app.use(
     // Note: Don't pass `logger: console` - use the built-in scoped logger
     // which respects log levels. The console logger ignores log levels.
     plugins: [
-      betterAuthPlugin({
+      userAuth({
         onSessionError: 'continue',
         globalAdmins: [
           {

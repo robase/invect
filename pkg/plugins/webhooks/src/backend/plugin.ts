@@ -402,6 +402,6 @@ export function webhooksPlugin(options?: WebhooksPluginOptions): InvectPlugin {
     },
 
     setupInstructions:
-      'Run `npx invect generate` to generate the webhook_triggers table schema, then `npx invect migrate` to apply it.',
+      'Run `npx invect-cli generate` to generate the webhook_triggers table schema, then `npx invect-cli migrate` to apply it.',
   };
 }

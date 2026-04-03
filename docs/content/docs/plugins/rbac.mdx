@@ -17,13 +17,13 @@ npm install @invect/rbac
 
 ## Add the plugin to Invect
 
-Register `rbacPlugin` **after** `betterAuthPlugin` in your plugins array:
+Register `rbacPlugin` **after** `userAuth` in your plugins array:
 
 <Tabs groupId="framework" persist items={['Express', 'NestJS', 'Next.js']}>
 <Tab value="Express">
 ```ts
 import { createInvectRouter } from '@invect/express';
-import { betterAuthPlugin } from '@invect/user-auth';
+import { userAuth } from '@invect/user-auth';
 import { rbacPlugin } from '@invect/rbac';
 import { auth } from './auth';
 
@@ -34,7 +34,7 @@ app.use('/invect', createInvectRouter({
     id: 'main',
   },
   plugins: [
-    betterAuthPlugin({ auth }),
+    userAuth({ auth }),
     rbacPlugin(),
   ],
 }));
@@ -49,7 +49,7 @@ InvectModule.forRoot({
     id: 'main',
   },
   plugins: [
-    betterAuthPlugin({ auth }),
+    userAuth({ auth }),
     rbacPlugin(),
   ],
 })
@@ -64,7 +64,7 @@ createInvectHandler({
     id: 'main',
   },
   plugins: [
-    betterAuthPlugin({ auth }),
+    userAuth({ auth }),
     rbacPlugin(),
   ],
 })
@@ -87,7 +87,7 @@ createInvectRouter({
     useFlowAccessTable: true,
   },
   plugins: [
-    betterAuthPlugin({ auth }),
+    userAuth({ auth }),
     rbacPlugin(),
   ],
 });
@@ -98,8 +98,8 @@ createInvectRouter({
 The RBAC plugin uses the core `flow_access` table (already included in the base schema). Run migrations if you haven't already:
 
 ```bash
-npx invect generate
-npx invect migrate --push
+npx invect-cli generate
+npx invect-cli migrate --push
 ```
 
 ## Add the frontend plugin

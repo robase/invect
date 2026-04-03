@@ -17,7 +17,7 @@ pnpm add @invect/rbac
 ### Backend
 
 ```typescript
-import { betterAuthPlugin } from '@invect/user-auth';
+import { userAuth } from '@invect/user-auth';
 import { rbacPlugin } from '@invect/rbac';
 
 app.use('/invect', createInvectRouter({
@@ -27,7 +27,7 @@ app.use('/invect', createInvectRouter({
     useFlowAccessTable: true,
   },
   plugins: [
-    betterAuthPlugin({ auth }),  // Auth MUST be registered first
+    userAuth({ auth }),  // Auth MUST be registered first
     rbacPlugin({
       useFlowAccessTable: true,
     }),

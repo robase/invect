@@ -1,11 +1,11 @@
 /**
- * `npx invect secret` — Generate a secure encryption key
+ * `npx invect-cli secret` — Generate a secure encryption key
  *
  * Generates a cryptographically secure 32-byte key (base64-encoded)
  * suitable for use as INVECT_ENCRYPTION_KEY.
  *
  * Usage:
- *   npx invect secret
+ *   npx invect-cli secret
  */
 
 import { Command } from 'commander';

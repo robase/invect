@@ -2,7 +2,7 @@
  * Schema Diff & Change Detection Tests
  *
  * Tests the diffSchemas() utility and the CLI generator's ability to
- * detect unchanged files. These are crucial for the `npx invect generate`
+ * detect unchanged files. These are crucial for the `npx invect-cli generate`
  * UX — only files that actually changed should be flagged for writing.
  */
 
