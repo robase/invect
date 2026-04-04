@@ -12,8 +12,8 @@
  *
  * @example
  * ```tsx
- * import { InvectShell } from '@invect/frontend';
- * import '@invect/frontend/styles';
+ * import { InvectShell } from '@invect/ui';
+ * import '@invect/ui/styles';
  *
  * function AuthPage() {
  *   return (

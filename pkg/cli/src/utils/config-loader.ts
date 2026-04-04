@@ -19,7 +19,7 @@ import fs from 'node:fs';
 import pc from 'picocolors';
 
 /**
- * Minimal config shape — we only need plugins + baseDatabaseConfig
+ * Minimal config shape — we only need plugins + database
  * for schema generation. We don't need the full Zod-validated config.
  */
 interface ResolvedConfig {
@@ -32,7 +32,7 @@ interface ResolvedConfig {
     [key: string]: unknown;
   }>;
   /** Base database configuration */
-  baseDatabaseConfig?: {
+  database?: {
     connectionString: string;
     type: 'postgresql' | 'sqlite' | 'mysql';
     id: string;
@@ -213,7 +213,7 @@ export async function loadConfig(configPath: string): Promise<ResolvedConfig> {
   if (!raw || typeof raw !== 'object') {
     throw new Error(
       `Config file at ${configPath} does not export a valid Invect config object.\n` +
-        `Expected: export default { baseDatabaseConfig: ..., plugins: [...] }`,
+        `Expected: export default { database: ..., plugins: [...] }`,
     );
   }
 
@@ -237,7 +237,7 @@ export async function loadConfig(configPath: string): Promise<ResolvedConfig> {
 
   return {
     plugins: validPlugins,
-    baseDatabaseConfig: config.baseDatabaseConfig as ResolvedConfig['baseDatabaseConfig'],
+    database: config.database as ResolvedConfig['database'],
     raw: config,
     configPath,
   };
@@ -267,8 +267,8 @@ function resolveConfigExport(module: unknown): unknown {
   // Handle: export const invectConfig = ...
   if ('invectConfig' in mod) return mod.invectConfig;
 
-  // Handle: module itself is the config (has baseDatabaseConfig)
-  if ('baseDatabaseConfig' in mod || 'plugins' in mod) return mod;
+  // Handle: module itself is the config (has database)
+  if ('database' in mod || 'plugins' in mod) return mod;
 
   return mod;
 }

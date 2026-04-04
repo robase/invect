@@ -45,7 +45,7 @@ sqlite.close();
 
 // ── 2. Create the Next.js adapter handler ─────────────────────────────
 const handler = createInvectHandler({
-  baseDatabaseConfig: {
+  database: {
     id: `test-nextjs-${process.pid}`,
     type: "sqlite",
     connectionString: `file:${dbPath}`,

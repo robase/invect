@@ -189,7 +189,7 @@ export class NodeDataService {
    */
   getAvailableDatabases(): InvectDatabaseConfig[] {
     this.ensureInitialized();
-    return [this.config.baseDatabaseConfig];
+    return [this.config.database];
   }
 
   async runTemplateReplacement(

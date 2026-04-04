@@ -36,7 +36,7 @@ const auth = betterAuth({
 });
 
 app.use('/invect', createInvectRouter({
-  baseDatabaseConfig: { type: 'sqlite', connectionString: 'file:./dev.db', id: 'main' },
+  database: { type: 'sqlite', connectionString: 'file:./dev.db', id: 'main' },
   plugins: [
     userAuth({
       auth,
@@ -55,9 +55,9 @@ Sign-up is disabled in the UI. The initial admin is seeded from `globalAdmins`. 
 ## Frontend
 
 ```tsx
-import { Invect, InvectShell } from '@invect/frontend';
+import { Invect, InvectShell } from '@invect/ui';
 import { AuthenticatedInvect } from '@invect/user-auth/ui';
-import '@invect/frontend/styles';
+import '@invect/ui/styles';
 
 <AuthenticatedInvect
   apiBaseUrl="/api/invect"

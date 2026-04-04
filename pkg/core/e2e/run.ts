@@ -39,7 +39,7 @@ async function runExamples(): Promise<void> {
 
   // Initialize Invect
   const invect = new Invect({
-    baseDatabaseConfig: {
+    database: {
       type: "sqlite",
       connectionString: `file:${sqlitePath}`,
       id: "default",

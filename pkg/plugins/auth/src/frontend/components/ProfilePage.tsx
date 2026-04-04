@@ -5,7 +5,7 @@
  */
 
 import { LogOut, Mail, Shield, User as UserIcon } from 'lucide-react';
-import { PageLayout } from '@invect/frontend';
+import { PageLayout } from '@invect/ui';
 import { useAuth } from '../providers/AuthProvider';
 import { formatAuthRoleLabel } from '../../shared/roles';
 

@@ -15,8 +15,8 @@
  * @example
  * ```tsx
  * import { AuthenticatedInvect } from '@invect/user-auth/ui';
- * import { Invect, InvectShell } from '@invect/frontend';
- * import '@invect/frontend/styles';
+ * import { Invect, InvectShell } from '@invect/ui';
+ * import '@invect/ui/styles';
  *
  * export default function Page() {
  *   return (
@@ -68,12 +68,12 @@ export interface AuthenticatedInvectProps<TPlugin = unknown> {
   basePath?: string;
   /**
    * The Invect component to render when authenticated.
-   * Pass this to avoid a direct dependency on @invect/frontend.
+   * Pass this to avoid a direct dependency on @invect/ui.
    * Accepts both plain and React.memo-wrapped components.
    *
    * @example
    * ```tsx
-   * import { Invect } from '@invect/frontend';
+   * import { Invect } from '@invect/ui';
    * <AuthenticatedInvect InvectComponent={Invect} />
    * ```
    */
@@ -86,11 +86,11 @@ export interface AuthenticatedInvectProps<TPlugin = unknown> {
   /**
    * The InvectShell component that provides the `.invect` CSS scope.
    * This ensures theme tokens work for both the sign-in page and the
-   * Invect editor. Import from `@invect/frontend`.
+   * Invect editor. Import from `@invect/ui`.
    *
    * `children` is typed as `unknown` rather than `ReactNode` to avoid a
    * structural incompatibility between `@types/react@18` (used here) and
-   * `@types/react@19` (used by `@invect/frontend`) where `ReactPortal`
+   * `@types/react@19` (used by `@invect/ui`) where `ReactPortal`
    * changed between versions.
    *
    * If not provided, the auth UI renders without the Invect CSS scope
@@ -98,7 +98,7 @@ export interface AuthenticatedInvectProps<TPlugin = unknown> {
    *
    * @example
    * ```tsx
-   * import { InvectShell } from '@invect/frontend';
+   * import { InvectShell } from '@invect/ui';
    * <AuthenticatedInvect ShellComponent={InvectShell} />
    * ```
    */

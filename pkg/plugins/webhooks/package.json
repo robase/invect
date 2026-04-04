@@ -31,7 +31,7 @@
     "@invect/core": "workspace:*"
   },
   "peerDependencies": {
-    "@invect/frontend": ">=0.1.4",
+    "@invect/ui": ">=0.1.4",
     "react": ">=18.0.0",
     "react-dom": ">=18.0.0",
     "react-router": ">=7.0.0",
@@ -50,12 +50,12 @@
     "@tanstack/react-query": {
       "optional": true
     },
-    "@invect/frontend": {
+    "@invect/ui": {
       "optional": true
     }
   },
   "devDependencies": {
-    "@invect/frontend": "workspace:*",
+    "@invect/ui": "workspace:*",
     "@tanstack/react-query": "^5.0.0",
     "@types/node": "^20.11.20",
     "@types/react": "18.3.7",

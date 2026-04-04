@@ -1,10 +1,11 @@
 import {
   BatchProvider,
-  Invect,
+  createInvect,
   InvectConfig,
   GraphNodeType,
   createPluginDatabaseApi,
 } from '@invect/core';
+import type { InvectInstance } from '@invect/core';
 import { ZodError } from 'zod';
 
 /**
@@ -52,12 +53,12 @@ const parseParamsFromSearch = (value: string | null): Record<string, unknown> =>
 };
 
 export function createInvectHandler(config: InvectConfig): InvectHandler {
-  let core: InstanceType<typeof Invect> | null = null;
+  let core: InvectInstance | null = null;
   let initializationPromise: Promise<void> | null = null;
 
   // Lazy initialization - only initialize when first request comes in
-  const ensureInitialized = async (): Promise<InstanceType<typeof Invect>> => {
-    if (core && core.isInitialized()) {
+  const ensureInitialized = async (): Promise<InvectInstance> => {
+    if (core) {
       return core;
     }
 
@@ -72,8 +73,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
             throw new Error('Skipping database initialization during build');
           }
 
-          core = new Invect(config);
-          await core.initialize();
+          core = await createInvect(config);
           await core.startBatchPolling();
           // eslint-disable-next-line no-console
           console.log('✅ Invect initialized and batch polling started');
@@ -97,7 +97,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
   };
 
   // Helper function to get initialized core
-  const getInitializedCore = async (): Promise<InstanceType<typeof Invect> | Response> => {
+  const getInitializedCore = async (): Promise<InvectInstance | Response> => {
     try {
       return await ensureInitialized();
     } catch (error) {
@@ -237,23 +237,23 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
 
       // GET /flows/list — simple GET endpoint
       if (method === 'GET' && path === 'flows/list') {
-        const flows = await initializedCore.listFlows();
+        const flows = await initializedCore.flows.list();
         return Response.json(flows);
       }
 
       if (method === 'POST' && path === 'flows/list') {
-        const flows = await initializedCore.listFlows(body);
+        const flows = await initializedCore.flows.list(body);
         return Response.json(flows);
       }
 
       if (method === 'POST' && path === 'flows') {
-        const flow = await initializedCore.createFlow(body);
+        const flow = await initializedCore.flows.create(body);
         return Response.json(flow, { status: 201 });
       }
 
       if (method === 'POST' && path === 'validate-flow') {
         const { flowId, flowDefinition } = body;
-        const result = await initializedCore.validateFlowDefinition(flowId, flowDefinition);
+        const result = await initializedCore.flows.validate(flowId, flowDefinition);
         return Response.json(result);
       }
 
@@ -269,7 +269,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
         if (flowRunId) {
           options.flowRunId = flowRunId;
         }
-        const result = await initializedCore.renderToReactFlow(flowId, options);
+        const result = await initializedCore.flows.renderToReactFlow(flowId, options);
         return Response.json(result);
       }
 
@@ -279,13 +279,13 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
 
       if (method === 'POST' && path.match(/^flows\/[^/]+\/versions\/list$/)) {
         const flowId = path.split('/')[1];
-        const versions = await initializedCore.listFlowVersions(flowId, body);
+        const versions = await initializedCore.versions.list(flowId, body);
         return Response.json(versions);
       }
 
       if (method === 'POST' && path.match(/^flows\/[^/]+\/versions$/) && !path.endsWith('/list')) {
         const flowId = path.split('/')[1];
-        const version = await initializedCore.createFlowVersion(flowId, body);
+        const version = await initializedCore.versions.create(flowId, body);
         return Response.json(version, { status: 201 });
       }
 
@@ -293,7 +293,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
         const parts = path.split('/');
         const flowId = parts[1];
         const version = parts[3];
-        const flowVersion = await initializedCore.getFlowVersion(flowId, version);
+        const flowVersion = await initializedCore.versions.get(flowId, version);
         if (!flowVersion) {
           return Response.json(
             { error: 'Not Found', message: `Version ${version} not found for flow ${flowId}` },
@@ -313,52 +313,52 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
         const flowId = parts[1];
         const nodeId = parts[3];
         const { inputs = {}, options } = body;
-        const result = await initializedCore.executeFlowToNode(flowId, nodeId, inputs, options);
+        const result = await initializedCore.runs.executeToNode(flowId, nodeId, inputs, options);
         return Response.json(result, { status: 201 });
       }
 
       if (method === 'POST' && path.match(/^flows\/[^/]+\/run$/)) {
         const flowId = path.split('/')[1];
         const { inputs = {}, options } = body;
-        const result = await initializedCore.startFlowRunAsync(flowId, inputs, options);
+        const result = await initializedCore.runs.startAsync(flowId, inputs, options);
         return Response.json(result, { status: 201 });
       }
 
       if (method === 'POST' && path === 'flow-runs/list') {
-        const flowRuns = await initializedCore.listFlowRuns(body);
+        const flowRuns = await initializedCore.runs.list(body);
         return Response.json(flowRuns);
       }
 
       if (method === 'POST' && path.match(/^flow-runs\/[^/]+\/resume$/)) {
         const flowRunId = path.split('/')[1];
-        const result = await initializedCore.resumeExecution(flowRunId);
+        const result = await initializedCore.runs.resume(flowRunId);
         return Response.json(result);
       }
 
       if (method === 'POST' && path.match(/^flow-runs\/[^/]+\/cancel$/)) {
         const flowRunId = path.split('/')[1];
-        const result = await initializedCore.cancelFlowRun(flowRunId);
+        const result = await initializedCore.runs.cancel(flowRunId);
         return Response.json(result);
       }
 
       if (method === 'POST' && path.match(/^flow-runs\/[^/]+\/pause$/)) {
         const flowRunId = path.split('/')[1];
         const { reason } = body;
-        const result = await initializedCore.pauseFlowRun(flowRunId, reason);
+        const result = await initializedCore.runs.pause(flowRunId, reason);
         return Response.json(result);
       }
 
       // GET /flow-runs/:flowRunId/node-executions
       if (method === 'GET' && path.match(/^flow-runs\/[^/]+\/node-executions$/)) {
         const flowRunId = path.split('/')[1];
-        const nodeExecutions = await initializedCore.getNodeExecutionsByRunId(flowRunId);
+        const nodeExecutions = await initializedCore.runs.getNodeExecutions(flowRunId);
         return Response.json(nodeExecutions);
       }
 
       // GET /flow-runs/:flowRunId/stream - SSE stream of execution events
       if (method === 'GET' && path.match(/^flow-runs\/[^/]+\/stream$/)) {
         const flowRunId = path.split('/')[1];
-        const stream = initializedCore.createFlowRunEventStream(flowRunId);
+        const stream = initializedCore.runs.createEventStream(flowRunId);
 
         const encoder = new TextEncoder();
         const readable = new ReadableStream({
@@ -394,14 +394,14 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
       // GET /flows/:flowId/flow-runs
       if (method === 'GET' && path.match(/^flows\/[^/]+\/flow-runs$/)) {
         const flowId = path.split('/')[1];
-        const flowRuns = await initializedCore.listFlowRunsByFlowId(flowId);
+        const flowRuns = await initializedCore.runs.listByFlowId(flowId);
         return Response.json(flowRuns);
       }
 
       // GET /flow-runs/:flowRunId (must come AFTER more specific flow-runs/ routes)
       if (method === 'GET' && path.match(/^flow-runs\/[^/]+$/)) {
         const flowRunId = path.split('/')[1];
-        const flowRun = await initializedCore.getFlowRunById(flowRunId);
+        const flowRun = await initializedCore.runs.get(flowRunId);
         return Response.json(flowRun);
       }
 
@@ -410,7 +410,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
       // =====================================
 
       if (method === 'POST' && path === 'node-executions/list') {
-        const nodeExecutions = await initializedCore.listNodeExecutions(body);
+        const nodeExecutions = await initializedCore.runs.listNodeExecutions(body);
         return Response.json(nodeExecutions);
       }
 
@@ -419,22 +419,22 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
       // =====================================
 
       if (method === 'POST' && path === 'node-data/sql-query') {
-        const result = await initializedCore.executeSqlQuery(body);
+        const result = await initializedCore.testing.executeSqlQuery(body);
         return Response.json(result);
       }
 
       if (method === 'POST' && path === 'node-data/test-expression') {
-        const result = await initializedCore.testJsExpression(body);
+        const result = await initializedCore.testing.testJsExpression(body);
         return Response.json(result);
       }
 
       if (method === 'POST' && path === 'node-data/test-mapper') {
-        const result = await initializedCore.testMapper(body);
+        const result = await initializedCore.testing.testMapper(body);
         return Response.json(result);
       }
 
       if (method === 'POST' && path === 'node-data/model-query') {
-        const result = await initializedCore.testModelPrompt(body);
+        const result = await initializedCore.testing.testModelPrompt(body);
         return Response.json(result);
       }
 
@@ -443,7 +443,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
         const providerParam = searchParams.get('provider');
 
         if (credentialId) {
-          return Response.json(await initializedCore.getModelsForCredential(credentialId));
+          return Response.json(await initializedCore.testing.getModelsForCredential(credentialId));
         }
         if (providerParam) {
           const normalized = providerParam.trim().toUpperCase();
@@ -454,18 +454,18 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
             );
           }
           return Response.json(
-            await initializedCore.getModelsForProvider(normalized as BatchProvider),
+            await initializedCore.testing.getModelsForProvider(normalized as BatchProvider),
           );
         }
-        return Response.json(await initializedCore.getAvailableModels());
+        return Response.json(await initializedCore.testing.getAvailableModels());
       }
 
       if (method === 'GET' && path === 'node-data/databases') {
-        return Response.json(initializedCore.getAvailableDatabases());
+        return Response.json(initializedCore.testing.getAvailableDatabases());
       }
 
       if (method === 'POST' && path === 'node-config/update') {
-        const response = await initializedCore.handleNodeConfigUpdate(body);
+        const response = await initializedCore.actions.handleConfigUpdate(body);
         return Response.json(response);
       }
 
@@ -489,7 +489,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
         const nodeId = searchParams.get('nodeId') ?? `definition-${nodeTypeParam.toLowerCase()}`;
         const flowId = searchParams.get('flowId') ?? undefined;
 
-        const response = await initializedCore.handleNodeConfigUpdate({
+        const response = await initializedCore.actions.handleConfigUpdate({
           nodeType: nodeTypeParam as GraphNodeType,
           nodeId,
           flowId,
@@ -501,7 +501,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
 
       // GET /nodes — available node definitions
       if (method === 'GET' && path === 'nodes') {
-        return Response.json(initializedCore.getAvailableNodes());
+        return Response.json(initializedCore.actions.getAvailableNodes());
       }
 
       // GET /actions/:actionId/fields/:fieldName/options — dynamic field options
@@ -519,7 +519,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
           }
         }
         return Response.json(
-          await initializedCore.resolveFieldOptions(actionId, fieldName, dependencyValues),
+          await initializedCore.actions.resolveFieldOptions(actionId, fieldName, dependencyValues),
         );
       }
 
@@ -538,7 +538,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
             { status: 400 },
           );
         }
-        return Response.json(await initializedCore.testNode(nodeType, nodeParams, inputData || {}));
+        return Response.json(await initializedCore.testing.testNode(nodeType, nodeParams, inputData || {}));
       }
 
       // =====================================
@@ -547,12 +547,12 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
 
       // OAuth2 routes (must come before generic credential routes)
       if (method === 'GET' && path === 'credentials/oauth2/providers') {
-        return Response.json(initializedCore.getOAuth2Providers());
+        return Response.json(initializedCore.credentials.getOAuth2Providers());
       }
 
       if (method === 'GET' && path.match(/^credentials\/oauth2\/providers\/[^/]+$/)) {
         const providerId = path.split('/')[3];
-        const provider = initializedCore.getOAuth2Provider(providerId);
+        const provider = initializedCore.credentials.getOAuth2Provider(providerId);
         if (!provider) {
           return Response.json({ error: 'OAuth2 provider not found' }, { status: 404 });
         }
@@ -575,7 +575,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
             { status: 400 },
           );
         }
-        const result = initializedCore.startOAuth2Flow(
+        const result = initializedCore.credentials.startOAuth2Flow(
           providerId,
           { clientId, clientSecret, redirectUri },
           { scopes, returnUrl, credentialName },
@@ -591,7 +591,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
             { status: 400 },
           );
         }
-        const credential = await initializedCore.handleOAuth2Callback(code, state, {
+        const credential = await initializedCore.credentials.handleOAuth2Callback(code, state, {
           clientId,
           clientSecret,
           redirectUri,
@@ -602,7 +602,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
       if (method === 'GET' && path === 'credentials/expiring') {
         const daysParam = searchParams.get('daysUntilExpiry');
         const days = daysParam ? parseInt(daysParam) : 7;
-        return Response.json(await initializedCore.getExpiringCredentials(days));
+        return Response.json(await initializedCore.credentials.getExpiring(days));
       }
 
       if (method === 'POST' && path === 'credentials/test-request') {
@@ -636,7 +636,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
       }
 
       if (method === 'POST' && path === 'credentials') {
-        const credential = await initializedCore.createCredential(body);
+        const credential = await initializedCore.credentials.create(body);
         return Response.json(credential, { status: 201 });
       }
 
@@ -655,7 +655,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
           filters.isActive = isActive === 'true';
         }
         return Response.json(
-          await initializedCore.listCredentials(
+          await initializedCore.credentials.list(
             filters as import('@invect/core').CredentialFilters,
           ),
         );
@@ -664,40 +664,40 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
       // POST /credentials/:id/refresh
       if (method === 'POST' && path.match(/^credentials\/[^/]+\/refresh$/)) {
         const credId = path.split('/')[1];
-        return Response.json(await initializedCore.refreshOAuth2Credential(credId));
+        return Response.json(await initializedCore.credentials.refreshOAuth2Credential(credId));
       }
 
       // POST /credentials/:id/track-usage
       if (method === 'POST' && path.match(/^credentials\/[^/]+\/track-usage$/)) {
         const credId = path.split('/')[1];
-        await initializedCore.updateCredentialLastUsed(credId);
+        await initializedCore.credentials.updateLastUsed(credId);
         return new Response(null, { status: 204 });
       }
 
       // POST /credentials/:id/test
       if (method === 'POST' && path.match(/^credentials\/[^/]+\/test$/)) {
         const credentialId = path.split('/')[1];
-        const result = await initializedCore.testCredential(credentialId);
+        const result = await initializedCore.credentials.test(credentialId);
         return Response.json(result);
       }
 
       // GET /credentials/:id
       if (method === 'GET' && path.match(/^credentials\/[^/]+$/)) {
         const credentialId = path.split('/')[1];
-        return Response.json(await initializedCore.getCredential(credentialId));
+        return Response.json(await initializedCore.credentials.get(credentialId));
       }
 
       // DELETE /credentials/:id
       if (method === 'DELETE' && path.match(/^credentials\/[^/]+$/)) {
         const credentialId = path.split('/')[1];
-        await initializedCore.deleteCredential(credentialId);
+        await initializedCore.credentials.delete(credentialId);
         return new Response(null, { status: 204 });
       }
 
       // GET /triggers/:triggerId
       if (method === 'GET' && path.match(/^triggers\/[^/]+$/)) {
         const triggerId = path.split('/')[1];
-        const trigger = await initializedCore.getTrigger(triggerId);
+        const trigger = await initializedCore.triggers.get(triggerId);
         if (!trigger) {
           return Response.json(
             { error: 'Not Found', message: `Trigger ${triggerId} not found` },
@@ -709,7 +709,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
 
       if (method === 'PUT' && path.match(/^triggers\/[^/]+$/)) {
         const triggerId = path.split('/')[1];
-        const trigger = await initializedCore.updateTrigger(triggerId, body);
+        const trigger = await initializedCore.triggers.update(triggerId, body);
         if (!trigger) {
           return Response.json({ error: 'Not Found' }, { status: 404 });
         }
@@ -718,7 +718,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
 
       if (method === 'DELETE' && path.match(/^triggers\/[^/]+$/)) {
         const triggerId = path.split('/')[1];
-        await initializedCore.deleteTrigger(triggerId);
+        await initializedCore.triggers.delete(triggerId);
         return new Response(null, { status: 204 });
       }
 
@@ -727,7 +727,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
       // =====================================
 
       if (method === 'GET' && path === 'agent/tools') {
-        return Response.json(initializedCore.getAgentTools());
+        return Response.json(initializedCore.agent.getTools());
       }
 
       // =====================================
@@ -735,7 +735,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
       // =====================================
 
       if (method === 'GET' && path === 'dashboard/stats') {
-        return Response.json(await initializedCore.getDashboardStats());
+        return Response.json(await initializedCore.flows.getDashboardStats());
       }
 
       // =====================================
@@ -743,7 +743,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
       // =====================================
 
       if (method === 'GET' && path === 'chat/status') {
-        return Response.json({ enabled: initializedCore.isChatEnabled() });
+        return Response.json({ enabled: initializedCore.chat.isEnabled() });
       }
 
       // POST /chat - Streaming chat assistant endpoint (SSE via Web ReadableStream)
@@ -757,7 +757,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
           );
         }
 
-        const stream = await initializedCore.createChatStream({
+        const stream = await initializedCore.chat.createStream({
           messages,
           context: chatContext || {},
         });
@@ -795,7 +795,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
 
       if (method === 'GET' && path.match(/^chat\/messages\/[^/]+$/)) {
         const flowId = path.split('/')[2];
-        return Response.json(await initializedCore.getChatMessages(flowId));
+        return Response.json(await initializedCore.chat.getMessages(flowId));
       }
 
       if (method === 'PUT' && path.match(/^chat\/messages\/[^/]+$/)) {
@@ -804,12 +804,12 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
         if (!messages || !Array.isArray(messages)) {
           return Response.json({ error: '"messages" must be an array' }, { status: 400 });
         }
-        return Response.json(await initializedCore.saveChatMessages(flowId, messages));
+        return Response.json(await initializedCore.chat.saveMessages(flowId, messages));
       }
 
       if (method === 'DELETE' && path.match(/^chat\/messages\/[^/]+$/)) {
         const flowId = path.split('/')[2];
-        await initializedCore.deleteChatMessages(flowId);
+        await initializedCore.chat.deleteMessages(flowId);
         return Response.json({ success: true });
       }
 
@@ -819,17 +819,17 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
 
       if (method === 'GET' && path.match(/^flows\/[^/]+$/)) {
         const flowId = path.split('/')[1];
-        return Response.json(await initializedCore.getFlow(flowId));
+        return Response.json(await initializedCore.flows.get(flowId));
       }
 
       if (method === 'PUT' && path.match(/^flows\/[^/]+$/)) {
         const flowId = path.split('/')[1];
-        return Response.json(await initializedCore.updateFlow(flowId, body));
+        return Response.json(await initializedCore.flows.update(flowId, body));
       }
 
       if (method === 'DELETE' && path.match(/^flows\/[^/]+$/)) {
         const flowId = path.split('/')[1];
-        await initializedCore.deleteFlow(flowId);
+        await initializedCore.flows.delete(flowId);
         return new Response(null, { status: 204 });
       }
 
@@ -839,7 +839,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
       // =====================================
       if (path.startsWith('plugins/')) {
         const pluginPath = '/' + path.replace(/^plugins\/?/, '');
-        const endpoints = initializedCore.getPluginEndpoints();
+        const endpoints = initializedCore.plugins.getEndpoints();
 
         const matchedEndpoint = endpoints.find((ep) => {
           if (ep.method !== method) {
@@ -900,14 +900,14 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
             return h;
           })(),
           identity: pluginRequestContext.identity,
-          database: createPluginDatabaseApi(initializedCore.getDatabaseConnection()),
+          database: createPluginDatabaseApi(initializedCore.plugins.getDatabaseConnection()),
           request: requestClone,
           core: {
-            getPermissions: (identity) => initializedCore.getPermissions(identity),
-            getAvailableRoles: () => initializedCore.getAvailableRoles(),
+            getPermissions: (identity) => initializedCore.auth.getPermissions(identity),
+            getAvailableRoles: () => initializedCore.auth.getAvailableRoles(),
             getResolvedRole: (identity) =>
-              initializedCore.getAuthService().getResolvedRole(identity),
-            authorize: (context) => initializedCore.authorize(context),
+              initializedCore.auth.getResolvedRole(identity),
+            authorize: (context) => initializedCore.auth.authorize(context),
           },
         });
 
@@ -956,19 +956,18 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
  * This creates individual route handlers for specific endpoints
  */
 export function createInvectEndpoint(config: InvectConfig) {
-  let core: InstanceType<typeof Invect> | null = null;
+  let core: InvectInstance | null = null;
   let initializationPromise: Promise<void> | null = null;
 
-  const ensureInitialized = async (): Promise<InstanceType<typeof Invect>> => {
-    if (core && core.isInitialized()) {
+  const ensureInitialized = async (): Promise<InvectInstance> => {
+    if (core) {
       return core;
     }
 
     if (!initializationPromise) {
       initializationPromise = (async () => {
         try {
-          core = new Invect(config);
-          await core.initialize();
+          core = await createInvect(config);
           await core.startBatchPolling();
           // eslint-disable-next-line no-console
           console.log('✅ Invect batch polling started');
@@ -996,7 +995,7 @@ export function createInvectEndpoint(config: InvectConfig) {
 
     // Helper to create individual endpoint handlers
     createEndpoint: (
-      handler: (core: InstanceType<typeof Invect>, request: Request) => Promise<Response>,
+      handler: (core: InvectInstance, request: Request) => Promise<Response>,
     ) => {
       return async (request: Request) => {
         try {
@@ -1034,4 +1033,5 @@ export function createInvectEndpoint(config: InvectConfig) {
 }
 
 // Re-export types from core for convenience
-export type { InvectConfig } from '@invect/core';
+export type { InvectConfig, InvectInstance } from '@invect/core';
+export { createInvect } from '@invect/core';

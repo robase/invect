@@ -13,7 +13,7 @@ const DATABASE_URL =
   'postgresql://invect:invect@localhost:5433/acme_saas';
 
 export const invectConfig = defineConfig({
-  baseDatabaseConfig: {
+  database: {
     id: 'nest-prisma',
     type: 'postgresql',
     connectionString: DATABASE_URL,

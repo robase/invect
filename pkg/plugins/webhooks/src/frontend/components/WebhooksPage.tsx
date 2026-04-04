@@ -21,7 +21,7 @@ import {
   Dialog,
   DialogContent,
   useFlows,
-} from '@invect/frontend';
+} from '@invect/ui';
 import { useWebhookTriggers } from '../hooks/useWebhookQueries';
 import { CreateWebhookModal } from './CreateWebhookModal';
 import { WebhookDetailPanel } from './WebhookDetailPanel';

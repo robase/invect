@@ -92,7 +92,7 @@ export class ServiceFactory {
         plugins: (this.config.plugins || []) as import('src/types/plugin.types').InvectPlugin[],
       };
       const databaseService = new DatabaseService(
-        this.config.baseDatabaseConfig,
+        this.config.database,
         this.logger,
         verificationOpts,
         (this.config.plugins || []) as import('src/types/plugin.types').InvectPlugin[],

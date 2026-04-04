@@ -30,7 +30,7 @@ import { userAuth } from '@invect/user-auth';
 import { rbacPlugin } from '@invect/rbac';
 
 app.use('/invect', createInvectRouter({
-  baseDatabaseConfig: { type: 'sqlite', connectionString: 'file:./dev.db', id: 'main' },
+  database: { type: 'sqlite', connectionString: 'file:./dev.db', id: 'main' },
   plugins: [
     userAuth({ auth }),   // Must come first
     rbacPlugin(),
@@ -41,7 +41,7 @@ app.use('/invect', createInvectRouter({
 ## Frontend
 
 ```tsx
-import { Invect } from '@invect/frontend';
+import { Invect } from '@invect/ui';
 import { rbacFrontendPlugin } from '@invect/rbac/ui';
 
 <Invect

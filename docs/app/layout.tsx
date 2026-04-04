@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import './global.css';
 
 const geistSans = localFont({
-  src: '../../pkg/frontend/src/assets/fonts/geist-latin-wght-normal.woff2',
+  src: '../../pkg/ui/src/assets/fonts/geist-latin-wght-normal.woff2',
   variable: '--font-geist-sans',
   display: 'swap',
   weight: '100 900',
@@ -13,22 +13,22 @@ const geistSans = localFont({
 const iosevkaMono = localFont({
   src: [
     {
-      path: '../../pkg/frontend/src/assets/fonts/iosevka-latin-400-normal.woff2',
+      path: '../../pkg/ui/src/assets/fonts/iosevka-latin-400-normal.woff2',
       weight: '400',
       style: 'normal',
     },
     {
-      path: '../../pkg/frontend/src/assets/fonts/iosevka-latin-500-normal.woff2',
+      path: '../../pkg/ui/src/assets/fonts/iosevka-latin-500-normal.woff2',
       weight: '500',
       style: 'normal',
     },
     {
-      path: '../../pkg/frontend/src/assets/fonts/iosevka-latin-600-normal.woff2',
+      path: '../../pkg/ui/src/assets/fonts/iosevka-latin-600-normal.woff2',
       weight: '600',
       style: 'normal',
     },
     {
-      path: '../../pkg/frontend/src/assets/fonts/iosevka-latin-700-normal.woff2',
+      path: '../../pkg/ui/src/assets/fonts/iosevka-latin-700-normal.woff2',
       weight: '700',
       style: 'normal',
     },

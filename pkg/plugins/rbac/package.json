@@ -45,7 +45,7 @@
   },
   "peerDependencies": {
     "@invect/user-auth": ">=0.1.4",
-    "@invect/frontend": ">=0.1.4",
+    "@invect/ui": ">=0.1.4",
     "react": ">=18.0.0",
     "react-dom": ">=18.0.0",
     "@tanstack/react-query": ">=5.0.0",
@@ -54,7 +54,7 @@
     "zustand": ">=4.0.0"
   },
   "peerDependenciesMeta": {
-    "@invect/frontend": {
+    "@invect/ui": {
       "optional": true
     },
     "clsx": {
@@ -77,7 +77,7 @@
     }
   },
   "devDependencies": {
-    "@invect/frontend": "workspace:*",
+    "@invect/ui": "workspace:*",
     "@invect/user-auth": "workspace:*",
     "@tanstack/react-query": "^5.0.0",
     "@types/node": "^20.11.20",

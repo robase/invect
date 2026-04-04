@@ -5,7 +5,7 @@
   </picture>
 </p>
 
-<h1 align="center">@invect/frontend</h1>
+<h1 align="center">@invect/ui</h1>
 
 <p align="center">
   React flow editor and dashboard for Invect.
@@ -26,14 +26,14 @@ npx invect-cli init
 Or install manually:
 
 ```bash
-npm install @invect/frontend
+npm install @invect/ui
 ```
 
 ## Usage
 
 ```tsx
-import { Invect } from '@invect/frontend';
-import '@invect/frontend/styles';
+import { Invect } from '@invect/ui';
+import '@invect/ui/styles';
 
 function App() {
   return <Invect apiBaseUrl="http://localhost:3000/invect" />;
@@ -60,8 +60,8 @@ All styles are scoped under a `.invect` CSS class. Invect won't interfere with y
 For plugin UIs that render outside the main app (e.g. sign-in pages), use `InvectShell` to get just the CSS scope without routing or layout:
 
 ```tsx
-import { InvectShell } from '@invect/frontend';
-import '@invect/frontend/styles';
+import { InvectShell } from '@invect/ui';
+import '@invect/ui/styles';
 
 <InvectShell theme="dark">
   <YourCustomUI />

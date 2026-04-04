@@ -11,7 +11,7 @@ TARGET_FILTERS=(
   "@invect/express..."     # express adapter + its dependents
   "@invect/user-auth..."   # auth plugin + its dependents
   "@invect/rbac..."        # RBAC plugin + its dependents
-  "@invect/frontend..."    # frontend package + example apps
+  "@invect/ui..."    # frontend package + example apps
   "invect-express-simple"  # example backend (explicit for clarity)
   "flow-executor"             # example frontend (explicit for clarity)
 )

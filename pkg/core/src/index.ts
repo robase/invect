@@ -375,3 +375,22 @@ export {
 } from '@invect/layouts';
 
 export type { LayoutNode, LayoutEdge, DagreLayoutOptions } from '@invect/layouts';
+
+// =====================================
+// New API (namespaced sub-APIs)
+// =====================================
+export { createInvect } from './api';
+export type {
+  InvectInstance,
+  FlowsAPI,
+  FlowVersionsAPI,
+  FlowRunsAPI,
+  CredentialsAPI,
+  TriggersAPI,
+  AgentAPI,
+  ChatAPI,
+  ActionsAPI,
+  TestingAPI,
+  AuthAPI,
+  PluginsAPI,
+} from './api';

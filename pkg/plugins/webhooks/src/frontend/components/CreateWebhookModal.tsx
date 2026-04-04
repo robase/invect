@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@invect/frontend';
+} from '@invect/ui';
 import { useCreateWebhookTrigger } from '../hooks/useWebhookQueries';
 import { CopyableField } from './CopyableField';
 import type { CreateWebhookTriggerInput } from '../../shared/types';

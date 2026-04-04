@@ -549,7 +549,7 @@ export const USER_AUTH_SCHEMA: InvectPluginSchema = {
  *
  * Database resolution order:
  * 1. Explicit `options.database` (any value `betterAuth({ database })` accepts)
- * 2. Auto-created client from Invect's `baseDatabaseConfig.connectionString`
+ * 2. Auto-created client from Invect's `database.connectionString`
  */
 async function createInternalBetterAuth(
   invectConfig: Record<string, unknown>,
@@ -583,7 +583,7 @@ async function createInternalBetterAuth(
   let database: unknown = options.database;
 
   if (!database) {
-    const dbConfig = invectConfig.baseDatabaseConfig as
+    const dbConfig = invectConfig.database as
       | { type?: string; connectionString?: string }
       | undefined;
 
@@ -591,7 +591,7 @@ async function createInternalBetterAuth(
       throw new Error(
         'Cannot create internal better-auth instance: no database configuration found. ' +
           'Either provide `auth` (a better-auth instance), `database`, or ensure ' +
-          'Invect baseDatabaseConfig has a connectionString.',
+          'Invect database has a connectionString.',
       );
     }
 

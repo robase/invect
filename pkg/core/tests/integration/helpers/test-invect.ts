@@ -47,7 +47,7 @@ export async function createTestInvect(opts?: {
   sqlite.close();
 
   const invect = new Invect({
-    baseDatabaseConfig: {
+    database: {
       type: 'sqlite',
       connectionString: `file:${dbPath}`,
       id: 'test',

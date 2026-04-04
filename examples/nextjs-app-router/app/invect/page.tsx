@@ -1,9 +1,9 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import '@invect/frontend/styles';
+import '@invect/ui/styles';
 
-const Invect = dynamic(() => import('@invect/frontend').then((mod) => ({ default: mod.Invect })), {
+const Invect = dynamic(() => import('@invect/ui').then((mod) => ({ default: mod.Invect })), {
   ssr: false,
 });
 

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useApiClient } from '@invect/frontend';
+import { useApiClient } from '@invect/ui';
 import type {
   EffectiveFlowAccessResponse,
   GrantScopeAccessRequest,

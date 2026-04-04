@@ -4,7 +4,7 @@ import {
   type InjectionToken,
   type OptionalFactoryDependency,
 } from '@nestjs/common';
-import { Invect, InvectConfig } from '@invect/core';
+import { createInvect, InvectConfig } from '@invect/core';
 import { InvectController } from './invect-nestjs.controller';
 import { InvectService } from './invect-nestjs.service';
 
@@ -13,10 +13,8 @@ export class InvectModule {
   static forRoot(config: InvectConfig): DynamicModule {
     const invectProvider = {
       provide: 'INVECT_CORE',
-      useFactory: () => {
-        const core = new Invect(config);
-        core.initialize();
-        return core;
+      useFactory: async () => {
+        return createInvect(config);
       },
     };
 
@@ -36,9 +34,7 @@ export class InvectModule {
       provide: 'INVECT_CORE',
       useFactory: async (...args: unknown[]) => {
         const config = await options.useFactory(...args);
-        const core = new Invect(config);
-        core.initialize();
-        return core;
+        return createInvect(config);
       },
       inject: options.inject || [],
     };

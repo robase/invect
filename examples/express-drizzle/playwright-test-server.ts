@@ -80,8 +80,8 @@ app.get('/invect/plugins/auth/api/auth/get-session', (_req, res) => {
 
 app.use(
   '/invect',
-  createInvectRouter({
-    baseDatabaseConfig: {
+  await createInvectRouter({
+    database: {
       id: `test-${process.pid}`,
       type: 'sqlite',
       connectionString: `file:${dbPath}`,

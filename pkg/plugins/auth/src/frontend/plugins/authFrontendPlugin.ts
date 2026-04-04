@@ -14,7 +14,7 @@ import { Users } from 'lucide-react';
 import { ProfilePage } from '../components/ProfilePage';
 import { UserManagementPage } from '../components/UserManagementPage';
 import { SidebarUserMenu } from '../components/SidebarUserMenu';
-import type { InvectFrontendPlugin } from '@invect/frontend';
+import type { InvectFrontendPlugin } from '@invect/ui';
 
 export const authFrontendPlugin: InvectFrontendPlugin = {
   id: 'user-auth',

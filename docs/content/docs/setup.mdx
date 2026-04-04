@@ -46,7 +46,7 @@ npm install @invect/core @invect/nextjs postgres
 For the frontend flow editor, install the frontend package in your React app:
 
 ```bash
-npm install @invect/frontend
+npm install @invect/ui
 ```
 
 ## 3. Create a Config File
@@ -57,7 +57,7 @@ Create `invect.config.ts` in your project root (or `src/`):
 <Tab value="SQLite">
 ```ts title="invect.config.ts"
 export default {
-  baseDatabaseConfig: {
+  database: {
     type: 'sqlite',
     connectionString: 'file:./dev.db',
     id: 'main',
@@ -68,7 +68,7 @@ export default {
 <Tab value="PostgreSQL">
 ```ts title="invect.config.ts"
 export default {
-  baseDatabaseConfig: {
+  database: {
     type: 'postgresql',
     connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/invect',
     id: 'main',
@@ -79,7 +79,7 @@ export default {
 <Tab value="MySQL">
 ```ts title="invect.config.ts"
 export default {
-  baseDatabaseConfig: {
+  database: {
     type: 'mysql',
     connectionString: process.env.DATABASE_URL || 'mysql://user:pass@localhost:3306/invect',
     id: 'main',
@@ -142,7 +142,7 @@ const app = express();
 app.use(cors());
 
 app.use('/invect', createInvectRouter({
-  baseDatabaseConfig: {
+  database: {
     type: 'sqlite',
     connectionString: 'file:./dev.db',
     id: 'main',
@@ -162,7 +162,7 @@ import { InvectModule } from '@invect/nestjs';
 @Module({
   imports: [
     InvectModule.forRoot({
-      baseDatabaseConfig: {
+      database: {
         type: 'postgresql',
         connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/invect',
         id: 'main',
@@ -178,7 +178,7 @@ export class AppModule {}
 import { createInvectHandler } from '@invect/nextjs';
 
 const handler = createInvectHandler({
-  baseDatabaseConfig: {
+  database: {
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL || 'file:./dev.db',
     id: 'main',
@@ -198,8 +198,8 @@ export const DELETE = handler;
 In your React app, render the flow editor:
 
 ```tsx title="App.tsx"
-import { Invect } from '@invect/frontend';
-import '@invect/frontend/styles';
+import { Invect } from '@invect/ui';
+import '@invect/ui/styles';
 
 export default function App() {
   return (

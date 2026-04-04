@@ -19,7 +19,7 @@ Create a catch-all API route for Invect:
 import { createInvectHandler } from '@invect/nextjs';
 
 const handler = createInvectHandler({
-  baseDatabaseConfig: {
+  database: {
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL || 'file:./dev.db',
     id: 'main',
@@ -39,8 +39,8 @@ In a client page or layout, mount the Invect component:
 ```tsx title="app/workflows/page.tsx"
 'use client';
 
-import { Invect } from '@invect/frontend';
-import '@invect/frontend/styles';
+import { Invect } from '@invect/ui';
+import '@invect/ui/styles';
 
 export default function WorkflowsPage() {
   return <Invect apiBaseUrl="/api/invect" />;
@@ -61,7 +61,7 @@ let core: Invect | null = null;
 function getCore() {
   if (!core) {
     core = new Invect({
-      baseDatabaseConfig: {
+      database: {
         type: 'sqlite',
         connectionString: process.env.DATABASE_URL || 'file:./dev.db',
         id: 'main',

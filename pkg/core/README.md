@@ -37,7 +37,7 @@ npm install @invect/core
 import { Invect } from '@invect/core';
 
 const core = new Invect({
-  baseDatabaseConfig: {
+  database: {
     type: 'sqlite',
     connectionString: 'file:./dev.db',
     id: 'main',

@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@invect/core": "workspace:*",
-    "@invect/frontend": "workspace:*",
+    "@invect/ui": "workspace:*",
     "@invect/nextjs": "workspace:*",
     "@invect/rbac": "workspace:*",
     "@invect/user-auth": "workspace:*",

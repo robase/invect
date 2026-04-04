@@ -15,7 +15,7 @@ export default function LandingPage() {
       if (!canvas || !wrap) return;
 
       const scene = new THREE.Scene();
-      const frustum = 5.5;
+      const frustum = 7;
       let W = wrap.clientWidth;
       let H = wrap.clientHeight;
       let aspect = W / H;
@@ -29,18 +29,48 @@ export default function LandingPage() {
       renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
       renderer.setClearColor(0x000000, 0);
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.0;
+      renderer.toneMappingExposure = 1.2;
 
-      // Physically-based lighting (Three.js r155+, intensity in candela)
-      const light1 = new THREE.PointLight(0xffffff, 80, 30, 2);
-      const light2 = new THREE.PointLight(0xcccccc, 50, 30, 2);
-      const lightRadius = 7;
+      // Theme detection
+      const isDark = () => document.documentElement.classList.contains('dark');
+      let dark = isDark();
+
+      // Invect palette colours
+      const LIGHT_PRIMARY = 0x5b5bd6;  // #5b5bd6
+      const DARK_PRIMARY  = 0x7b7bde;  // #7b7bde
+      const LIGHT_ACCENT  = 0x8b8be8;  // lighter indigo for fill light
+      const DARK_ACCENT   = 0x9b9bf0;  // brighter indigo for fill in dark
+
+      // Dramatic lighting — strong coloured keys, faint ambient
+      const light1 = new THREE.PointLight(dark ? DARK_PRIMARY : LIGHT_PRIMARY, 160, 40, 2);
+      const light2 = new THREE.PointLight(dark ? DARK_ACCENT : LIGHT_ACCENT, 90, 40, 2);
+      const rimLight = new THREE.PointLight(dark ? 0xc4b5fd : 0x8b8be8, 60, 40, 2);
+      const topLight = new THREE.PointLight(dark ? DARK_ACCENT : LIGHT_ACCENT, 50, 30, 2);
+      topLight.position.set(0, 12, 0);
+      const ambient = new THREE.AmbientLight(dark ? 0x2a2a4a : 0xddddf0, dark ? 0.08 : 0.18);
+      const lightRadius = 8;
       let lightAngle = 0;
-      const lightY = 5;
-      scene.add(light1, light2);
-      scene.add(new THREE.AmbientLight(0xffffff, 0.15));
+      const lightY = 6;
+      scene.add(light1, light2, rimLight, topLight, ambient);
 
-      const s = 1, h = 4;
+      // Watch for theme changes
+      const themeObserver = new MutationObserver(() => {
+        const nowDark = isDark();
+        if (nowDark === dark) return;
+        dark = nowDark;
+        light1.color.setHex(dark ? DARK_PRIMARY : LIGHT_PRIMARY);
+        light2.color.setHex(dark ? DARK_ACCENT : LIGHT_ACCENT);
+        rimLight.color.setHex(dark ? 0xc4b5fd : 0x8b8be8);
+        topLight.color.setHex(dark ? DARK_ACCENT : LIGHT_ACCENT);
+        ambient.color.setHex(dark ? 0x2a2a4a : 0xddddf0);
+        ambient.intensity = dark ? 0.08 : 0.18;
+        mat.color.setHex(dark ? 0xe8e8f8 : 0xffffff);
+        mat.roughness = dark ? 0.25 : 0.3;
+        mat.metalness = dark ? 0.1 : 0.05;
+      });
+      themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+      const s = 1.5, h = 6;
       const twistAngle = -Math.PI / 4;
 
       const bottomVertsBase: number[][] = [[-s,-h,s],[s,-h,s],[s,-h,-s],[-s,-h,-s]];
@@ -72,14 +102,16 @@ export default function LandingPage() {
       }
 
       const mat = new THREE.MeshStandardMaterial({
-        color: 0xffffff, roughness: 0.3, metalness: 0.05,
+        color: dark ? 0xe8e8f8 : 0xffffff,
+        roughness: dark ? 0.25 : 0.3,
+        metalness: dark ? 0.1 : 0.05,
         side: THREE.FrontSide,
       });
 
       const mesh = new THREE.Mesh(buildGeometry(bottomVerts, topVerts, twistAngle >= 0), mat);
       scene.add(mesh);
 
-      const baseDist = 12, baseRotX = Math.PI / 12, baseRotY = Math.PI / 2 + 0.3;
+      const baseDist = 12, baseRotX = Math.PI / 12, baseRotY = Math.PI / 2;
       let mouseX = 0, mouseY = 0, scrollYVal = 0;
       let tiltX = 0, tiltY = 0;
       let smoothMX = 0, smoothMY = 0, smoothTX = 0, smoothTY = 0;
@@ -126,8 +158,9 @@ export default function LandingPage() {
         lightAngle += 0.003;
         light1.position.set(lightRadius * Math.cos(lightAngle), lightY, lightRadius * Math.sin(lightAngle));
         light2.position.set(lightRadius * Math.cos(lightAngle + Math.PI), lightY * 0.8, lightRadius * Math.sin(lightAngle + Math.PI));
+        rimLight.position.set(lightRadius * Math.sin(lightAngle * 0.7), -lightY * 0.6, lightRadius * Math.cos(lightAngle * 0.7));
 
-        mesh.rotation.y = t * 0.05;
+        mesh.rotation.y = Math.sin(t * 0.5) * 0.2;
         renderer.render(scene, camera);
       }
       animate(0);
@@ -143,6 +176,7 @@ export default function LandingPage() {
       cleanup = () => {
         cancelAnimationFrame(rafId);
         ro.disconnect();
+        themeObserver.disconnect();
         window.removeEventListener('mousemove', onMouse);
         window.removeEventListener('scroll', onScroll);
         window.removeEventListener('deviceorientation', onOrientation);
@@ -208,12 +242,12 @@ export default function LandingPage() {
               <div
                 className="install-bar"
                 onClick={(e) => {
-                  navigator.clipboard.writeText('npm install invect');
+                  navigator.clipboard.writeText('npx invect-cli init');
                   const el = (e.currentTarget as HTMLElement).querySelector('.copy-label');
                   if (el) el.textContent = 'Copied!';
                 }}
               >
-                <code>npm install invect</code>
+                <code>npx invect-cli init</code>
                 <span className="copy-label copy-icon">📋</span>
               </div>
             </div>
@@ -226,14 +260,13 @@ export default function LandingPage() {
             <p className="section-label">Features</p>
             <h2 className="section-title">Everything you need to orchestrate</h2>
             <p className="section-desc">
-              A complete toolkit for building, running, and monitoring workflows — from simple
-              automations to complex AI agent&nbsp;pipelines.
+              Build, run, and monitor workflows — from simple automations to AI agent&nbsp;pipelines.
             </p>
             <div className="features-grid">
               <Link href="/docs/concepts" className="feature-card">
                 <div className="feature-icon purple">⚡</div>
                 <h3>Visual Flow Editor</h3>
-                <p>Drag-and-drop workflow builder with real-time execution monitoring powered by React&nbsp;Flow.</p>
+                <p>Drag-and-drop workflow builder with real-time execution&nbsp;monitoring.</p>
               </Link>
               <Link href="/docs/agents" className="feature-card">
                 <div className="feature-icon green">🤖</div>
@@ -248,7 +281,7 @@ export default function LandingPage() {
               <Link href="/docs/concepts" className="feature-card">
                 <div className="feature-icon pink">🔨</div>
                 <h3>AI-Assisted Flow Builder</h3>
-                <p>Describe what you need in plain language — the built-in chat assistant wires up nodes, configs, and connections for&nbsp;you.</p>
+                <p>Describe what you need in plain language — the chat assistant wires up nodes, configs, and&nbsp;connections.</p>
               </Link>
               <Link href="/docs/concepts" className="feature-card">
                 <div className="feature-icon blue">📦</div>
@@ -258,7 +291,7 @@ export default function LandingPage() {
               <Link href="/docs/database" className="feature-card">
                 <div className="feature-icon yellow">🗃️</div>
                 <h3>Multi-Database</h3>
-                <p>Works out of the box with SQLite, PostgreSQL, and MySQL via Drizzle&nbsp;ORM.</p>
+                <p>Works out of the box with SQLite, PostgreSQL, and MySQL. Bring your own&nbsp;database.</p>
               </Link>
             </div>
           </div>
@@ -289,12 +322,15 @@ export default function LandingPage() {
                   <span>server.ts</span>
                 </div>
                 <pre dangerouslySetInnerHTML={{ __html: `<span class="keyword">import</span> express <span class="keyword">from</span> <span class="string">'express'</span>;
-<span class="keyword">import</span> { <span class="type">createInvectRouter</span> } <span class="keyword">from</span> <span class="string">'invect/express'</span>;
+<span class="keyword">import</span> { <span class="type">createInvectRouter</span> } <span class="keyword">from</span> <span class="string">'@invect/express'</span>;
 
 <span class="keyword">const</span> app = <span class="func">express</span>();
 
 app.<span class="func">use</span>(<span class="string">'/invect'</span>, <span class="func">createInvectRouter</span>({
-  <span class="type">databaseUrl</span>: process.env.<span class="type">DATABASE_URL</span>,
+  <span class="type">database</span>: {
+    <span class="type">type</span>: <span class="string">'sqlite'</span>,
+    <span class="type">connectionString</span>: <span class="string">'file:./dev.db'</span>,
+  },
 }));
 
 app.<span class="func">listen</span>(<span class="string">3000</span>);` }} />
@@ -304,8 +340,8 @@ app.<span class="func">listen</span>(<span class="string">3000</span>);` }} />
                   <span className="code-dot red" /><span className="code-dot yellow" /><span className="code-dot green" />
                   <span>App.tsx</span>
                 </div>
-                <pre dangerouslySetInnerHTML={{ __html: `<span class="keyword">import</span> { <span class="type">Invect</span> } <span class="keyword">from</span> <span class="string">'invect/frontend'</span>;
-<span class="keyword">import</span> <span class="string">'invect/frontend/styles'</span>;
+                <pre dangerouslySetInnerHTML={{ __html: `<span class="keyword">import</span> { <span class="type">Invect</span> } <span class="keyword">from</span> <span class="string">'@invect/ui'</span>;
+<span class="keyword">import</span> <span class="string">'@invect/ui/styles'</span>;
 
 <span class="keyword">export default</span> () =&gt; (
   &lt;<span class="type">Invect</span> <span class="func">apiBaseUrl</span>=<span class="string">"http://localhost:3000/invect"</span> /&gt;
@@ -327,13 +363,11 @@ app.<span class="func">listen</span>(<span class="string">3000</span>);` }} />
               <div className="why-item">
                 <div className="why-item-text">
                   <h3>A real execution engine</h3>
-                  <p>Nodes run in topological order with full dependency resolution. Each node receives the merged outputs of every upstream node — no rigid &quot;input→output&quot; chains.</p>
+                  <p>Each node receives the merged output of every upstream node — no rigid &quot;input→output&quot;&nbsp;chains.</p>
                   <ul>
-                    <li>Unlimited inputs per node — every upstream output is available via Nunjucks templates</li>
+                    <li>Reference any upstream node by name in templates</li>
                     <li>Conditional branching, loops, and parallel paths are first-class</li>
                     <li>Pause mid-flow for batch API results, then resume automatically</li>
-                    <li>AI agents with iterative tool-calling loops, not single-shot prompts</li>
-                    <li>Typed, validated params on every node via Zod schemas</li>
                   </ul>
                   <Link href="/docs/concepts" className="why-link">Learn about the execution model →</Link>
                 </div>
@@ -361,20 +395,21 @@ app.<span class="func">listen</span>(<span class="string">3000</span>);` }} />
                     <li>Mount the Express router, NestJS module, or Next.js actions into your existing app</li>
                     <li>The React frontend is a single <code>&lt;Invect /&gt;</code> component — drop it into any page</li>
                     <li>Uses your existing database (SQLite, Postgres, MySQL) — no separate infra</li>
-                    <li>Or run it standalone with the included example apps</li>
-                    <li>Credential storage and OAuth2 flows are built in, scoped to your app</li>
                   </ul>
                   <Link href="/docs/integrations/express" className="why-link">See integration guides →</Link>
                 </div>
                 <div className="why-code">
                   <div className="code-header"><span className="code-dot red" /><span className="code-dot yellow" /><span className="code-dot green" /><span>your-app.ts</span></div>
                   <pre dangerouslySetInnerHTML={{ __html: `<span class="comment">// Your existing Express app</span>
-<span class="keyword">import</span> { <span class="type">createInvectRouter</span> } <span class="keyword">from</span> <span class="string">'invect/express'</span>;
+<span class="keyword">import</span> { <span class="type">createInvectRouter</span> } <span class="keyword">from</span> <span class="string">'@invect/express'</span>;
 
 <span class="comment">// Mount alongside your existing routes</span>
 app.<span class="func">use</span>(<span class="string">'/api'</span>, yourRouter);
 app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <span class="func">createInvectRouter</span>({
-  <span class="type">databaseUrl</span>: process.env.<span class="type">DATABASE_URL</span>,
+  <span class="type">database</span>: {
+    <span class="type">type</span>: <span class="string">'sqlite'</span>,
+    <span class="type">connectionString</span>: process.env.<span class="type">DATABASE_URL</span>,
+  },
 }));
 
 <span class="comment">// That's it. Same server, same database,</span>
@@ -385,21 +420,24 @@ app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <spa
               <div className="why-item">
                 <div className="why-item-text">
                   <h3>Execute flows directly in code</h3>
-                  <p>The visual editor is optional. The core <code>Invect</code> class exposes every operation as a typed method — build flows in the UI, trigger them from your backend code.</p>
+                  <p>The visual editor is optional. Every operation is a typed method — build flows in the UI, trigger them from your backend&nbsp;code.</p>
                   <ul>
                     <li>Call <code>core.startFlowRun(flowId, inputs)</code> from any server-side code</li>
-                    <li>Build flows programmatically with <code>createFlow()</code> and <code>createFlowVersion()</code></li>
-                    <li>Read execution results, node traces, and logs via typed&nbsp;APIs</li>
-                    <li>Use flows as background jobs — trigger from webhooks, cron, or queue workers</li>
+                    <li>Trigger from webhooks, cron, or queue workers</li>
                     <li>Full TypeScript types for inputs, outputs, and flow definitions</li>
                   </ul>
                   <Link href="/docs/programmatic-usage" className="why-link">See the programmatic API →</Link>
                 </div>
                 <div className="why-code">
                   <div className="code-header"><span className="code-dot red" /><span className="code-dot yellow" /><span className="code-dot green" /><span>worker.ts</span></div>
-                  <pre dangerouslySetInnerHTML={{ __html: `<span class="keyword">import</span> { <span class="type">Invect</span> } <span class="keyword">from</span> <span class="string">'invect'</span>;
+                  <pre dangerouslySetInnerHTML={{ __html: `<span class="keyword">import</span> { <span class="type">Invect</span> } <span class="keyword">from</span> <span class="string">'@invect/core'</span>;
 
-<span class="keyword">const</span> core = <span class="keyword">new</span> <span class="type">Invect</span>({ <span class="type">databaseUrl</span>: <span class="string">'...'</span> });
+<span class="keyword">const</span> core = <span class="keyword">new</span> <span class="type">Invect</span>({
+  <span class="type">database</span>: {
+    <span class="type">type</span>: <span class="string">'sqlite'</span>,
+    <span class="type">connectionString</span>: <span class="string">'file:./dev.db'</span>,
+  },
+});
 <span class="keyword">await</span> core.<span class="func">initialize</span>();
 
 <span class="comment">// Trigger a flow from a webhook handler</span>
@@ -408,7 +446,7 @@ app.<span class="func">post</span>(<span class="string">'/webhooks/new-order'</s
     <span class="string">'order-processing-flow'</span>,
     { order: req.body }
   );
-  res.<span class="func">json</span>({ runId: result.id });
+  res.<span class="func">json</span>({ runId: result.flowRunId });
 });` }} />
                 </div>
               </div>
@@ -533,10 +571,10 @@ const landingStyles = `
   .landing .nav-links .btn-nav:hover { background: var(--bg-subtle); border-color: var(--text-muted); }
 
   /* Hero */
-  .landing .hero { padding: 140px 0 100px; position: relative; overflow: hidden; min-height: 100vh; }
+  .landing .hero { padding: 140px 0 100px; position: relative; min-height: 100vh; }
   .landing .hero::before { content: ''; position: absolute; top: -10%; left: -5%; width: 55%; height: 90%; background: radial-gradient(ellipse at center, var(--accent-glow) 0%, transparent 70%); pointer-events: none; z-index: 0; }
-  .landing .hero > .container { display: grid; grid-template-columns: 420px 1fr; align-items: center; gap: 32px; position: relative; z-index: 2; }
-  .landing .hero-canvas-wrap { position: relative; width: 420px; height: 520px; }
+  .landing .hero > .container { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 0; position: relative; z-index: 2; min-height: calc(100vh - 240px); }
+  .landing .hero-canvas-wrap { position: relative; width: 100%; height: 100%; min-height: 500px; }
   .landing #hero-canvas { display: block; width: 100%; height: 100%; }
   .landing .hero-text { text-align: left; }
   .landing .hero-overlay { display: none; }
@@ -646,7 +684,7 @@ const landingStyles = `
     .landing .hero p { margin-left: auto; margin-right: auto; }
     .landing .hero-actions { justify-content: center; }
     .landing .install-bar { margin: 0 auto; }
-    .landing .hero-canvas-wrap { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.15; }
+    .landing .hero-canvas-wrap { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.15; aspect-ratio: auto; max-height: none; }
     .landing .features-grid { grid-template-columns: 1fr; }
     .landing .code-section > .container { grid-template-columns: 1fr; }
     .landing .why-item { grid-template-columns: 1fr; }

@@ -1,7 +1,7 @@
 import { createInvectHandler } from '@invect/nextjs';
 
 const config = {
-  baseDatabaseConfig: {
+  database: {
     connectionString: 'file:./invect.db',
     type: 'sqlite' as const,
     id: 'main',

@@ -14,7 +14,7 @@ export default defineConfig({
   deps: {
     neverBundle: [
       '@invect/core',
-      '@invect/frontend',
+      '@invect/ui',
       'better-auth',
       'better-auth/plugins',
       'better-auth/adapters/drizzle',

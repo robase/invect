@@ -247,7 +247,7 @@ async function main() {
   console.log('\n📦 Seeding flows…');
 
   const invect = new Invect({
-    baseDatabaseConfig: {
+    database: {
       type: 'sqlite',
       connectionString: `file:${sqlitePath}`,
       id: 'seed-db',

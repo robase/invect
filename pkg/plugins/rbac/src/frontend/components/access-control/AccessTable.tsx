@@ -13,7 +13,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@invect/frontend';
+} from '@invect/ui';
 import { twMerge } from 'tailwind-merge';
 import type { AccessRow } from './types';
 import type { FlowAccessPermission } from '../../../shared/types';

@@ -32,7 +32,7 @@ import { createInvectRouter } from '@invect/express';
 const app = express();
 
 app.use('/invect', createInvectRouter({
-  baseDatabaseConfig: {
+  database: {
     type: 'sqlite',
     connectionString: 'file:./dev.db',
     id: 'main',
@@ -54,7 +54,7 @@ import { InvectModule } from '@invect/nestjs';
 @Module({
   imports: [
     InvectModule.forRoot({
-      baseDatabaseConfig: {
+      database: {
         type: 'sqlite',
         connectionString: process.env.DATABASE_URL || 'file:./dev.db',
         id: 'main',
@@ -70,7 +70,7 @@ export class AppModule {}
 import { createInvectHandler } from '@invect/nextjs';
 
 const handler = createInvectHandler({
-  baseDatabaseConfig: {
+  database: {
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL || 'file:./dev.db',
     id: 'main',
@@ -90,8 +90,8 @@ export const DELETE = handler;
 The React frontend is a single component. Install it in your frontend app:
 
 ```tsx title="App.tsx"
-import { Invect } from '@invect/frontend';
-import '@invect/frontend/styles';
+import { Invect } from '@invect/ui';
+import '@invect/ui/styles';
 
 export default function App() {
   return (

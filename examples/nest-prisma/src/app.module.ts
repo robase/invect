@@ -17,7 +17,7 @@ const DATABASE_URL =
       envFilePath: '.env',
     }),
     InvectModule.forRoot({
-      baseDatabaseConfig: {
+      database: {
         id: 'nest-prisma',
         type: 'postgresql',
         connectionString: DATABASE_URL,

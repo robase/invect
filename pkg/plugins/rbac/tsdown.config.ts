@@ -15,7 +15,7 @@ export default defineConfig({
     neverBundle: [
       '@invect/core',
       '@invect/user-auth',
-      '@invect/frontend',
+      '@invect/ui',
       'react',
       'react-dom',
       'react/jsx-runtime',

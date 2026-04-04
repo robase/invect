@@ -306,7 +306,7 @@ describe('RBAC Plugin — Security Red Team', () => {
     // 7. Create plugin + Invect
     plugin = rbacPlugin({ enableTeams: true });
     invect = new Invect({
-      baseDatabaseConfig: {
+      database: {
         type: 'sqlite',
         connectionString: `file:${dbPath}`,
         id: 'rbac-test',

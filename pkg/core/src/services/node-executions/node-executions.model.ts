@@ -387,7 +387,8 @@ export class NodeExecutionsModel {
       nodeType: String(raw.node_type ?? raw.nodeType ?? ''),
       toolId: (raw.tool_id ?? raw.toolId ?? null) as string | null,
       toolName: (raw.tool_name ?? raw.toolName ?? null) as string | null,
-      iteration: raw.iteration !== null && raw.iteration !== undefined ? Number(raw.iteration) : null,
+      iteration:
+        raw.iteration !== null && raw.iteration !== undefined ? Number(raw.iteration) : null,
       status: (raw.status || 'PENDING') as NodeExecutionStatus,
       inputs: (raw.inputs || {}) as Record<string, unknown>,
       outputs: raw.outputs as NodeOutput | undefined,

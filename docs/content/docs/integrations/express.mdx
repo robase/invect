@@ -24,7 +24,7 @@ app.use(cors());
 // Mount alongside your existing routes
 app.use('/api/admin', adminRouter);
 app.use('/api/invect', createInvectRouter({
-  baseDatabaseConfig: {
+  database: {
     type: 'sqlite',
     connectionString: 'file:./dev.db',
     id: 'main',
@@ -41,7 +41,7 @@ app.listen(3000);
 ```ts
 createInvectRouter({
   // Required
-  baseDatabaseConfig: {
+  database: {
     type: 'sqlite',            // 'sqlite' | 'postgresql' | 'mysql'
     connectionString: string,  // Database connection URL
     id: string,                // Identifier for this database
@@ -100,7 +100,7 @@ app.use('/admin/api', adminRouter);
 
 // Invect workflows — same server, same database
 app.use('/admin/workflows', createInvectRouter({
-  baseDatabaseConfig: {
+  database: {
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL || 'file:./dev.db',
     id: 'main',
@@ -111,8 +111,8 @@ app.use('/admin/workflows', createInvectRouter({
 Then in your admin frontend, drop in the React component:
 
 ```tsx title="admin-workflows.tsx"
-import { Invect } from '@invect/frontend';
-import '@invect/frontend/styles';
+import { Invect } from '@invect/ui';
+import '@invect/ui/styles';
 
 export function WorkflowsPage() {
   return <Invect apiBaseUrl="/admin/workflows" />;

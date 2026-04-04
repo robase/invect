@@ -2,7 +2,7 @@
  * @invect/rbac/ui — Frontend Plugin Types
  *
  * Types for the frontend plugin system. These are consumed by
- * @invect/frontend to render plugin-contributed UI.
+ * @invect/ui to render plugin-contributed UI.
  */
 
 import type { ComponentType, ReactNode } from 'react';

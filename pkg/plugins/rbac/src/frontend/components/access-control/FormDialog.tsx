@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@invect/frontend';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@invect/ui';
 
 export function FormDialog({
   open,

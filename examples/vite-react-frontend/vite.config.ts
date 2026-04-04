@@ -15,7 +15,7 @@ export default defineConfig({
     ],
     // Exclude workspace packages from pre-bundling so they resolve from pnpm workspaces
     exclude: [
-      '@invect/frontend',
+      '@invect/ui',
       '@invect/core',
       'perf_hooks',
       'crypto',
@@ -33,7 +33,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       // Externalize @invect/core to prevent bundling Node.js runtime code
-      // The types from @invect/core/types are already re-exported by @invect/frontend
+      // The types from @invect/core/types are already re-exported by @invect/ui
       external: [/^@invect\/core/],
     },
   },

@@ -38,7 +38,7 @@ Create a catch-all route in your Next.js App Router:
 import { createInvectHandler } from '@invect/nextjs';
 
 const handler = createInvectHandler({
-  baseDatabaseConfig: {
+  database: {
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL || 'file:./dev.db',
     id: 'main',
@@ -60,8 +60,8 @@ Add the flow editor to any page:
 
 ```tsx
 // app/invect/[[...slug]]/page.tsx
-import { Invect } from '@invect/frontend';
-import '@invect/frontend/styles';
+import { Invect } from '@invect/ui';
+import '@invect/ui/styles';
 
 export default function InvectPage() {
   return <Invect apiBaseUrl="/api/invect" basePath="/invect" />;

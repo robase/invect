@@ -38,7 +38,7 @@ import { InvectModule } from '@invect/nestjs';
 @Module({
   imports: [
     InvectModule.forRoot({
-      baseDatabaseConfig: {
+      database: {
         type: 'sqlite',
         connectionString: 'file:./dev.db',
         id: 'main',
@@ -60,7 +60,7 @@ import { InvectModule } from '@invect/nestjs';
     ConfigModule.forRoot(),
     InvectModule.forRootAsync({
       useFactory: (config: ConfigService) => ({
-        baseDatabaseConfig: {
+        database: {
           type: 'postgres',
           connectionString: config.get('DATABASE_URL'),
           id: 'main',

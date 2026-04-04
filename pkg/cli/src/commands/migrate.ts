@@ -61,15 +61,15 @@ async function migrateAction(options: {
     process.exit(1);
   }
 
-  const dbType = config.baseDatabaseConfig?.type;
-  const dbUrl = config.baseDatabaseConfig?.connectionString;
+  const dbType = config.database?.type;
+  const dbUrl = config.database?.connectionString;
 
   if (!dbType) {
     console.error(
-      pc.red('✗ No baseDatabaseConfig.type found in your config.') +
+      pc.red('✗ No database.type found in your config.') +
         '\n' +
         pc.dim(
-          '  Expected: baseDatabaseConfig: { type: "sqlite" | "postgresql" | "mysql", ... }',
+          '  Expected: database: { type: "sqlite" | "postgresql" | "mysql", ... }',
         ) +
         '\n',
     );

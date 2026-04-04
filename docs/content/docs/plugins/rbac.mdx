@@ -28,7 +28,7 @@ import { rbacPlugin } from '@invect/rbac';
 import { auth } from './auth';
 
 app.use('/invect', createInvectRouter({
-  baseDatabaseConfig: {
+  database: {
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL || 'file:./dev.db',
     id: 'main',
@@ -43,7 +43,7 @@ app.use('/invect', createInvectRouter({
 <Tab value="NestJS">
 ```ts
 InvectModule.forRoot({
-  baseDatabaseConfig: {
+  database: {
     type: 'postgresql',
     connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/invect',
     id: 'main',
@@ -58,7 +58,7 @@ InvectModule.forRoot({
 <Tab value="Next.js">
 ```ts
 createInvectHandler({
-  baseDatabaseConfig: {
+  database: {
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL || 'file:./dev.db',
     id: 'main',
@@ -78,7 +78,7 @@ The `flow_access` table is provided by the `@invect/user-auth` plugin. Make sure
 
 ```ts
 createInvectRouter({
-  baseDatabaseConfig: {
+  database: {
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL || 'file:./dev.db',
     id: 'main',
@@ -104,9 +104,9 @@ npx invect-cli migrate --push
 In your React app, include the RBAC frontend plugin:
 
 ```tsx title="App.tsx"
-import { Invect } from '@invect/frontend';
+import { Invect } from '@invect/ui';
 import { rbacFrontendPlugin } from '@invect/rbac/ui';
-import '@invect/frontend/styles';
+import '@invect/ui/styles';
 
 export default function App() {
   return (

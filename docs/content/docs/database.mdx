@@ -15,13 +15,13 @@ The database stores flows, flow versions, flow runs, node executions, credential
 
 ## Configuration
 
-Pass `baseDatabaseConfig` when initializing Invect:
+Pass `database` when initializing Invect:
 
 <Tabs groupId="database" persist items={['SQLite', 'PostgreSQL', 'MySQL']}>
 <Tab value="SQLite">
 ```ts
 createInvectRouter({
-  baseDatabaseConfig: {
+  database: {
     type: 'sqlite',
     connectionString: 'file:./dev.db',
     id: 'main',
@@ -32,7 +32,7 @@ createInvectRouter({
 <Tab value="PostgreSQL">
 ```ts
 createInvectRouter({
-  baseDatabaseConfig: {
+  database: {
     type: 'postgresql',
     connectionString: 'postgresql://user:pass@localhost:5432/invect',
     id: 'main',
@@ -43,7 +43,7 @@ createInvectRouter({
 <Tab value="MySQL">
 ```ts
 createInvectRouter({
-  baseDatabaseConfig: {
+  database: {
     type: 'mysql',
     connectionString: 'mysql://user:pass@localhost:3306/invect',
     id: 'main',
@@ -74,7 +74,7 @@ On startup, Invect can verify that your database has the required tables and col
 
 ```ts
 createInvectRouter({
-  baseDatabaseConfig: {
+  database: {
     type: 'sqlite',
     connectionString: 'file:./dev.db',
     id: 'main',
@@ -110,7 +110,7 @@ Invect creates its own tables and doesn't interfere with your existing schema. Y
 ```ts
 // Same database as your app
 app.use('/invect', createInvectRouter({
-  baseDatabaseConfig: {
+  database: {
     type: 'postgresql',
     connectionString: process.env.DATABASE_URL!, // Your existing DB
     id: 'main',

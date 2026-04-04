@@ -111,7 +111,7 @@ export const LoggingConfigSchema = z.object({
  * Core Invect configuration schema
  */
 export const InvectConfigSchema = z.object({
-  baseDatabaseConfig: databaseConfigSchema,
+  database: databaseConfigSchema,
   logging: LoggingConfigSchema.default(() => ({
     level: 'info' as const,
   })).optional(),
@@ -224,7 +224,7 @@ export type InvectConfig = z.infer<typeof InvectConfigSchema>;
  * import { defineConfig } from '@invect/core';
  *
  * export default defineConfig({
- *   baseDatabaseConfig: {
+ *   database: {
  *     id: 'main',
  *     type: 'sqlite',
  *     connectionString: 'file:./dev.db',

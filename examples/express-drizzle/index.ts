@@ -32,10 +32,8 @@ app.options('*', cors(corsOptions));
 app.use(express.json());
 
 // Mount Invect routes under /invect (or a path of your choice)
-app.use(
-  '/invect',
-  createInvectRouter({
-    baseDatabaseConfig: {
+const invectRouter = await createInvectRouter({
+    database: {
       id: 'my-db-name',
       type: 'sqlite', // Example, adjust based on your setup
       connectionString: sqliteConnectionString,
@@ -99,8 +97,8 @@ app.use(
         webhookBaseUrl,
       }),
     ],
-  }),
-);
+  });
+app.use('/invect', invectRouter);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

@@ -59,7 +59,7 @@ import { createInvectRouter } from '@invect/express';
 import { myPlugin } from './my-plugin';
 
 app.use('/invect', createInvectRouter({
-  baseDatabaseConfig: {
+  database: {
     type: 'sqlite',
     connectionString: 'file:./dev.db',
     id: 'main',
@@ -76,7 +76,7 @@ import { myPlugin } from './my-plugin';
 @Module({
   imports: [
     InvectModule.forRoot({
-      baseDatabaseConfig: {
+      database: {
         type: 'postgresql',
         connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/invect',
         id: 'main',
@@ -94,7 +94,7 @@ import { createInvectHandler } from '@invect/nextjs';
 import { myPlugin } from './my-plugin';
 
 const handler = createInvectHandler({
-  baseDatabaseConfig: {
+  database: {
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL || 'file:./dev.db',
     id: 'main',

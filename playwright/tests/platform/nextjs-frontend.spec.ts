@@ -1,6 +1,6 @@
 // spec: Next.js frontend rendering — Invect React component
 //
-// Validates that the @invect/frontend `<Invect>` component renders correctly
+// Validates that the @invect/ui `<Invect>` component renders correctly
 // when imported and used in a Next.js App Router application.
 // The Next.js example runs on the shared Playwright Next.js port.
 //

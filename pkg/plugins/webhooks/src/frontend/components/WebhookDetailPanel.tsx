@@ -18,7 +18,7 @@ import {
   Workflow,
   Loader2,
 } from 'lucide-react';
-import { DialogHeader, DialogTitle, DialogDescription } from '@invect/frontend';
+import { DialogHeader, DialogTitle, DialogDescription } from '@invect/ui';
 import {
   useUpdateWebhookTrigger,
   useDeleteWebhookTrigger,

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import {
   BatchProvider,
-  Invect,
+  createInvect,
   InvectConfig,
   GraphNodeType,
   InvectIdentity,
@@ -10,7 +10,7 @@ import {
   InvectResourceType,
   createPluginDatabaseApi,
 } from '@invect/core';
-import type { CredentialFilters } from '@invect/core';
+import type { CredentialFilters, InvectInstance } from '@invect/core';
 import { asyncHandler } from './async-handler';
 import { ZodError } from 'zod';
 
@@ -70,41 +70,20 @@ function coerceQueryValue(value: unknown): unknown {
 /**
  * Create Invect Express Router
  */
-export function createInvectRouter(config: InvectConfig): Router {
-  const core = new Invect(config);
+export async function createInvectRouter(config: InvectConfig): Promise<Router> {
+  const invect = await createInvect(config);
 
-  // Initialize core asynchronously - this is a fire-and-forget initialization
-  // The core will handle initialization state internally
-  core
-    .initialize()
-    .then(async () => {
-      // Start batch polling for automatic batch completion handling
-      await core.startBatchPolling();
-      // eslint-disable-next-line no-console
-      console.log('✅ Invect batch polling started');
+  // Start batch polling for automatic batch completion handling
+  await invect.startBatchPolling();
+  // eslint-disable-next-line no-console
+  console.log('✅ Invect batch polling started');
 
-      // Start cron scheduler for automatic cron trigger execution
-      await core.startCronScheduler();
-      // eslint-disable-next-line no-console
-      console.log('✅ Invect cron scheduler started');
-    })
-    .catch((error: unknown) => {
-      // eslint-disable-next-line no-console
-      console.error('Failed to initialize Invect Core:', error);
-    });
+  // Start cron scheduler for automatic cron trigger execution
+  await invect.startCronScheduler();
+  // eslint-disable-next-line no-console
+  console.log('✅ Invect cron scheduler started');
 
   const router = Router();
-
-  // Middleware to check if core is initialized
-  router.use((req: Request, res: Response, next: NextFunction) => {
-    if (!core.isInitialized()) {
-      return res.status(503).json({
-        error: 'Service Unavailable',
-        message: 'Invect Core is still initializing. Please try again in a moment.',
-      });
-    }
-    next();
-  });
 
   // =====================================
   // AUTHENTICATION MIDDLEWARE
@@ -133,7 +112,7 @@ export function createInvectRouter(config: InvectConfig): Router {
         identity: null as InvectIdentity | null,
       };
 
-      const hookResult = await core.getPluginHookRunner().runOnRequest(webRequest, hookContext);
+      const hookResult = await invect.plugins.getHookRunner().runOnRequest(webRequest, hookContext);
       if (hookResult.intercepted && hookResult.response) {
         const arrayBuf = await hookResult.response.arrayBuffer();
         res.status(hookResult.response.status);
@@ -170,7 +149,7 @@ export function createInvectRouter(config: InvectConfig): Router {
       const resourceId = getResourceId ? getResourceId(req) : undefined;
       const resourceType = permission.split(':')[0] as InvectResourceType;
 
-      const result = await core.authorize({
+      const result = await invect.auth.authorize({
         identity,
         action: permission,
         resource: resourceId
@@ -205,7 +184,7 @@ export function createInvectRouter(config: InvectConfig): Router {
   router.get(
     '/dashboard/stats',
     asyncHandler(async (_req: Request, res: Response) => {
-      const stats = await core.getDashboardStats();
+      const stats = await invect.flows.getDashboardStats();
       res.json(stats);
     }),
   );
@@ -223,7 +202,7 @@ export function createInvectRouter(config: InvectConfig): Router {
     '/flows/list',
     requirePermission('flow:read'),
     asyncHandler(async (_req: Request, res: Response) => {
-      const flows = await core.listFlows();
+      const flows = await invect.flows.list();
       res.json(flows);
     }),
   );
@@ -238,7 +217,7 @@ export function createInvectRouter(config: InvectConfig): Router {
     '/flows/list',
     requirePermission('flow:read'),
     asyncHandler(async (req: Request, res: Response) => {
-      const flows = await core.listFlows(req.body);
+      const flows = await invect.flows.list(req.body);
       res.json(flows);
     }),
   );
@@ -252,7 +231,7 @@ export function createInvectRouter(config: InvectConfig): Router {
     '/flows',
     requirePermission('flow:create'),
     asyncHandler(async (req: Request, res: Response) => {
-      const flow = await core.createFlow(req.body);
+      const flow = await invect.flows.create(req.body);
       res.status(201).json(flow);
     }),
   );
@@ -266,7 +245,7 @@ export function createInvectRouter(config: InvectConfig): Router {
     '/flows/:id',
     requirePermission('flow:read', (req) => req.params.id),
     asyncHandler(async (req: Request, res: Response) => {
-      const flow = await core.getFlow(req.params.id);
+      const flow = await invect.flows.get(req.params.id);
       res.json(flow);
     }),
   );
@@ -280,7 +259,7 @@ export function createInvectRouter(config: InvectConfig): Router {
     '/flows/:id',
     requirePermission('flow:update', (req) => req.params.id),
     asyncHandler(async (req: Request, res: Response) => {
-      const flow = await core.updateFlow(req.params.id, req.body);
+      const flow = await invect.flows.update(req.params.id, req.body);
       res.json(flow);
     }),
   );
@@ -294,7 +273,7 @@ export function createInvectRouter(config: InvectConfig): Router {
     '/flows/:id',
     requirePermission('flow:delete', (req) => req.params.id),
     asyncHandler(async (req: Request, res: Response) => {
-      await core.deleteFlow(req.params.id);
+      await invect.flows.delete(req.params.id);
       res.status(204).send();
     }),
   );
@@ -309,7 +288,7 @@ export function createInvectRouter(config: InvectConfig): Router {
     requirePermission('flow:read'),
     asyncHandler(async (req: Request, res: Response) => {
       const { flowId, flowDefinition } = req.body;
-      const result = await core.validateFlowDefinition(flowId, flowDefinition);
+      const result = await invect.flows.validate(flowId, flowDefinition);
       res.json(result);
     }),
   );
@@ -328,7 +307,7 @@ export function createInvectRouter(config: InvectConfig): Router {
       }
 
       const queryParams = req.query as ReactFlowQueryParams;
-      const options: Parameters<typeof core.renderToReactFlow>[1] = {};
+      const options: { version?: string | number | 'latest'; flowRunId?: string } = {};
 
       // Extract and validate query parameters
       if (queryParams.version) {
@@ -338,7 +317,7 @@ export function createInvectRouter(config: InvectConfig): Router {
         options.flowRunId = queryParams.flowRunId;
       }
 
-      const result = await core.renderToReactFlow(req.params.flowId, options);
+      const result = await invect.flows.renderToReactFlow(req.params.flowId, options);
       res.json(result);
     }),
   );
@@ -355,7 +334,7 @@ export function createInvectRouter(config: InvectConfig): Router {
   router.post(
     '/flows/:id/versions/list',
     asyncHandler(async (req: Request, res: Response) => {
-      const versions = await core.listFlowVersions(req.params.id, req.body);
+      const versions = await invect.versions.list(req.params.id, req.body);
       res.json(versions);
     }),
   );
@@ -369,7 +348,7 @@ export function createInvectRouter(config: InvectConfig): Router {
     '/flows/:id/versions',
     requirePermission('flow-version:create', (req) => req.params.id),
     asyncHandler(async (req: Request, res: Response) => {
-      const version = await core.createFlowVersion(req.params.id, req.body);
+      const version = await invect.versions.create(req.params.id, req.body);
       res.status(201).json(version);
     }),
   );
@@ -383,7 +362,7 @@ export function createInvectRouter(config: InvectConfig): Router {
     '/flows/:id/versions/:version',
     requirePermission('flow-version:read', (req) => req.params.id),
     asyncHandler(async (req: Request, res: Response) => {
-      const version = await core.getFlowVersion(req.params.id, req.params.version);
+      const version = await invect.versions.get(req.params.id, req.params.version);
       if (!version) {
         return res.status(404).json({
           error: 'Not Found',
@@ -409,7 +388,7 @@ export function createInvectRouter(config: InvectConfig): Router {
     requirePermission('flow-run:create', (req) => req.params.flowId),
     asyncHandler(async (req: Request, res: Response) => {
       const { inputs = {}, options } = req.body;
-      const result = await core.startFlowRunAsync(req.params.flowId, inputs, options);
+      const result = await invect.runs.startAsync(req.params.flowId, inputs, options);
       res.status(201).json(result);
     }),
   );
@@ -425,7 +404,7 @@ export function createInvectRouter(config: InvectConfig): Router {
     requirePermission('flow-run:create', (req) => req.params.flowId),
     asyncHandler(async (req: Request, res: Response) => {
       const { inputs = {}, options } = req.body;
-      const result = await core.executeFlowToNode(
+      const result = await invect.runs.executeToNode(
         req.params.flowId,
         req.params.nodeId,
         inputs,
@@ -445,7 +424,7 @@ export function createInvectRouter(config: InvectConfig): Router {
     '/flow-runs/list',
     requirePermission('flow-run:read'),
     asyncHandler(async (req: Request, res: Response) => {
-      const flowRuns = await core.listFlowRuns(req.body);
+      const flowRuns = await invect.runs.list(req.body);
       res.json(flowRuns);
     }),
   );
@@ -457,7 +436,7 @@ export function createInvectRouter(config: InvectConfig): Router {
   router.get(
     '/flow-runs/:flowRunId',
     asyncHandler(async (req: Request, res: Response) => {
-      const flowRun = await core.getFlowRunById(req.params.flowRunId);
+      const flowRun = await invect.runs.get(req.params.flowRunId);
       res.json(flowRun);
     }),
   );
@@ -469,7 +448,7 @@ export function createInvectRouter(config: InvectConfig): Router {
   router.get(
     '/flows/:flowId/flow-runs',
     asyncHandler(async (req: Request, res: Response) => {
-      const flowRuns = await core.listFlowRunsByFlowId(req.params.flowId);
+      const flowRuns = await invect.runs.listByFlowId(req.params.flowId);
       res.json(flowRuns);
     }),
   );
@@ -481,7 +460,7 @@ export function createInvectRouter(config: InvectConfig): Router {
   router.post(
     '/flow-runs/:flowRunId/resume',
     asyncHandler(async (req: Request, res: Response) => {
-      const result = await core.resumeExecution(req.params.flowRunId);
+      const result = await invect.runs.resume(req.params.flowRunId);
       res.json(result);
     }),
   );
@@ -493,7 +472,7 @@ export function createInvectRouter(config: InvectConfig): Router {
   router.post(
     '/flow-runs/:flowRunId/cancel',
     asyncHandler(async (req: Request, res: Response) => {
-      const result = await core.cancelFlowRun(req.params.flowRunId);
+      const result = await invect.runs.cancel(req.params.flowRunId);
       res.json(result);
     }),
   );
@@ -506,7 +485,7 @@ export function createInvectRouter(config: InvectConfig): Router {
     '/flow-runs/:flowRunId/pause',
     asyncHandler(async (req: Request, res: Response) => {
       const { reason } = req.body;
-      const result = await core.pauseFlowRun(req.params.flowRunId, reason);
+      const result = await invect.runs.pause(req.params.flowRunId, reason);
       res.json(result);
     }),
   );
@@ -522,7 +501,7 @@ export function createInvectRouter(config: InvectConfig): Router {
   router.get(
     '/flow-runs/:flowRunId/node-executions',
     asyncHandler(async (req: Request, res: Response) => {
-      const nodeExecutions = await core.getNodeExecutionsByRunId(req.params.flowRunId);
+      const nodeExecutions = await invect.runs.getNodeExecutions(req.params.flowRunId);
       res.json(nodeExecutions);
     }),
   );
@@ -545,7 +524,7 @@ export function createInvectRouter(config: InvectConfig): Router {
       res.flushHeaders();
 
       try {
-        const stream = core.createFlowRunEventStream(req.params.flowRunId);
+        const stream = invect.runs.createEventStream(req.params.flowRunId);
 
         for await (const event of stream) {
           if (res.destroyed) {
@@ -575,7 +554,7 @@ export function createInvectRouter(config: InvectConfig): Router {
   router.post(
     '/node-executions/list',
     asyncHandler(async (req: Request, res: Response) => {
-      const nodeExecutions = await core.listNodeExecutions(req.body);
+      const nodeExecutions = await invect.runs.listNodeExecutions(req.body);
       res.json(nodeExecutions);
     }),
   );
@@ -591,7 +570,7 @@ export function createInvectRouter(config: InvectConfig): Router {
   router.post(
     '/node-data/sql-query',
     asyncHandler(async (req: Request, res: Response) => {
-      const result = await core.executeSqlQuery(req.body);
+      const result = await invect.testing.executeSqlQuery(req.body);
       res.json(result);
     }),
   );
@@ -603,7 +582,7 @@ export function createInvectRouter(config: InvectConfig): Router {
   router.post(
     '/node-data/test-expression',
     asyncHandler(async (req: Request, res: Response) => {
-      const result = await core.testJsExpression(req.body);
+      const result = await invect.testing.testJsExpression(req.body);
       res.json(result);
     }),
   );
@@ -615,7 +594,7 @@ export function createInvectRouter(config: InvectConfig): Router {
   router.post(
     '/node-data/test-mapper',
     asyncHandler(async (req: Request, res: Response) => {
-      const result = await core.testMapper(req.body);
+      const result = await invect.testing.testMapper(req.body);
       res.json(result);
     }),
   );
@@ -627,7 +606,7 @@ export function createInvectRouter(config: InvectConfig): Router {
   router.post(
     '/node-data/model-query',
     asyncHandler(async (req: Request, res: Response) => {
-      const result = await core.testModelPrompt(req.body);
+      const result = await invect.testing.testModelPrompt(req.body);
       res.json(result);
     }),
   );
@@ -645,7 +624,7 @@ export function createInvectRouter(config: InvectConfig): Router {
         typeof req.query.provider === 'string' ? req.query.provider.trim().toUpperCase() : '';
 
       if (credentialId) {
-        const response = await core.getModelsForCredential(credentialId);
+        const response = await invect.testing.getModelsForCredential(credentialId);
         res.json(response);
         return;
       }
@@ -660,12 +639,12 @@ export function createInvectRouter(config: InvectConfig): Router {
         }
 
         const provider = providerQuery as BatchProvider;
-        const response = await core.getModelsForProvider(provider);
+        const response = await invect.testing.getModelsForProvider(provider);
         res.json(response);
         return;
       }
 
-      const models = await core.getAvailableModels();
+      const models = await invect.testing.getAvailableModels();
       res.json(models);
     }),
   );
@@ -677,7 +656,7 @@ export function createInvectRouter(config: InvectConfig): Router {
   router.get(
     '/node-data/databases',
     asyncHandler(async (req: Request, res: Response) => {
-      const databases = core.getAvailableDatabases();
+      const databases = invect.testing.getAvailableDatabases();
       res.json(databases);
     }),
   );
@@ -689,7 +668,7 @@ export function createInvectRouter(config: InvectConfig): Router {
   router.post(
     '/node-config/update',
     asyncHandler(async (req: Request, res: Response) => {
-      const response = await core.handleNodeConfigUpdate(req.body);
+      const response = await invect.actions.handleConfigUpdate(req.body);
       res.json(response);
     }),
   );
@@ -723,7 +702,7 @@ export function createInvectRouter(config: InvectConfig): Router {
       const nodeId = typeof req.query.nodeId === 'string' ? req.query.nodeId : undefined;
       const flowId = typeof req.query.flowId === 'string' ? req.query.flowId : undefined;
 
-      const response = await core.handleNodeConfigUpdate({
+      const response = await invect.actions.handleConfigUpdate({
         nodeType: nodeTypeParam as GraphNodeType,
         nodeId: nodeId ?? `definition-${nodeTypeParam.toLowerCase()}`,
         flowId,
@@ -742,7 +721,7 @@ export function createInvectRouter(config: InvectConfig): Router {
   router.get(
     '/nodes',
     asyncHandler(async (req: Request, res: Response) => {
-      const nodes = core.getAvailableNodes();
+      const nodes = invect.actions.getAvailableNodes();
       res.json(nodes);
     }),
   );
@@ -769,7 +748,7 @@ export function createInvectRouter(config: InvectConfig): Router {
         }
       }
 
-      const result = await core.resolveFieldOptions(actionId, fieldName, dependencyValues);
+      const result = await invect.actions.resolveFieldOptions(actionId, fieldName, dependencyValues);
       res.json(result);
     }),
   );
@@ -792,7 +771,7 @@ export function createInvectRouter(config: InvectConfig): Router {
         return res.status(400).json({ error: 'params is required and must be an object' });
       }
 
-      const result = await core.testNode(nodeType, params, inputData || {});
+      const result = await invect.testing.testNode(nodeType, params, inputData || {});
       res.json(result);
     }),
   );
@@ -818,7 +797,7 @@ export function createInvectRouter(config: InvectConfig): Router {
         req.header('x-user-id') ||
         'anonymous';
 
-      const credential = await core.createCredential({ ...req.body, userId: resolvedUserId });
+      const credential = await invect.credentials.create({ ...req.body, userId: resolvedUserId });
       res.status(201).json(credential);
     }),
   );
@@ -839,7 +818,7 @@ export function createInvectRouter(config: InvectConfig): Router {
         isActive:
           req.query.isActive === 'true' ? true : req.query.isActive === 'false' ? false : undefined,
       };
-      const credentials = await core.listCredentials(filters);
+      const credentials = await invect.credentials.list(filters);
       res.json(credentials);
     }),
   );
@@ -853,7 +832,7 @@ export function createInvectRouter(config: InvectConfig): Router {
     '/credentials/:id',
     requirePermission('credential:read', (req) => req.params.id),
     asyncHandler(async (req: Request, res: Response) => {
-      const credential = await core.getCredential(req.params.id);
+      const credential = await invect.credentials.get(req.params.id);
       res.json(credential);
     }),
   );
@@ -867,7 +846,7 @@ export function createInvectRouter(config: InvectConfig): Router {
     '/credentials/:id',
     requirePermission('credential:update', (req) => req.params.id),
     asyncHandler(async (req: Request, res: Response) => {
-      const credential = await core.updateCredential(req.params.id, req.body);
+      const credential = await invect.credentials.update(req.params.id, req.body);
       res.json(credential);
     }),
   );
@@ -881,7 +860,7 @@ export function createInvectRouter(config: InvectConfig): Router {
     '/credentials/:id',
     requirePermission('credential:delete', (req) => req.params.id),
     asyncHandler(async (req: Request, res: Response) => {
-      await core.deleteCredential(req.params.id);
+      await invect.credentials.delete(req.params.id);
       res.status(204).send();
     }),
   );
@@ -895,7 +874,7 @@ export function createInvectRouter(config: InvectConfig): Router {
     '/credentials/:id/test',
     requirePermission('credential:read', (req) => req.params.id),
     asyncHandler(async (req: Request, res: Response) => {
-      const result = await core.testCredential(req.params.id);
+      const result = await invect.credentials.test(req.params.id);
       res.json(result);
     }),
   );
@@ -909,7 +888,7 @@ export function createInvectRouter(config: InvectConfig): Router {
     '/credentials/:id/track-usage',
     requirePermission('credential:read', (req) => req.params.id),
     asyncHandler(async (req: Request, res: Response) => {
-      await core.updateCredentialLastUsed(req.params.id);
+      await invect.credentials.updateLastUsed(req.params.id);
       res.status(204).send();
     }),
   );
@@ -923,7 +902,7 @@ export function createInvectRouter(config: InvectConfig): Router {
     '/credentials/:id/webhook',
     requirePermission('credential:read', (req) => req.params.id),
     asyncHandler(async (req: Request, res: Response) => {
-      const webhookInfo = await core.getCredentialsService().getWebhookInfo(req.params.id);
+      const webhookInfo = await invect.credentials.getWebhookInfo(req.params.id);
       if (!webhookInfo) {
         return res.status(404).json({ error: 'Webhook not enabled for credential' });
       }
@@ -938,7 +917,7 @@ export function createInvectRouter(config: InvectConfig): Router {
     '/credentials/:id/webhook-info',
     requirePermission('credential:read', (req) => req.params.id),
     asyncHandler(async (req: Request, res: Response) => {
-      const webhookInfo = await core.getCredentialsService().getWebhookInfo(req.params.id);
+      const webhookInfo = await invect.credentials.getWebhookInfo(req.params.id);
       if (!webhookInfo) {
         return res.status(404).json({ error: 'Webhook not enabled for credential' });
       }
@@ -955,7 +934,7 @@ export function createInvectRouter(config: InvectConfig): Router {
     '/credentials/:id/webhook',
     requirePermission('credential:update', (req) => req.params.id),
     asyncHandler(async (req: Request, res: Response) => {
-      const webhookInfo = await core.getCredentialsService().enableWebhook(req.params.id);
+      const webhookInfo = await invect.credentials.enableWebhook(req.params.id);
       res.json(webhookInfo);
     }),
   );
@@ -967,7 +946,7 @@ export function createInvectRouter(config: InvectConfig): Router {
     '/credentials/:id/webhook/enable',
     requirePermission('credential:update', (req) => req.params.id),
     asyncHandler(async (req: Request, res: Response) => {
-      const webhookInfo = await core.getCredentialsService().enableWebhook(req.params.id);
+      const webhookInfo = await invect.credentials.enableWebhook(req.params.id);
       res.json(webhookInfo);
     }),
   );
@@ -979,9 +958,7 @@ export function createInvectRouter(config: InvectConfig): Router {
   router.post(
     '/webhooks/credentials/:webhookPath',
     asyncHandler(async (req: Request, res: Response) => {
-      const credential = await core
-        .getCredentialsService()
-        .findByWebhookPath(req.params.webhookPath);
+      const credential = await invect.credentials.findByWebhookPath(req.params.webhookPath);
 
       if (!credential) {
         return res.status(404).json({ ok: false, error: 'Credential webhook not found' });
@@ -1011,7 +988,7 @@ export function createInvectRouter(config: InvectConfig): Router {
         ? parseInt(req.query.daysUntilExpiry as string)
         : 7;
 
-      const credentials = await core.getExpiringCredentials(daysUntilExpiry);
+      const credentials = await invect.credentials.getExpiring(daysUntilExpiry);
       res.json(credentials);
     }),
   );
@@ -1108,7 +1085,7 @@ export function createInvectRouter(config: InvectConfig): Router {
   router.get(
     '/credentials/oauth2/providers',
     asyncHandler(async (_req: Request, res: Response) => {
-      const providers = core.getOAuth2Providers();
+      const providers = invect.credentials.getOAuth2Providers();
       res.json(providers);
     }),
   );
@@ -1119,7 +1096,7 @@ export function createInvectRouter(config: InvectConfig): Router {
   router.get(
     '/credentials/oauth2/providers/:providerId',
     asyncHandler(async (req: Request, res: Response) => {
-      const provider = core.getOAuth2Provider(req.params.providerId);
+      const provider = invect.credentials.getOAuth2Provider(req.params.providerId);
       if (!provider) {
         res.status(404).json({ error: 'OAuth2 provider not found' });
         return;
@@ -1146,7 +1123,7 @@ export function createInvectRouter(config: InvectConfig): Router {
         return;
       }
 
-      const result = core.startOAuth2Flow(
+      const result = invect.credentials.startOAuth2Flow(
         providerId,
         { clientId, clientSecret, redirectUri },
         { scopes, returnUrl, credentialName },
@@ -1173,7 +1150,7 @@ export function createInvectRouter(config: InvectConfig): Router {
         return;
       }
 
-      const credential = await core.handleOAuth2Callback(code, state, {
+      const credential = await invect.credentials.handleOAuth2Callback(code, state, {
         clientId,
         clientSecret,
         redirectUri,
@@ -1197,7 +1174,7 @@ export function createInvectRouter(config: InvectConfig): Router {
       if (error) {
         const errorMsg = error_description || error;
         // Get pending state to find return URL
-        const pendingState = core.getOAuth2PendingState(state as string);
+        const pendingState = invect.credentials.getOAuth2PendingState(state as string);
         const returnUrl = pendingState?.returnUrl || '/';
         const separator = returnUrl.includes('?') ? '&' : '?';
         res.redirect(
@@ -1212,7 +1189,7 @@ export function createInvectRouter(config: InvectConfig): Router {
       }
 
       // Get pending state to retrieve client credentials and return URL
-      const pendingState = core.getOAuth2PendingState(state as string);
+      const pendingState = invect.credentials.getOAuth2PendingState(state as string);
       if (!pendingState) {
         res.status(400).json({ error: 'Invalid or expired OAuth state' });
         return;
@@ -1237,7 +1214,7 @@ export function createInvectRouter(config: InvectConfig): Router {
   router.post(
     '/credentials/:id/refresh',
     asyncHandler(async (req: Request, res: Response) => {
-      const credential = await core.refreshOAuth2Credential(req.params.id);
+      const credential = await invect.credentials.refreshOAuth2Credential(req.params.id);
       res.json(credential);
     }),
   );
@@ -1255,7 +1232,7 @@ export function createInvectRouter(config: InvectConfig): Router {
     '/flows/:flowId/triggers',
     requirePermission('flow:read', (req) => req.params.flowId),
     asyncHandler(async (req: Request, res: Response) => {
-      const triggers = await core.listTriggersForFlow(req.params.flowId);
+      const triggers = await invect.triggers.list(req.params.flowId);
       res.json(triggers);
     }),
   );
@@ -1269,7 +1246,7 @@ export function createInvectRouter(config: InvectConfig): Router {
     '/flows/:flowId/triggers',
     requirePermission('flow:update', (req) => req.params.flowId),
     asyncHandler(async (req: Request, res: Response) => {
-      const trigger = await core.createTrigger({
+      const trigger = await invect.triggers.create({
         ...req.body,
         flowId: req.params.flowId,
       });
@@ -1287,7 +1264,7 @@ export function createInvectRouter(config: InvectConfig): Router {
     requirePermission('flow:update', (req) => req.params.flowId),
     asyncHandler(async (req: Request, res: Response) => {
       const { definition } = req.body;
-      const triggers = await core.syncTriggersForFlow(req.params.flowId, definition);
+      const triggers = await invect.triggers.sync(req.params.flowId, definition);
       res.json(triggers);
     }),
   );
@@ -1299,7 +1276,7 @@ export function createInvectRouter(config: InvectConfig): Router {
   router.get(
     '/triggers/:triggerId',
     asyncHandler(async (req: Request, res: Response) => {
-      const trigger = await core.getTrigger(req.params.triggerId);
+      const trigger = await invect.triggers.get(req.params.triggerId);
       if (!trigger) {
         return res.status(404).json({
           error: 'Not Found',
@@ -1317,7 +1294,7 @@ export function createInvectRouter(config: InvectConfig): Router {
   router.put(
     '/triggers/:triggerId',
     asyncHandler(async (req: Request, res: Response) => {
-      const trigger = await core.updateTrigger(req.params.triggerId, req.body);
+      const trigger = await invect.triggers.update(req.params.triggerId, req.body);
       if (!trigger) {
         return res.status(404).json({
           error: 'Not Found',
@@ -1335,7 +1312,7 @@ export function createInvectRouter(config: InvectConfig): Router {
   router.delete(
     '/triggers/:triggerId',
     asyncHandler(async (req: Request, res: Response) => {
-      await core.deleteTrigger(req.params.triggerId);
+      await invect.triggers.delete(req.params.triggerId);
       res.status(204).send();
     }),
   );
@@ -1351,7 +1328,7 @@ export function createInvectRouter(config: InvectConfig): Router {
   router.get(
     '/agent/tools',
     asyncHandler(async (_req: Request, res: Response) => {
-      const tools = core.getAgentTools();
+      const tools = invect.agent.getTools();
       res.json(tools);
     }),
   );
@@ -1367,7 +1344,7 @@ export function createInvectRouter(config: InvectConfig): Router {
   router.get(
     '/chat/status',
     asyncHandler(async (_req: Request, res: Response) => {
-      res.json({ enabled: core.isChatEnabled() });
+      res.json({ enabled: invect.chat.isEnabled() });
     }),
   );
 
@@ -1403,7 +1380,7 @@ export function createInvectRouter(config: InvectConfig): Router {
         undefined;
 
       try {
-        const stream = await core.createChatStream({
+        const stream = await invect.chat.createStream({
           messages,
           context: context || {},
           identity,
@@ -1446,7 +1423,7 @@ export function createInvectRouter(config: InvectConfig): Router {
   router.get(
     '/chat/messages/:flowId',
     asyncHandler(async (req: Request, res: Response) => {
-      const messages = await core.getChatMessages(req.params.flowId);
+      const messages = await invect.chat.getMessages(req.params.flowId);
       res.json(messages);
     }),
   );
@@ -1467,7 +1444,7 @@ export function createInvectRouter(config: InvectConfig): Router {
           message: '"messages" must be an array',
         });
       }
-      const saved = await core.saveChatMessages(req.params.flowId, messages);
+      const saved = await invect.chat.saveMessages(req.params.flowId, messages);
       res.json(saved);
     }),
   );
@@ -1479,19 +1456,19 @@ export function createInvectRouter(config: InvectConfig): Router {
   router.delete(
     '/chat/messages/:flowId',
     asyncHandler(async (req: Request, res: Response) => {
-      await core.deleteChatMessages(req.params.flowId);
+      await invect.chat.deleteMessages(req.params.flowId);
       res.json({ success: true });
     }),
   );
 
   // =====================================
   // PLUGIN ENDPOINTS
-  // Mount API endpoints defined by plugins via core.getPluginEndpoints()
+  // Mount API endpoints defined by plugins via invect.plugins.getEndpoints()
   // =====================================
   router.all(
     '/plugins/*',
     asyncHandler(async (req: Request, res: Response) => {
-      const endpoints = core.getPluginEndpoints();
+      const endpoints = invect.plugins.getEndpoints();
       // Strip the /plugins prefix — endpoint paths are defined relative to it
       // e.g. req.path="/plugins/auth/api/auth/sign-in/email" → "/auth/api/auth/sign-in/email"
       const pluginPath = (req.path || '/').replace(/^\/plugins/, '') || '/';
@@ -1534,7 +1511,7 @@ export function createInvectRouter(config: InvectConfig): Router {
       // Check endpoint-level auth
       if (!matchedEndpoint.isPublic && matchedEndpoint.permission) {
         const identity = req.invectIdentity ?? null;
-        if (!core.hasPermission(identity, matchedEndpoint.permission)) {
+        if (!invect.auth.hasPermission(identity, matchedEndpoint.permission)) {
           return res.status(403).json({
             error: 'Forbidden',
             message: `Missing permission: ${matchedEndpoint.permission}`,
@@ -1561,13 +1538,13 @@ export function createInvectRouter(config: InvectConfig): Router {
         query: (req.query || {}) as Record<string, string | undefined>,
         headers: req.headers as Record<string, string | undefined>,
         identity: req.invectIdentity ?? null,
-        database: createPluginDatabaseApi(core.getDatabaseConnection()),
+        database: createPluginDatabaseApi(invect.plugins.getDatabaseConnection()),
         request: webRequest,
         core: {
-          getPermissions: (identity) => core.getPermissions(identity),
-          getAvailableRoles: () => core.getAvailableRoles(),
-          getResolvedRole: (identity) => core.getAuthService().getResolvedRole(identity),
-          authorize: (context) => core.authorize(context),
+          getPermissions: (identity) => invect.auth.getPermissions(identity),
+          getAvailableRoles: () => invect.auth.getAvailableRoles(),
+          getResolvedRole: (identity) => invect.auth.getResolvedRole(identity),
+          authorize: (context) => invect.auth.authorize(context),
         },
       });
 

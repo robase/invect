@@ -30,7 +30,7 @@ npx invect-cli init
 Or install manually:
 
 ```bash
-npm install @invect/core @invect/express @invect/frontend
+npm install @invect/core @invect/express @invect/ui
 ```
 
 ### Backend
@@ -42,7 +42,7 @@ import { createInvectRouter } from '@invect/express';
 const app = express();
 
 app.use('/invect', createInvectRouter({
-  baseDatabaseConfig: {
+  database: {
     type: 'sqlite',
     connectionString: 'file:./dev.db',
     id: 'main',
@@ -55,8 +55,8 @@ app.listen(3000);
 ### Frontend
 
 ```tsx
-import { Invect } from '@invect/frontend';
-import '@invect/frontend/styles';
+import { Invect } from '@invect/ui';
+import '@invect/ui/styles';
 
 export default () => (
   <Invect apiBaseUrl="http://localhost:3000/invect" />
@@ -82,7 +82,7 @@ export default () => (
 | [`@invect/express`](pkg/express) | Express router adapter |
 | [`@invect/nestjs`](pkg/nestjs) | NestJS module adapter |
 | [`@invect/nextjs`](pkg/nextjs) | Next.js App Router handler |
-| [`@invect/frontend`](pkg/frontend) | React flow editor and dashboard |
+| [`@invect/ui`](pkg/ui) | React flow editor and dashboard |
 | [`@invect/cli`](pkg/cli) | CLI for schema generation, migrations, and project setup |
 | [`@invect/user-auth`](pkg/plugins/auth) | Authentication plugin (Better Auth) |
 | [`@invect/rbac`](pkg/plugins/rbac) | Role-based access control plugin |

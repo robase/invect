@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import '@invect/frontend/styles';
+import '@invect/ui/styles';
 
 /**
  * Invect flow editor, embedded as a page inside the Acme Dashboard.
@@ -14,7 +14,7 @@ import '@invect/frontend/styles';
 const InvectEditor = dynamic(
   () =>
     Promise.all([
-      import('@invect/frontend'),
+      import('@invect/ui'),
       import('@invect/user-auth/ui'),
       import('@invect/rbac/ui'),
     ]).then(([frontend, authUi, rbacUi]) => ({

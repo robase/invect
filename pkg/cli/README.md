@@ -71,7 +71,7 @@ The CLI reads from `invect.config.ts` in your project root:
 import { defineConfig } from '@invect/core';
 
 export default defineConfig({
-  baseDatabaseConfig: {
+  database: {
     type: 'sqlite',
     connectionString: 'file:./dev.db',
     id: 'main',

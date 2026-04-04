@@ -19,7 +19,7 @@
     "clsx": "^2.1.1",
     "d3-force": "^3.0.0",
     "d3-hierarchy": "^3.1.2",
-    "@invect/frontend": "workspace:*",
+    "@invect/ui": "workspace:*",
     "@invect/user-auth": "workspace:*",
     "@invect/rbac": "workspace:*",
     "@invect/webhooks": "workspace:*",

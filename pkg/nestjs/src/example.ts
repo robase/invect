@@ -9,7 +9,7 @@ import { InvectModule } from '@invect/nestjs';
 @Module({
   imports: [
     InvectModule.forRoot({
-      baseDatabaseConfig: {
+      database: {
         type: 'sqlite',
         connectionString: 'file:./dev.db',
         id: 'main',
@@ -27,7 +27,7 @@ export class AppModule {}
   imports: [
     InvectModule.forRootAsync({
       useFactory: () => ({
-        baseDatabaseConfig: {
+        database: {
           type: 'sqlite',
           connectionString: process.env.DATABASE_URL || 'file:./dev.db',
           id: 'main',

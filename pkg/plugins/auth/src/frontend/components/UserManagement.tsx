@@ -32,7 +32,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@invect/frontend';
+} from '@invect/ui';
 import { useAuth } from '../providers/AuthProvider';
 import {
   AUTH_ADMIN_ROLE,

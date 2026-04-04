@@ -1,11 +1,11 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { Invect } from '@invect/core';
+import type { InvectInstance } from '@invect/core';
 
 @Injectable()
 export class InvectService {
-  constructor(@Inject('INVECT_CORE') private readonly core: Invect) {}
+  constructor(@Inject('INVECT_CORE') private readonly core: InvectInstance) {}
 
-  getCore(): Invect {
+  getCore(): InvectInstance {
     return this.core;
   }
 }

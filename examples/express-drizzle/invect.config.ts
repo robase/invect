@@ -13,7 +13,7 @@ import { defineConfig } from '@invect/core';
 const webhookBaseUrl = process.env.INVECT_WEBHOOK_BASE_URL || 'http://localhost:3000/invect';
 
 export const invectConfig = defineConfig({
-  baseDatabaseConfig: {
+  database: {
     id: 'main',
     type: 'sqlite',
     connectionString: process.env.DB_FILE_NAME || 'file:./dev.db',

@@ -1,11 +1,11 @@
 /**
  * React hooks for the webhooks plugin API.
  *
- * Uses @invect/frontend's ApiContext for the base URL.
+ * Uses @invect/ui's ApiContext for the base URL.
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useApiBaseURL } from '@invect/frontend';
+import { useApiBaseURL } from '@invect/ui';
 import type {
   WebhookTrigger,
   CreateWebhookTriggerInput,

@@ -239,7 +239,7 @@ export interface UserAuthPluginOptions {
    * `better-sqlite3` instance, a `pg` Pool, etc.
    *
    * When omitted, the plugin creates a database client from Invect's
-   * `baseDatabaseConfig` (connection string + type).
+   * `database` (connection string + type).
    *
    * Only used when `auth` is **not** provided.
    */

@@ -58,7 +58,7 @@ export interface ProviderDef {
   /**
    * Raw SVG markup for custom provider branding (legacy).
    *
-   * Prefer adding a static SVG file to `pkg/frontend/src/assets/provider-icons/{id}.svg`
+   * Prefer adding a static SVG file to `pkg/ui/src/assets/provider-icons/{id}.svg`
    * instead. The frontend resolves icons by provider `id` first, then falls back
    * to `svgIcon`, then to the Lucide `icon` name.
    */

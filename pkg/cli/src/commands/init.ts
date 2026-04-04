@@ -294,8 +294,8 @@ export const initCommand = new Command('init')
 
     // Frontend package
     if (framework.id !== 'other') {
-      if (!('@invect/frontend' in allDeps)) {
-        depsToInstall.push('@invect/frontend');
+      if (!('@invect/ui' in allDeps)) {
+        depsToInstall.push('@invect/ui');
       }
     }
 
@@ -597,18 +597,18 @@ function generateConfigFile(framework: Framework, database: Database): string {
 
   if (database.id === 'sqlite') {
     const driverLine = needsDriver ? `\n    driver: '${database.driver}',` : '';
-    dbConfig = `  baseDatabaseConfig: {
+    dbConfig = `  database: {
     type: 'sqlite',${driverLine}
     connectionString: 'file:./dev.db',
   },`;
   } else if (database.id === 'postgresql') {
     const driverLine = needsDriver ? `\n    driver: '${database.driver}',` : '';
-    dbConfig = `  baseDatabaseConfig: {
+    dbConfig = `  database: {
     type: 'postgresql',${driverLine}
     connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/invect',
   },`;
   } else {
-    dbConfig = `  baseDatabaseConfig: {
+    dbConfig = `  database: {
     type: 'mysql',
     connectionString: process.env.DATABASE_URL || 'mysql://root@localhost:3306/invect',
   },`;

@@ -20,7 +20,7 @@ import { createInvectRouter } from '@invect/express';
 import { webhooksPlugin } from '@invect/webhooks';
 
 app.use('/invect', createInvectRouter({
-  baseDatabaseConfig: {
+  database: {
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL || 'file:./dev.db',
     id: 'main',
@@ -36,7 +36,7 @@ app.use('/invect', createInvectRouter({
 <Tab value="NestJS">
 ```ts
 InvectModule.forRoot({
-  baseDatabaseConfig: {
+  database: {
     type: 'postgresql',
     connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/invect',
     id: 'main',
@@ -48,7 +48,7 @@ InvectModule.forRoot({
 <Tab value="Next.js">
 ```ts
 createInvectHandler({
-  baseDatabaseConfig: {
+  database: {
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL || 'file:./dev.db',
     id: 'main',

@@ -38,7 +38,7 @@ import { createInvectRouter } from '@invect/express';
 const app = express();
 
 app.use('/invect', createInvectRouter({
-  baseDatabaseConfig: {
+  database: {
     type: 'sqlite',
     connectionString: 'file:./dev.db',
     id: 'main',
@@ -57,18 +57,18 @@ import { userAuth } from '@invect/user-auth';
 import { rbacPlugin } from '@invect/rbac';
 
 app.use('/invect', createInvectRouter({
-  baseDatabaseConfig: { type: 'sqlite', connectionString: 'file:./dev.db', id: 'main' },
+  database: { type: 'sqlite', connectionString: 'file:./dev.db', id: 'main' },
   plugins: [userAuth({ auth }), rbacPlugin()],
 }));
 ```
 
 ## Frontend
 
-Pair with [`@invect/frontend`](../frontend) for the visual flow editor:
+Pair with [`@invect/ui`](../ui) for the visual flow editor:
 
 ```tsx
-import { Invect } from '@invect/frontend';
-import '@invect/frontend/styles';
+import { Invect } from '@invect/ui';
+import '@invect/ui/styles';
 
 <Invect apiBaseUrl="http://localhost:3000/invect" />
 ```

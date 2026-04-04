@@ -8,7 +8,7 @@ cd "$ROOT_DIR"
 LIB_FILTERS=(
   "@invect/core..."          # core plus every package that depends on it
   "@invect/nextjs..."        # nextjs adapter + its dependents
-  "@invect/frontend..."      # frontend package + example apps
+  "@invect/ui..."      # frontend package + example apps
 )
 
 ALL_FILTERS=(

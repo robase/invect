@@ -8,7 +8,7 @@
   "exclude": [
     "node_modules",
     "dist",
-    "../../pkg/frontend/src/**/*",
+    "../../pkg/ui/src/**/*",
     "coverage",
     "playwright-report",
     "test-results"

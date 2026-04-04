@@ -366,12 +366,12 @@ importers:
       '@invect/core':
         specifier: workspace:*
         version: link:../../pkg/core
-      '@invect/frontend':
-        specifier: workspace:*
-        version: link:../../pkg/frontend
       '@invect/nextjs':
         specifier: workspace:*
         version: link:../../pkg/nextjs
+      '@invect/ui':
+        specifier: workspace:*
+        version: link:../../pkg/ui
       '@tailwindcss/postcss':
         specifier: ^4.1.12
         version: 4.2.1
@@ -418,15 +418,15 @@ importers:
       '@invect/core':
         specifier: workspace:*
         version: link:../../pkg/core
-      '@invect/frontend':
-        specifier: workspace:*
-        version: link:../../pkg/frontend
       '@invect/nextjs':
         specifier: workspace:*
         version: link:../../pkg/nextjs
       '@invect/rbac':
         specifier: workspace:*
         version: link:../../pkg/plugins/rbac
+      '@invect/ui':
+        specifier: workspace:*
+        version: link:../../pkg/ui
       '@invect/user-auth':
         specifier: workspace:*
         version: link:../../pkg/plugins/auth
@@ -497,12 +497,12 @@ importers:
 
   examples/vite-react-frontend:
     dependencies:
-      '@invect/frontend':
-        specifier: workspace:*
-        version: link:../../pkg/frontend
       '@invect/rbac':
         specifier: workspace:*
         version: link:../../pkg/plugins/rbac
+      '@invect/ui':
+        specifier: workspace:*
+        version: link:../../pkg/ui
       '@invect/user-auth':
         specifier: workspace:*
         version: link:../../pkg/plugins/auth
@@ -776,196 +776,6 @@ importers:
         specifier: ^1.2.2
         version: 1.6.1(@types/node@20.19.37)(lightningcss@1.32.0)(terser@5.46.0)
 
-  pkg/frontend:
-    dependencies:
-      '@codemirror/autocomplete':
-        specifier: ^6.20.0
-        version: 6.20.1
-      '@codemirror/commands':
-        specifier: ^6.10.0
-        version: 6.10.2
-      '@codemirror/lang-javascript':
-        specifier: ^6.2.5
-        version: 6.2.5
-      '@codemirror/lang-json':
-        specifier: ^6.0.2
-        version: 6.0.2
-      '@codemirror/language':
-        specifier: ^6.11.3
-        version: 6.12.2
-      '@codemirror/lint':
-        specifier: ^6.9.2
-        version: 6.9.5
-      '@codemirror/state':
-        specifier: ^6.5.2
-        version: 6.5.4
-      '@codemirror/view':
-        specifier: ^6.38.8
-        version: 6.39.16
-      '@fsegurai/codemirror-theme-vscode-dark':
-        specifier: ^6.2.4
-        version: 6.2.4(@codemirror/language@6.12.2)(@codemirror/state@6.5.4)(@codemirror/view@6.39.16)(@lezer/highlight@1.2.3)
-      '@fsegurai/codemirror-theme-vscode-light':
-        specifier: ^6.2.4
-        version: 6.2.4(@codemirror/language@6.12.2)(@codemirror/state@6.5.4)(@codemirror/view@6.39.16)(@lezer/highlight@1.2.3)
-      '@invect/core':
-        specifier: workspace:*
-        version: link:../core
-      '@invect/layouts':
-        specifier: workspace:*
-        version: link:../layouts
-      '@lezer/highlight':
-        specifier: ^1.2.3
-        version: 1.2.3
-      '@radix-ui/react-accordion':
-        specifier: ^1.2.12
-        version: 1.2.12(@types/react-dom@18.3.7(@types/react@18.3.7))(@types/react@18.3.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@radix-ui/react-alert-dialog':
-        specifier: ^1.1.15
-        version: 1.1.15(@types/react-dom@18.3.7(@types/react@18.3.7))(@types/react@18.3.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@radix-ui/react-collapsible':
-        specifier: ^1.1.3
-        version: 1.1.12(@types/react-dom@18.3.7(@types/react@18.3.7))(@types/react@18.3.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@radix-ui/react-dialog':
-        specifier: ^1.1.15
-        version: 1.1.15(@types/react-dom@18.3.7(@types/react@18.3.7))(@types/react@18.3.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@radix-ui/react-label':
-        specifier: ^2.1.8
-        version: 2.1.8(@types/react-dom@18.3.7(@types/react@18.3.7))(@types/react@18.3.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@radix-ui/react-popover':
-        specifier: ^1.1.15
-        version: 1.1.15(@types/react-dom@18.3.7(@types/react@18.3.7))(@types/react@18.3.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@radix-ui/react-scroll-area':
-        specifier: ^1.2.10
-        version: 1.2.10(@types/react-dom@18.3.7(@types/react@18.3.7))(@types/react@18.3.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@radix-ui/react-slider':
-        specifier: ^1.3.6
-        version: 1.3.6(@types/react-dom@18.3.7(@types/react@18.3.7))(@types/react@18.3.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      cmdk:
-        specifier: ^1.1.1
-        version: 1.1.1(@types/react-dom@18.3.7(@types/react@18.3.7))(@types/react@18.3.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      codemirror:
-        specifier: ^6.0.2
-        version: 6.0.2
-      nanoid:
-        specifier: ^5.1.6
-        version: 5.1.6
-      prettier:
-        specifier: ^3.0.0
-        version: 3.8.1
-      react:
-        specifier: ^18.3.1 || ^19.0.0
-        version: 18.3.1
-      react-dom:
-        specifier: ^18.3.1 || ^19.0.0
-        version: 18.3.1(react@18.3.1)
-      react-markdown:
-        specifier: ^10.1.0
-        version: 10.1.0(@types/react@18.3.7)(react@18.3.1)
-      react-resizable-panels:
-        specifier: ^3.0.6
-        version: 3.0.6(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1
-      zustand:
-        specifier: ^5.0.9
-        version: 5.0.11(@types/react@18.3.7)(immer@11.1.4)(react@18.3.1)(use-sync-external-store@1.6.0(react@18.3.1))
-    devDependencies:
-      '@eslint/js':
-        specifier: ^9.0.0
-        version: 9.39.4
-      '@radix-ui/react-dropdown-menu':
-        specifier: ^2.1.16
-        version: 2.1.16(@types/react-dom@18.3.7(@types/react@18.3.7))(@types/react@18.3.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@radix-ui/react-select':
-        specifier: ^2.2.6
-        version: 2.2.6(@types/react-dom@18.3.7(@types/react@18.3.7))(@types/react@18.3.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@radix-ui/react-separator':
-        specifier: ^1.1.7
-        version: 1.1.8(@types/react-dom@18.3.7(@types/react@18.3.7))(@types/react@18.3.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@radix-ui/react-slot':
-        specifier: ^1.2.3
-        version: 1.2.4(@types/react@18.3.7)(react@18.3.1)
-      '@radix-ui/react-tooltip':
-        specifier: ^1.2.8
-        version: 1.2.8(@types/react-dom@18.3.7(@types/react@18.3.7))(@types/react@18.3.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@tailwindcss/postcss':
-        specifier: ^4.1.0
-        version: 4.2.1
-      '@tanstack/react-query':
-        specifier: ^5.83.0
-        version: 5.90.21(react@18.3.1)
-      '@types/node':
-        specifier: ^24.0.13
-        version: 24.12.0
-      '@types/react':
-        specifier: 18.3.7
-        version: 18.3.7
-      '@types/react-dom':
-        specifier: 18.3.7
-        version: 18.3.7(@types/react@18.3.7)
-      '@vitejs/plugin-react':
-        specifier: ^6.0.1
-        version: 6.0.1(vite@8.0.0(@types/node@24.12.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.3))
-      '@xyflow/react':
-        specifier: ^12.9.2
-        version: 12.10.1(@types/react@18.3.7)(immer@11.1.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      autoprefixer:
-        specifier: ^10.4.21
-        version: 10.4.27(postcss@8.5.8)
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      eslint:
-        specifier: ^9.0.0
-        version: 9.39.4(jiti@2.6.1)
-      globals:
-        specifier: ^15.0.0
-        version: 15.15.0
-      json-logic-js:
-        specifier: ^2.0.5
-        version: 2.0.5
-      lucide-react:
-        specifier: ^0.525.0
-        version: 0.525.0(react@18.3.1)
-      postcss:
-        specifier: ^8.5.6
-        version: 8.5.8
-      postcss-nested:
-        specifier: ^7.0.2
-        version: 7.0.2(postcss@8.5.8)
-      react-router:
-        specifier: ^7.6.3
-        version: 7.13.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      react-router-dom:
-        specifier: ^7.6.3
-        version: 7.13.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      tailwind-merge:
-        specifier: ^3.3.1
-        version: 3.5.0
-      tailwindcss:
-        specifier: ^4.1.0
-        version: 4.2.1
-      tw-animate-css:
-        specifier: ^1.4.0
-        version: 1.4.0
-      typescript:
-        specifier: ^5.8.3
-        version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.0.0
-        version: 8.57.0(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
-      vite:
-        specifier: ^8.0.0
-        version: 8.0.0(@types/node@24.12.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.3)
-      vite-plugin-dts:
-        specifier: ^4.5.4
-        version: 4.5.4(@types/node@24.12.0)(rollup@4.59.0)(typescript@5.9.3)(vite@8.0.0(@types/node@24.12.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.3))
-
   pkg/invect:
     dependencies:
       '@invect/cli':
@@ -1170,9 +980,9 @@ importers:
         specifier: '>=7.0.0'
         version: 7.13.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
     devDependencies:
-      '@invect/frontend':
+      '@invect/ui':
         specifier: workspace:*
-        version: link:../../frontend
+        version: link:../../ui
       '@tanstack/react-query':
         specifier: ^5.0.0
         version: 5.90.21(react@18.3.1)
@@ -1225,9 +1035,9 @@ importers:
         specifier: '>=2.0.0'
         version: 3.5.0
     devDependencies:
-      '@invect/frontend':
+      '@invect/ui':
         specifier: workspace:*
-        version: link:../../frontend
+        version: link:../../ui
       '@invect/user-auth':
         specifier: workspace:*
         version: link:../auth
@@ -1283,9 +1093,9 @@ importers:
         specifier: '>=7.0.0'
         version: 7.13.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
     devDependencies:
-      '@invect/frontend':
+      '@invect/ui':
         specifier: workspace:*
-        version: link:../../frontend
+        version: link:../../ui
       '@tanstack/react-query':
         specifier: ^5.0.0
         version: 5.90.21(react@18.3.1)
@@ -1307,6 +1117,196 @@ importers:
       typescript:
         specifier: ^5.3.3
         version: 5.9.3
+
+  pkg/ui:
+    dependencies:
+      '@codemirror/autocomplete':
+        specifier: ^6.20.0
+        version: 6.20.1
+      '@codemirror/commands':
+        specifier: ^6.10.0
+        version: 6.10.2
+      '@codemirror/lang-javascript':
+        specifier: ^6.2.5
+        version: 6.2.5
+      '@codemirror/lang-json':
+        specifier: ^6.0.2
+        version: 6.0.2
+      '@codemirror/language':
+        specifier: ^6.11.3
+        version: 6.12.2
+      '@codemirror/lint':
+        specifier: ^6.9.2
+        version: 6.9.5
+      '@codemirror/state':
+        specifier: ^6.5.2
+        version: 6.5.4
+      '@codemirror/view':
+        specifier: ^6.38.8
+        version: 6.39.16
+      '@fsegurai/codemirror-theme-vscode-dark':
+        specifier: ^6.2.4
+        version: 6.2.4(@codemirror/language@6.12.2)(@codemirror/state@6.5.4)(@codemirror/view@6.39.16)(@lezer/highlight@1.2.3)
+      '@fsegurai/codemirror-theme-vscode-light':
+        specifier: ^6.2.4
+        version: 6.2.4(@codemirror/language@6.12.2)(@codemirror/state@6.5.4)(@codemirror/view@6.39.16)(@lezer/highlight@1.2.3)
+      '@invect/core':
+        specifier: workspace:*
+        version: link:../core
+      '@invect/layouts':
+        specifier: workspace:*
+        version: link:../layouts
+      '@lezer/highlight':
+        specifier: ^1.2.3
+        version: 1.2.3
+      '@radix-ui/react-accordion':
+        specifier: ^1.2.12
+        version: 1.2.12(@types/react-dom@18.3.7(@types/react@18.3.7))(@types/react@18.3.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@radix-ui/react-alert-dialog':
+        specifier: ^1.1.15
+        version: 1.1.15(@types/react-dom@18.3.7(@types/react@18.3.7))(@types/react@18.3.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@radix-ui/react-collapsible':
+        specifier: ^1.1.3
+        version: 1.1.12(@types/react-dom@18.3.7(@types/react@18.3.7))(@types/react@18.3.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@radix-ui/react-dialog':
+        specifier: ^1.1.15
+        version: 1.1.15(@types/react-dom@18.3.7(@types/react@18.3.7))(@types/react@18.3.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@radix-ui/react-label':
+        specifier: ^2.1.8
+        version: 2.1.8(@types/react-dom@18.3.7(@types/react@18.3.7))(@types/react@18.3.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@radix-ui/react-popover':
+        specifier: ^1.1.15
+        version: 1.1.15(@types/react-dom@18.3.7(@types/react@18.3.7))(@types/react@18.3.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@radix-ui/react-scroll-area':
+        specifier: ^1.2.10
+        version: 1.2.10(@types/react-dom@18.3.7(@types/react@18.3.7))(@types/react@18.3.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@radix-ui/react-slider':
+        specifier: ^1.3.6
+        version: 1.3.6(@types/react-dom@18.3.7(@types/react@18.3.7))(@types/react@18.3.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      cmdk:
+        specifier: ^1.1.1
+        version: 1.1.1(@types/react-dom@18.3.7(@types/react@18.3.7))(@types/react@18.3.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      codemirror:
+        specifier: ^6.0.2
+        version: 6.0.2
+      nanoid:
+        specifier: ^5.1.6
+        version: 5.1.6
+      prettier:
+        specifier: ^3.0.0
+        version: 3.8.1
+      react:
+        specifier: ^18.3.1 || ^19.0.0
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1 || ^19.0.0
+        version: 18.3.1(react@18.3.1)
+      react-markdown:
+        specifier: ^10.1.0
+        version: 10.1.0(@types/react@18.3.7)(react@18.3.1)
+      react-resizable-panels:
+        specifier: ^3.0.6
+        version: 3.0.6(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      remark-gfm:
+        specifier: ^4.0.1
+        version: 4.0.1
+      zustand:
+        specifier: ^5.0.9
+        version: 5.0.11(@types/react@18.3.7)(immer@11.1.4)(react@18.3.1)(use-sync-external-store@1.6.0(react@18.3.1))
+    devDependencies:
+      '@eslint/js':
+        specifier: ^9.0.0
+        version: 9.39.4
+      '@radix-ui/react-dropdown-menu':
+        specifier: ^2.1.16
+        version: 2.1.16(@types/react-dom@18.3.7(@types/react@18.3.7))(@types/react@18.3.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@radix-ui/react-select':
+        specifier: ^2.2.6
+        version: 2.2.6(@types/react-dom@18.3.7(@types/react@18.3.7))(@types/react@18.3.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@radix-ui/react-separator':
+        specifier: ^1.1.7
+        version: 1.1.8(@types/react-dom@18.3.7(@types/react@18.3.7))(@types/react@18.3.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@radix-ui/react-slot':
+        specifier: ^1.2.3
+        version: 1.2.4(@types/react@18.3.7)(react@18.3.1)
+      '@radix-ui/react-tooltip':
+        specifier: ^1.2.8
+        version: 1.2.8(@types/react-dom@18.3.7(@types/react@18.3.7))(@types/react@18.3.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@tailwindcss/postcss':
+        specifier: ^4.1.0
+        version: 4.2.1
+      '@tanstack/react-query':
+        specifier: ^5.83.0
+        version: 5.90.21(react@18.3.1)
+      '@types/node':
+        specifier: ^24.0.13
+        version: 24.12.0
+      '@types/react':
+        specifier: 18.3.7
+        version: 18.3.7
+      '@types/react-dom':
+        specifier: 18.3.7
+        version: 18.3.7(@types/react@18.3.7)
+      '@vitejs/plugin-react':
+        specifier: ^6.0.1
+        version: 6.0.1(vite@8.0.0(@types/node@24.12.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.3))
+      '@xyflow/react':
+        specifier: ^12.9.2
+        version: 12.10.1(@types/react@18.3.7)(immer@11.1.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      autoprefixer:
+        specifier: ^10.4.21
+        version: 10.4.27(postcss@8.5.8)
+      class-variance-authority:
+        specifier: ^0.7.1
+        version: 0.7.1
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      eslint:
+        specifier: ^9.0.0
+        version: 9.39.4(jiti@2.6.1)
+      globals:
+        specifier: ^15.0.0
+        version: 15.15.0
+      json-logic-js:
+        specifier: ^2.0.5
+        version: 2.0.5
+      lucide-react:
+        specifier: ^0.525.0
+        version: 0.525.0(react@18.3.1)
+      postcss:
+        specifier: ^8.5.6
+        version: 8.5.8
+      postcss-nested:
+        specifier: ^7.0.2
+        version: 7.0.2(postcss@8.5.8)
+      react-router:
+        specifier: ^7.6.3
+        version: 7.13.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      react-router-dom:
+        specifier: ^7.6.3
+        version: 7.13.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      tailwind-merge:
+        specifier: ^3.3.1
+        version: 3.5.0
+      tailwindcss:
+        specifier: ^4.1.0
+        version: 4.2.1
+      tw-animate-css:
+        specifier: ^1.4.0
+        version: 1.4.0
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.0.0
+        version: 8.57.0(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
+      vite:
+        specifier: ^8.0.0
+        version: 8.0.0(@types/node@24.12.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.3)
+      vite-plugin-dts:
+        specifier: ^4.5.4
+        version: 4.5.4(@types/node@24.12.0)(rollup@4.59.0)(typescript@5.9.3)(vite@8.0.0(@types/node@24.12.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.3))
 
 packages:
 

@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@invect/core": "workspace:*",
-    "@invect/frontend": "workspace:*",
+    "@invect/ui": "workspace:*",
     "@invect/nextjs": "workspace:*",
     "@tailwindcss/postcss": "^4.1.12",
     "autoprefixer": "^10.4.21",

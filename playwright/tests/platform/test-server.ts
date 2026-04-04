@@ -80,8 +80,8 @@ process.on("unhandledRejection", (err) => {
 
 app.use(
   "/invect",
-  createInvectRouter({
-    baseDatabaseConfig: {
+  await createInvectRouter({
+    database: {
       id: `test-${process.pid}`,
       type: "sqlite",
       connectionString: `file:${dbPath}`,

@@ -104,7 +104,7 @@ The scheduler is enabled by default. Disable it globally (e.g. for worker proces
 
 ```ts
 createInvectRouter({
-  baseDatabaseConfig: {
+  database: {
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL || 'file:./dev.db',
     id: 'main',

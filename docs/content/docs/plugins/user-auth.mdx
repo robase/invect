@@ -63,7 +63,7 @@ import { userAuth } from '@invect/user-auth';
 import { auth } from './auth';
 
 app.use('/invect', createInvectRouter({
-  baseDatabaseConfig: {
+  database: {
     type: 'sqlite',
     connectionString: 'file:./dev.db',
     id: 'main',
@@ -83,7 +83,7 @@ import { auth } from './auth';
 @Module({
   imports: [
     InvectModule.forRoot({
-      baseDatabaseConfig: {
+      database: {
         type: 'postgresql',
         connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/invect',
         id: 'main',
@@ -104,7 +104,7 @@ import { userAuth } from '@invect/user-auth';
 import { auth } from './auth';
 
 export const handler = createInvectHandler({
-  baseDatabaseConfig: {
+  database: {
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL || 'file:./dev.db',
     id: 'main',
