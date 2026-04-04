@@ -53,6 +53,9 @@ export type {
   ParamField,
 } from './actions';
 
+// Re-export shared plugin database API factory
+export { createPluginDatabaseApi } from './services/plugin-database-api';
+
 // Re-export auth types and service
 export { AuthorizationService, createAuthorizationService } from './services/auth';
 export { FlowAccessService } from './services/auth';

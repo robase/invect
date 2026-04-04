@@ -6,15 +6,34 @@ const databaseConfigSchema = z.object({
   id: z.string(), // Optional ID for the database, useful for multi-database setups
   name: z.string().optional(), // Human readable name for the database
   /**
-   * SQLite driver selection. Only applies when `type` is `'sqlite'`.
+   * Underlying driver package to use for database connections.
+   * When omitted, a sensible default is chosen per dialect:
    *
-   * - `'better-sqlite3'` — Fast native C++ driver (default). Best for Express / NestJS / long-running Node servers.
-   * - `'libsql'` — Pure JS / WASM driver. Works in serverless and edge environments (Vercel, Cloudflare).
-   *   Also supports Turso remote SQLite via `libsql://` URLs.
+   * **PostgreSQL** (default: `'postgres'`):
+   * - `'postgres'`          — postgres.js. Fast, pure JS. Default.
+   * - `'pg'`                — node-postgres (Pool). Most popular PG driver.
+   * - `'neon-serverless'`   — @neondatabase/serverless. WebSocket-based, for Neon + edge.
    *
-   * @default 'better-sqlite3'
+   * **SQLite** (default: `'better-sqlite3'`):
+   * - `'better-sqlite3'`    — Native C++. Fastest for long-running Node servers.
+   * - `'libsql'`            — Pure JS / WASM. Works in serverless/edge + Turso.
+   *
+   * **MySQL** (default: `'mysql2'`):
+   * - `'mysql2'`            — Only supported driver.
    */
-  driver: z.enum(['better-sqlite3', 'libsql']).optional(),
+  driver: z
+    .enum([
+      // PostgreSQL
+      'postgres',
+      'pg',
+      'neon-serverless',
+      // SQLite
+      'better-sqlite3',
+      'libsql',
+      // MySQL
+      'mysql2',
+    ])
+    .optional(),
 });
 
 export type InvectDatabaseConfig = z.infer<typeof databaseConfigSchema>;

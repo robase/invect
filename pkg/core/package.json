@@ -67,8 +67,10 @@
   },
   "optionalDependencies": {
     "@libsql/client": "^0.17.2",
+    "@neondatabase/serverless": "^1.0.0",
     "better-sqlite3": "^12.0.0",
     "mysql2": "^3.14.2",
+    "pg": "^8.16.0",
     "postgres": "^3.4.7"
   },
   "devDependencies": {

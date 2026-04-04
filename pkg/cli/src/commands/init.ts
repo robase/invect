@@ -85,8 +85,10 @@ type Framework = (typeof FRAMEWORKS)[number];
 const DATABASES = [
   { name: 'SQLite', id: 'sqlite', dependency: 'better-sqlite3', driver: 'better-sqlite3' as const, description: undefined, alsoDetect: [] as string[] },
   { name: 'SQLite (libsql)', id: 'sqlite', dependency: '@libsql/client', driver: 'libsql' as const, description: '(serverless, edge or Turso)', alsoDetect: [] as string[] },
-  { name: 'PostgreSQL', id: 'postgresql', dependency: 'postgres', driver: undefined, description: undefined, alsoDetect: ['pg', '@neondatabase/serverless', '@vercel/postgres'] },
-  { name: 'MySQL', id: 'mysql', dependency: 'mysql2', driver: undefined, description: undefined, alsoDetect: ['mysql'] },
+  { name: 'PostgreSQL (postgres.js)', id: 'postgresql', dependency: 'postgres', driver: 'postgres' as const, description: undefined, alsoDetect: [] as string[] },
+  { name: 'PostgreSQL (pg)', id: 'postgresql', dependency: 'pg', driver: 'pg' as const, description: '(node-postgres)', alsoDetect: [] as string[] },
+  { name: 'PostgreSQL (Neon)', id: 'postgresql', dependency: '@neondatabase/serverless', driver: 'neon-serverless' as const, description: '(Neon serverless)', alsoDetect: ['@vercel/postgres'] },
+  { name: 'MySQL', id: 'mysql', dependency: 'mysql2', driver: 'mysql2' as const, description: undefined, alsoDetect: ['mysql'] },
 ] as const;
 
 type Database = (typeof DATABASES)[number];
@@ -176,11 +178,11 @@ export const initCommand = new Command('init')
 
     let database: Database;
     if (options.database) {
-      // Support --database libsql as a shorthand for sqlite + libsql driver
-      if (options.database === 'libsql') {
-        database = DATABASES.find((d) => d.driver === 'libsql')!;
+      // Support --database libsql, pg, neon-serverless as shorthand for driver selection
+      if (options.database === 'libsql' || options.database === 'pg' || options.database === 'neon-serverless') {
+        database = DATABASES.find((d) => d.driver === options.database)!;
       } else {
-        database = DATABASES.find((d) => d.id === options.database && d.driver !== 'libsql') || DATABASES[0]!;
+        database = DATABASES.find((d) => d.id === options.database && d.driver !== 'libsql' && d.driver !== 'pg' && d.driver !== 'neon-serverless') || DATABASES[0]!;
       }
     } else {
       // Try auto-detection — check both the exact driver package and common alternatives
@@ -270,7 +272,7 @@ export const initCommand = new Command('init')
     // Only install the driver explicitly if it's NOT a core dependency
     // (currently all supported drivers are, so this is a no-op — but future-proofs
     // against drivers being moved to peerDependencies).
-    const coreShippedDrivers = ['postgres', 'better-sqlite3', 'mysql2', '@libsql/client'];
+    const coreShippedDrivers = ['postgres', 'better-sqlite3', 'mysql2', '@libsql/client', 'pg', '@neondatabase/serverless'];
     if (!(database.dependency in allDeps) && !coreShippedDrivers.includes(database.dependency)) {
       depsToInstall.push(database.dependency);
     }
@@ -574,20 +576,25 @@ async function askSchemaTool(): Promise<SchemaTool> {
 function generateConfigFile(framework: Framework, database: Database): string {
   let dbConfig: string;
 
-  if (database.id === 'sqlite' && database.driver === 'libsql') {
+  // Determine if we need an explicit `driver` field.
+  // Omit it when the default for the dialect is implied (postgres, better-sqlite3, mysql2).
+  const defaultDrivers: Record<string, string> = {
+    sqlite: 'better-sqlite3',
+    postgresql: 'postgres',
+    mysql: 'mysql2',
+  };
+  const needsDriver = database.driver && database.driver !== defaultDrivers[database.id];
+
+  if (database.id === 'sqlite') {
+    const driverLine = needsDriver ? `\n    driver: '${database.driver}',` : '';
     dbConfig = `  baseDatabaseConfig: {
-    type: 'sqlite',
-    driver: 'libsql',
-    connectionString: 'file:./dev.db',
-  },`;
-  } else if (database.id === 'sqlite') {
-    dbConfig = `  baseDatabaseConfig: {
-    type: 'sqlite',
+    type: 'sqlite',${driverLine}
     connectionString: 'file:./dev.db',
   },`;
   } else if (database.id === 'postgresql') {
+    const driverLine = needsDriver ? `\n    driver: '${database.driver}',` : '';
     dbConfig = `  baseDatabaseConfig: {
-    type: 'postgresql',
+    type: 'postgresql',${driverLine}
     connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/invect',
   },`;
   } else {

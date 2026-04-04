@@ -2,13 +2,13 @@
  * Bridge between Invect's existing DatabaseConnection (Drizzle-based)
  * and the new Kysely-based adapter system.
  *
- * Creates a Kysely instance that shares the same underlying database
- * connection (postgres.js client, better-sqlite3, mysql2 pool).
+ * Creates a Kysely instance that shares the underlying database
+ * connection via the unified DatabaseDriver interface.
  */
 
 import {
   Kysely,
-  MysqlDialect,
+  MysqlQueryCompiler,
   PostgresAdapter,
   PostgresIntrospector,
   PostgresQueryCompiler,
@@ -17,7 +17,7 @@ import {
   SqliteQueryCompiler,
 } from 'kysely';
 import type { DatabaseConnection } from '../connection';
-import type { SqliteDriver } from '../sqlite-driver';
+import type { DatabaseDriver } from '../drivers/types';
 import type { InvectAdapter, AdapterConfig } from '../adapter';
 import { createKyselyAdapter } from './kysely-adapter';
 import { createInvectAdapterFactory } from '../adapter-factory';
@@ -43,20 +43,16 @@ export function createAdapterFromConnection(connection: DatabaseConnection): Inv
 }
 
 /**
- * Create a Kysely instance that reuses the underlying client from
- * a Drizzle DatabaseConnection.
+ * Create a Kysely instance that delegates to the DatabaseDriver from
+ * a Drizzle DatabaseConnection. No new connections are created.
  */
 function createKyselyFromConnection(connection: DatabaseConnection): KyselyDb {
   switch (connection.type) {
     case 'sqlite': {
-      // Use the unified SqliteDriver from the connection instead of
-      // reaching into $client. Works with both better-sqlite3 and libsql.
-      const sqliteDriver = connection.driver;
-
       return new Kysely({
         dialect: {
           createAdapter: () => new SqliteAdapter(),
-          createDriver: () => createSqliteKyselyDriver(sqliteDriver),
+          createDriver: () => createDriverBridge(connection.driver),
           createIntrospector: (db: Kysely<unknown>) => new SqliteIntrospector(db),
           createQueryCompiler: () => new SqliteQueryCompiler(),
         } as never,
@@ -64,14 +60,10 @@ function createKyselyFromConnection(connection: DatabaseConnection): KyselyDb {
     }
 
     case 'postgresql': {
-      // Drizzle's postgres.js driver exposes $client which is a postgres.Sql instance.
-      // We wrap it as a Kysely PostgresDialect pool.
-      const pgClient = (connection.db as unknown as { $client: PgClient }).$client;
-
       return new Kysely({
         dialect: {
           createAdapter: () => new PostgresAdapter(),
-          createDriver: () => createPostgresJsDriver(pgClient),
+          createDriver: () => createDriverBridge(connection.driver),
           createIntrospector: (db: Kysely<unknown>) => new PostgresIntrospector(db),
           createQueryCompiler: () => new PostgresQueryCompiler(),
         } as never,
@@ -79,33 +71,39 @@ function createKyselyFromConnection(connection: DatabaseConnection): KyselyDb {
     }
 
     case 'mysql': {
-      // Drizzle's mysql2 driver exposes $client which is a mysql2 Pool.
-      const mysqlPool = (connection.db as unknown as { $client: MysqlPool }).$client;
-
+      // MySQL uses the standard MysqlDialect with the pool obtained from Drizzle's $client.
+      // We can't easily use the DatabaseDriver here because MysqlDialect expects a pool.
+      // Instead we create a universal Kysely driver bridge using DatabaseDriver.
       return new Kysely({
-        dialect: new MysqlDialect({ pool: mysqlPool as never }),
+        dialect: {
+          createAdapter: () =>
+            ({
+              supportsReturning: () => false,
+              supportsTransactionalDdl: () => false,
+            }) as unknown as ReturnType<Kysely<never>['getExecutor']>['adapter'],
+          createDriver: () => createDriverBridge(connection.driver),
+          createIntrospector: (db: Kysely<unknown>) =>
+            new (class {
+              constructor(private db: Kysely<unknown>) {}
+              introspect() {
+                return { tables: [] };
+              }
+            })(db) as unknown as ReturnType<
+              Kysely<never>['getExecutor']
+            >['adapter'] extends infer _A
+              ? InstanceType<never>
+              : never,
+          createQueryCompiler: () => {
+            return new MysqlQueryCompiler();
+          },
+        } as never,
       }) as unknown as KyselyDb;
     }
   }
 }
 
 // ---------------------------------------------------------------------------
-// Type stubs for underlying clients (avoid importing full packages)
-// ---------------------------------------------------------------------------
-
-interface PgClient {
-  <T = Record<string, unknown>[]>(strings: TemplateStringsArray, ...values: unknown[]): Promise<T>;
-  (query: string): Promise<Record<string, unknown>[]>;
-  unsafe(query: string, params?: unknown[]): Promise<Record<string, unknown>[]>;
-}
-
-interface MysqlPool {
-  getConnection(): Promise<unknown>;
-  execute(sql: string, params?: unknown[]): Promise<[unknown[], unknown]>;
-}
-
-// ---------------------------------------------------------------------------
-// Custom Kysely drivers wrapping existing clients
+// Universal Kysely driver bridge — wraps DatabaseDriver
 // ---------------------------------------------------------------------------
 
 async function noopAsync(): Promise<void> {
@@ -113,17 +111,17 @@ async function noopAsync(): Promise<void> {
 }
 
 /**
- * Create a Kysely driver that delegates to the unified SqliteDriver interface.
- * Works with both better-sqlite3 and libsql transparently.
+ * Create a Kysely driver that delegates to a DatabaseDriver.
+ * Works with any dialect — the driver handles SQL execution uniformly.
  */
-function createSqliteKyselyDriver(driver: SqliteDriver) {
+function createDriverBridge(driver: DatabaseDriver) {
   return {
     init: noopAsync,
     async acquireConnection() {
       return {
         executeQuery: async (compiledQuery: { sql: string; parameters: unknown[] }) => {
           const sql = compiledQuery.sql.trimStart();
-          const isSelect = /^(SELECT|PRAGMA|WITH|EXPLAIN)/i.test(sql);
+          const isSelect = /^(SELECT|PRAGMA|WITH|EXPLAIN|SHOW)/i.test(sql);
           const hasReturning = /\bRETURNING\b/i.test(sql);
 
           if (isSelect || hasReturning) {
@@ -141,34 +139,7 @@ function createSqliteKyselyDriver(driver: SqliteDriver) {
           }
         },
         streamQuery: () => {
-          throw new Error('Streaming not supported with SQLite driver bridge');
-        },
-      };
-    },
-    beginTransaction: noopAsync,
-    commitTransaction: noopAsync,
-    rollbackTransaction: noopAsync,
-    releaseConnection: noopAsync,
-    destroy: noopAsync,
-  };
-}
-
-function createPostgresJsDriver(client: PgClient) {
-  return {
-    init: noopAsync,
-    async acquireConnection() {
-      return {
-        executeQuery: async (compiledQuery: { sql: string; parameters: unknown[] }) => {
-          // postgres.js uses $1, $2 placeholders natively
-          const result = await client.unsafe(compiledQuery.sql, compiledQuery.parameters);
-
-          return {
-            rows: result as Record<string, unknown>[],
-            numAffectedRows: BigInt(result.length),
-          };
-        },
-        streamQuery: () => {
-          throw new Error('Streaming not supported with postgres.js driver bridge');
+          throw new Error('Streaming not supported with DatabaseDriver bridge');
         },
       };
     },

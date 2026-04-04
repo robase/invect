@@ -51,8 +51,13 @@ export interface SqliteDriver {
  * else defaults to `better-sqlite3`.
  */
 export function resolveSqliteDriverType(config: InvectDatabaseConfig): SqliteDriverType {
-  if (config.driver) return config.driver;
-  if (config.connectionString.startsWith('libsql://')) return 'libsql';
+  const d = config.driver;
+  if (d === 'better-sqlite3' || d === 'libsql') {
+    return d;
+  }
+  if (config.connectionString.startsWith('libsql://')) {
+    return 'libsql';
+  }
   return 'better-sqlite3';
 }
 
@@ -81,10 +86,7 @@ export async function createSqliteDriver(
 // better-sqlite3 implementation
 // ---------------------------------------------------------------------------
 
-async function createBetterSqlite3Driver(
-  filePath: string,
-  logger: Logger,
-): Promise<SqliteDriver> {
+async function createBetterSqlite3Driver(filePath: string, logger: Logger): Promise<SqliteDriver> {
   const Database = (await import('better-sqlite3')).default;
 
   const dbPath = filePath === ':memory:' ? ':memory:' : filePath;
@@ -132,7 +134,8 @@ async function createLibsqlDriver(
 
   // Remote Turso URLs use the connection string directly.
   // Local file paths use the `file:` URL scheme.
-  const isRemote = connectionString.startsWith('libsql://') || connectionString.startsWith('https://');
+  const isRemote =
+    connectionString.startsWith('libsql://') || connectionString.startsWith('https://');
   const url = isRemote ? connectionString : `file:${filePath}`;
 
   const client = createClient({ url });
@@ -153,12 +156,18 @@ async function createLibsqlDriver(
     type: 'libsql',
 
     async queryAll(sql: string, params: unknown[] = []) {
-      const result = await client.execute({ sql, args: params as any });
+      const result = await client.execute({
+        sql,
+        args: params as Array<string | number | bigint | ArrayBuffer | null>,
+      });
       return result.rows as unknown as Record<string, unknown>[];
     },
 
     async execute(sql: string, params: unknown[] = []) {
-      const result = await client.execute({ sql, args: params as any });
+      const result = await client.execute({
+        sql,
+        args: params as Array<string | number | bigint | ArrayBuffer | null>,
+      });
       return { changes: result.rowsAffected };
     },
 

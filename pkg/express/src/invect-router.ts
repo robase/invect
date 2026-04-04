@@ -8,91 +8,11 @@ import {
   InvectIdentity,
   InvectPermission,
   InvectResourceType,
+  createPluginDatabaseApi,
 } from '@invect/core';
 import type { CredentialFilters } from '@invect/core';
 import { asyncHandler } from './async-handler';
 import { ZodError } from 'zod';
-
-type PostgreSqlClientLike = {
-  unsafe<T = Record<string, unknown>>(statement: string, params?: unknown[]): Promise<T[]>;
-};
-
-type SqliteClientLike = {
-  prepare(sql: string): {
-    all(...params: unknown[]): Record<string, unknown>[];
-    run(...params: unknown[]): { changes: number };
-  };
-};
-
-type MysqlClientLike = {
-  execute<T = Record<string, unknown>>(
-    statement: string,
-    params: unknown[],
-  ): Promise<[T[] | unknown, unknown]>;
-};
-
-function createPluginDatabaseApi(core: Invect) {
-  const connection = core.getDatabaseConnection();
-
-  const normalizeSql = (statement: string): string => {
-    if (connection.type !== 'postgresql') {
-      return statement;
-    }
-
-    let index = 0;
-    return statement.replace(/\?/g, () => `$${++index}`);
-  };
-
-  const query = async <T = Record<string, unknown>>(
-    statement: string,
-    params: unknown[] = [],
-  ): Promise<T[]> => {
-    switch (connection.type) {
-      case 'postgresql': {
-        const client = (connection.db as unknown as { $client: PostgreSqlClientLike }).$client;
-        return await client.unsafe<T>(normalizeSql(statement), params);
-      }
-      case 'sqlite': {
-        return await connection.driver.queryAll(statement, params) as T[];
-      }
-      case 'mysql': {
-        const client = (connection.db as unknown as { $client: MysqlClientLike }).$client;
-        const [rows] = await client.execute<T>(statement, params);
-        return Array.isArray(rows) ? rows : [];
-      }
-    }
-
-    throw new Error(`Unsupported database type: ${String((connection as { type?: string }).type)}`);
-  };
-
-  return {
-    type: connection.type,
-    query,
-    async execute(statement: string, params: unknown[] = []): Promise<void> {
-      switch (connection.type) {
-        case 'postgresql': {
-          const client = (connection.db as unknown as { $client: PostgreSqlClientLike }).$client;
-          await client.unsafe(normalizeSql(statement), params);
-          return;
-        }
-        case 'sqlite': {
-          // Coerce booleans to 0/1 for SQLite compatibility
-          const coerced = params.map((p) => (typeof p === 'boolean' ? (p ? 1 : 0) : p));
-          await connection.driver.execute(statement, coerced);
-          return;
-        }
-        case 'mysql': {
-          const client = (connection.db as unknown as { $client: MysqlClientLike }).$client;
-          await client.execute(statement, params);
-          return;
-        }
-      }
-      throw new Error(
-        `Unsupported database type: ${String((connection as { type?: string }).type)}`,
-      );
-    },
-  };
-}
 
 // Extend Express Request type to include Invect identity
 declare global {
@@ -1667,7 +1587,7 @@ export function createInvectRouter(config: InvectConfig): Router {
         query: (req.query || {}) as Record<string, string | undefined>,
         headers: req.headers as Record<string, string | undefined>,
         identity: req.invectIdentity ?? null,
-        database: createPluginDatabaseApi(core),
+        database: createPluginDatabaseApi(core.getDatabaseConnection()),
         request: webRequest,
         core: {
           getPermissions: (identity) => core.getPermissions(identity),

@@ -17,39 +17,6 @@ import type { InvectPlugin } from 'src/types/plugin.types';
 import type { InvectAdapter } from '../../database/adapter';
 import { createAdapterFromConnection } from '../../database/adapters/connection-bridge';
 
-type PostgreSqlClientLike = {
-  <T = Record<string, unknown>>(query: string): Promise<T[]>;
-  (strings: TemplateStringsArray, ...values: unknown[]): Promise<unknown[]>;
-};
-
-type SqliteClientLike = {
-  prepare(sql: string): {
-    all(...params: unknown[]): Record<string, unknown>[];
-    run(...params: unknown[]): { changes: number };
-    get(...params: unknown[]): Record<string, unknown> | undefined;
-  };
-  exec(sql: string): void;
-};
-
-type MysqlClientLike = {
-  execute<T = Record<string, unknown>>(
-    query: string,
-    params?: unknown[],
-  ): Promise<[T[] | unknown, unknown]>;
-};
-
-type PostgreSqlDbLike = {
-  $client: PostgreSqlClientLike;
-};
-
-type SqliteDbLike = {
-  $client: SqliteClientLike;
-};
-
-type MysqlDbLike = {
-  $client: MysqlClientLike;
-};
-
 /**
  * Describes tables that a plugin needs checked at startup.
  */
@@ -243,32 +210,8 @@ export class DatabaseService {
         this.logger,
       );
 
-      // Execute the query based on database type and return results
-      let result: Record<string, unknown>[] = [];
-
-      switch (queryDBConfig.type) {
-        case 'postgresql': {
-          // PostgreSQL query execution using postgres.js client directly
-          const client = (queryConnection.db as unknown as PostgreSqlDbLike).$client;
-          result = await client<Record<string, unknown>>(query);
-          break;
-        }
-        case 'sqlite': {
-          // SQLite query execution via unified driver (better-sqlite3 or libsql)
-          const sqliteConn = queryConnection as Extract<typeof queryConnection, { type: 'sqlite' }>;
-          result = await sqliteConn.driver.queryAll(query);
-          break;
-        }
-        case 'mysql': {
-          // MySQL query execution using mysql2 client directly
-          const client = (queryConnection.db as unknown as MysqlDbLike).$client;
-          const [rows] = await client.execute<Record<string, unknown>>(query);
-          result = Array.isArray(rows) ? rows : [];
-          break;
-        }
-        default:
-          throw new DatabaseError(`Unsupported database type: ${queryDBConfig.type}`);
-      }
+      // Execute the query using the unified driver interface
+      const result = await queryConnection.driver.queryAll<Record<string, unknown>>(query);
 
       this.logger.debug('Query executed successfully', {
         rowCount: Array.isArray(result) ? result.length : 'unknown',
@@ -311,25 +254,8 @@ export class DatabaseService {
     }
 
     try {
-      // Simple connectivity test using host database connection
-      switch (this.connection.type) {
-        case 'postgresql': {
-          const client = (this.connection.db as unknown as PostgreSqlDbLike).$client;
-          await client`SELECT 1 as health`;
-          break;
-        }
-        case 'sqlite': {
-          await this.connection.driver.queryAll('SELECT 1 as health');
-          break;
-        }
-        case 'mysql': {
-          const client = (this.connection.db as unknown as MysqlDbLike).$client;
-          await client.execute('SELECT 1 as health');
-          break;
-        }
-        default:
-          throw new DatabaseError('Unsupported database type for health check');
-      }
+      // Simple connectivity test using the unified driver
+      await this.connection.driver.queryAll('SELECT 1 as health');
 
       this.logger.debug('Database health check passed');
     } catch (error) {
@@ -404,22 +330,7 @@ export class DatabaseService {
    * Run a simple `SELECT 1` query to verify the database is reachable.
    */
   private async runConnectivityCheck(connection: DatabaseConnection): Promise<void> {
-    switch (connection.type) {
-      case 'postgresql': {
-        const client = (connection.db as unknown as PostgreSqlDbLike).$client;
-        await client`SELECT 1 as health`;
-        break;
-      }
-      case 'sqlite': {
-        await connection.driver.queryAll('SELECT 1 as health');
-        break;
-      }
-      case 'mysql': {
-        const client = (connection.db as unknown as MysqlDbLike).$client;
-        await client.execute('SELECT 1 as health');
-        break;
-      }
-    }
+    await connection.driver.queryAll('SELECT 1 as health');
   }
 
   /**
@@ -648,33 +559,27 @@ export class DatabaseService {
 
     switch (connection.type) {
       case 'sqlite': {
-        // Note: In SQL LIKE, '_' is a single-char wildcard. We must escape it
-        // with ESCAPE '\' so 'sqlite\_%' matches literal 'sqlite_*' and
-        // '\\_\\_%' matches literal names starting with '__'.
         const query = `SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite\\_%' ESCAPE '\\' AND name NOT LIKE '\\_\\_%' ESCAPE '\\'`;
-        const rows = await connection.driver.queryAll(query) as Array<{ name: string }>;
+        const rows = (await connection.driver.queryAll(query)) as Array<{ name: string }>;
         for (const row of rows) {
           names.add(row.name);
         }
         break;
       }
       case 'postgresql': {
-        const db = connection.db as unknown as PostgreSqlDbLike;
-        const rows = (await db.$client`
-          SELECT table_name FROM information_schema.tables
-          WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-        `) as Array<{ table_name: string }>;
+        const rows = (await connection.driver.queryAll(
+          `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'`,
+        )) as Array<{ table_name: string }>;
         for (const row of rows) {
           names.add(row.table_name);
         }
         break;
       }
       case 'mysql': {
-        const db = connection.db as unknown as MysqlDbLike;
-        const [rows] = await db.$client.execute(
+        const rows = (await connection.driver.queryAll(
           `SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE'`,
-        );
-        for (const row of rows as Array<Record<string, string>>) {
+        )) as Array<Record<string, string>>;
+        for (const row of rows) {
           names.add(row['TABLE_NAME']);
         }
         break;

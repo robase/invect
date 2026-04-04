@@ -164,15 +164,17 @@ async function introspectDatabase(
   }
 }
 
-async function introspectSqlite(driver: import('./sqlite-driver').SqliteDriver): Promise<Map<string, Set<string>>> {
+async function introspectSqlite(
+  driver: import('./drivers/types').DatabaseDriver,
+): Promise<Map<string, Set<string>>> {
   const schema = new Map<string, Set<string>>();
 
-  const tables = await driver.queryAll(
+  const tables = (await driver.queryAll(
     `SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '__%'`,
-  ) as Array<{ name: string }>;
+  )) as Array<{ name: string }>;
 
   for (const table of tables) {
-    const columns = await driver.queryAll(`PRAGMA table_info('${table.name}')`) as Array<{
+    const columns = (await driver.queryAll(`PRAGMA table_info('${table.name}')`)) as Array<{
       name: string;
     }>;
     schema.set(table.name, new Set(columns.map((c) => c.name)));

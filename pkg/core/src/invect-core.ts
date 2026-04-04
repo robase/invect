@@ -83,12 +83,7 @@ import {
 
 // Plugin system
 import { PluginManager } from './services/plugin-manager';
-import type {
-  InvectPlugin,
-  InvectPluginEndpoint,
-  PluginDatabaseApi,
-  PluginHookRunner,
-} from './types/plugin.types';
+import type { InvectPlugin, InvectPluginEndpoint, PluginHookRunner } from './types/plugin.types';
 import type { AgentToolDefinition, AgentPromptResult } from './types/agent-tool.types';
 
 // Action registry (Provider-Actions architecture)
@@ -110,77 +105,8 @@ import type {
   AuthEvent,
 } from './types/auth.types';
 
-type PostgreSqlClientLike = {
-  unsafe<T = Record<string, unknown>>(statement: string, params?: unknown[]): Promise<T[]>;
-};
-
-type SqliteClientLike = {
-  prepare(statement: string): {
-    all(...params: unknown[]): unknown[];
-    run(...params: unknown[]): unknown;
-  };
-};
-
-type MysqlClientLike = {
-  execute<T = unknown>(statement: string, params?: unknown[]): Promise<[T, unknown]>;
-};
-
-function createPluginDatabaseApi(connection: DatabaseConnection): PluginDatabaseApi {
-  const normalizeSql = (statement: string): string => {
-    if (connection.type !== 'postgresql') {
-      return statement;
-    }
-
-    let index = 0;
-    return statement.replace(/\?/g, () => `$${++index}`);
-  };
-
-  const query = async <T = Record<string, unknown>>(
-    statement: string,
-    params: unknown[] = [],
-  ): Promise<T[]> => {
-    switch (connection.type) {
-      case 'postgresql': {
-        const client = (connection.db as unknown as { $client: PostgreSqlClientLike }).$client;
-        return client.unsafe<T>(normalizeSql(statement), params);
-      }
-      case 'sqlite': {
-        return await connection.driver.queryAll(statement, params) as T[];
-      }
-      case 'mysql': {
-        const client = (connection.db as unknown as { $client: MysqlClientLike }).$client;
-        const [rows] = await client.execute<T[]>(statement, params);
-        return Array.isArray(rows) ? rows : [];
-      }
-    }
-  };
-
-  return {
-    type: connection.type,
-    query,
-    async execute(statement: string, params: unknown[] = []): Promise<void> {
-      switch (connection.type) {
-        case 'postgresql': {
-          const client = (connection.db as unknown as { $client: PostgreSqlClientLike }).$client;
-          await client.unsafe(normalizeSql(statement), params);
-          return;
-        }
-        case 'sqlite': {
-          const coerced = params.map((param) =>
-            typeof param === 'boolean' ? (param ? 1 : 0) : param,
-          );
-          await connection.driver.execute(statement, coerced);
-          return;
-        }
-        case 'mysql': {
-          const client = (connection.db as unknown as { $client: MysqlClientLike }).$client;
-          await client.execute(statement, params);
-          return;
-        }
-      }
-    },
-  };
-}
+// Shared plugin database API factory
+import { createPluginDatabaseApi } from './services/plugin-database-api';
 
 /**
  * Custom node configuration interface

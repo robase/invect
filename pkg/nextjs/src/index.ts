@@ -1,4 +1,10 @@
-import { BatchProvider, Invect, InvectConfig, GraphNodeType } from '@invect/core';
+import {
+  BatchProvider,
+  Invect,
+  InvectConfig,
+  GraphNodeType,
+  createPluginDatabaseApi,
+} from '@invect/core';
 import { ZodError } from 'zod';
 
 /**
@@ -33,24 +39,6 @@ interface InvectHandler {
   ) => Promise<Response>;
 }
 
-type PostgreSqlClientLike = {
-  unsafe<T = Record<string, unknown>>(statement: string, params?: unknown[]): Promise<T[]>;
-};
-
-type SqliteClientLike = {
-  prepare(sql: string): {
-    all(...params: unknown[]): Record<string, unknown>[];
-    run(...params: unknown[]): { changes: number };
-  };
-};
-
-type MysqlClientLike = {
-  execute<T = Record<string, unknown>>(
-    statement: string,
-    params: unknown[],
-  ): Promise<[T[] | unknown, unknown]>;
-};
-
 const parseParamsFromSearch = (value: string | null): Record<string, unknown> => {
   if (!value) {
     return {};
@@ -62,50 +50,6 @@ const parseParamsFromSearch = (value: string | null): Record<string, unknown> =>
     return {};
   }
 };
-
-function createPluginDatabaseApi(core: Invect) {
-  const connection = core.getDatabaseConnection();
-
-  const normalizeSql = (statement: string): string => {
-    if (connection.type !== 'postgresql') {
-      return statement;
-    }
-
-    let index = 0;
-    return statement.replace(/\?/g, () => `$${++index}`);
-  };
-
-  const query = async <T = Record<string, unknown>>(
-    statement: string,
-    params: unknown[] = [],
-  ): Promise<T[]> => {
-    switch (connection.type) {
-      case 'postgresql': {
-        const client = (connection.db as unknown as { $client: PostgreSqlClientLike }).$client;
-        return await client.unsafe<T>(normalizeSql(statement), params);
-      }
-      case 'sqlite': {
-        // Use the unified SqliteDriver — works with both better-sqlite3 and libsql.
-        return await connection.driver.queryAll(statement, params) as T[];
-      }
-      case 'mysql': {
-        const client = (connection.db as unknown as { $client: MysqlClientLike }).$client;
-        const [rows] = await client.execute<T>(statement, params);
-        return Array.isArray(rows) ? rows : [];
-      }
-    }
-
-    throw new Error(`Unsupported database type: ${String((connection as { type?: string }).type)}`);
-  };
-
-  return {
-    type: connection.type,
-    query,
-    async execute(statement: string, params: unknown[] = []): Promise<void> {
-      await query(statement, params);
-    },
-  };
-}
 
 export function createInvectHandler(config: InvectConfig): InvectHandler {
   let core: InstanceType<typeof Invect> | null = null;
@@ -956,7 +900,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
             return h;
           })(),
           identity: pluginRequestContext.identity,
-          database: createPluginDatabaseApi(initializedCore),
+          database: createPluginDatabaseApi(initializedCore.getDatabaseConnection()),
           request: requestClone,
           core: {
             getPermissions: (identity) => initializedCore.getPermissions(identity),

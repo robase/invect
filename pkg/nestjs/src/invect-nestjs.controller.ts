@@ -15,7 +15,7 @@ import {
   NotFoundException,
   HttpCode,
 } from '@nestjs/common';
-import { BatchProvider, Invect, FlowValidationResult } from '@invect/core';
+import { BatchProvider, Invect, FlowValidationResult, createPluginDatabaseApi } from '@invect/core';
 import type {
   NodeConfigUpdateEvent,
   NodeConfigUpdateResponse,
@@ -42,24 +42,6 @@ import type {
 } from '@invect/core';
 import { GraphNodeType } from '@invect/core/types';
 import type { Request, Response } from 'express';
-
-type PostgreSqlClientLike = {
-  unsafe<T = Record<string, unknown>>(statement: string, params?: unknown[]): Promise<T[]>;
-};
-
-type SqliteClientLike = {
-  prepare(sql: string): {
-    all(...params: unknown[]): Record<string, unknown>[];
-    run(...params: unknown[]): { changes: number };
-  };
-};
-
-type MysqlClientLike = {
-  execute<T = Record<string, unknown>>(
-    statement: string,
-    params: unknown[],
-  ): Promise<[T[] | unknown, unknown]>;
-};
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -106,49 +88,6 @@ function parseParamsFromQuery(value: unknown): Record<string, unknown> {
   }
 
   return {};
-}
-
-function createPluginDatabaseApi(invect: Invect) {
-  const connection = invect.getDatabaseConnection();
-
-  const normalizeSql = (statement: string): string => {
-    if (connection.type !== 'postgresql') {
-      return statement;
-    }
-
-    let index = 0;
-    return statement.replace(/\?/g, () => `$${++index}`);
-  };
-
-  const query = async <T = Record<string, unknown>>(
-    statement: string,
-    params: unknown[] = [],
-  ): Promise<T[]> => {
-    switch (connection.type) {
-      case 'postgresql': {
-        const client = (connection.db as unknown as { $client: PostgreSqlClientLike }).$client;
-        return await client.unsafe<T>(normalizeSql(statement), params);
-      }
-      case 'sqlite': {
-        return await connection.driver.queryAll(statement, params) as T[];
-      }
-      case 'mysql': {
-        const client = (connection.db as unknown as { $client: MysqlClientLike }).$client;
-        const [rows] = await client.execute<T>(statement, params);
-        return Array.isArray(rows) ? rows : [];
-      }
-    }
-
-    throw new Error(`Unsupported database type: ${String((connection as { type?: string }).type)}`);
-  };
-
-  return {
-    type: connection.type,
-    query,
-    async execute(statement: string, params: unknown[] = []): Promise<void> {
-      await query(statement, params);
-    },
-  };
 }
 
 function coerceQueryValue(value: unknown): unknown {
@@ -1106,7 +1045,7 @@ export class InvectController {
       query: (req.query || {}) as Record<string, string | undefined>,
       headers: req.headers as Record<string, string | undefined>,
       identity: req.invectIdentity ?? null,
-      database: createPluginDatabaseApi(this.invect),
+      database: createPluginDatabaseApi(this.invect.getDatabaseConnection()),
       request: req as unknown as globalThis.Request,
       core: {
         getPermissions: (identity) => this.invect.getPermissions(identity),

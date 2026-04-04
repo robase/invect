@@ -698,11 +698,15 @@ export function generateSqliteSchemaAppend(schema: MergedSchema): AppendSchemaRe
   // Collect names already imported as runtime values to avoid duplicates in type import
   const runtimeImportedNames = new Set<string>();
   for (const identifiers of runtimeImports.values()) {
-    for (const id of identifiers) runtimeImportedNames.add(id);
+    for (const id of identifiers) {
+      runtimeImportedNames.add(id);
+    }
   }
 
   const typeImport = collectTypeImportsForAppend(schema, runtimeImportedNames);
-  if (typeImport) imports.push(typeImport);
+  if (typeImport) {
+    imports.push(typeImport);
+  }
 
   const lines: string[] = [];
   lines.push(``);
@@ -737,7 +741,9 @@ export function generatePostgresSchemaAppend(schema: MergedSchema): AppendSchema
   ];
 
   const typeImport = collectTypeImportsForAppend(schema);
-  if (typeImport) imports.push(typeImport);
+  if (typeImport) {
+    imports.push(typeImport);
+  }
 
   const lines: string[] = [];
   lines.push(``);
@@ -782,7 +788,9 @@ export function generateMysqlSchemaAppend(schema: MergedSchema): AppendSchemaRes
   ];
 
   const typeImport = collectTypeImportsForAppend(schema);
-  if (typeImport) imports.push(typeImport);
+  if (typeImport) {
+    imports.push(typeImport);
+  }
 
   const lines: string[] = [];
   lines.push(``);
@@ -935,11 +943,17 @@ function collectTypeAnnotations(schema: MergedSchema): Set<string> {
  */
 function isBuiltinType(annotation: string): boolean {
   // Primitive array types
-  if (annotation === 'string[]' || annotation === 'number[]' || annotation === 'boolean[]') return true;
+  if (annotation === 'string[]' || annotation === 'number[]' || annotation === 'boolean[]') {
+    return true;
+  }
   // Record<> utility types
-  if (annotation.startsWith('Record<')) return true;
+  if (annotation.startsWith('Record<')) {
+    return true;
+  }
   // Inline union literal types (e.g., "'user' | 'assistant' | 'system' | 'tool'")
-  if (annotation.includes("'") && annotation.includes('|')) return true;
+  if (annotation.includes("'") && annotation.includes('|')) {
+    return true;
+  }
   return false;
 }
 
@@ -948,14 +962,19 @@ function isBuiltinType(annotation: string): boolean {
  * used in the schema. This is needed in append mode where the generated code lives
  * in the user's project and can't use internal `src/` paths.
  */
-function collectTypeImportsForAppend(schema: MergedSchema, runtimeImportedNames?: Set<string>): string | null {
+function collectTypeImportsForAppend(
+  schema: MergedSchema,
+  runtimeImportedNames?: Set<string>,
+): string | null {
   const annotations = collectTypeAnnotations(schema);
   const importable = Array.from(annotations)
     .filter((a) => !isBuiltinType(a))
     .filter((a) => !runtimeImportedNames?.has(a))
     .sort();
 
-  if (importable.length === 0) return null;
+  if (importable.length === 0) {
+    return null;
+  }
   return `import type { ${importable.join(', ')} } from '@invect/core/types';`;
 }
 

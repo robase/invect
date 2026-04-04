@@ -2,14 +2,13 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { drizzle as drizzleSQLite } from 'drizzle-orm/better-sqlite3';
 import { drizzle as drizzleMySQL } from 'drizzle-orm/mysql2';
-import postgres from 'postgres';
 import Database from 'better-sqlite3';
-import mysql from 'mysql2/promise';
 import fs from 'fs';
 import path from 'path';
 
 import { sqliteSchema, mysqlSchema, postgresqlSchema } from './schema';
-import { type SqliteDriver, createSqliteDriver, resolveSqliteDriverType } from './sqlite-driver';
+import type { DatabaseDriver } from './drivers/types';
+import { createDatabaseDriver, resolveDatabaseDriverType } from './drivers';
 
 import { Logger, InvectDatabaseConfig } from 'src/types/schemas';
 
@@ -17,32 +16,35 @@ import { Logger, InvectDatabaseConfig } from 'src/types/schemas';
  * Drizzle SQLite ORM instance type.
  * Covers both better-sqlite3 and libsql drivers (they share the same schema API).
  */
-type DrizzleSQLiteDb<S extends Record<string, unknown> = Record<string, unknown>> = ReturnType<typeof drizzleSQLite<S>>;
+type DrizzleSQLiteDb<S extends Record<string, unknown> = Record<string, unknown>> = ReturnType<
+  typeof drizzleSQLite<S>
+>;
 
 /**
  * Database connection type - discriminated union based on database type.
  *
- * The `sqlite` variant carries a `driver` handle that provides a uniform
- * async interface over the underlying engine (better-sqlite3 or libsql).
- * Use `connection.driver` instead of reaching into Drizzle's `$client`.
+ * Every variant carries a `driver: DatabaseDriver` that provides a uniform
+ * async interface for raw SQL execution. Use `connection.driver` for raw
+ * queries instead of reaching into Drizzle's `$client`.
  */
 export type DatabaseConnection =
   | {
       type: 'postgresql';
       db: ReturnType<typeof drizzle<typeof postgresqlSchema>>;
       schema: typeof postgresqlSchema;
+      driver: DatabaseDriver;
     }
   | {
       type: 'sqlite';
       db: DrizzleSQLiteDb<typeof sqliteSchema>;
       schema: typeof sqliteSchema;
-      /** Unified async driver — use this for raw SQL instead of $client. */
-      driver: SqliteDriver;
+      driver: DatabaseDriver;
     }
   | {
       type: 'mysql';
       db: ReturnType<typeof drizzleMySQL<typeof mysqlSchema>>;
       schema: typeof mysqlSchema;
+      driver: DatabaseDriver;
     };
 
 /**
@@ -53,17 +55,19 @@ export type QueryDatabaseConnection =
       type: 'postgresql';
       db: ReturnType<typeof drizzle>;
       config: InvectDatabaseConfig;
+      driver: DatabaseDriver;
     }
   | {
       type: 'sqlite';
       db: DrizzleSQLiteDb;
       config: InvectDatabaseConfig;
-      driver: SqliteDriver;
+      driver: DatabaseDriver;
     }
   | {
       type: 'mysql';
       db: ReturnType<typeof drizzleMySQL>;
       config: InvectDatabaseConfig;
+      driver: DatabaseDriver;
     };
 
 /**
@@ -93,11 +97,13 @@ export class DatabaseConnectionFactory {
 
     switch (dbConfig.type) {
       case 'postgresql': {
-        const pgDb = await this.createPostgreSQLConnection(dbConfig, logger);
+        const driver = await createDatabaseDriver(dbConfig, logger);
+        const pgDb = await this.createPostgreSQLConnection(dbConfig, driver, logger);
         connection = {
           type: 'postgresql',
           db: pgDb,
           schema: postgresqlSchema,
+          driver,
         };
         break;
       }
@@ -112,11 +118,13 @@ export class DatabaseConnectionFactory {
         break;
       }
       case 'mysql': {
-        const mysqlDb = await this.createMySQLConnection(dbConfig, logger);
+        const driver = await createDatabaseDriver(dbConfig, logger);
+        const mysqlDb = await this.createMySQLConnection(dbConfig, driver, logger);
         connection = {
           type: 'mysql',
           db: mysqlDb,
           schema: mysqlSchema,
+          driver,
         };
         break;
       }
@@ -151,11 +159,13 @@ export class DatabaseConnectionFactory {
 
     switch (dbConfig.type) {
       case 'postgresql': {
-        const pgDb = await this.createPostgreSQLQueryConnection(dbConfig, logger);
+        const driver = await createDatabaseDriver(dbConfig, logger);
+        const pgDb = await this.createPostgreSQLQueryConnection(dbConfig, driver, logger);
         connection = {
           type: 'postgresql',
           db: pgDb,
           config: dbConfig,
+          driver,
         };
         break;
       }
@@ -170,11 +180,13 @@ export class DatabaseConnectionFactory {
         break;
       }
       case 'mysql': {
-        const mysqlDb = await this.createMySQLQueryConnection(dbConfig, logger);
+        const driver = await createDatabaseDriver(dbConfig, logger);
+        const mysqlDb = await this.createMySQLQueryConnection(dbConfig, driver, logger);
         connection = {
           type: 'mysql',
           db: mysqlDb,
           config: dbConfig,
+          driver,
         };
         break;
       }
@@ -212,7 +224,7 @@ export class DatabaseConnectionFactory {
 
   /**
    * Helper method to configure SQLite database pragmas via better-sqlite3.
-   * Only used for the legacy better-sqlite3 direct path; the SqliteDriver
+   * Only used for the better-sqlite3 direct Drizzle path; the DatabaseDriver
    * abstraction handles pragmas internally.
    */
   private static configureSQLitePragmas(client: InstanceType<typeof Database>): void {
@@ -222,102 +234,98 @@ export class DatabaseConnectionFactory {
   }
 
   /**
-   * Helper method to test PostgreSQL connection
-   */
-  private static async testPostgreSQLConnection(
-    client: postgres.Sql,
-    logger: Logger,
-    isQuery: boolean = false,
-    configId?: string,
-  ): Promise<void> {
-    try {
-      await client`SELECT 1`;
-      const message = isQuery
-        ? 'PostgreSQL query connection established successfully'
-        : 'PostgreSQL connection established successfully';
-      const logData = isQuery && configId ? { id: configId } : undefined;
-      logger.info(message, logData);
-    } catch (error) {
-      const errorMessage = isQuery
-        ? 'Failed to connect to PostgreSQL query database'
-        : 'Failed to connect to PostgreSQL';
-      logger.error(errorMessage, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Helper method to test MySQL connection
-   */
-  private static async testMySQLConnection(
-    connection: mysql.Pool,
-    logger: Logger,
-    isQuery: boolean = false,
-    configId?: string,
-  ): Promise<void> {
-    try {
-      await connection.execute('SELECT 1');
-      const message = isQuery
-        ? 'MySQL query connection established successfully'
-        : 'MySQL connection established successfully';
-      const logData = isQuery && configId ? { id: configId } : undefined;
-      logger.info(message, logData);
-    } catch (error) {
-      const errorMessage = isQuery
-        ? 'Failed to connect to MySQL query database'
-        : 'Failed to connect to MySQL';
-      logger.error(errorMessage, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Create PostgreSQL connection
+   * Create PostgreSQL Drizzle ORM instance.
+   *
+   * The `driver` has already been created and tested. We create a *second*
+   * client handle for Drizzle because each Drizzle adapter constructor
+   * expects its own driver-specific client. The `DatabaseDriver` and the
+   * Drizzle instance share the same underlying connection pool/endpoint.
    */
   private static async createPostgreSQLConnection(
     config: InvectDatabaseConfig,
+    driver: DatabaseDriver,
     logger: Logger,
   ): Promise<ReturnType<typeof drizzle<typeof postgresqlSchema>>> {
-    const client = postgres(config.connectionString, {
-      onnotice: (notice) => logger.debug('PostgreSQL notice', notice),
-    });
+    return this.createDrizzlePostgresDb(
+      config,
+      driver,
+      logger,
+      postgresqlSchema,
+    ) as unknown as ReturnType<typeof drizzle<typeof postgresqlSchema>>;
+  }
 
-    const db = drizzle(client, { schema: postgresqlSchema });
+  /**
+   * Create a Drizzle PostgreSQL instance for the given driver type.
+   * Dynamically imports the correct Drizzle adapter so unused packages
+   * are never loaded.
+   */
+  private static async createDrizzlePostgresDb(
+    config: InvectDatabaseConfig,
+    driver: DatabaseDriver,
+    logger: Logger,
+    schema?: Record<string, unknown>,
+  ): Promise<unknown> {
+    switch (driver.type) {
+      case 'postgres': {
+        const postgres = (await import('postgres')).default;
+        const client = postgres(config.connectionString, {
+          onnotice: (notice: unknown) => logger.debug('PostgreSQL notice', notice),
+        });
+        return schema ? drizzle(client, { schema }) : drizzle(client);
+      }
+      case 'pg': {
+        const { Pool } = await import('pg');
+        const { drizzle: drizzleNodePg } = await import('drizzle-orm/node-postgres');
+        const pool = new Pool({ connectionString: config.connectionString });
+        return schema ? drizzleNodePg(pool, { schema }) : drizzleNodePg(pool);
+      }
+      case 'neon-serverless': {
+        // @ts-ignore — @neondatabase/serverless is an optional dependency
+        const neonMod = await import('@neondatabase/serverless');
+        const { drizzle: drizzleNeon } = await import('drizzle-orm/neon-serverless');
 
-    // Test connection
-    await this.testPostgreSQLConnection(client, logger);
-
-    return db;
+        const pool = new (neonMod.Pool as new (o: Record<string, unknown>) => unknown)({
+          connectionString: config.connectionString,
+        });
+        return schema ? drizzleNeon(pool, { schema }) : drizzleNeon(pool);
+      }
+      default:
+        throw new Error(`Unsupported PostgreSQL driver type: ${driver.type}`);
+    }
   }
 
   /**
    * Create SQLite connection.
    *
-   * Resolves the driver type from config (better-sqlite3 or libsql), creates
-   * both the Drizzle ORM instance and the raw `SqliteDriver` handle.
+   * Resolves the driver type from config, creates
+   * both the Drizzle ORM instance and the raw DatabaseDriver handle.
    */
   private static async createSQLiteConnection(
     config: InvectDatabaseConfig,
     logger: Logger,
   ): Promise<{
     db: DrizzleSQLiteDb<typeof sqliteSchema>;
-    driver: SqliteDriver;
+    driver: DatabaseDriver;
   }> {
     const filePath = this.prepareSQLiteFilePath(config.connectionString, logger);
-    const driverType = resolveSqliteDriverType(config);
+    const driverType = resolveDatabaseDriverType(config);
 
     // Create the unified driver (handles pragmas internally).
-    const driver = await createSqliteDriver(config, filePath, logger);
+    const driver = await createDatabaseDriver(config, logger, filePath);
 
     let db: DrizzleSQLiteDb<typeof sqliteSchema>;
 
     if (driverType === 'libsql') {
       const { createClient } = await import('@libsql/client');
       const { drizzle: drizzleLibSQL } = await import('drizzle-orm/libsql');
-      const isRemote = config.connectionString.startsWith('libsql://') || config.connectionString.startsWith('https://');
+      const isRemote =
+        config.connectionString.startsWith('libsql://') ||
+        config.connectionString.startsWith('https://');
       const url = isRemote ? config.connectionString : `file:${filePath}`;
       const client = createClient({ url });
-      db = drizzleLibSQL(client, { schema: sqliteSchema }) as unknown as DrizzleSQLiteDb<typeof sqliteSchema>;
+      db = drizzleLibSQL(client, { schema: sqliteSchema }) as unknown as DrizzleSQLiteDb<
+        typeof sqliteSchema
+      >;
     } else {
       const dbPath = filePath === ':memory:' ? ':memory:' : filePath;
       const client = new Database(dbPath);
@@ -332,19 +340,19 @@ export class DatabaseConnectionFactory {
   }
 
   /**
-   * Create MySQL connection
+   * Create MySQL Drizzle ORM instance.
+   *
+   * The `driver` has already been created and tested.
    */
   private static async createMySQLConnection(
     config: InvectDatabaseConfig,
+    _driver: DatabaseDriver,
     logger: Logger,
   ): Promise<ReturnType<typeof drizzleMySQL<typeof mysqlSchema>>> {
+    const mysql = await import('mysql2/promise');
     const connection = mysql.createPool(config.connectionString);
-
     const db = drizzleMySQL(connection, { schema: mysqlSchema, mode: 'default' });
-
-    // Test connection
-    await this.testMySQLConnection(connection, logger);
-
+    logger.debug('MySQL Drizzle ORM instance created');
     return db as unknown as ReturnType<typeof drizzleMySQL<typeof mysqlSchema>>;
   }
 
@@ -353,18 +361,12 @@ export class DatabaseConnectionFactory {
    */
   private static async createPostgreSQLQueryConnection(
     config: InvectDatabaseConfig,
+    driver: DatabaseDriver,
     logger: Logger,
   ): Promise<ReturnType<typeof drizzle>> {
-    const client = postgres(config.connectionString, {
-      onnotice: (notice) => logger.debug('PostgreSQL notice', notice),
-    });
-
-    const db = drizzle(client);
-
-    // Test connection
-    await this.testPostgreSQLConnection(client, logger, true, config.id);
-
-    return db;
+    return this.createDrizzlePostgresDb(config, driver, logger) as unknown as ReturnType<
+      typeof drizzle
+    >;
   }
 
   /**
@@ -375,19 +377,21 @@ export class DatabaseConnectionFactory {
     logger: Logger,
   ): Promise<{
     db: DrizzleSQLiteDb;
-    driver: SqliteDriver;
+    driver: DatabaseDriver;
   }> {
     const filePath = this.prepareSQLiteFilePath(config.connectionString, logger);
-    const driverType = resolveSqliteDriverType(config);
+    const driverType = resolveDatabaseDriverType(config);
 
-    const driver = await createSqliteDriver(config, filePath, logger);
+    const driver = await createDatabaseDriver(config, logger, filePath);
 
     let db: DrizzleSQLiteDb;
 
     if (driverType === 'libsql') {
       const { createClient } = await import('@libsql/client');
       const { drizzle: drizzleLibSQL } = await import('drizzle-orm/libsql');
-      const isRemote = config.connectionString.startsWith('libsql://') || config.connectionString.startsWith('https://');
+      const isRemote =
+        config.connectionString.startsWith('libsql://') ||
+        config.connectionString.startsWith('https://');
       const url = isRemote ? config.connectionString : `file:${filePath}`;
       const client = createClient({ url });
       db = drizzleLibSQL(client) as unknown as DrizzleSQLiteDb;
@@ -407,15 +411,13 @@ export class DatabaseConnectionFactory {
    */
   private static async createMySQLQueryConnection(
     config: InvectDatabaseConfig,
+    _driver: DatabaseDriver,
     logger: Logger,
   ): Promise<ReturnType<typeof drizzleMySQL>> {
+    const mysql = await import('mysql2/promise');
     const connection = mysql.createPool(config.connectionString);
-
     const db = drizzleMySQL(connection, { mode: 'default' });
-
-    // Test connection
-    await this.testMySQLConnection(connection, logger, true, config.id);
-
+    logger.debug('MySQL Drizzle query instance created');
     return db as unknown as ReturnType<typeof drizzleMySQL>;
   }
 

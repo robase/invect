@@ -10,7 +10,7 @@
  * Drizzle Kit manages everything together.
  */
 
-import { pgTable, text, integer, boolean, doublePrecision, timestamp, json, primaryKey, pgEnum, uuid, bigint, type AnyPgColumn } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, boolean, doublePrecision, timestamp, json, primaryKey, pgEnum, uuid, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
