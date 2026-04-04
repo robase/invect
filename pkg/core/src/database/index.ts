@@ -1,5 +1,7 @@
 // Database layer exports for Invect core
 export * from './connection';
+export type { SqliteDriver, SqliteDriverType } from './sqlite-driver';
+export { resolveSqliteDriverType } from './sqlite-driver';
 
 // Re-export database schema types
 export type {

@@ -53,8 +53,7 @@ function createPluginDatabaseApi(core: Invect) {
         return await client.unsafe<T>(normalizeSql(statement), params);
       }
       case 'sqlite': {
-        const client = (connection.db as unknown as { $client: SqliteClientLike }).$client;
-        return client.prepare(statement).all(...params) as T[];
+        return await connection.driver.queryAll(statement, params) as T[];
       }
       case 'mysql': {
         const client = (connection.db as unknown as { $client: MysqlClientLike }).$client;
@@ -77,10 +76,9 @@ function createPluginDatabaseApi(core: Invect) {
           return;
         }
         case 'sqlite': {
-          const client = (connection.db as unknown as { $client: SqliteClientLike }).$client;
-          // better-sqlite3 doesn't accept booleans — coerce to 0/1
+          // Coerce booleans to 0/1 for SQLite compatibility
           const coerced = params.map((p) => (typeof p === 'boolean' ? (p ? 1 : 0) : p));
-          client.prepare(statement).run(...coerced);
+          await connection.driver.execute(statement, coerced);
           return;
         }
         case 'mysql': {

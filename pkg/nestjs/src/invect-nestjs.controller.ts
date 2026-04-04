@@ -130,8 +130,7 @@ function createPluginDatabaseApi(invect: Invect) {
         return await client.unsafe<T>(normalizeSql(statement), params);
       }
       case 'sqlite': {
-        const client = (connection.db as unknown as { $client: SqliteClientLike }).$client;
-        return client.prepare(statement).all(...params) as T[];
+        return await connection.driver.queryAll(statement, params) as T[];
       }
       case 'mysql': {
         const client = (connection.db as unknown as { $client: MysqlClientLike }).$client;

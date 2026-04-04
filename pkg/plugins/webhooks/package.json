@@ -25,7 +25,7 @@
     "plugin",
     "workflow"
   ],
-  "author": "Invect Team",
+  "author": "robase <team@invect.dev>",
   "license": "MIT",
   "dependencies": {
     "@invect/core": "workspace:*"

@@ -47,7 +47,7 @@
     "dagre",
     "graph"
   ],
-  "author": "robase",
+  "author": "robase <team@invect.dev>",
   "license": "MIT",
   "repository": {
     "type": "git",

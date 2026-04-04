@@ -49,7 +49,7 @@
     "migration",
     "drizzle"
   ],
-  "author": "robase",
+  "author": "robase <team@invect.dev>",
   "license": "MIT",
   "repository": {
     "type": "git",

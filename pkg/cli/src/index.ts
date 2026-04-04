@@ -36,7 +36,8 @@ async function main() {
 
   program
     .description('CLI for managing Invect workflow engine projects')
-    .version('0.1.0');
+    .version('0.1.0')
+    .option('--debug', 'Show detailed error messages and stack traces');
 
   program
     .addCommand(generateCommand)

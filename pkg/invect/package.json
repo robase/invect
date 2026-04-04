@@ -18,7 +18,7 @@
     "workflow",
     "automation"
   ],
-  "author": "robase",
+  "author": "robase <team@invect.dev>",
   "license": "MIT",
   "repository": {
     "type": "git",

@@ -20,6 +20,16 @@ import { produceSchema } from '@mrleebo/prisma-ast';
 import type { PrismaProvider } from '@invect/core';
 import type { SchemaGeneratorResult } from './types.js';
 
+function isDebug(): boolean {
+  return process.argv.includes('--debug');
+}
+
+function debug(...args: unknown[]) {
+  if (isDebug()) {
+    console.log(`  [debug] ${args.map(a => typeof a === 'string' ? a : JSON.stringify(a, null, 2)).join(' ')}`);
+  }
+}
+
 // =============================================================================
 // Prisma Version Detection (mirrors better-auth's getPrismaVersion)
 // =============================================================================
@@ -89,6 +99,11 @@ export async function generatePrismaSchema(
   // Merge core + plugin schemas
   const mergedSchema = mergeSchemas(options.plugins as any);
 
+  debug('mergeSchemas result:', {
+    tableCount: mergedSchema.tables?.length ?? 0,
+    tableNames: mergedSchema.tables?.map((t: any) => t.name),
+  });
+
   const provider = options.provider || 'postgresql';
   const filePath = options.file || './prisma/schema.prisma';
   const fileExists = existsSync(filePath);
@@ -98,7 +113,9 @@ export async function generatePrismaSchema(
   if (fileExists) {
     // Existing schema — merge Invect models into it
     const existingContent = readFileSync(filePath, 'utf-8');
+    debug('Existing schema length:', existingContent.length);
     code = mergeIntoExistingSchema(existingContent, mergedSchema, provider);
+    debug('Merged schema length:', code.length);
   } else {
     // No existing schema — create a minimal base and merge into it.
     // This ensures the output format is identical to subsequent runs
@@ -356,7 +373,7 @@ function createPrismaModel(
   if (definition.compositePrimaryKey?.length) {
     builder
       .model(modelName)
-      .blockAttribute('id', `[${definition.compositePrimaryKey.join(', ')}]`);
+      .blockAttribute(`id([${definition.compositePrimaryKey.join(', ')}])`);
   }
 
   const dbTableName = definition.tableName || toSnakeCase(table.name);

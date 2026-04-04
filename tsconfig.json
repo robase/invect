@@ -39,11 +39,29 @@
     "docs",
     "playwright",
     "playwright-report",
+    "test-results",
     "scripts",
     "coverage",
     ".next",
+    ".react-router",
     "drizzle",
     "**/*.test.ts",
     "**/*.spec.ts"
-  ]
+  ],
+  "watchOptions": {
+    "watchFile": "useFsEvents",
+    "watchDirectory": "useFsEvents",
+    "fallbackPolling": "dynamicPriority",
+    "excludeDirectories": [
+      "**/.git",
+      "**/.next",
+      "**/.react-router",
+      "**/coverage",
+      "**/dist",
+      "**/drizzle",
+      "**/node_modules",
+      "**/playwright-report",
+      "**/test-results"
+    ]
+  }
 }

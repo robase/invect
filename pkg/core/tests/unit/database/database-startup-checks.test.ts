@@ -47,27 +47,26 @@ function mockConnectionFactory(opts: {
   // Mock the connection object returned by the factory
   const mockConnection = {
     type: 'sqlite' as const,
-    db: {
-      $client: {
-        prepare: vi.fn().mockImplementation((sql: string) => ({
-          get: () => {
-            if (queryError) throw queryError;
-            if (sql.includes('SELECT 1')) {
-              return { health: 1 };
-            }
-            return undefined;
-          },
-          all: () => {
-            if (queryError) throw queryError;
-            if (sql.includes('sqlite_master')) {
-              return tables.map((name) => ({ name }));
-            }
-            return [];
-          },
-        })),
-      },
-    },
+    db: {},
     schema: {},
+    driver: {
+      type: 'better-sqlite3' as const,
+      async queryAll(sql: string) {
+        if (queryError) throw queryError;
+        if (sql.includes('SELECT 1') || sql.includes('health')) {
+          return [{ health: 1 }];
+        }
+        if (sql.includes('sqlite_master')) {
+          return tables.map((name: string) => ({ name }));
+        }
+        return [];
+      },
+      async execute() {
+        if (queryError) throw queryError;
+        return { changes: 0 };
+      },
+      close() {},
+    },
   };
 
   // Mock the factory

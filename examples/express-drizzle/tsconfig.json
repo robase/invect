@@ -16,5 +16,19 @@
     "types": ["node"]
   },
   "include": ["*.ts", "db/**/*.ts", "lib/**/*.ts", "seed/**/*"],
-  "exclude": ["node_modules", "dist", "drizzle"]
+  "exclude": ["node_modules", "dist", "drizzle", "coverage", "playwright-report", "test-results"],
+  "watchOptions": {
+    "watchFile": "useFsEvents",
+    "watchDirectory": "useFsEvents",
+    "fallbackPolling": "dynamicPriority",
+    "excludeDirectories": [
+      "**/.git",
+      "**/coverage",
+      "**/dist",
+      "**/drizzle",
+      "**/node_modules",
+      "**/playwright-report",
+      "**/test-results"
+    ]
+  }
 }

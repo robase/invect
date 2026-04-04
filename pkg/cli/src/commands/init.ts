@@ -21,6 +21,30 @@ import { execSync } from 'node:child_process';
 import pc from 'picocolors';
 import prompts from 'prompts';
 
+function isDebug(): boolean {
+  return process.argv.includes('--debug');
+}
+
+function debug(...args: unknown[]) {
+  if (isDebug()) {
+    console.log(pc.dim(`  [debug] ${args.map(a => typeof a === 'string' ? a : JSON.stringify(a, null, 2)).join(' ')}`));
+  }
+}
+
+function debugError(label: string, error: unknown) {
+  if (isDebug()) {
+    console.error(pc.yellow(`  [debug] ${label}:`));
+    if (error instanceof Error) {
+      console.error(pc.dim(`    ${error.message}`));
+      if (error.stack) {
+        console.error(pc.dim(error.stack.split('\n').slice(1).map(l => `    ${l.trim()}`).join('\n')));
+      }
+    } else {
+      console.error(pc.dim(`    ${String(error)}`));
+    }
+  }
+}
+
 // =============================================================================
 // Constants
 // =============================================================================
@@ -59,9 +83,10 @@ const FRAMEWORKS = [
 type Framework = (typeof FRAMEWORKS)[number];
 
 const DATABASES = [
-  { name: 'SQLite', id: 'sqlite', dependency: 'better-sqlite3' },
-  { name: 'PostgreSQL', id: 'postgresql', dependency: 'postgres' },
-  { name: 'MySQL', id: 'mysql', dependency: 'mysql2' },
+  { name: 'SQLite', id: 'sqlite', dependency: 'better-sqlite3', driver: 'better-sqlite3' as const, description: undefined, alsoDetect: [] as string[] },
+  { name: 'SQLite (libsql)', id: 'sqlite', dependency: '@libsql/client', driver: 'libsql' as const, description: '(serverless, edge or Turso)', alsoDetect: [] as string[] },
+  { name: 'PostgreSQL', id: 'postgresql', dependency: 'postgres', driver: undefined, description: undefined, alsoDetect: ['pg', '@neondatabase/serverless', '@vercel/postgres'] },
+  { name: 'MySQL', id: 'mysql', dependency: 'mysql2', driver: undefined, description: undefined, alsoDetect: ['mysql'] },
 ] as const;
 
 type Database = (typeof DATABASES)[number];
@@ -86,7 +111,8 @@ export const initCommand = new Command('init')
     '--package-manager <pm>',
     'Package manager (npm, pnpm, yarn, bun)',
   )
-  .action(async (options: { framework?: string; database?: string; packageManager?: string }) => {
+  .option('--debug', 'Show detailed error messages and stack traces')
+  .action(async (options: { framework?: string; database?: string; packageManager?: string; debug?: boolean }) => {
     // Header
     console.log(
       '\n' +
@@ -150,15 +176,29 @@ export const initCommand = new Command('init')
 
     let database: Database;
     if (options.database) {
-      database = DATABASES.find((d) => d.id === options.database) || DATABASES[0]!;
+      // Support --database libsql as a shorthand for sqlite + libsql driver
+      if (options.database === 'libsql') {
+        database = DATABASES.find((d) => d.driver === 'libsql')!;
+      } else {
+        database = DATABASES.find((d) => d.id === options.database && d.driver !== 'libsql') || DATABASES[0]!;
+      }
     } else {
-      // Try auto-detection
-      const detected = DATABASES.find((d) => d.dependency in allDeps);
+      // Try auto-detection — check both the exact driver package and common alternatives
+      const detected = DATABASES.find(
+        (d) =>
+          d.dependency in allDeps ||
+          d.alsoDetect.some((alt) => alt in allDeps),
+      );
       if (detected) {
-        console.log(pc.dim(`  Detected: ${detected.name}`));
+        // Show which package triggered the detection
+        const matchedPkg =
+          detected.dependency in allDeps
+            ? detected.dependency
+            : detected.alsoDetect.find((alt) => alt in allDeps) ?? detected.dependency;
+        console.log(pc.dim(`  Detected: ${detected.name} (found ${matchedPkg})`));
         database = detected;
       } else {
-        database = await askDatabase();
+        database = await askDatabase(framework);
       }
     }
 
@@ -225,20 +265,21 @@ export const initCommand = new Command('init')
     const depsToInstall: string[] = ['@invect/core'];
     const devDepsToInstall: string[] = ['@invect/cli'];
 
-    // Database driver
-    if (!(database.dependency in allDeps)) {
+    // @invect/core ships postgres, better-sqlite3, mysql2, and @libsql/client
+    // as direct dependencies, so they're installed transitively.
+    // Only install the driver explicitly if it's NOT a core dependency
+    // (currently all supported drivers are, so this is a no-op — but future-proofs
+    // against drivers being moved to peerDependencies).
+    const coreShippedDrivers = ['postgres', 'better-sqlite3', 'mysql2', '@libsql/client'];
+    if (!(database.dependency in allDeps) && !coreShippedDrivers.includes(database.dependency)) {
       depsToInstall.push(database.dependency);
     }
 
-    // ORM-specific dependencies
-    if (schemaTool.id === 'drizzle') {
-      if (!('drizzle-orm' in allDeps)) depsToInstall.push('drizzle-orm');
-      if (!('drizzle-kit' in allDeps)) devDepsToInstall.push('drizzle-kit');
-    } else if (schemaTool.id === 'prisma') {
+    // Prisma packages when user chooses Prisma for schema management
+    if (schemaTool.id === 'prisma') {
       if (!('prisma' in allDeps)) devDepsToInstall.push('prisma');
       if (!('@prisma/client' in allDeps)) depsToInstall.push('@prisma/client');
     }
-    // Raw SQL: no extra ORM deps
 
     // Framework adapter
     if (framework.adapterPackage && !(framework.adapterPackage in allDeps)) {
@@ -279,12 +320,13 @@ export const initCommand = new Command('init')
         }
 
         installSucceeded = true;
-      } catch {
+      } catch (error) {
         console.error(pc.yellow('  ⚠ Package installation failed. You can install manually later:'));
         console.log(pc.dim(`    ${getInstallCommand(pm, depsToInstall, false)}`));
         if (devDepsToInstall.length > 0) {
           console.log(pc.dim(`    ${getInstallCommand(pm, devDepsToInstall, true)}`));
         }
+        debugError('Package installation error', error);
       }
     }
 
@@ -357,12 +399,15 @@ export const initCommand = new Command('init')
       initial: true,
     });
 
+    debug('shouldGenerate =', shouldGenerate);
+
     if (shouldGenerate) {
       try {
         const { generateAction } = await import('./generate.js');
         const outputDir = configDir === 'src' ? './src/database' : './database';
 
         if (schemaTool.id === 'sql') {
+          debug('Running SQL generate mode');
           await generateAction({
             config: configPath,
             output: '.',
@@ -371,6 +416,11 @@ export const initCommand = new Command('init')
             yes: true,
           });
         } else if (schemaTool.id === 'prisma') {
+          debug('Running Prisma generate mode', {
+            config: configPath,
+            schema: existingSchemaPath,
+            dialect: database.id,
+          });
           await generateAction({
             config: configPath,
             output: '',
@@ -380,6 +430,7 @@ export const initCommand = new Command('init')
             yes: true,
           });
         } else {
+          debug('Running Drizzle generate mode', { output: outputDir, dialect: database.id });
           await generateAction({
             config: configPath,
             output: outputDir,
@@ -393,6 +444,7 @@ export const initCommand = new Command('init')
             '\n' +
             pc.dim(`    npx invect-cli generate\n`),
         );
+        debugError('Schema generation error', error);
       }
     } else {
       console.log(
@@ -471,23 +523,28 @@ async function askFramework(): Promise<Framework> {
   return FRAMEWORKS.find((f) => f.id === framework)!;
 }
 
-async function askDatabase(): Promise<Database> {
+async function askDatabase(framework?: Framework): Promise<Database> {
+  // For Next.js, exclude native better-sqlite3 but keep libsql (pure JS/WASM)
+  const available = framework?.id === 'nextjs'
+    ? DATABASES.filter((d) => !(d.id === 'sqlite' && d.driver === 'better-sqlite3'))
+    : [...DATABASES];
+
   const { database } = await prompts({
     type: 'select',
     name: 'database',
     message: 'Which database will you use?',
-    choices: DATABASES.map((d) => ({
-      title: d.name,
-      value: d.id,
+    choices: available.map((d) => ({
+      title: 'description' in d && d.description ? `${d.name} — ${d.description}` : d.name,
+      value: available.indexOf(d),
     })),
   });
 
-  if (!database) {
+  if (database === undefined) {
     console.log(pc.dim('\n  Cancelled.\n'));
     process.exit(0);
   }
 
-  return DATABASES.find((d) => d.id === database)!;
+  return available[database as number]!;
 }
 
 async function askSchemaTool(): Promise<SchemaTool> {
@@ -515,20 +572,30 @@ async function askSchemaTool(): Promise<SchemaTool> {
 // =============================================================================
 
 function generateConfigFile(framework: Framework, database: Database): string {
-  const dbConfigMap: Record<string, string> = {
-    sqlite: `  baseDatabaseConfig: {
+  let dbConfig: string;
+
+  if (database.id === 'sqlite' && database.driver === 'libsql') {
+    dbConfig = `  baseDatabaseConfig: {
+    type: 'sqlite',
+    driver: 'libsql',
+    connectionString: 'file:./dev.db',
+  },`;
+  } else if (database.id === 'sqlite') {
+    dbConfig = `  baseDatabaseConfig: {
     type: 'sqlite',
     connectionString: 'file:./dev.db',
-  },`,
-    postgresql: `  baseDatabaseConfig: {
+  },`;
+  } else if (database.id === 'postgresql') {
+    dbConfig = `  baseDatabaseConfig: {
     type: 'postgresql',
     connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/invect',
-  },`,
-    mysql: `  baseDatabaseConfig: {
+  },`;
+  } else {
+    dbConfig = `  baseDatabaseConfig: {
     type: 'mysql',
     connectionString: process.env.DATABASE_URL || 'mysql://root@localhost:3306/invect',
-  },`,
-  };
+  },`;
+  }
 
   const adapterImport = framework.adapterPackage
     ? `// import { ... } from '${framework.adapterPackage}';\n`
@@ -544,7 +611,7 @@ function generateConfigFile(framework: Framework, database: Database): string {
  */
 
 ${adapterImport}export default {
-${dbConfigMap[database.id]}
+${dbConfig}
 
   // Add plugins here
   // plugins: [],

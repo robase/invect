@@ -43,7 +43,7 @@
     "typescript",
     "components"
   ],
-  "author": "robase",
+  "author": "robase <team@invect.dev>",
   "license": "MIT",
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.0",

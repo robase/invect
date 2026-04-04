@@ -2,7 +2,7 @@
   "name": "nest-prisma",
   "version": "0.0.1",
   "description": "Acme SaaS — NestJS + Prisma + PostgreSQL example with Invect integration",
-  "author": "",
+  "author": "robase <team@invect.dev>",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {

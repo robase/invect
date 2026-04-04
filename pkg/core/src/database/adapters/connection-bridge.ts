@@ -17,6 +17,7 @@ import {
   SqliteQueryCompiler,
 } from 'kysely';
 import type { DatabaseConnection } from '../connection';
+import type { SqliteDriver } from '../sqlite-driver';
 import type { InvectAdapter, AdapterConfig } from '../adapter';
 import { createKyselyAdapter } from './kysely-adapter';
 import { createInvectAdapterFactory } from '../adapter-factory';
@@ -48,14 +49,14 @@ export function createAdapterFromConnection(connection: DatabaseConnection): Inv
 function createKyselyFromConnection(connection: DatabaseConnection): KyselyDb {
   switch (connection.type) {
     case 'sqlite': {
-      // Drizzle's better-sqlite3 driver exposes $client which is a Database instance.
-      // We wrap it as a Kysely SqliteDialect driver.
-      const sqliteDb = (connection.db as unknown as { $client: BetterSqlite3Database }).$client;
+      // Use the unified SqliteDriver from the connection instead of
+      // reaching into $client. Works with both better-sqlite3 and libsql.
+      const sqliteDriver = connection.driver;
 
       return new Kysely({
         dialect: {
           createAdapter: () => new SqliteAdapter(),
-          createDriver: () => createBetterSqlite3Driver(sqliteDb),
+          createDriver: () => createSqliteKyselyDriver(sqliteDriver),
           createIntrospector: (db: Kysely<unknown>) => new SqliteIntrospector(db),
           createQueryCompiler: () => new SqliteQueryCompiler(),
         } as never,
@@ -92,14 +93,6 @@ function createKyselyFromConnection(connection: DatabaseConnection): KyselyDb {
 // Type stubs for underlying clients (avoid importing full packages)
 // ---------------------------------------------------------------------------
 
-interface BetterSqlite3Database {
-  prepare(sql: string): {
-    all(...params: unknown[]): Record<string, unknown>[];
-    run(...params: unknown[]): { changes: number; lastInsertRowid: number | bigint };
-  };
-  exec(sql: string): void;
-}
-
 interface PgClient {
   <T = Record<string, unknown>[]>(strings: TemplateStringsArray, ...values: unknown[]): Promise<T>;
   (query: string): Promise<Record<string, unknown>[]>;
@@ -119,35 +112,36 @@ async function noopAsync(): Promise<void> {
   return undefined;
 }
 
-function createBetterSqlite3Driver(db: BetterSqlite3Database) {
+/**
+ * Create a Kysely driver that delegates to the unified SqliteDriver interface.
+ * Works with both better-sqlite3 and libsql transparently.
+ */
+function createSqliteKyselyDriver(driver: SqliteDriver) {
   return {
     init: noopAsync,
     async acquireConnection() {
       return {
         executeQuery: async (compiledQuery: { sql: string; parameters: unknown[] }) => {
-          // Detect if this is a SELECT/RETURNING query or a mutation
           const sql = compiledQuery.sql.trimStart();
           const isSelect = /^(SELECT|PRAGMA|WITH|EXPLAIN)/i.test(sql);
           const hasReturning = /\bRETURNING\b/i.test(sql);
 
           if (isSelect || hasReturning) {
-            const rows = db.prepare(compiledQuery.sql).all(...compiledQuery.parameters);
+            const rows = await driver.queryAll(compiledQuery.sql, compiledQuery.parameters);
             return {
               rows,
               numAffectedRows: BigInt(rows.length),
             };
           } else {
-            const result = db.prepare(compiledQuery.sql).run(...compiledQuery.parameters);
+            const result = await driver.execute(compiledQuery.sql, compiledQuery.parameters);
             return {
               rows: [],
               numAffectedRows: BigInt(result.changes),
-              insertId:
-                result.lastInsertRowid !== undefined ? BigInt(result.lastInsertRowid) : undefined,
             };
           }
         },
         streamQuery: () => {
-          throw new Error('Streaming not supported with better-sqlite3 driver');
+          throw new Error('Streaming not supported with SQLite driver bridge');
         },
       };
     },

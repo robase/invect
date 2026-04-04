@@ -40,6 +40,7 @@
   ],
   "scripts": {
     "build": "pnpm --filter '@invect/*' run build",
+    "link:all": "pnpm build && pnpm --filter '@invect/*' exec npm link",
     "build:core": "pnpm --filter '@invect/core' run build",
     "build:frontend": "pnpm --filter '@invect/frontend' run build",
     "build:nestjs": "pnpm --filter '@invect/nestjs' run build",
@@ -88,7 +89,7 @@
     "Invect",
     "components"
   ],
-  "author": "robase",
+  "author": "robase <team@invect.dev>",
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0",

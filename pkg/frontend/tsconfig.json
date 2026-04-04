@@ -37,5 +37,18 @@
     "node_modules",
     "dist",
     "src/ui-v3/**"
-  ]
+  ],
+  "watchOptions": {
+    "watchFile": "useFsEvents",
+    "watchDirectory": "useFsEvents",
+    "fallbackPolling": "dynamicPriority",
+    "excludeDirectories": [
+      "**/.git",
+      "**/coverage",
+      "**/dist",
+      "**/node_modules",
+      "**/playwright-report",
+      "**/test-results"
+    ]
+  }
 }

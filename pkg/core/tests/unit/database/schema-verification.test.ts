@@ -57,25 +57,27 @@ function createMockSqliteConnection(
 ): DatabaseConnection {
   return {
     type: 'sqlite',
-    db: {
-      $client: {
-        prepare: vi.fn().mockImplementation((query: string) => ({
-          all: () => {
-            if (query.includes('sqlite_master')) {
-              return Object.keys(schema).map((name) => ({ name }));
-            }
-            if (query.includes('PRAGMA table_info')) {
-              const match = query.match(/table_info\('(.+?)'\)/);
-              const tableName = match?.[1] || '';
-              const columns = schema[tableName] || [];
-              return columns.map((name) => ({ name }));
-            }
-            return [];
-          },
-        })),
-      },
-    },
+    db: {} as unknown,
     schema: {} as unknown as DatabaseConnection['schema'],
+    driver: {
+      type: 'better-sqlite3' as const,
+      async queryAll(sql: string) {
+        if (sql.includes('sqlite_master')) {
+          return Object.keys(schema).map((name) => ({ name }));
+        }
+        if (sql.includes('PRAGMA table_info')) {
+          const match = sql.match(/table_info\('(.+?)'\)/);
+          const tableName = match?.[1] || '';
+          const columns = schema[tableName] || [];
+          return columns.map((name) => ({ name }));
+        }
+        return [];
+      },
+      async execute() {
+        return { changes: 0 };
+      },
+      close() {},
+    },
   } as unknown as DatabaseConnection;
 }
 

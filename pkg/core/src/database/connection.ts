@@ -9,11 +9,22 @@ import fs from 'fs';
 import path from 'path';
 
 import { sqliteSchema, mysqlSchema, postgresqlSchema } from './schema';
+import { type SqliteDriver, createSqliteDriver, resolveSqliteDriverType } from './sqlite-driver';
 
 import { Logger, InvectDatabaseConfig } from 'src/types/schemas';
 
 /**
- * Database connection type - discriminated union based on database type
+ * Drizzle SQLite ORM instance type.
+ * Covers both better-sqlite3 and libsql drivers (they share the same schema API).
+ */
+type DrizzleSQLiteDb<S extends Record<string, unknown> = Record<string, unknown>> = ReturnType<typeof drizzleSQLite<S>>;
+
+/**
+ * Database connection type - discriminated union based on database type.
+ *
+ * The `sqlite` variant carries a `driver` handle that provides a uniform
+ * async interface over the underlying engine (better-sqlite3 or libsql).
+ * Use `connection.driver` instead of reaching into Drizzle's `$client`.
  */
 export type DatabaseConnection =
   | {
@@ -23,8 +34,10 @@ export type DatabaseConnection =
     }
   | {
       type: 'sqlite';
-      db: ReturnType<typeof drizzleSQLite<typeof sqliteSchema>>;
+      db: DrizzleSQLiteDb<typeof sqliteSchema>;
       schema: typeof sqliteSchema;
+      /** Unified async driver — use this for raw SQL instead of $client. */
+      driver: SqliteDriver;
     }
   | {
       type: 'mysql';
@@ -43,8 +56,9 @@ export type QueryDatabaseConnection =
     }
   | {
       type: 'sqlite';
-      db: ReturnType<typeof drizzleSQLite>;
+      db: DrizzleSQLiteDb;
       config: InvectDatabaseConfig;
+      driver: SqliteDriver;
     }
   | {
       type: 'mysql';
@@ -88,11 +102,12 @@ export class DatabaseConnectionFactory {
         break;
       }
       case 'sqlite': {
-        const sqliteDb = await this.createSQLiteConnection(dbConfig, logger);
+        const { db: sqliteDb, driver } = await this.createSQLiteConnection(dbConfig, logger);
         connection = {
           type: 'sqlite',
           db: sqliteDb,
           schema: sqliteSchema,
+          driver,
         };
         break;
       }
@@ -145,11 +160,12 @@ export class DatabaseConnectionFactory {
         break;
       }
       case 'sqlite': {
-        const sqliteDb = await this.createSQLiteQueryConnection(dbConfig, logger);
+        const { db: sqliteDb, driver } = await this.createSQLiteQueryConnection(dbConfig, logger);
         connection = {
           type: 'sqlite',
           db: sqliteDb,
           config: dbConfig,
+          driver,
         };
         break;
       }
@@ -195,7 +211,9 @@ export class DatabaseConnectionFactory {
   }
 
   /**
-   * Helper method to configure SQLite database pragmas via better-sqlite3
+   * Helper method to configure SQLite database pragmas via better-sqlite3.
+   * Only used for the legacy better-sqlite3 direct path; the SqliteDriver
+   * abstraction handles pragmas internally.
    */
   private static configureSQLitePragmas(client: InstanceType<typeof Database>): void {
     client.pragma('journal_mode = WAL');
@@ -273,25 +291,44 @@ export class DatabaseConnectionFactory {
   }
 
   /**
-   * Create SQLite connection
+   * Create SQLite connection.
+   *
+   * Resolves the driver type from config (better-sqlite3 or libsql), creates
+   * both the Drizzle ORM instance and the raw `SqliteDriver` handle.
    */
   private static async createSQLiteConnection(
     config: InvectDatabaseConfig,
     logger: Logger,
-  ): Promise<ReturnType<typeof drizzleSQLite<typeof sqliteSchema>>> {
+  ): Promise<{
+    db: DrizzleSQLiteDb<typeof sqliteSchema>;
+    driver: SqliteDriver;
+  }> {
     const filePath = this.prepareSQLiteFilePath(config.connectionString, logger);
+    const driverType = resolveSqliteDriverType(config);
 
-    const dbPath = filePath === ':memory:' ? ':memory:' : filePath;
-    const client = new Database(dbPath);
-    this.configureSQLitePragmas(client);
+    // Create the unified driver (handles pragmas internally).
+    const driver = await createSqliteDriver(config, filePath, logger);
 
-    const db = drizzleSQLite(client, { schema: sqliteSchema });
+    let db: DrizzleSQLiteDb<typeof sqliteSchema>;
+
+    if (driverType === 'libsql') {
+      const { createClient } = await import('@libsql/client');
+      const { drizzle: drizzleLibSQL } = await import('drizzle-orm/libsql');
+      const isRemote = config.connectionString.startsWith('libsql://') || config.connectionString.startsWith('https://');
+      const url = isRemote ? config.connectionString : `file:${filePath}`;
+      const client = createClient({ url });
+      db = drizzleLibSQL(client, { schema: sqliteSchema }) as unknown as DrizzleSQLiteDb<typeof sqliteSchema>;
+    } else {
+      const dbPath = filePath === ':memory:' ? ':memory:' : filePath;
+      const client = new Database(dbPath);
+      this.configureSQLitePragmas(client);
+      db = drizzleSQLite(client, { schema: sqliteSchema });
+    }
 
     // Skip migrations - assume database already conforms to schema
     logger.debug('Skipping SQLite migrations - assuming database conforms to schema');
 
-    logger.info('SQLite connection established successfully', { filePath });
-    return db;
+    return { db, driver };
   }
 
   /**
@@ -336,17 +373,33 @@ export class DatabaseConnectionFactory {
   private static async createSQLiteQueryConnection(
     config: InvectDatabaseConfig,
     logger: Logger,
-  ): Promise<ReturnType<typeof drizzleSQLite>> {
+  ): Promise<{
+    db: DrizzleSQLiteDb;
+    driver: SqliteDriver;
+  }> {
     const filePath = this.prepareSQLiteFilePath(config.connectionString, logger);
+    const driverType = resolveSqliteDriverType(config);
 
-    const dbPath = filePath === ':memory:' ? ':memory:' : filePath;
-    const client = new Database(dbPath);
-    this.configureSQLitePragmas(client);
+    const driver = await createSqliteDriver(config, filePath, logger);
 
-    const db = drizzleSQLite(client);
+    let db: DrizzleSQLiteDb;
+
+    if (driverType === 'libsql') {
+      const { createClient } = await import('@libsql/client');
+      const { drizzle: drizzleLibSQL } = await import('drizzle-orm/libsql');
+      const isRemote = config.connectionString.startsWith('libsql://') || config.connectionString.startsWith('https://');
+      const url = isRemote ? config.connectionString : `file:${filePath}`;
+      const client = createClient({ url });
+      db = drizzleLibSQL(client) as unknown as DrizzleSQLiteDb;
+    } else {
+      const dbPath = filePath === ':memory:' ? ':memory:' : filePath;
+      const client = new Database(dbPath);
+      this.configureSQLitePragmas(client);
+      db = drizzleSQLite(client);
+    }
 
     logger.info('SQLite query connection established successfully', { filePath, id: config.id });
-    return db;
+    return { db, driver };
   }
 
   /**

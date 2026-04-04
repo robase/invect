@@ -30,6 +30,28 @@
     "backend/dist",
     "frontend/build",
     "backend/test",
-    "frontend/test"
-  ]
+    "frontend/test",
+    "coverage",
+    "playwright-report",
+    "test-results",
+    ".next",
+    ".react-router",
+    "drizzle"
+  ],
+  "watchOptions": {
+    "watchFile": "useFsEvents",
+    "watchDirectory": "useFsEvents",
+    "fallbackPolling": "dynamicPriority",
+    "excludeDirectories": [
+      "**/.git",
+      "**/.next",
+      "**/.react-router",
+      "**/coverage",
+      "**/dist",
+      "**/drizzle",
+      "**/node_modules",
+      "**/playwright-report",
+      "**/test-results"
+    ]
+  }
 }

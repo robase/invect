@@ -36,6 +36,7 @@ export default defineConfig({
       'drizzle-zod',
       'postgres',
       'better-sqlite3',
+      '@libsql/client',
       'mysql2',
       'zod',
       'json-logic-js',

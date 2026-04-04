@@ -29,7 +29,7 @@
     "automation",
     "api"
   ],
-  "author": "robase",
+  "author": "robase <team@invect.dev>",
   "license": "MIT",
   "dependencies": {
     "@invect/core": "workspace:*",

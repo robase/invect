@@ -29,6 +29,30 @@ import { findConfigPath, loadConfig } from '../utils/config-loader.js';
 import { generateAllDrizzleSchemas, generateAppendSchema } from '../generators/drizzle.js';
 import { generatePrismaSchema } from '../generators/prisma.js';
 
+function isDebug(): boolean {
+  return process.argv.includes('--debug');
+}
+
+function debug(...args: unknown[]) {
+  if (isDebug()) {
+    console.log(pc.dim(`  [debug] ${args.map(a => typeof a === 'string' ? a : JSON.stringify(a, null, 2)).join(' ')}`));
+  }
+}
+
+function debugError(label: string, error: unknown) {
+  if (isDebug()) {
+    console.error(pc.yellow(`  [debug] ${label}:`));
+    if (error instanceof Error) {
+      console.error(pc.dim(`    ${error.message}`));
+      if (error.stack) {
+        console.error(pc.dim(error.stack.split('\n').slice(1).map(l => `    ${l.trim()}`).join('\n')));
+      }
+    } else {
+      console.error(pc.dim(`    ${String(error)}`));
+    }
+  }
+}
+
 export const generateCommand = new Command('generate')
   .description('Generate Drizzle or Prisma schema files from core + plugin schemas')
   .option(
@@ -99,6 +123,11 @@ export async function generateAction(options: {
   let config;
   try {
     config = await loadConfig(configPath);
+    debug('Config loaded', {
+      hasPlugins: !!config.plugins,
+      pluginCount: config.plugins?.length ?? 0,
+      pluginIds: config.plugins?.map((p: any) => p.id),
+    });
   } catch (error) {
     console.error(
       pc.red(`\n✗ Failed to load config.`) +
@@ -194,6 +223,8 @@ async function runPrismaMode(
   console.log(pc.dim(`  Provider: ${pc.white(provider)}`));
   console.log(pc.dim(`  Schema: ${path.relative(process.cwd(), schemaFile)}`));
 
+  debug('Prisma mode', { provider, schemaFile, plugins: config.plugins?.length ?? 0 });
+
   let result;
   try {
     result = await generatePrismaSchema({
@@ -201,9 +232,16 @@ async function runPrismaMode(
       file: schemaFile,
       provider,
     });
+    debug('Prisma generate result', {
+      fileName: result.fileName,
+      hasCode: result.code !== undefined,
+      overwrite: result.overwrite,
+      codeLength: result.code?.length,
+    });
   } catch (error) {
     console.error(pc.red(`\n✗ Prisma schema generation failed:`));
     console.error(pc.dim(`  ${error instanceof Error ? error.message : String(error)}\n`));
+    debugError('Prisma schema generation', error);
     process.exit(1);
   }
 

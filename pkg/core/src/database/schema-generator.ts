@@ -695,6 +695,15 @@ export function generateSqliteSchemaAppend(schema: MergedSchema): AppendSchemaRe
     imports.push(`import { ${Array.from(identifiers).sort().join(', ')} } from '${importPath}';`);
   }
 
+  // Collect names already imported as runtime values to avoid duplicates in type import
+  const runtimeImportedNames = new Set<string>();
+  for (const identifiers of runtimeImports.values()) {
+    for (const id of identifiers) runtimeImportedNames.add(id);
+  }
+
+  const typeImport = collectTypeImportsForAppend(schema, runtimeImportedNames);
+  if (typeImport) imports.push(typeImport);
+
   const lines: string[] = [];
   lines.push(``);
   lines.push(`// =============================================================================`);
@@ -726,6 +735,9 @@ export function generatePostgresSchemaAppend(schema: MergedSchema): AppendSchema
     `import { relations } from 'drizzle-orm';`,
     `import { randomUUID } from 'crypto';`,
   ];
+
+  const typeImport = collectTypeImportsForAppend(schema);
+  if (typeImport) imports.push(typeImport);
 
   const lines: string[] = [];
   lines.push(``);
@@ -768,6 +780,9 @@ export function generateMysqlSchemaAppend(schema: MergedSchema): AppendSchemaRes
     `import { relations, sql } from 'drizzle-orm';`,
     `import { randomUUID } from 'crypto';`,
   ];
+
+  const typeImport = collectTypeImportsForAppend(schema);
+  if (typeImport) imports.push(typeImport);
 
   const lines: string[] = [];
   lines.push(``);
@@ -912,6 +927,36 @@ function collectTypeAnnotations(schema: MergedSchema): Set<string> {
     }
   }
   return annotations;
+}
+
+/**
+ * Built-in TypeScript types that don't need an import statement.
+ * Includes primitive arrays, utility types, and inline union literals.
+ */
+function isBuiltinType(annotation: string): boolean {
+  // Primitive array types
+  if (annotation === 'string[]' || annotation === 'number[]' || annotation === 'boolean[]') return true;
+  // Record<> utility types
+  if (annotation.startsWith('Record<')) return true;
+  // Inline union literal types (e.g., "'user' | 'assistant' | 'system' | 'tool'")
+  if (annotation.includes("'") && annotation.includes('|')) return true;
+  return false;
+}
+
+/**
+ * Generate a type import line for `@invect/core/types` based on the type annotations
+ * used in the schema. This is needed in append mode where the generated code lives
+ * in the user's project and can't use internal `src/` paths.
+ */
+function collectTypeImportsForAppend(schema: MergedSchema, runtimeImportedNames?: Set<string>): string | null {
+  const annotations = collectTypeAnnotations(schema);
+  const importable = Array.from(annotations)
+    .filter((a) => !isBuiltinType(a))
+    .filter((a) => !runtimeImportedNames?.has(a))
+    .sort();
+
+  if (importable.length === 0) return null;
+  return `import type { ${importable.join(', ')} } from '@invect/core/types';`;
 }
 
 // =============================================================================

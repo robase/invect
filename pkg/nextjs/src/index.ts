@@ -85,8 +85,8 @@ function createPluginDatabaseApi(core: Invect) {
         return await client.unsafe<T>(normalizeSql(statement), params);
       }
       case 'sqlite': {
-        const client = (connection.db as unknown as { $client: SqliteClientLike }).$client;
-        return client.prepare(statement).all(...params) as T[];
+        // Use the unified SqliteDriver — works with both better-sqlite3 and libsql.
+        return await connection.driver.queryAll(statement, params) as T[];
       }
       case 'mysql': {
         const client = (connection.db as unknown as { $client: MysqlClientLike }).$client;

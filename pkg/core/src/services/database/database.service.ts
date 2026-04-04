@@ -254,9 +254,9 @@ export class DatabaseService {
           break;
         }
         case 'sqlite': {
-          // SQLite query execution using better-sqlite3 synchronous API
-          const sqliteClient = (queryConnection.db as unknown as SqliteDbLike).$client;
-          result = sqliteClient.prepare(query).all() as Record<string, unknown>[];
+          // SQLite query execution via unified driver (better-sqlite3 or libsql)
+          const sqliteConn = queryConnection as Extract<typeof queryConnection, { type: 'sqlite' }>;
+          result = await sqliteConn.driver.queryAll(query);
           break;
         }
         case 'mysql': {
@@ -319,8 +319,7 @@ export class DatabaseService {
           break;
         }
         case 'sqlite': {
-          const client = (this.connection.db as unknown as SqliteDbLike).$client;
-          client.prepare('SELECT 1 as health').get();
+          await this.connection.driver.queryAll('SELECT 1 as health');
           break;
         }
         case 'mysql': {
@@ -412,8 +411,7 @@ export class DatabaseService {
         break;
       }
       case 'sqlite': {
-        const client = (connection.db as unknown as SqliteDbLike).$client;
-        client.prepare('SELECT 1 as health').get();
+        await connection.driver.queryAll('SELECT 1 as health');
         break;
       }
       case 'mysql': {
@@ -650,12 +648,11 @@ export class DatabaseService {
 
     switch (connection.type) {
       case 'sqlite': {
-        const db = connection.db as unknown as SqliteDbLike;
         // Note: In SQL LIKE, '_' is a single-char wildcard. We must escape it
         // with ESCAPE '\' so 'sqlite\_%' matches literal 'sqlite_*' and
         // '\\_\\_%' matches literal names starting with '__'.
         const query = `SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite\\_%' ESCAPE '\\' AND name NOT LIKE '\\_\\_%' ESCAPE '\\'`;
-        const rows = db.$client.prepare(query).all() as Array<{ name: string }>;
+        const rows = await connection.driver.queryAll(query) as Array<{ name: string }>;
         for (const row of rows) {
           names.add(row.name);
         }

@@ -10,7 +10,7 @@
  * Drizzle Kit manages everything together.
  */
 
-import { pgTable, text, integer, boolean, doublePrecision, timestamp, json, primaryKey } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, boolean, doublePrecision, timestamp, json, primaryKey, pgEnum, uuid, bigint, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
@@ -111,13 +111,18 @@ export const orderItems = pgTable('order_items', {
 // Do not edit below this line. Run `npx invect-cli generate` to regenerate.
 // =============================================================================
 
+export const flowRunsStatusEnum = pgEnum('flow_runs_status', ['PENDING', 'RUNNING', 'SUCCESS', 'FAILED', 'CANCELLED', 'PAUSED', 'PAUSED_FOR_BATCH']);
+export const nodeExecutionsStatusEnum = pgEnum('node_executions_status', ['PENDING', 'RUNNING', 'SUCCESS', 'FAILED', 'SKIPPED', 'BATCH_SUBMITTED', 'BATCH_PROCESSING']);
+export const batchJobsProviderEnum = pgEnum('batch_jobs_provider', ['OPENAI', 'ANTHROPIC']);
+export const batchJobsStatusEnum = pgEnum('batch_jobs_status', ['SUBMITTED', 'PROCESSING', 'COMPLETED', 'FAILED', 'CANCELLED']);
+
 export const user = pgTable('user', {
   id: text('id').primaryKey().notNull(),
   name: text('name').notNull(),
   email: text('email').notNull().unique(),
   emailVerified: boolean('email_verified').notNull().default(false),
   image: text('image'),
-  role: text('role').default('editor'),
+  role: text('role').default('default'),
   banned: boolean('banned').default(false),
   banReason: text('ban_reason'),
   banExpires: timestamp('ban_expires'),
@@ -163,7 +168,7 @@ export const verification = pgTable('verification', {
 });
 
 export const credentials = pgTable('credentials', {
-  id: text('id').primaryKey().notNull().$defaultFn(() => randomUUID()),
+  id: uuid('id').primaryKey().notNull().$default(() => randomUUID()),
   name: text('name').notNull(),
   type: text('type').$type<CredentialType>().notNull(),
   authType: text('auth_type').$type<CredentialAuthType>().notNull(),
@@ -186,42 +191,15 @@ export const flows = pgTable('flows', {
   name: text('name').notNull(),
   description: text('description'),
   tags: json('tags').$type<string[]>(),
-  scopeId: text('scope_id'),
   isActive: boolean('is_active').notNull().default(true),
   liveVersionNumber: integer('live_version_number'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
-
-export const rbacTeams = pgTable('rbac_teams', {
-  id: text('id').primaryKey().notNull(),
-  name: text('name').notNull(),
-  description: text('description'),
-  parentId: text('parent_id'),
-  createdBy: text('created_by').references(() => user.id),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at'),
-});
-
-export const rbacTeamMembers = pgTable('rbac_team_members', {
-  id: text('id').primaryKey().notNull(),
-  teamId: text('team_id').notNull().references(() => rbacTeams.id, { onDelete: 'cascade' }),
-  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-});
-
-export const rbacScopeAccess = pgTable('rbac_scope_access', {
-  id: text('id').primaryKey().notNull(),
-  scopeId: text('scope_id').notNull().references(() => rbacTeams.id, { onDelete: 'cascade' }),
-  userId: text('user_id'),
-  teamId: text('team_id'),
-  permission: text('permission').$type<FlowAccessPermission>().notNull().default('viewer'),
-  grantedBy: text('granted_by'),
-  grantedAt: timestamp('granted_at').notNull().defaultNow(),
+  scope_id: text('scope_id').references(() => rbac_teams.id, { onDelete: 'set null' }),
 });
 
 export const flowAccess = pgTable('flow_access', {
-  id: text('id').primaryKey().notNull().$defaultFn(() => randomUUID()),
+  id: uuid('id').primaryKey().notNull().$default(() => randomUUID()),
   flowId: text('flow_id').notNull().references(() => flows.id, { onDelete: 'cascade' }),
   userId: text('user_id'),
   teamId: text('team_id'),
@@ -232,7 +210,7 @@ export const flowAccess = pgTable('flow_access', {
 });
 
 export const flowTriggers = pgTable('flow_triggers', {
-  id: text('id').primaryKey().notNull().$defaultFn(() => randomUUID()),
+  id: uuid('id').primaryKey().notNull().$default(() => randomUUID()),
   flowId: text('flow_id').notNull().references(() => flows.id, { onDelete: 'cascade' }),
   nodeId: text('node_id').notNull(),
   type: text('type').$type<TriggerType>().notNull(),
@@ -255,7 +233,7 @@ export const flowVersions = pgTable('flow_versions', {
 }, (table) => [primaryKey({ columns: [table.version, table.flowId] })]);
 
 export const chatMessages = pgTable('chat_messages', {
-  id: text('id').primaryKey().notNull().$defaultFn(() => randomUUID()),
+  id: uuid('id').primaryKey().notNull().$default(() => randomUUID()),
   flowId: text('flow_id').notNull().references(() => flows.id, { onDelete: 'cascade' }),
   role: text('role').$type<'user' | 'assistant' | 'system' | 'tool'>().notNull(),
   content: text('content').notNull().default(''),
@@ -264,10 +242,10 @@ export const chatMessages = pgTable('chat_messages', {
 });
 
 export const flowRuns = pgTable('flow_executions', {
-  id: text('id').primaryKey().notNull().$defaultFn(() => randomUUID()),
+  id: uuid('id').primaryKey().notNull().$default(() => randomUUID()),
   flowId: text('flow_id').notNull().references(() => flows.id, { onDelete: 'cascade' }),
   flowVersion: integer('flow_version').notNull(),
-  status: text('status').$type<FlowRunStatus>().notNull().default('PENDING'),
+  status: flowRunsStatusEnum('status').$type<FlowRunStatus>().notNull().default('PENDING'),
   inputs: json('inputs').$type<JSONValue>().notNull(),
   outputs: json('outputs').$type<JSONValue>(),
   error: text('error'),
@@ -283,11 +261,11 @@ export const flowRuns = pgTable('flow_executions', {
 });
 
 export const nodeExecutions = pgTable('execution_traces', {
-  id: text('id').primaryKey().notNull().$defaultFn(() => randomUUID()),
-  flowRunId: text('flow_run_id').notNull().references(() => flowRuns.id, { onDelete: 'cascade' }),
+  id: uuid('id').primaryKey().notNull().$default(() => randomUUID()),
+  flowRunId: uuid('flow_run_id').notNull().references(() => flowRuns.id, { onDelete: 'cascade' }),
   nodeId: text('node_id').notNull(),
   nodeType: text('node_type').notNull(),
-  status: text('status').$type<NodeExecutionStatus>().notNull().default('PENDING'),
+  status: nodeExecutionsStatusEnum('status').$type<NodeExecutionStatus>().notNull().default('PENDING'),
   inputs: json('inputs').$type<JSONValue>().notNull(),
   outputs: json('outputs').$type<JSONValue>(),
   error: text('error'),
@@ -298,12 +276,12 @@ export const nodeExecutions = pgTable('execution_traces', {
 });
 
 export const batchJobs = pgTable('batch_jobs', {
-  id: text('id').primaryKey().notNull().$defaultFn(() => randomUUID()),
-  flowRunId: text('flow_run_id').notNull().references(() => flowRuns.id, { onDelete: 'cascade' }),
+  id: uuid('id').primaryKey().notNull().$default(() => randomUUID()),
+  flowRunId: uuid('flow_run_id').notNull().references(() => flowRuns.id, { onDelete: 'cascade' }),
   nodeId: text('node_id').notNull(),
-  provider: text('provider').$type<BatchProvider>().notNull(),
+  provider: batchJobsProviderEnum('provider').$type<BatchProvider>().notNull(),
   batchId: text('batch_id'),
-  status: text('status').$type<BatchStatus>().notNull().default('SUBMITTED'),
+  status: batchJobsStatusEnum('status').$type<BatchStatus>().notNull().default('SUBMITTED'),
   requestData: json('request_data').notNull(),
   responseData: json('response_data'),
   error: text('error'),
@@ -314,9 +292,9 @@ export const batchJobs = pgTable('batch_jobs', {
 });
 
 export const agentToolExecutions = pgTable('agent_tool_executions', {
-  id: text('id').primaryKey().notNull().$defaultFn(() => randomUUID()),
-  nodeExecutionId: text('node_execution_id').notNull().references(() => nodeExecutions.id, { onDelete: 'cascade' }),
-  flowRunId: text('flow_run_id').notNull().references(() => flowRuns.id, { onDelete: 'cascade' }),
+  id: uuid('id').primaryKey().notNull().$default(() => randomUUID()),
+  nodeExecutionId: uuid('node_execution_id').notNull().references(() => nodeExecutions.id, { onDelete: 'cascade' }),
+  flowRunId: uuid('flow_run_id').notNull().references(() => flowRuns.id, { onDelete: 'cascade' }),
   toolId: text('tool_id').notNull(),
   toolName: text('tool_name').notNull(),
   iteration: integer('iteration').notNull(),
@@ -329,9 +307,38 @@ export const agentToolExecutions = pgTable('agent_tool_executions', {
   duration: integer('duration'),
 });
 
+export const rbac_scope_access = pgTable('rbac_scope_access', {
+  id: text('id').primaryKey().notNull(),
+  scope_id: text('scope_id').notNull().references(() => rbac_teams.id, { onDelete: 'cascade' }),
+  user_id: text('user_id'),
+  team_id: text('team_id'),
+  permission: text('permission').$type<FlowAccessPermission>().notNull().default('viewer'),
+  granted_by: text('granted_by'),
+  granted_at: timestamp('granted_at').notNull().defaultNow(),
+});
+
+export const rbac_team_members = pgTable('rbac_team_members', {
+  id: text('id').primaryKey().notNull(),
+  team_id: text('team_id').notNull().references(() => rbac_teams.id, { onDelete: 'cascade' }),
+  user_id: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  created_at: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const rbac_teams = pgTable('rbac_teams', {
+  id: text('id').primaryKey().notNull(),
+  name: text('name').notNull(),
+  description: text('description'),
+  parent_id: text('parent_id').references((): AnyPgColumn => rbac_teams.id, { onDelete: 'set null' }),
+  created_by: text('created_by').references(() => user.id, { onDelete: 'no action' }),
+  created_at: timestamp('created_at').notNull().defaultNow(),
+  updated_at: timestamp('updated_at'),
+});
+
 export const userRelations = relations(user, ({ many }) => ({
   account: many(account),
   session: many(session),
+  rbac_team_members: many(rbac_team_members),
+  rbac_teams: many(rbac_teams),
 }));
 
 export const accountRelations = relations(account, ({ one }) => ({
@@ -342,7 +349,8 @@ export const sessionRelations = relations(session, ({ one }) => ({
   user: one(user, { fields: [session.userId], references: [user.id] }),
 }));
 
-export const flowsRelations = relations(flows, ({ many }) => ({
+export const flowsRelations = relations(flows, ({ one, many }) => ({
+  scope: one(rbac_teams, { fields: [flows.scope_id], references: [rbac_teams.id] }),
   flowAccess: many(flowAccess),
   flowTriggers: many(flowTriggers),
   flowVersions: many(flowVersions),
@@ -387,6 +395,24 @@ export const agentToolExecutionsRelations = relations(agentToolExecutions, ({ on
   flowRun: one(flowRuns, { fields: [agentToolExecutions.flowRunId], references: [flowRuns.id] }),
 }));
 
+export const rbac_scope_accessRelations = relations(rbac_scope_access, ({ one }) => ({
+  scope: one(rbac_teams, { fields: [rbac_scope_access.scope_id], references: [rbac_teams.id] }),
+}));
+
+export const rbac_team_membersRelations = relations(rbac_team_members, ({ one }) => ({
+  team: one(rbac_teams, { fields: [rbac_team_members.team_id], references: [rbac_teams.id] }),
+  user: one(user, { fields: [rbac_team_members.user_id], references: [user.id] }),
+}));
+
+export const rbac_teamsRelations = relations(rbac_teams, ({ one, many }) => ({
+  parent: one(rbac_teams, { fields: [rbac_teams.parent_id], references: [rbac_teams.id] }),
+  created_by: one(user, { fields: [rbac_teams.created_by], references: [user.id] }),
+  flows: many(flows),
+  rbac_scope_access: many(rbac_scope_access),
+  rbac_team_members: many(rbac_team_members),
+  rbac_teams: many(rbac_teams),
+}));
+
 
 export type User = typeof user.$inferSelect;
 export type NewUser = typeof user.$inferInsert;
@@ -400,12 +426,6 @@ export type Credentials = typeof credentials.$inferSelect;
 export type NewCredentials = typeof credentials.$inferInsert;
 export type Flows = typeof flows.$inferSelect;
 export type NewFlows = typeof flows.$inferInsert;
-export type RbacTeams = typeof rbacTeams.$inferSelect;
-export type NewRbacTeams = typeof rbacTeams.$inferInsert;
-export type RbacTeamMembers = typeof rbacTeamMembers.$inferSelect;
-export type NewRbacTeamMembers = typeof rbacTeamMembers.$inferInsert;
-export type RbacScopeAccess = typeof rbacScopeAccess.$inferSelect;
-export type NewRbacScopeAccess = typeof rbacScopeAccess.$inferInsert;
 export type FlowAccess = typeof flowAccess.$inferSelect;
 export type NewFlowAccess = typeof flowAccess.$inferInsert;
 export type FlowTriggers = typeof flowTriggers.$inferSelect;
@@ -422,3 +442,9 @@ export type BatchJobs = typeof batchJobs.$inferSelect;
 export type NewBatchJobs = typeof batchJobs.$inferInsert;
 export type AgentToolExecutions = typeof agentToolExecutions.$inferSelect;
 export type NewAgentToolExecutions = typeof agentToolExecutions.$inferInsert;
+export type Rbac_scope_access = typeof rbac_scope_access.$inferSelect;
+export type NewRbac_scope_access = typeof rbac_scope_access.$inferInsert;
+export type Rbac_team_members = typeof rbac_team_members.$inferSelect;
+export type NewRbac_team_members = typeof rbac_team_members.$inferInsert;
+export type Rbac_teams = typeof rbac_teams.$inferSelect;
+export type NewRbac_teams = typeof rbac_teams.$inferInsert;

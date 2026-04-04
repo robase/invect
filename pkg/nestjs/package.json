@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "type": "module",
   "description": "A NestJS module for executing Invect workflows with batch processing capabilities",
-  "author": "robase",
+  "author": "robase <team@invect.dev>",
   "private": false,
   "license": "MIT",
   "main": "dist/index.cjs",

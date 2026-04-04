@@ -5,6 +5,16 @@ const databaseConfigSchema = z.object({
   type: z.enum(['postgresql', 'sqlite', 'mysql']),
   id: z.string(), // Optional ID for the database, useful for multi-database setups
   name: z.string().optional(), // Human readable name for the database
+  /**
+   * SQLite driver selection. Only applies when `type` is `'sqlite'`.
+   *
+   * - `'better-sqlite3'` — Fast native C++ driver (default). Best for Express / NestJS / long-running Node servers.
+   * - `'libsql'` — Pure JS / WASM driver. Works in serverless and edge environments (Vercel, Cloudflare).
+   *   Also supports Turso remote SQLite via `libsql://` URLs.
+   *
+   * @default 'better-sqlite3'
+   */
+  driver: z.enum(['better-sqlite3', 'libsql']).optional(),
 });
 
 export type InvectDatabaseConfig = z.infer<typeof databaseConfigSchema>;

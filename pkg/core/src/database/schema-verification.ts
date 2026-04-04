@@ -154,7 +154,7 @@ async function introspectDatabase(
 ): Promise<Map<string, Set<string>>> {
   switch (connection.type) {
     case 'sqlite':
-      return introspectSqlite(connection.db);
+      return introspectSqlite(connection.driver);
     case 'postgresql':
       return introspectPostgres(connection.db);
     case 'mysql':
@@ -164,24 +164,15 @@ async function introspectDatabase(
   }
 }
 
-async function introspectSqlite(db: DatabaseConnection['db']): Promise<Map<string, Set<string>>> {
+async function introspectSqlite(driver: import('./sqlite-driver').SqliteDriver): Promise<Map<string, Set<string>>> {
   const schema = new Map<string, Set<string>>();
 
-  // Use better-sqlite3's synchronous $client.prepare().all() API
-  const client = (
-    db as unknown as {
-      $client: { prepare(sql: string): { all(): Array<Record<string, unknown>> } };
-    }
-  ).$client;
-
-  const tables = client
-    .prepare(
-      `SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '__%'`,
-    )
-    .all() as Array<{ name: string }>;
+  const tables = await driver.queryAll(
+    `SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '__%'`,
+  ) as Array<{ name: string }>;
 
   for (const table of tables) {
-    const columns = client.prepare(`PRAGMA table_info('${table.name}')`).all() as Array<{
+    const columns = await driver.queryAll(`PRAGMA table_info('${table.name}')`) as Array<{
       name: string;
     }>;
     schema.set(table.name, new Set(columns.map((c) => c.name)));

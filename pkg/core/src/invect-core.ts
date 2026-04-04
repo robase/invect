@@ -145,8 +145,7 @@ function createPluginDatabaseApi(connection: DatabaseConnection): PluginDatabase
         return client.unsafe<T>(normalizeSql(statement), params);
       }
       case 'sqlite': {
-        const client = (connection.db as unknown as { $client: SqliteClientLike }).$client;
-        return client.prepare(statement).all(...params) as T[];
+        return await connection.driver.queryAll(statement, params) as T[];
       }
       case 'mysql': {
         const client = (connection.db as unknown as { $client: MysqlClientLike }).$client;
@@ -167,11 +166,10 @@ function createPluginDatabaseApi(connection: DatabaseConnection): PluginDatabase
           return;
         }
         case 'sqlite': {
-          const client = (connection.db as unknown as { $client: SqliteClientLike }).$client;
           const coerced = params.map((param) =>
             typeof param === 'boolean' ? (param ? 1 : 0) : param,
           );
-          client.prepare(statement).run(...coerced);
+          await connection.driver.execute(statement, coerced);
           return;
         }
         case 'mysql': {
