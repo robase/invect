@@ -10,7 +10,6 @@ import {
 import { useGrantScopeAccess, useRevokeScopeAccess, useScopeAccess } from '../../hooks/useScopes';
 import type { FlowAccessPermission, Team } from '../../../shared/types';
 import type { AccessRow, AuthUser } from './types';
-import { formatPermissionLabel, getPermissionBadgeClasses } from './types';
 import { AccessTable, OptionalRoleSelector, RoleSelector } from './AccessTable';
 import { FormDialog } from './FormDialog';
 import { MemberCombobox } from './MemberCombobox';
@@ -113,7 +112,7 @@ export function ScopeDetailPanel({
   ]);
 
   const memberRows = accessRows.filter((row) => row.group === 'Members');
-  const grantRows = accessRows.filter((row) => row.group === 'Access Grants');
+  const _grantRows = accessRows.filter((row) => row.group === 'Access Grants');
 
   const scopePath = useMemo(() => {
     const path: Team[] = [];

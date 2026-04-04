@@ -38,7 +38,9 @@ function useUsers() {
           setUsers(data.users);
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        // intentionally ignored — UI will show empty state
+      });
     return () => {
       cancelled = true;
     };

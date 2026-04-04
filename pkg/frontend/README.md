@@ -20,6 +20,12 @@ A single React component that gives you a complete workflow editor, execution vi
 ## Install
 
 ```bash
+npx invect-cli init
+```
+
+Or install manually:
+
+```bash
 npm install @invect/frontend
 ```
 

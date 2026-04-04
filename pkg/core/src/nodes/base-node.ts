@@ -241,7 +241,7 @@ export class NodeExecutionUtils {
    * Template string replacement
    */
   static replaceTemplateVariables(template: string, variables: Record<string, unknown>): string {
-    return template.replace(/\{\{([^}]+)\}\}/g, (match, varName) => {
+    return template.replace(/\{\{((?:[^{}])*)\}\}/g, (match, varName) => {
       const trimmedVarName = varName.trim();
       const value = NodeExecutionUtils.getNestedValue(variables, trimmedVarName);
       return value !== undefined ? String(value) : match;

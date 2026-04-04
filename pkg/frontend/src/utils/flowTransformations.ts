@@ -71,7 +71,7 @@ export function transformToInvectDefinition(nodes: Node[], edges: Edge[]): Invec
 /**
  * Validate that a InvectDefinition has required fields
  */
-function validateInvectDefinition(definition: InvectDefinition): {
+function _validateInvectDefinition(definition: InvectDefinition): {
   isValid: boolean;
   errors: string[];
 } {

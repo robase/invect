@@ -23,7 +23,6 @@ import { GraphNodeType } from '../../../src/types/graph-node-types';
 import type { InvectDefinition } from '../../../src/services/flow-versions/schemas-fresh';
 import type {
   AgentExecutionOutput,
-  AgentFinishReason,
 } from '../../../src/types/agent-tool.types';
 import { createTestInvect } from '../helpers/test-invect';
 

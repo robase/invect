@@ -245,7 +245,7 @@ export interface AgentExecutionOutput {
 /**
  * Agent configuration for advanced settings
  */
-interface AgentConfig {
+interface _AgentConfig {
   /** Tool execution timeout in milliseconds (default: 30000) */
   toolTimeoutMs?: number;
   /** Maximum tokens for conversation history before truncation (default: 100000) */

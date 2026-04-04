@@ -704,6 +704,34 @@ export class InvectController {
       throw new BadRequestException('URL is required');
     }
 
+    // Validate URL to prevent SSRF
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(url);
+    } catch {
+      throw new BadRequestException('Invalid URL');
+    }
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      throw new BadRequestException('Only HTTP and HTTPS protocols are allowed');
+    }
+    const h = parsedUrl.hostname;
+    if (
+      h === 'localhost' ||
+      h === '127.0.0.1' ||
+      h === '[::1]' ||
+      h === '0.0.0.0' ||
+      /^10\./.test(h) ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(h) ||
+      /^192\.168\./.test(h) ||
+      /^169\.254\./.test(h) ||
+      /^f[cd]/i.test(h) ||
+      h.includes(':')
+    ) {
+      throw new BadRequestException(
+        'Requests to private/internal network addresses are not allowed',
+      );
+    }
+
     const fetchOptions: RequestInit = { method, headers };
     if (reqBody && ['POST', 'PUT', 'PATCH'].includes(method)) {
       fetchOptions.body = typeof reqBody === 'string' ? reqBody : JSON.stringify(reqBody);

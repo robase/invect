@@ -30,10 +30,10 @@ export interface TemplateValidationResult {
 }
 
 /** Regex to detect at least one {{ … }} block. */
-const TEMPLATE_PATTERN = /\{\{[\s\S]*?\}\}/;
+const TEMPLATE_PATTERN = /\{\{(?:[^}]|\}(?!\}))*\}\}/;
 
 /** Regex to detect a "pure expression": the entire string is one {{ expr }} with no other text or expressions. */
-const PURE_EXPRESSION_PATTERN = /^\{\{\s*([\s\S]+?)\s*\}\}$/;
+const PURE_EXPRESSION_PATTERN = /^\{\{((?:[^}]|\}(?!\}))*)\}\}$/;
 
 /**
  * Checks whether a string is a "pure" single-expression template
@@ -46,19 +46,16 @@ function isPureExpression(template: string): RegExpMatchArray | null {
   if (!m) {
     return null;
   }
-  // Ensure the captured expression doesn't contain another `}}…{{` pair,
-  // which would mean the regex greedily spanned multiple blocks.
-  if (/\}\}[\s\S]*?\{\{/.test(m[1])) {
-    return null;
-  }
+  // Trim whitespace from captured expression (moved from regex \s* groups)
+  m[1] = m[1].trim();
   return m;
 }
 
 /** Regex to match each {{ … }} block for replacement. */
-const EXPRESSION_BLOCK_PATTERN = /\{\{\s*([\s\S]+?)\s*\}\}/g;
+const EXPRESSION_BLOCK_PATTERN = /\{\{((?:[^}]|\}(?!\}))*)\}\}/g;
 
 /** Regex for a valid JavaScript identifier (used for context destructuring). */
-const VALID_JS_IDENT = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
+const _VALID_JS_IDENT = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
 
 /**
  * Helper functions injected into every QuickJS evaluation context.

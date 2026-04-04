@@ -20,6 +20,12 @@ Add Invect to any Next.js app with a single catch-all API route. Handles all end
 ## Install
 
 ```bash
+npx invect-cli init
+```
+
+Or install manually:
+
+```bash
 npm install @invect/core @invect/nextjs
 ```
 

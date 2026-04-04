@@ -61,7 +61,7 @@ export interface UpdateFlowRunInput {
 /**
  * Flow execution query parameters
  */
-interface FlowRunQuery {
+interface _FlowRunQuery {
   flowId: string;
   pagination?: PaginationQuery;
   sort?: SortingQuery<FlowRun>;

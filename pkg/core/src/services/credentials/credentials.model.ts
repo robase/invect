@@ -65,7 +65,7 @@ export interface UpdateCredentialInput {
 /**
  * Credential query parameters
  */
-interface CredentialQuery {
+interface _CredentialQuery {
   userId: string;
   type?: CredentialType;
   authType?: CredentialAuthType;

@@ -5,7 +5,7 @@
  * through the real Invect core. Uses lightweight test plugins that record
  * hook invocations so assertions can inspect ordering and side effects.
  */
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Invect, FlowRunStatus } from '../../../src';
 import type {
   InvectPlugin,

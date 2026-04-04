@@ -55,7 +55,7 @@ export function createOutputSchema<
 }
 
 /** Infer the TypeScript type from an output schema */
-type InferOutputType<T extends ZodType> = z.infer<T>;
+type _InferOutputType<T extends ZodType> = z.infer<T>;
 
 // =============================================================================
 // DEFAULT OUTPUT SCHEMA
@@ -65,7 +65,7 @@ type InferOutputType<T extends ZodType> = z.infer<T>;
  * Default output schema for nodes that don't define their own.
  * Uses a flexible structure that accepts any valid node output.
  */
-const defaultOutputSchema = z.object({
+const _defaultOutputSchema = z.object({
   nodeType: z.string(),
   data: z.object({
     variables: variablesRecordSchema,

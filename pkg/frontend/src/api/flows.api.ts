@@ -11,7 +11,6 @@ import {
   type FlowVersion,
   type ReactFlowData,
   type InvectDefinition,
-  type FlowInputs,
 } from '@invect/core/types';
 
 export function useDashboardStats() {

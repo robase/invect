@@ -38,7 +38,7 @@ export interface UpdateBatchJobInput {
 /**
  * Batch job query parameters
  */
-interface BatchJobQuery {
+interface _BatchJobQuery {
   flowRunId?: string;
   nodeId?: string;
   provider?: BatchProvider;

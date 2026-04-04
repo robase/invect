@@ -139,14 +139,67 @@ export class JsExpressionService {
  * while multi-statement code requires explicit `return`.
  */
 function needsAutoReturn(code: string): boolean {
-  // Strip string literals and comments to avoid false positives,
-  // then check for `return` as a keyword boundary
-  const stripped = code
-    .replace(/\/\/.*$/gm, '') // line comments
-    .replace(/\/\*[\s\S]*?\*\//g, '') // block comments
-    .replace(/'(?:[^'\\]|\\.)*'/g, '') // single-quoted strings
-    .replace(/"(?:[^"\\]|\\.)*"/g, '') // double-quoted strings
-    .replace(/`(?:[^`\\]|\\.)*`/g, ''); // template literals
+  // Strip string literals and comments using a linear-time character scanner
+  // to avoid polynomial backtracking in regex-based stripping.
+  let stripped = '';
+  let i = 0;
+  while (i < code.length) {
+    // Line comment
+    if (code[i] === '/' && code[i + 1] === '/') {
+      i += 2;
+      while (i < code.length && code[i] !== '\n') {
+        i++;
+      }
+      continue;
+    }
+    // Block comment
+    if (code[i] === '/' && code[i + 1] === '*') {
+      i += 2;
+      while (i < code.length && !(code[i] === '*' && code[i + 1] === '/')) {
+        i++;
+      }
+      i += 2; // skip closing */
+      continue;
+    }
+    // Single-quoted string
+    if (code[i] === "'") {
+      i++;
+      while (i < code.length && code[i] !== "'") {
+        if (code[i] === '\\') {
+          i++;
+        }
+        i++;
+      }
+      i++;
+      continue;
+    }
+    // Double-quoted string
+    if (code[i] === '"') {
+      i++;
+      while (i < code.length && code[i] !== '"') {
+        if (code[i] === '\\') {
+          i++;
+        }
+        i++;
+      }
+      i++;
+      continue;
+    }
+    // Template literal
+    if (code[i] === '`') {
+      i++;
+      while (i < code.length && code[i] !== '`') {
+        if (code[i] === '\\') {
+          i++;
+        }
+        i++;
+      }
+      i++;
+      continue;
+    }
+    stripped += code[i];
+    i++;
+  }
 
   return !/\breturn\b/.test(stripped);
 }

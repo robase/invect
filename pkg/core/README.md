@@ -22,6 +22,12 @@ Framework packages ([`@invect/express`](../express), [`@invect/nestjs`](../nestj
 ## Install
 
 ```bash
+npx invect-cli init
+```
+
+Or install manually:
+
+```bash
 npm install @invect/core
 ```
 

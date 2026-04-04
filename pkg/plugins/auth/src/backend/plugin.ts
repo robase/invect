@@ -781,6 +781,14 @@ export function userAuth(options: UserAuthPluginOptions): InvectPlugin {
   // Mutable — assigned in `init` when no external instance was provided.
   let auth: BetterAuthInstance | null = options.auth ?? null;
 
+  /** Narrow `auth` for call-sites that run only after init. */
+  function requireAuth(): BetterAuthInstance {
+    if (!auth) {
+      throw new Error('Auth plugin not initialized');
+    }
+    return auth;
+  }
+
   let endpointLogger: PluginLoggerLike = console;
 
   // Determine better-auth's basePath (defaults to /api/auth).
@@ -922,7 +930,7 @@ export function userAuth(options: UserAuthPluginOptions): InvectPlugin {
       });
 
       // Let better-auth handle it
-      const response = await auth!.handler(authRequest);
+      const response = await requireAuth().handler(authRequest);
       endpointLogger.debug?.(`[auth-proxy] Response: ${response.status} ${response.statusText}`, {
         setCookie: response.headers.get('set-cookie') ? 'present' : 'absent',
         contentType: response.headers.get('content-type'),
@@ -1034,7 +1042,7 @@ export function userAuth(options: UserAuthPluginOptions): InvectPlugin {
           }
 
           try {
-            const api = auth!.api as Record<string, unknown>;
+            const api = requireAuth().api as Record<string, unknown>;
             const headers = toHeaders(ctx.headers);
 
             // Try better-auth's admin listUsers API first
@@ -1138,7 +1146,7 @@ export function userAuth(options: UserAuthPluginOptions): InvectPlugin {
           }
 
           try {
-            const api = auth!.api as Record<string, unknown>;
+            const api = requireAuth().api as Record<string, unknown>;
             const headers = toHeaders(ctx.headers);
             let result: BetterAuthApiUserResult | null = null;
 
@@ -1262,7 +1270,7 @@ export function userAuth(options: UserAuthPluginOptions): InvectPlugin {
           }
 
           try {
-            const api = auth!.api as Record<string, unknown>;
+            const api = requireAuth().api as Record<string, unknown>;
             const headers = toHeaders(ctx.headers);
 
             // Try better-auth admin API for updating user
@@ -1350,7 +1358,7 @@ export function userAuth(options: UserAuthPluginOptions): InvectPlugin {
           }
 
           try {
-            const api = auth!.api as Record<string, unknown>;
+            const api = requireAuth().api as Record<string, unknown>;
             const headers = toHeaders(ctx.headers);
 
             if (typeof api.removeUser === 'function') {
@@ -1545,7 +1553,7 @@ export function userAuth(options: UserAuthPluginOptions): InvectPlugin {
             continue;
           }
 
-          const api = auth!.api as Record<string, unknown>;
+          const api = requireAuth().api as Record<string, unknown>;
           let result: BetterAuthApiUserResult | null = null;
 
           if (typeof api.createUser === 'function') {

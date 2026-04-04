@@ -66,3 +66,5 @@ lerna-debug.log*
 
 # npm lockfiles (pnpm workspace uses pnpm-lock.yaml)
 **/package-lock.json
+
+.npmrc

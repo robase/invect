@@ -20,6 +20,12 @@ Mount Invect into any NestJS app as a module. Provides a controller for all API 
 ## Install
 
 ```bash
+npx invect-cli init
+```
+
+Or install manually:
+
+```bash
 npm install @invect/core @invect/nestjs
 ```
 

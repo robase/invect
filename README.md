@@ -5,7 +5,7 @@
   </picture>
 </p>
 
-<h1 align="center">invect.</h1>
+<h1 align="center">invect</h1>
 
 <p align="center">
   Drop-in AI workflows for your Node.js app.
@@ -22,6 +22,12 @@
 Invect is an open-source workflow orchestration library you mount directly into your existing Express, NestJS, or Next.js app. Visual flow editor, AI agent nodes, 50+ built-in integrations, and batch processing — all as a library, not a platform.
 
 ## Quick Start
+
+```bash
+npx invect-cli init
+```
+
+Or install manually:
 
 ```bash
 npm install @invect/core @invect/express @invect/frontend

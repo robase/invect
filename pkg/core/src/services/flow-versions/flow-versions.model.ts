@@ -15,7 +15,7 @@ interface UpdateFlowVersionInput {
 /**
  * Flow version with optional composite key for database operations
  */
-interface FlowVersionKey {
+interface _FlowVersionKey {
   version: number;
   flowId: string;
 }
@@ -23,7 +23,7 @@ interface FlowVersionKey {
 /**
  * Flow version query parameters
  */
-interface FlowVersionQuery {
+interface _FlowVersionQuery {
   flowId: string;
   version?: number | 'latest';
   limit?: number;

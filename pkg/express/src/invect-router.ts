@@ -1088,6 +1088,37 @@ export function createInvectRouter(config: InvectConfig): Router {
         return;
       }
 
+      // Validate URL to prevent SSRF
+      let parsedUrl: URL;
+      try {
+        parsedUrl = new URL(url);
+      } catch {
+        res.status(400).json({ error: 'Invalid URL' });
+        return;
+      }
+      if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+        res.status(400).json({ error: 'Only HTTP and HTTPS protocols are allowed' });
+        return;
+      }
+      const h = parsedUrl.hostname;
+      if (
+        h === 'localhost' ||
+        h === '127.0.0.1' ||
+        h === '[::1]' ||
+        h === '0.0.0.0' ||
+        /^10\./.test(h) ||
+        /^172\.(1[6-9]|2\d|3[01])\./.test(h) ||
+        /^192\.168\./.test(h) ||
+        /^169\.254\./.test(h) ||
+        /^f[cd]/i.test(h) ||
+        h.includes(':')
+      ) {
+        res
+          .status(400)
+          .json({ error: 'Requests to private/internal network addresses are not allowed' });
+        return;
+      }
+
       try {
         const fetchOptions: RequestInit = {
           method,

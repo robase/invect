@@ -1232,7 +1232,10 @@ export class Invect {
       while (!done) {
         // Drain whatever is in the queue
         while (queue.length > 0) {
-          const event = queue.shift()!;
+          const event = queue.shift();
+          if (!event) {
+            break;
+          }
           yield event;
           if (event.type === 'end') {
             return;

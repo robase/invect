@@ -20,6 +20,12 @@ Mount Invect into any Express app with a single router. All API endpoints — fl
 ## Install
 
 ```bash
+npx invect-cli init
+```
+
+Or install manually:
+
+```bash
 npm install @invect/core @invect/express
 ```
 
