@@ -724,9 +724,12 @@ describe('$type<>() annotation generation', () => {
     for (const dialect of [sqlite, postgres, mysql]) {
       // e.g., credentials.config has typeAnnotation: 'CredentialConfig'
       expect(dialect).toContain('$type<CredentialConfig>()');
-      // e.g., flowRuns.status has typeAnnotation: 'FlowRunStatus'
-      expect(dialect).toContain('$type<FlowRunStatus>()');
     }
+    // Enum columns: SQLite uses text() so needs $type<>() for type safety,
+    // but Postgres/MySQL use pgEnum/mysqlEnum which already type correctly.
+    expect(sqlite).toContain('$type<FlowRunStatus>()');
+    expect(postgres).not.toContain('$type<FlowRunStatus>()');
+    expect(mysql).not.toContain('$type<FlowRunStatus>()');
   });
 });
 
@@ -802,7 +805,7 @@ describe('append-mode schema generators', () => {
 
   it('should generate SQLite append-mode schema with imports and code', () => {
     const result = generateSqliteSchemaAppend(merged);
-    expect(result.imports).toHaveLength(4);
+    expect(result.imports).toHaveLength(5);
     expect(result.imports[0]).toContain('drizzle-orm/sqlite-core');
     expect(result.imports).toContain("import { FlowRunStatus, NodeExecutionStatus } from '@invect/core';");
     expect(result.code).toContain('Invect tables — AUTO-GENERATED');
@@ -816,7 +819,7 @@ describe('append-mode schema generators', () => {
 
   it('should generate PostgreSQL append-mode schema', () => {
     const result = generatePostgresSchemaAppend(merged);
-    expect(result.imports).toHaveLength(3);
+    expect(result.imports).toHaveLength(4);
     expect(result.imports[0]).toContain('drizzle-orm/pg-core');
     expect(result.code).toContain('pgTable');
     expect(result.code).toContain('pgEnum');
@@ -824,7 +827,7 @@ describe('append-mode schema generators', () => {
 
   it('should generate MySQL append-mode schema', () => {
     const result = generateMysqlSchemaAppend(merged);
-    expect(result.imports).toHaveLength(3);
+    expect(result.imports).toHaveLength(4);
     expect(result.imports[0]).toContain('drizzle-orm/mysql-core');
     expect(result.code).toContain('mysqlTable');
   });

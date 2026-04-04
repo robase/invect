@@ -72,9 +72,9 @@ createInvectHandler({
 </Tab>
 </Tabs>
 
-## Enable the flow access table
+## Database setup
 
-In your Invect config, opt in to per-flow access control:
+The `flow_access` table is provided by the `@invect/user-auth` plugin. Make sure to generate and migrate your schema after adding both plugins:
 
 ```ts
 createInvectRouter({
@@ -82,9 +82,6 @@ createInvectRouter({
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL || 'file:./dev.db',
     id: 'main',
-  },
-  auth: {
-    useFlowAccessTable: true,
   },
   plugins: [
     userAuth({ auth }),
@@ -95,7 +92,7 @@ createInvectRouter({
 
 ## Migrate the database
 
-The RBAC plugin uses the core `flow_access` table (already included in the base schema). Run migrations if you haven't already:
+The `flow_access` table is included in the auth plugin schema. Run migrations to ensure it exists:
 
 ```bash
 npx invect-cli generate
@@ -163,9 +160,6 @@ All endpoints are mounted under `/plugins/rbac/` (or the equivalent path for you
 
 ```ts
 rbacPlugin({
-  // Enable per-flow access table checks (default: true)
-  useFlowAccessTable: true,
-
   // Permission required to view the Access Control admin page (default: 'admin:*')
   adminPermission: 'admin:*',
 })

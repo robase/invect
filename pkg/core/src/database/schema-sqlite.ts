@@ -73,16 +73,29 @@ export const flowRuns = sqliteTable('flow_executions', {
   lastHeartbeatAt: text('last_heartbeat_at'), // Updated periodically during execution for stale run detection
 });
 
-// Execution trace table to track individual node executions
-export const nodeExecutions = sqliteTable('execution_traces', {
+// Action traces table — unified node executions + agent tool executions
+import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
+
+export const actionTraces = sqliteTable('action_traces', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => randomUUID()),
   flowRunId: text('flow_run_id')
     .notNull()
     .references(() => flowRuns.id, { onDelete: 'cascade' }),
-  nodeId: text('node_id').notNull(),
-  nodeType: text('node_type').notNull(),
+  // Self-referential FK: NULL for node traces, set for tool traces
+  parentNodeExecutionId: text('parent_node_execution_id').references(
+    (): AnySQLiteColumn => actionTraces.id,
+    { onDelete: 'cascade' },
+  ),
+  // Node execution fields (null for tool traces)
+  nodeId: text('node_id'),
+  nodeType: text('node_type'),
+  // Tool execution fields (null for node traces)
+  toolId: text('tool_id'),
+  toolName: text('tool_name'),
+  iteration: integer('iteration'),
+  // Shared fields
   status: text('status')
     .$type<NodeExecutionStatus>()
     .notNull()
@@ -123,40 +136,6 @@ export const batchJobs = sqliteTable('batch_jobs', {
   updatedAt: text('updated_at')
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-});
-
-// =============================================================================
-// Agent Tool Executions - For tracking individual tool calls during agent execution
-// =============================================================================
-
-export const agentToolExecutions = sqliteTable('agent_tool_executions', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => randomUUID()),
-  // Reference to the node execution (agent node)
-  nodeExecutionId: text('node_execution_id')
-    .notNull()
-    .references(() => nodeExecutions.id, { onDelete: 'cascade' }),
-  // Denormalized reference to flow run for efficient querying
-  flowRunId: text('flow_run_id')
-    .notNull()
-    .references(() => flowRuns.id, { onDelete: 'cascade' }),
-  // Tool identification
-  toolId: text('tool_id').notNull(), // The instance ID or base tool ID
-  toolName: text('tool_name').notNull(), // Human-readable name
-  // Iteration within the agent loop (1-based)
-  iteration: integer('iteration').notNull(),
-  // Input/output data
-  input: text('input', { mode: 'json' }).$type<JSONValue>().notNull(),
-  output: text('output', { mode: 'json' }).$type<JSONValue>(),
-  error: text('error'),
-  success: integer('success', { mode: 'boolean' }).notNull(),
-  // Timing
-  startedAt: text('started_at')
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  completedAt: text('completed_at'),
-  duration: integer('duration'), // in milliseconds
 });
 
 // =============================================================================
@@ -370,32 +349,26 @@ export const flowRunsRelations = relations(flowRuns, ({ one, many }) => ({
     fields: [flowRuns.flowVersion, flowRuns.flowId],
     references: [flowVersions.version, flowVersions.flowId],
   }),
-  traces: many(nodeExecutions),
+  traces: many(actionTraces),
   batchJobs: many(batchJobs),
 }));
 
-export const nodeExecutionRelations = relations(nodeExecutions, ({ one, many }) => ({
+export const actionTracesRelations = relations(actionTraces, ({ one, many }) => ({
   execution: one(flowRuns, {
-    fields: [nodeExecutions.flowRunId],
+    fields: [actionTraces.flowRunId],
     references: [flowRuns.id],
   }),
-  toolExecutions: many(agentToolExecutions),
+  parentNodeExecution: one(actionTraces, {
+    fields: [actionTraces.parentNodeExecutionId],
+    references: [actionTraces.id],
+    relationName: 'parentChild',
+  }),
+  childToolExecutions: many(actionTraces, { relationName: 'parentChild' }),
 }));
 
 export const batchJobsRelations = relations(batchJobs, ({ one }) => ({
   execution: one(flowRuns, {
     fields: [batchJobs.flowRunId],
-    references: [flowRuns.id],
-  }),
-}));
-
-export const agentToolExecutionsRelations = relations(agentToolExecutions, ({ one }) => ({
-  nodeExecution: one(nodeExecutions, {
-    fields: [agentToolExecutions.nodeExecutionId],
-    references: [nodeExecutions.id],
-  }),
-  flowRun: one(flowRuns, {
-    fields: [agentToolExecutions.flowRunId],
     references: [flowRuns.id],
   }),
 }));
@@ -416,62 +389,14 @@ export type NewFlowVersion = typeof flowVersions.$inferInsert;
 export type FlowRun = typeof flowRuns.$inferSelect;
 export type NewFlowRun = typeof flowRuns.$inferInsert;
 
-export type NodeExecution = typeof nodeExecutions.$inferSelect;
-export type NewNodeExecution = typeof nodeExecutions.$inferInsert;
+export type NodeExecution = typeof actionTraces.$inferSelect;
+export type NewNodeExecution = typeof actionTraces.$inferInsert;
 
 export type BatchJob = typeof batchJobs.$inferSelect;
 export type NewBatchJob = typeof batchJobs.$inferInsert;
 
-export type AgentToolExecution = typeof agentToolExecutions.$inferSelect;
-export type NewAgentToolExecution = typeof agentToolExecutions.$inferInsert;
-
 export type Credential = typeof credentials.$inferSelect;
 export type NewCredential = typeof credentials.$inferInsert;
-
-// =============================================================================
-// Flow Access Control (RBAC)
-// =============================================================================
-
-/**
- * Flow access permission levels: "owner" | "editor" | "operator" | "viewer"
- */
-export type FlowAccessPermission = 'owner' | 'editor' | 'operator' | 'viewer';
-
-/**
- * Flow access table - tracks who can access which flows.
- * Supports both user-level and team-level access.
- */
-export const flowAccess = sqliteTable('flow_access', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => randomUUID()),
-  flowId: text('flow_id')
-    .notNull()
-    .references(() => flows.id, { onDelete: 'cascade' }),
-
-  // Either userId OR teamId is set (not both)
-  userId: text('user_id'), // External user ID from host app
-  teamId: text('team_id'), // External team ID from host app
-
-  // Permission level for this flow: "owner" | "editor" | "operator" | "viewer"
-  permission: text('permission').$type<FlowAccessPermission>().notNull().default('viewer'),
-
-  // Audit fields
-  grantedBy: text('granted_by'),
-  grantedAt: text('granted_at')
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-
-  // Optional expiration
-  expiresAt: text('expires_at'),
-});
-
-export const flowAccessRelations = relations(flowAccess, ({ one }) => ({
-  flow: one(flows, {
-    fields: [flowAccess.flowId],
-    references: [flows.id],
-  }),
-}));
 
 export const flowTriggersRelations = relations(flowTriggers, ({ one }) => ({
   flow: one(flows, {
@@ -479,9 +404,6 @@ export const flowTriggersRelations = relations(flowTriggers, ({ one }) => ({
     references: [flows.id],
   }),
 }));
-
-export type FlowAccess = typeof flowAccess.$inferSelect;
-export type NewFlowAccess = typeof flowAccess.$inferInsert;
 
 export type FlowTrigger = typeof flowTriggers.$inferSelect;
 export type NewFlowTrigger = typeof flowTriggers.$inferInsert;

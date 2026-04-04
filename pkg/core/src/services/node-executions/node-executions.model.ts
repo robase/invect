@@ -1,4 +1,5 @@
-// Node Executions Model for Invect core — adapter-based implementation
+// Action Traces Model for Invect core — adapter-based implementation
+// Unified model for node executions + agent tool executions (action_traces table)
 import type { InvectAdapter, WhereClause } from '../../database/adapter';
 import { NodeExecutionStatus } from 'src/types/base';
 import { DatabaseError } from 'src/types/common/errors.types';
@@ -6,13 +7,17 @@ import { Logger, PaginatedResponse, QueryOptions } from 'src/types/schemas';
 import type { NodeOutput } from 'src/types/node-io-types';
 
 /**
- * Execution Trace entity
+ * Execution Trace entity (node-level trace, parentNodeExecutionId is null)
  */
 export interface NodeExecution {
   id: string;
   flowRunId: string;
+  parentNodeExecutionId?: string | null;
   nodeId: string;
   nodeType: string;
+  toolId?: string | null;
+  toolName?: string | null;
+  iteration?: number | null;
   status: NodeExecutionStatus;
   inputs: Record<string, unknown>;
   outputs?: NodeOutput;
@@ -21,6 +26,44 @@ export interface NodeExecution {
   completedAt?: Date | string;
   duration?: number;
   retryCount: number;
+}
+
+/**
+ * Agent Tool Execution entity — a view over a tool-type action trace.
+ * Provides backward-compatible shape with `success`, `input` (singular), `output` (singular).
+ */
+export interface AgentToolExecution {
+  id: string;
+  nodeExecutionId: string;
+  flowRunId: string;
+  toolId: string;
+  toolName: string;
+  iteration: number;
+  input: Record<string, unknown>;
+  output?: unknown;
+  error?: string;
+  success: boolean;
+  startedAt: Date | string;
+  completedAt?: Date | string;
+  duration?: number;
+}
+
+/**
+ * Input for creating a new agent tool execution (backward-compatible with old service API)
+ */
+export interface CreateAgentToolExecutionInput {
+  nodeExecutionId: string;
+  flowRunId: string;
+  toolId: string;
+  toolName: string;
+  iteration: number;
+  input: Record<string, unknown>;
+  output?: unknown;
+  error?: string;
+  success: boolean;
+  startedAt: string;
+  completedAt?: string;
+  duration?: number;
 }
 
 /**
@@ -56,7 +99,21 @@ interface _NodeExecutionQuery {
   offset?: number;
 }
 
-const TABLE = 'execution_traces';
+const TABLE = 'action_traces';
+
+/** Filter clause to select only node-level traces (not tool traces) */
+const NODE_TRACE_FILTER: WhereClause = {
+  field: 'parent_node_execution_id',
+  operator: 'is_null',
+  value: null,
+};
+
+/** Filter clause to select only tool-level traces */
+const toolTraceFilter = (parentId: string): WhereClause => ({
+  field: 'parent_node_execution_id',
+  operator: 'eq',
+  value: parentId,
+});
 
 /**
  * Node Executions CRUD operations class — uses InvectAdapter.
@@ -92,14 +149,14 @@ export class NodeExecutionsModel {
   }
 
   /**
-   * Get all execution traces with optional filtering
+   * Get all execution traces with optional filtering (node traces only)
    */
   async list(options?: QueryOptions<NodeExecution>): Promise<PaginatedResponse<NodeExecution>> {
     const pagination = options?.pagination || { limit: 100, page: 1 };
     const sort = options?.sort;
     const filter = options?.filter || {};
     const offset = (pagination.page - 1) * pagination.limit;
-    const where = this.buildFilterWhere(filter);
+    const where = [...this.buildFilterWhere(filter), NODE_TRACE_FILTER];
 
     try {
       const [data, totalCount] = await Promise.all([
@@ -196,11 +253,20 @@ export class NodeExecutionsModel {
   }
 
   /**
-   * Get execution traces by flow run ID
+   * Get execution traces by flow run ID (node traces only)
    */
   async findByFlowRunId(flowRunId: string): Promise<NodeExecution[]> {
-    const result = await this.list({ filter: { flowRunId: [flowRunId] } });
-    return result.data;
+    try {
+      const results = await this.adapter.findMany<Record<string, unknown>>({
+        model: TABLE,
+        where: [{ field: 'flow_run_id', value: flowRunId }, NODE_TRACE_FILTER],
+        sortBy: { field: 'started_at', direction: 'desc' },
+      });
+      return results.map((r) => this.normalize(r));
+    } catch (error) {
+      this.logger.error('Failed to get execution traces by flow run ID', { flowRunId, error });
+      throw new DatabaseError('Failed to get execution traces', { error });
+    }
   }
 
   /**
@@ -213,6 +279,7 @@ export class NodeExecutionsModel {
         where: [
           { field: 'flow_run_id', value: flowRunId },
           { field: 'node_id', value: nodeId },
+          NODE_TRACE_FILTER,
         ],
         sortBy: { field: 'started_at', direction: 'desc' },
       });
@@ -313,8 +380,14 @@ export class NodeExecutionsModel {
     return {
       id: String(raw.id),
       flowRunId: String(raw.flow_run_id ?? raw.flowRunId),
-      nodeId: String(raw.node_id ?? raw.nodeId),
-      nodeType: String(raw.node_type ?? raw.nodeType),
+      parentNodeExecutionId: (raw.parent_node_execution_id ?? raw.parentNodeExecutionId ?? null) as
+        | string
+        | null,
+      nodeId: String(raw.node_id ?? raw.nodeId ?? ''),
+      nodeType: String(raw.node_type ?? raw.nodeType ?? ''),
+      toolId: (raw.tool_id ?? raw.toolId ?? null) as string | null,
+      toolName: (raw.tool_name ?? raw.toolName ?? null) as string | null,
+      iteration: raw.iteration !== null && raw.iteration !== undefined ? Number(raw.iteration) : null,
       status: (raw.status || 'PENDING') as NodeExecutionStatus,
       inputs: (raw.inputs || {}) as Record<string, unknown>,
       outputs: raw.outputs as NodeOutput | undefined,
@@ -350,11 +423,149 @@ export class NodeExecutionsModel {
       startedAt: 'started_at',
       completedAt: 'completed_at',
       retryCount: 'retry_count',
+      parentNodeExecutionId: 'parent_node_execution_id',
+      toolId: 'tool_id',
+      toolName: 'tool_name',
     };
     return map[field] ?? field;
   }
 
   private mapSortField(field: string): string {
     return this.mapFilterField(field);
+  }
+
+  // =========================================================================
+  // Tool execution methods (agent tool traces)
+  // =========================================================================
+
+  /**
+   * Create a new agent tool execution record (stored as a child action trace)
+   */
+  async createToolExecution(input: CreateAgentToolExecutionInput): Promise<AgentToolExecution> {
+    try {
+      const status = input.success ? NodeExecutionStatus.SUCCESS : NodeExecutionStatus.FAILED;
+      const result = await this.adapter.create({
+        model: TABLE,
+        data: {
+          parent_node_execution_id: input.nodeExecutionId,
+          flow_run_id: input.flowRunId,
+          tool_id: input.toolId,
+          tool_name: input.toolName,
+          iteration: input.iteration,
+          status,
+          inputs: input.input, // singular → plural column
+          outputs: input.output ?? null,
+          error: input.error ?? null,
+          started_at: new Date(input.startedAt),
+          completed_at: input.completedAt ? new Date(input.completedAt) : null,
+          duration: input.duration ?? null,
+          retry_count: 0,
+        },
+      });
+      return this.normalizeToolExecution(result);
+    } catch (error) {
+      this.logger.error('Failed to create agent tool execution', { input, error });
+      throw new DatabaseError('Failed to create agent tool execution', { error });
+    }
+  }
+
+  /**
+   * Get agent tool executions by parent node execution ID
+   */
+  async getToolExecutionsByNodeExecutionId(nodeExecutionId: string): Promise<AgentToolExecution[]> {
+    try {
+      const results = await this.adapter.findMany<Record<string, unknown>>({
+        model: TABLE,
+        where: [toolTraceFilter(nodeExecutionId)],
+        sortBy: { field: 'iteration', direction: 'asc' },
+      });
+      return results.map((r) => this.normalizeToolExecution(r));
+    } catch (error) {
+      this.logger.error('Failed to get agent tool executions by node execution ID', {
+        nodeExecutionId,
+        error,
+      });
+      throw new DatabaseError('Failed to get agent tool executions', { error });
+    }
+  }
+
+  /**
+   * Get agent tool executions by flow run ID
+   */
+  async getToolExecutionsByFlowRunId(flowRunId: string): Promise<AgentToolExecution[]> {
+    try {
+      const results = await this.adapter.findMany<Record<string, unknown>>({
+        model: TABLE,
+        where: [
+          { field: 'flow_run_id', value: flowRunId },
+          { field: 'tool_id', operator: 'is_not_null', value: null },
+        ],
+        sortBy: { field: 'started_at', direction: 'asc' },
+      });
+      return results.map((r) => this.normalizeToolExecution(r));
+    } catch (error) {
+      this.logger.error('Failed to get agent tool executions by flow run ID', {
+        flowRunId,
+        error,
+      });
+      throw new DatabaseError('Failed to get agent tool executions', { error });
+    }
+  }
+
+  /**
+   * List agent tool executions with pagination
+   */
+  async listToolExecutions(
+    options?: QueryOptions<AgentToolExecution>,
+  ): Promise<PaginatedResponse<AgentToolExecution>> {
+    const pagination = options?.pagination || { limit: 100, page: 1 };
+    const offset = (pagination.page - 1) * pagination.limit;
+
+    try {
+      const toolFilter: WhereClause = { field: 'tool_id', operator: 'is_not_null', value: null };
+      const [results, totalCount] = await Promise.all([
+        this.adapter.findMany<Record<string, unknown>>({
+          model: TABLE,
+          where: [toolFilter],
+          sortBy: { field: 'started_at', direction: 'desc' },
+          limit: pagination.limit,
+          offset,
+        }),
+        this.adapter.count({ model: TABLE, where: [toolFilter] }),
+      ]);
+
+      const data = results.map((r) => this.normalizeToolExecution(r));
+      const totalPages = Math.ceil(totalCount / pagination.limit);
+
+      return {
+        data,
+        pagination: { page: pagination.page, limit: pagination.limit, totalPages },
+      };
+    } catch (error) {
+      this.logger.error('Failed to list agent tool executions', { options, error });
+      throw new DatabaseError('Failed to list agent tool executions', { error });
+    }
+  }
+
+  /**
+   * Normalize a raw DB row to the backward-compatible AgentToolExecution shape
+   */
+  private normalizeToolExecution(raw: Record<string, unknown>): AgentToolExecution {
+    const status = (raw.status as string) || 'FAILED';
+    return {
+      id: raw.id as string,
+      nodeExecutionId: (raw.parent_node_execution_id ?? raw.parentNodeExecutionId) as string,
+      flowRunId: (raw.flow_run_id ?? raw.flowRunId) as string,
+      toolId: (raw.tool_id ?? raw.toolId) as string,
+      toolName: (raw.tool_name ?? raw.toolName) as string,
+      iteration: raw.iteration as number,
+      input: (raw.inputs as Record<string, unknown>) || {},
+      output: raw.outputs as unknown,
+      error: raw.error as string | undefined,
+      success: status === 'SUCCESS' || status === NodeExecutionStatus.SUCCESS,
+      startedAt: (raw.started_at ?? raw.startedAt) as Date | string,
+      completedAt: (raw.completed_at ?? raw.completedAt) as Date | string | undefined,
+      duration: raw.duration as number | undefined,
+    };
   }
 }

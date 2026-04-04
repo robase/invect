@@ -243,7 +243,7 @@ test.describe("NestJS + Prisma + PostgreSQL — Invect Installation", () => {
     expect(tables).toContain("flows");
     expect(tables).toContain("flow_versions");
     expect(tables).toContain("flow_executions");
-    expect(tables).toContain("execution_traces");
+    expect(tables).toContain("execution_traces"); // TODO: rename to action_traces after migration
     expect(tables).toContain("batch_jobs");
     expect(tables).toContain("credentials");
   });

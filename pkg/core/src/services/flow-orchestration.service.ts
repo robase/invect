@@ -2,7 +2,6 @@ import type { FlowRunsService } from './flow-runs/flow-runs.service';
 import type { NodeExecutionService } from './node-executions/node-execution.service';
 import type { FlowsService } from './flows/flows.service';
 import type { CredentialsService } from './credentials/credentials.service';
-import type { AgentToolExecutionService } from './agent-tool-executions/agent-tool-execution.service';
 import type { JsExpressionService } from './templating/js-expression.service';
 import type { TemplateService } from './templating/template.service';
 import type { BatchJobsService } from './batch-jobs/batch-jobs.service';
@@ -47,7 +46,7 @@ export class FlowOrchestrationService {
     private readonly batchJobsService: BatchJobsService,
     private readonly credentialsService?: CredentialsService, // Optional for now to avoid breaking changes
     private readonly baseAIClient?: BaseAIClient,
-    private readonly agentToolExecutionService?: AgentToolExecutionService,
+    private readonly nodeExecutionServiceForTools?: NodeExecutionService,
     executionConfig?: {
       heartbeatIntervalMs?: number;
       flowTimeoutMs?: number;
@@ -71,7 +70,7 @@ export class FlowOrchestrationService {
       nodeDataService,
       graphService,
       credentialsService,
-      agentToolExecutionService,
+      nodeExecutionServiceForTools: nodeExecutionServiceForTools ?? nodeExecutionService,
       templateService,
       jsExpressionService,
       baseAIClient,

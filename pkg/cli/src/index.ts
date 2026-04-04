@@ -50,7 +50,9 @@ async function main() {
   await program.parseAsync(process.argv);
 }
 
-main().catch((error) => {
-  console.error('Error running Invect CLI:', error);
-  process.exit(1);
-});
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error('Error running Invect CLI:', error);
+    process.exit(1);
+  });

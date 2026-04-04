@@ -30,7 +30,7 @@ export interface InvectIdentity {
 
   /**
    * Team IDs this user belongs to (from host app).
-   * Used for team-level flow access when useFlowAccessTable is enabled.
+   * Used for team-level flow access via the auth plugin.
    */
   teamIds?: string[];
 
@@ -48,7 +48,7 @@ export interface InvectIdentity {
    * Use '*' to allow access to all resources of that type.
    * Omit the key entirely to use role-based access (no resource restriction).
    *
-   * Note: If useFlowAccessTable is enabled, flow access is looked up from
+   * Note: When the auth plugin is active, flow access is looked up from
    * the database instead of this field.
    */
   resourceAccess?: InvectResourceAccess;
@@ -289,19 +289,6 @@ export interface InvectAuthConfig {
    * @default 'throw'
    */
   onAuthFailure?: 'throw' | 'log' | 'deny';
-
-  /**
-   * Use the flow_access database table to manage flow-level permissions.
-   * When enabled:
-   * - Invect stores flow access records in its own database
-   * - Flow access is looked up from the database
-   *
-   * When disabled (default):
-   * - Flow access is determined by resourceAccess.flows from the identity
-   *
-   * @default false
-   */
-  useFlowAccessTable?: boolean;
 }
 
 // =============================================================================

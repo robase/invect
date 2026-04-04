@@ -94,9 +94,7 @@ app.use(
           },
         ],
       }),
-      rbacPlugin({
-        useFlowAccessTable: true,
-      }),
+      rbacPlugin(),
       webhooksPlugin({
         webhookBaseUrl,
       }),

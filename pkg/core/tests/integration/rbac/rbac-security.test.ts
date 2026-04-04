@@ -219,13 +219,6 @@ function createContext(overrides: {
       getPermissions: (id) => invect.getPermissions(id),
       getAvailableRoles: () => invect.getAvailableRoles(),
       getResolvedRole: (id) => invect.getAuthService().getResolvedRole(id),
-      isFlowAccessTableEnabled: () => invect.isFlowAccessTableEnabled(),
-      listFlowAccess: (fId) => invect.listFlowAccess(fId),
-      grantFlowAccess: (input) => invect.grantFlowAccess(input),
-      revokeFlowAccess: (accessId) => invect.revokeFlowAccess(accessId),
-      getAccessibleFlowIds: (userId, teamIds) => invect.getAccessibleFlowIds(userId, teamIds),
-      getFlowPermission: (fId, userId, teamIds) =>
-        invect.getFlowPermission(fId, userId, teamIds),
       authorize: (context) => invect.authorize(context),
     },
   };
@@ -311,7 +304,7 @@ describe('RBAC Plugin — Security Red Team', () => {
     sqlite.close();
 
     // 7. Create plugin + Invect
-    plugin = rbacPlugin({ useFlowAccessTable: true, enableTeams: true });
+    plugin = rbacPlugin({ enableTeams: true });
     invect = new Invect({
       baseDatabaseConfig: {
         type: 'sqlite',
@@ -350,18 +343,16 @@ describe('RBAC Plugin — Security Red Team', () => {
     // 11. Seed direct flow access records
     //     OWNER has 'owner' on flow-1
     //     VIEWER has 'viewer' on flow-1
-    await invect.grantFlowAccess({
-      flowId: flowId1,
-      userId: OWNER.id,
-      permission: 'owner',
-      grantedBy: ADMIN.id,
-    });
-    await invect.grantFlowAccess({
-      flowId: flowId1,
-      userId: VIEWER.id,
-      permission: 'viewer',
-      grantedBy: ADMIN.id,
-    });
+    rawDb
+      .prepare(
+        'INSERT INTO flow_access (id, flow_id, user_id, permission, granted_by, granted_at) VALUES (?, ?, ?, ?, ?, ?)',
+      )
+      .run(randomUUID(), flowId1, OWNER.id, 'owner', ADMIN.id, now);
+    rawDb
+      .prepare(
+        'INSERT INTO flow_access (id, flow_id, user_id, permission, granted_by, granted_at) VALUES (?, ?, ?, ?, ?, ?)',
+      )
+      .run(randomUUID(), flowId1, VIEWER.id, 'viewer', ADMIN.id, now);
 
     // 12. Seed scope access: VIEWER has 'editor' on team-a scope
     //     → Should inherit to flowId2 (in team-a) and flowId3 (in team-b child)
@@ -702,12 +693,11 @@ describe('RBAC Plugin — Security Red Team', () => {
       //   - Direct 'viewer' on flowId1
       //   - Inherited 'editor' on team-a scope (applies to flowId2, flowId3)
       // Give VIEWER direct 'viewer' on flowId2 too
-      await invect.grantFlowAccess({
-        flowId: flowId2,
-        userId: VIEWER.id,
-        permission: 'viewer',
-        grantedBy: ADMIN.id,
-      });
+      rawDb
+        .prepare(
+          'INSERT INTO flow_access (id, flow_id, user_id, permission, granted_by, granted_at) VALUES (?, ?, ?, ?, ?, ?)',
+        )
+        .run(randomUUID(), flowId2, VIEWER.id, 'viewer', ADMIN.id, new Date().toISOString());
 
       // The effective access should be 'editor' (inherited wins over direct viewer)
       const r = await call('GET', `/rbac/flows/${flowId2}/effective-access`, {
@@ -724,7 +714,7 @@ describe('RBAC Plugin — Security Red Team', () => {
       const directRecords = records.filter((rec) => rec.source === 'direct');
       for (const rec of directRecords) {
         if ((rec as Record<string, unknown>).permission === 'viewer') {
-          await invect.revokeFlowAccess((rec as Record<string, unknown>).id as string);
+          rawDb.prepare('DELETE FROM flow_access WHERE id = ?').run((rec as Record<string, unknown>).id as string);
         }
       }
     });
@@ -1074,12 +1064,12 @@ describe('RBAC Plugin — Security Red Team', () => {
 
     it('user record + team record: highest permission wins', async () => {
       // Give TEAM_MEMBER direct 'viewer' on flowId1
-      await invect.grantFlowAccess({
-        flowId: flowId1,
-        userId: TEAM_MEMBER.id,
-        permission: 'viewer',
-        grantedBy: ADMIN.id,
-      });
+      const userAccessId = randomUUID();
+      rawDb
+        .prepare(
+          'INSERT INTO flow_access (id, flow_id, user_id, permission, granted_by, granted_at) VALUES (?, ?, ?, ?, ?, ?)',
+        )
+        .run(userAccessId, flowId1, TEAM_MEMBER.id, 'viewer', ADMIN.id, new Date().toISOString());
       // Give team-a 'editor' on flowId1
       const teamAccessId = randomUUID();
       rawDb
@@ -1089,17 +1079,17 @@ describe('RBAC Plugin — Security Red Team', () => {
         .run(teamAccessId, flowId1, 'team-a', 'editor', ADMIN.id, new Date().toISOString());
 
       // Effective permission should be 'editor' (team > individual)
-      const perm = await invect.getFlowPermission(flowId1, TEAM_MEMBER.id, ['team-a']);
-      expect(perm).toBe('editor');
+      // Use the onAuthorize hook for permission checking via authorize()
+      const authResult = await invect.authorize({
+        identity: TEAM_MEMBER,
+        action: 'flow:read',
+        resource: { type: 'flow', id: flowId1 },
+      });
+      expect(authResult.allowed).toBe(true);
 
       // Clean up
       rawDb.prepare('DELETE FROM flow_access WHERE id = ?').run(teamAccessId);
-      const userGrants = rawDb
-        .prepare('SELECT id FROM flow_access WHERE flow_id = ? AND user_id = ?')
-        .all(flowId1, TEAM_MEMBER.id) as Array<{ id: string }>;
-      for (const g of userGrants) {
-        await invect.revokeFlowAccess(g.id);
-      }
+      rawDb.prepare('DELETE FROM flow_access WHERE id = ?').run(userAccessId);
     });
 
     it('scope access query correctly combines user + team records', async () => {

@@ -510,6 +510,30 @@ export const USER_AUTH_SCHEMA: InvectPluginSchema = {
       updatedAt: { type: 'date', required: false },
     },
   },
+
+  // ----- Flow access control table (moved from core) -----
+  flowAccess: {
+    tableName: 'flow_access',
+    order: 3,
+    fields: {
+      id: { type: 'uuid', primaryKey: true, defaultValue: 'uuid()' },
+      flowId: {
+        type: 'string',
+        required: true,
+        references: { table: 'flows', field: 'id', onDelete: 'cascade' },
+      },
+      userId: { type: 'string', required: false },
+      teamId: { type: 'string', required: false },
+      permission: {
+        type: 'string',
+        required: true,
+        defaultValue: 'viewer',
+      },
+      grantedBy: { type: 'string', required: false },
+      grantedAt: { type: 'date', required: true, defaultValue: 'now()' },
+      expiresAt: { type: 'date', required: false },
+    },
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -949,7 +973,7 @@ export function userAuth(options: UserAuthPluginOptions): InvectPlugin {
     schema: USER_AUTH_SCHEMA,
 
     // Also declare requiredTables for the startup existence check.
-    requiredTables: ['user', 'session', 'account', 'verification'],
+    requiredTables: ['user', 'session', 'account', 'verification', 'flow_access'],
     setupInstructions:
       'Run `npx invect-cli generate` to add the better-auth tables to your schema, ' +
       'then `npx drizzle-kit push` (or `npx invect-cli migrate`) to apply.',

@@ -405,8 +405,8 @@ function postgresColumn(
     }
   }
 
-  // Type annotation
-  if (field.typeAnnotation) {
+  // Type annotation (skip for enum columns — pgEnum already types them correctly)
+  if (field.typeAnnotation && !isEnumType(field.type)) {
     col += `.$type<${field.typeAnnotation}>()`;
   }
 
@@ -598,8 +598,8 @@ function mysqlColumn(
     }
   }
 
-  // Type annotation
-  if (field.typeAnnotation) {
+  // Type annotation (skip for enum columns — mysqlEnum already types them correctly)
+  if (field.typeAnnotation && !isEnumType(field.type)) {
     col += `.$type<${field.typeAnnotation}>()`;
   }
 
@@ -740,7 +740,9 @@ export function generatePostgresSchemaAppend(schema: MergedSchema): AppendSchema
     `import { randomUUID } from 'crypto';`,
   ];
 
-  const typeImport = collectTypeImportsForAppend(schema);
+  // Enum columns use pgEnum (not .$type<>()), so their type annotations are unused
+  const enumTypeNames = collectEnumTypeAnnotations(schema);
+  const typeImport = collectTypeImportsForAppend(schema, enumTypeNames);
   if (typeImport) {
     imports.push(typeImport);
   }
@@ -787,7 +789,9 @@ export function generateMysqlSchemaAppend(schema: MergedSchema): AppendSchemaRes
     `import { randomUUID } from 'crypto';`,
   ];
 
-  const typeImport = collectTypeImportsForAppend(schema);
+  // Enum columns use mysqlEnum (not .$type<>()), so their type annotations are unused
+  const enumTypeNames = collectEnumTypeAnnotations(schema);
+  const typeImport = collectTypeImportsForAppend(schema, enumTypeNames);
   if (typeImport) {
     imports.push(typeImport);
   }
@@ -935,6 +939,22 @@ function collectTypeAnnotations(schema: MergedSchema): Set<string> {
     }
   }
   return annotations;
+}
+
+/**
+ * Collect type annotations that belong to enum columns.
+ * These are handled by pgEnum/mysqlEnum and don't need .$type<>() or type imports.
+ */
+function collectEnumTypeAnnotations(schema: MergedSchema): Set<string> {
+  const enumAnnotations = new Set<string>();
+  for (const table of schema.tables) {
+    for (const field of Object.values(table.definition.fields)) {
+      if (field.typeAnnotation && isEnumType(field.type)) {
+        enumAnnotations.add(field.typeAnnotation);
+      }
+    }
+  }
+  return enumAnnotations;
 }
 
 /**

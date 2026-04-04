@@ -907,14 +907,6 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
             getAvailableRoles: () => initializedCore.getAvailableRoles(),
             getResolvedRole: (identity) =>
               initializedCore.getAuthService().getResolvedRole(identity),
-            isFlowAccessTableEnabled: () => initializedCore.isFlowAccessTableEnabled(),
-            listFlowAccess: (flowId) => initializedCore.listFlowAccess(flowId),
-            grantFlowAccess: (input) => initializedCore.grantFlowAccess(input),
-            revokeFlowAccess: (accessId) => initializedCore.revokeFlowAccess(accessId),
-            getAccessibleFlowIds: (userId, teamIds) =>
-              initializedCore.getAccessibleFlowIds(userId, teamIds),
-            getFlowPermission: (flowId, userId, teamIds) =>
-              initializedCore.getFlowPermission(flowId, userId, teamIds),
             authorize: (context) => initializedCore.authorize(context),
           },
         });

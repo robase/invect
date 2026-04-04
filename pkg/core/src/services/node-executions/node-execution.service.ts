@@ -3,7 +3,11 @@ import { Logger } from 'src/types/schemas';
 import { DatabaseError } from 'src/types/common/errors.types';
 import { NodeExecutionStatus } from 'src/types/base';
 import { PaginatedResponse, QueryOptions } from 'src/types/schemas/pagination-sort-filter';
-import { NodeExecution } from './node-executions.model';
+import {
+  NodeExecution,
+  AgentToolExecution,
+  CreateAgentToolExecutionInput,
+} from './node-executions.model';
 import type { NodeOutput } from 'src/types/node-io-types';
 import type { ExecutionEventBus } from '../execution-event-bus';
 
@@ -274,5 +278,95 @@ export class NodeExecutionService {
     this.logger.debug('Closing execution trace service');
     this.initialized = false;
     // Database connection lifecycle is managed externally
+  }
+
+  // =========================================================================
+  // Agent Tool Execution Methods (merged from AgentToolExecutionService)
+  // =========================================================================
+
+  /**
+   * Record a tool execution
+   */
+  async recordToolExecution(input: CreateAgentToolExecutionInput): Promise<AgentToolExecution> {
+    this.logger.debug('Recording agent tool execution', {
+      nodeExecutionId: input.nodeExecutionId,
+      toolId: input.toolId,
+      toolName: input.toolName,
+      iteration: input.iteration,
+    });
+
+    try {
+      const record = await this.databaseService.nodeExecutions.createToolExecution(input);
+
+      this.logger.debug('Agent tool execution recorded successfully', {
+        id: record.id,
+        toolId: input.toolId,
+        success: record.success,
+        duration: record.duration,
+      });
+
+      return record;
+    } catch (error) {
+      this.logger.error('Failed to record agent tool execution', {
+        nodeExecutionId: input.nodeExecutionId,
+        toolId: input.toolId,
+        error,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get tool executions for a specific node execution (agent node)
+   */
+  async getToolExecutionsByNodeExecutionId(nodeExecutionId: string): Promise<AgentToolExecution[]> {
+    this.logger.debug('Getting agent tool executions by node execution ID', {
+      nodeExecutionId,
+    });
+
+    try {
+      return await this.databaseService.nodeExecutions.getToolExecutionsByNodeExecutionId(
+        nodeExecutionId,
+      );
+    } catch (error) {
+      this.logger.error('Failed to get agent tool executions by node execution ID', {
+        nodeExecutionId,
+        error,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get all tool executions for a flow run
+   */
+  async getToolExecutionsByFlowRunId(flowRunId: string): Promise<AgentToolExecution[]> {
+    this.logger.debug('Getting agent tool executions by flow run ID', { flowRunId });
+
+    try {
+      return await this.databaseService.nodeExecutions.getToolExecutionsByFlowRunId(flowRunId);
+    } catch (error) {
+      this.logger.error('Failed to get agent tool executions by flow run ID', {
+        flowRunId,
+        error,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * List tool executions with pagination and filtering
+   */
+  async listToolExecutions(
+    options?: QueryOptions<AgentToolExecution>,
+  ): Promise<PaginatedResponse<AgentToolExecution>> {
+    this.logger.debug('Listing agent tool executions', { options });
+
+    try {
+      return await this.databaseService.nodeExecutions.listToolExecutions(options);
+    } catch (error) {
+      this.logger.error('Failed to list agent tool executions', { options, error });
+      throw error;
+    }
   }
 }

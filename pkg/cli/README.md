@@ -68,9 +68,9 @@ npx invect-cli secret
 The CLI reads from `invect.config.ts` in your project root:
 
 ```ts
-import type { InvectConfig } from '@invect/core';
+import { defineConfig } from '@invect/core';
 
-export const invectConfig: InvectConfig = {
+export default defineConfig({
   baseDatabaseConfig: {
     type: 'sqlite',
     connectionString: 'file:./dev.db',
@@ -79,7 +79,7 @@ export const invectConfig: InvectConfig = {
   plugins: [
     // Your plugins here — their schemas are merged automatically
   ],
-};
+});
 ```
 
 ## License

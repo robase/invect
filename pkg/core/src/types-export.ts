@@ -40,6 +40,8 @@ export type {
   NodeExecution,
   CreateNodeExecutionInput,
   UpdateNodeExecutionInput,
+  AgentToolExecution,
+  CreateAgentToolExecutionInput,
 } from './services/node-executions/node-executions.model';
 
 export type {
@@ -162,7 +164,6 @@ export type {
   CredentialAuthType,
   CredentialConfig,
 } from './database/schema-sqlite';
-export type { FlowAccessPermission } from './services/auth/flow-access.service';
 
 // Dashboard stats type (pure interface — safe for frontend)
 export type { DashboardStats } from './invect-core';

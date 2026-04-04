@@ -1,6 +1,5 @@
-export { AgentToolExecutionService } from './agent-tool-execution.service';
-export {
-  AgentToolExecutionsModel,
-  type AgentToolExecution,
-  type CreateAgentToolExecutionInput,
-} from './agent-tool-executions.model';
+// Re-export from the unified model for backward compatibility
+export type {
+  AgentToolExecution,
+  CreateAgentToolExecutionInput,
+} from '../node-executions/node-executions.model';

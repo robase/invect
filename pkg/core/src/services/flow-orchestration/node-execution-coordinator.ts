@@ -10,7 +10,6 @@ import type { NodeExecutorRegistry } from 'src/nodes/executor-registry';
 import type { Logger } from 'src/types/schemas';
 import type { GraphService } from '../graph.service';
 import type { CredentialsService } from '../credentials/credentials.service';
-import type { AgentToolExecutionService } from '../agent-tool-executions/agent-tool-execution.service';
 import type { BaseAIClient } from '../ai/base-client';
 import { BatchProvider } from '../ai/base-client';
 import type { PluginHookRunner } from 'src/types/plugin.types';
@@ -28,7 +27,7 @@ export type NodeExecutionCoordinatorDeps = {
   nodeDataService: NodeDataService;
   graphService: GraphService;
   credentialsService?: CredentialsService;
-  agentToolExecutionService?: AgentToolExecutionService;
+  nodeExecutionServiceForTools?: NodeExecutionService;
   templateService?: TemplateService;
   jsExpressionService?: JsExpressionService;
   baseAIClient: BaseAIClient;
@@ -550,13 +549,13 @@ export class NodeExecutionCoordinator {
             return this.deps.baseAIClient.runAgentPrompt(request, request.provider);
           },
           recordToolExecution: async (input) => {
-            const { agentToolExecutionService } = this.deps;
-            if (!agentToolExecutionService) {
-              logger.warn('Agent tool execution service not available');
+            const toolService = this.deps.nodeExecutionServiceForTools;
+            if (!toolService) {
+              logger.warn('Node execution service not available for tool recording');
               return null;
             }
             try {
-              const record = await agentToolExecutionService.recordToolExecution(input);
+              const record = await toolService.recordToolExecution(input);
               return { id: record.id };
             } catch (error) {
               logger.error('Failed to record tool execution', {

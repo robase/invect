@@ -70,16 +70,6 @@ export async function resolveTeamIds(db: PluginDatabaseApi, userId: string): Pro
 
 export interface RbacPluginOptions {
   /**
-   * Enable the flow access table for database-backed per-flow permissions.
-   * When enabled, the plugin will check flow-level ACLs in addition to
-   * role-based permissions. Requires `auth.useFlowAccessTable: true` in
-   * the Invect config.
-   *
-   * @default true
-   */
-  useFlowAccessTable?: boolean;
-
-  /**
    * Permission required to access the RBAC flows page.
    *
    * @default 'flow:read'
@@ -402,6 +392,73 @@ async function listAllDirectFlowAccess(
     .filter((record) => !record.expiresAt || new Date(record.expiresAt).getTime() > now);
 }
 
+async function grantDirectFlowAccess(
+  db: PluginDatabaseApi,
+  input: {
+    flowId: string;
+    userId?: string;
+    teamId?: string;
+    permission: FlowAccessPermission;
+    grantedBy?: string;
+    expiresAt?: string;
+  },
+): Promise<FlowAccessRecord> {
+  const now = new Date().toISOString();
+
+  // Check for existing access
+  const existingRows = await db.query<Record<string, unknown>>(
+    'SELECT id FROM flow_access WHERE flow_id = ? AND user_id IS ? AND team_id IS ?',
+    [input.flowId, input.userId ?? null, input.teamId ?? null],
+  );
+
+  if (existingRows.length > 0) {
+    const existingId = String(existingRows[0].id);
+    await db.execute(
+      'UPDATE flow_access SET permission = ?, granted_by = ?, granted_at = ?, expires_at = ? WHERE id = ?',
+      [input.permission, input.grantedBy ?? null, now, input.expiresAt ?? null, existingId],
+    );
+    return {
+      id: existingId,
+      flowId: input.flowId,
+      userId: input.userId ?? null,
+      teamId: input.teamId ?? null,
+      permission: input.permission,
+      grantedBy: input.grantedBy ?? null,
+      grantedAt: now,
+      expiresAt: input.expiresAt ?? null,
+    };
+  }
+
+  const id = crypto.randomUUID();
+  await db.execute(
+    'INSERT INTO flow_access (id, flow_id, user_id, team_id, permission, granted_by, granted_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [
+      id,
+      input.flowId,
+      input.userId ?? null,
+      input.teamId ?? null,
+      input.permission,
+      input.grantedBy ?? null,
+      now,
+      input.expiresAt ?? null,
+    ],
+  );
+  return {
+    id,
+    flowId: input.flowId,
+    userId: input.userId ?? null,
+    teamId: input.teamId ?? null,
+    permission: input.permission,
+    grantedBy: input.grantedBy ?? null,
+    grantedAt: now,
+    expiresAt: input.expiresAt ?? null,
+  };
+}
+
+async function revokeDirectFlowAccess(db: PluginDatabaseApi, accessId: string): Promise<void> {
+  await db.execute('DELETE FROM flow_access WHERE id = ?', [accessId]);
+}
+
 async function listAllEffectiveFlowAccessForPreview(
   db: PluginDatabaseApi,
   flowId: string,
@@ -568,7 +625,7 @@ async function resolveAccessChangeNames(
 // ─────────────────────────────────────────────────────────────
 
 export function rbacPlugin(options: RbacPluginOptions = {}): InvectPlugin {
-  const { useFlowAccessTable = true, adminPermission = 'flow:read', enableTeams = true } = options;
+  const { adminPermission = 'flow:read', enableTeams = true } = options;
 
   // ── Plugin-owned tables ─────────────────────────────────────
   const teamsSchema: InvectPluginSchema = enableTeams
@@ -719,9 +776,7 @@ export function rbacPlugin(options: RbacPluginOptions = {}): InvectPlugin {
         );
       }
 
-      ctx.logger.info('RBAC plugin initialized', {
-        useFlowAccessTable,
-      });
+      ctx.logger.info('RBAC plugin initialized');
     },
 
     // ─── Plugin Endpoints ─────────────────────────────────────
@@ -801,17 +856,6 @@ export function rbacPlugin(options: RbacPluginOptions = {}): InvectPlugin {
             return { status: 400, body: { error: 'Missing flowId parameter' } };
           }
 
-          if (!ctx.core.isFlowAccessTableEnabled()) {
-            return {
-              status: 501,
-              body: {
-                error: 'Not Implemented',
-                message:
-                  'Flow access table not enabled. Set auth.useFlowAccessTable: true in config.',
-              },
-            };
-          }
-
           if (!ctx.identity) {
             return {
               status: 401,
@@ -831,7 +875,7 @@ export function rbacPlugin(options: RbacPluginOptions = {}): InvectPlugin {
             };
           }
 
-          const access = await ctx.core.listFlowAccess(flowId);
+          const access = await listAllDirectFlowAccess(ctx.database, flowId);
           return { status: 200, body: { access } };
         },
       },
@@ -844,17 +888,6 @@ export function rbacPlugin(options: RbacPluginOptions = {}): InvectPlugin {
           const flowId = ctx.params.flowId;
           if (!flowId) {
             return { status: 400, body: { error: 'Missing flowId parameter' } };
-          }
-
-          if (!ctx.core.isFlowAccessTableEnabled()) {
-            return {
-              status: 501,
-              body: {
-                error: 'Not Implemented',
-                message:
-                  'Flow access table not enabled. Set auth.useFlowAccessTable: true in config.',
-              },
-            };
           }
 
           const { userId, teamId, permission, expiresAt } = ctx.body as {
@@ -897,11 +930,11 @@ export function rbacPlugin(options: RbacPluginOptions = {}): InvectPlugin {
             };
           }
 
-          const access = await ctx.core.grantFlowAccess({
+          const access = await grantDirectFlowAccess(ctx.database, {
             flowId,
             userId,
             teamId,
-            permission: permission as 'owner' | 'editor' | 'operator' | 'viewer',
+            permission: permission as FlowAccessPermission,
             grantedBy: ctx.identity?.id,
             expiresAt,
           });
@@ -917,17 +950,6 @@ export function rbacPlugin(options: RbacPluginOptions = {}): InvectPlugin {
           const { flowId, accessId } = ctx.params;
           if (!flowId || !accessId) {
             return { status: 400, body: { error: 'Missing flowId or accessId parameter' } };
-          }
-
-          if (!ctx.core.isFlowAccessTableEnabled()) {
-            return {
-              status: 501,
-              body: {
-                error: 'Not Implemented',
-                message:
-                  'Flow access table not enabled. Set auth.useFlowAccessTable: true in config.',
-              },
-            };
           }
 
           if (!ctx.identity) {
@@ -949,7 +971,7 @@ export function rbacPlugin(options: RbacPluginOptions = {}): InvectPlugin {
             };
           }
 
-          await ctx.core.revokeFlowAccess(accessId);
+          await revokeDirectFlowAccess(ctx.database, accessId);
           return { status: 204, body: null };
         },
       },
@@ -959,17 +981,6 @@ export function rbacPlugin(options: RbacPluginOptions = {}): InvectPlugin {
         path: '/rbac/flows/accessible',
         isPublic: false,
         handler: async (ctx) => {
-          if (!ctx.core.isFlowAccessTableEnabled()) {
-            return {
-              status: 501,
-              body: {
-                error: 'Not Implemented',
-                message:
-                  'Flow access table not enabled. Set auth.useFlowAccessTable: true in config.',
-              },
-            };
-          }
-
           const identity = ctx.identity;
           if (!identity) {
             return {
@@ -1882,10 +1893,6 @@ export function rbacPlugin(options: RbacPluginOptions = {}): InvectPlugin {
 
       // Enforce flow-level ACLs on authorization checks
       onAuthorize: async (context) => {
-        if (!useFlowAccessTable) {
-          return; // Defer to default RBAC
-        }
-
         const { identity, resource, action } = context;
 
         // Only enforce for flow-related resources with specific IDs
@@ -1926,8 +1933,6 @@ export function rbacPlugin(options: RbacPluginOptions = {}): InvectPlugin {
       // Auto-grant owner access when a flow is created
       afterFlowRun: async (_context) => {
         // This hook is for flow *runs*, not flow creation.
-        // Flow creation auto-grant is handled by the core when
-        // auth.useFlowAccessTable is true.
       },
     },
 

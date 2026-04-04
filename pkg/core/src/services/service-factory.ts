@@ -10,8 +10,6 @@ import { BatchJobsService } from './batch-jobs/batch-jobs.service';
 import { BaseAIClient } from './ai/base-client';
 import { CredentialsService } from './credentials/credentials.service';
 import { EncryptionService } from './credentials/encryption.service';
-import { AgentToolExecutionService } from './agent-tool-executions/agent-tool-execution.service';
-import { FlowAccessService } from './auth/flow-access.service';
 import { FlowTriggersService } from './triggers/flow-triggers.service';
 import { CronSchedulerService } from './triggers/cron-scheduler.service';
 import { ChatStreamService } from './chat/chat-stream.service';
@@ -39,8 +37,6 @@ interface CoreServices {
   baseAIClient: BaseAIClient;
   reactFlowRendererService: ReactFlowRendererService;
   credentialsService: CredentialsService;
-  agentToolExecutionService: AgentToolExecutionService;
-  flowAccessService: FlowAccessService;
   triggersService: FlowTriggersService;
   cronScheduler: CronSchedulerService;
   chatStreamService: ChatStreamService;
@@ -140,16 +136,7 @@ export class ServiceFactory {
         this.logger,
       );
 
-      // 5c. Create agent tool execution service
-      const agentToolExecutionService = new AgentToolExecutionService(this.logger, databaseService);
-
-      // 5d. Create flow access service (always available; plugins like RBAC activate it)
-      const flowAccessService = new FlowAccessService({
-        adapter: databaseService.adapter,
-        logger: this.logger,
-      });
-
-      // 5e. Create triggers service (needs orchestration, wired after orchestration is created)
+      // 5d. Create triggers service (needs orchestration, wired after orchestration is created)
       // Placeholder — we wire the real orchestrationService reference below.
 
       // 6. Create orchestration service with proper dependencies
@@ -164,7 +151,7 @@ export class ServiceFactory {
         batchJobsService,
         credentialsService, // Add credentials service
         baseAIClient, // Add baseAIClient for agent prompt support
-        agentToolExecutionService, // Add agent tool execution service
+        nodeExecutionsService, // Unified service handles both node + tool traces
         // Execution config: heartbeat, flow timeout, stale-run detection
         {
           heartbeatIntervalMs: this.config.execution?.heartbeatIntervalMs ?? 30_000,
@@ -212,7 +199,6 @@ export class ServiceFactory {
         orchestrationService.initialize(),
         nodeDataService.initialize(),
         reactFlowRendererService.initialize(),
-        agentToolExecutionService.initialize(),
         triggersService.initialize(),
       ]);
 
@@ -230,8 +216,6 @@ export class ServiceFactory {
         baseAIClient,
         reactFlowRendererService,
         credentialsService,
-        agentToolExecutionService,
-        flowAccessService,
         triggersService,
         cronScheduler,
         chatStreamService,
@@ -328,20 +312,6 @@ export class ServiceFactory {
    */
   getCredentialsService(): CredentialsService {
     return this.getServices().credentialsService;
-  }
-
-  /**
-   * Get agent tool execution service
-   */
-  getAgentToolExecutionService(): AgentToolExecutionService {
-    return this.getServices().agentToolExecutionService;
-  }
-
-  /**
-   * Get flow access service (for Invect-managed flow permissions).
-   */
-  getFlowAccessService(): FlowAccessService {
-    return this.getServices().flowAccessService;
   }
 
   /**

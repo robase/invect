@@ -9,7 +9,6 @@ import { FlowsModel } from '../flows/flows.model';
 import { BatchJobsModel } from '../batch-jobs/batch-jobs.model';
 import { FlowVersionsModel } from '../flow-versions/flow-versions.model';
 import { NodeExecutionsModel } from '../node-executions/node-executions.model';
-import { AgentToolExecutionsModel } from '../agent-tool-executions/agent-tool-executions.model';
 import { FlowTriggersModel } from '../triggers/flow-triggers.model';
 import { ChatMessagesModel } from '../chat/chat-messages.model';
 import { InvectDatabaseConfig, Logger } from 'src/types/schemas';
@@ -97,20 +96,6 @@ export class DatabaseService {
 
   /**
    * Direct access to batch jobs model
-   */
-  get batchJobs() {
-    return this.database.batchJobs;
-  }
-
-  /**
-   * Direct access to agent tool executions model
-   */
-  get agentToolExecutions() {
-    return this.database.agentToolExecutions;
-  }
-
-  /**
-   * Direct access to flow triggers model
    */
   get flowTriggers() {
     return this.database.flowTriggers;
@@ -709,7 +694,6 @@ class Database {
   public readonly flowRuns: FlowRunsModel;
   public readonly executionTraces: NodeExecutionsModel;
   public readonly batchJobs: BatchJobsModel;
-  public readonly agentToolExecutions: AgentToolExecutionsModel;
   public readonly flowTriggers: FlowTriggersModel;
   public readonly chatMessages: ChatMessagesModel;
 
@@ -719,7 +703,6 @@ class Database {
     this.flowRuns = new FlowRunsModel(adapter, logger);
     this.executionTraces = new NodeExecutionsModel(adapter, logger);
     this.batchJobs = new BatchJobsModel(adapter, logger);
-    this.agentToolExecutions = new AgentToolExecutionsModel(adapter, logger);
     this.flowTriggers = new FlowTriggersModel(adapter, logger);
     this.chatMessages = new ChatMessagesModel(adapter, logger);
   }

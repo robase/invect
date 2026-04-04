@@ -29,6 +29,47 @@ import { findConfigPath, loadConfig } from '../utils/config-loader.js';
 import { generateAllDrizzleSchemas, generateAppendSchema } from '../generators/drizzle.js';
 import { generatePrismaSchema } from '../generators/prisma.js';
 
+/**
+ * Auto-detect the schema adapter based on project files.
+ * If a Prisma schema exists or prisma is in dependencies, use prisma.
+ * Otherwise default to drizzle.
+ */
+function detectAdapter(): string {
+  const cwd = process.cwd();
+
+  // Check for prisma schema file
+  const prismaSchemaLocations = [
+    path.join(cwd, 'prisma', 'schema.prisma'),
+    path.join(cwd, 'schema.prisma'),
+    path.join(cwd, 'prisma', 'schema'),
+  ];
+
+  for (const loc of prismaSchemaLocations) {
+    if (fs.existsSync(loc)) {
+      return 'prisma';
+    }
+  }
+
+  // Check for prisma in dependencies
+  try {
+    const pkgPath = path.join(cwd, 'package.json');
+    if (fs.existsSync(pkgPath)) {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+      const allDeps = {
+        ...pkg.dependencies,
+        ...pkg.devDependencies,
+      };
+      if (allDeps['prisma'] || allDeps['@prisma/client']) {
+        return 'prisma';
+      }
+    }
+  } catch {
+    // Ignore parse errors
+  }
+
+  return 'drizzle';
+}
+
 function isDebug(): boolean {
   return process.argv.includes('--debug');
 }
@@ -92,7 +133,7 @@ export async function generateAction(options: {
   console.log(pc.bold('\n🔧 Invect Schema Generator\n'));
 
   // ─── Step 0: Detect adapter ─────────────────────────────────────
-  const adapter = (options.adapter || 'drizzle').toLowerCase();
+  const adapter = (options.adapter || detectAdapter()).toLowerCase();
   if (adapter !== 'drizzle' && adapter !== 'prisma' && adapter !== 'sql') {
     console.error(
       pc.red(`✗ Unknown adapter "${options.adapter}".`) +
@@ -119,6 +160,9 @@ export async function generateAction(options: {
   }
 
   console.log(pc.dim(`  Config: ${path.relative(process.cwd(), configPath)}`));
+  if (!options.adapter && adapter !== 'drizzle') {
+    console.log(pc.dim(`  Adapter: ${adapter} (auto-detected)`));
+  }
 
   let config;
   try {
@@ -366,8 +410,14 @@ async function runAppendMode(
     }
 
     const modulePath = fromMatch[1];
+    const isTypeImport = /^import\s+type\s/.test(imp);
+
+    // Build regex that matches existing imports from the same module,
+    // distinguishing `import type {` from `import {`.
+    // Use [^}]* instead of [\s\S]*? to prevent matching across multiple imports.
+    const importKeyword = isTypeImport ? 'import\\s+type\\s*' : 'import\\s*';
     const moduleImportRegex = new RegExp(
-      `import\\s*\\{([\\s\\S]*?)\\}\\s*from\\s*['\"]${modulePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['\"];?`,
+      `${importKeyword}\\{([^}]*)\\}\\s*from\\s*['\"]${modulePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['\"];?`,
       'm',
     );
 
@@ -377,7 +427,7 @@ async function runAppendMode(
       continue;
     }
 
-    const newSpecifiersMatch = imp.match(/import\s*\{([\s\S]*?)\}\s*from/);
+    const newSpecifiersMatch = imp.match(/import\s+(?:type\s+)?\{([^}]*)\}\s*from/);
     if (!newSpecifiersMatch) {
       continue;
     }
@@ -392,7 +442,8 @@ async function runAppendMode(
       .filter(Boolean);
 
     const mergedSpecifiers = Array.from(new Set([...existingSpecifiers, ...nextSpecifiers]));
-    const replacement = `import { ${mergedSpecifiers.join(', ')} } from '${modulePath}';`;
+    const typeKeyword = isTypeImport ? 'type ' : '';
+    const replacement = `import ${typeKeyword}{ ${mergedSpecifiers.join(', ')} } from '${modulePath}';`;
     mergedContent = mergedContent.replace(moduleImportRegex, replacement);
   }
 
@@ -489,7 +540,7 @@ async function runAppendMode(
       pc.dim('  Schema file unchanged after regeneration — skipping drizzle-kit push.\n') +
         pc.dim('  The database is already up to date.\n'),
     );
-  } else if (!options.yes) {
+  } else {
     const { runPush } = await prompts({
       type: 'confirm',
       name: 'runPush',
@@ -506,8 +557,6 @@ async function runAppendMode(
           pc.dim(' to apply schema changes.\n'),
       );
     }
-  } else {
-    await runDrizzleKitPush();
   }
 }
 
@@ -603,21 +652,17 @@ async function runSeparateFilesMode(
   );
 
   // Optionally run drizzle-kit generate
-  if (!options.yes) {
-    const { runDrizzleKit } = await prompts({
-      type: 'confirm',
-      name: 'runDrizzleKit',
-      message: `Run ${pc.cyan('drizzle-kit generate')} to create SQL migrations?`,
-      initial: true,
-    });
+  const { runDrizzleKit } = await prompts({
+    type: 'confirm',
+    name: 'runDrizzleKit',
+    message: `Run ${pc.cyan('drizzle-kit generate')} to create SQL migrations?`,
+    initial: true,
+  });
 
-    if (runDrizzleKit) {
-      await runDrizzleKitGenerate();
-    } else {
-      printNextSteps();
-    }
-  } else {
+  if (runDrizzleKit) {
     await runDrizzleKitGenerate();
+  } else {
+    printNextSteps();
   }
 }
 
@@ -785,6 +830,42 @@ function normalizeDialect(
 // Drizzle Kit Commands
 // =============================================================================
 
+/** Env for drizzle-kit subprocesses — suppresses Node.js deprecation warnings. */
+function drizzleKitEnv(): NodeJS.ProcessEnv {
+  const existing = process.env.NODE_OPTIONS || '';
+  return {
+    ...process.env,
+    NODE_OPTIONS: existing.includes('--no-deprecation')
+      ? existing
+      : `${existing} --no-deprecation`.trim(),
+  };
+}
+
+/**
+ * Detect whether an execSync error was caused by the user aborting the
+ * subprocess (Ctrl-C, SIGINT/SIGTERM) or by the tool's own interactive
+ * prompt being declined (e.g. drizzle-kit "No, abort").
+ *
+ * ORM tools like drizzle-kit and prisma often present interactive
+ * confirmations (data-loss warnings, migration prompts).  When the user
+ * declines, the tool exits with a non-zero code but there is no actual
+ * error — we should not scare the user with "make sure X is installed".
+ */
+function wasAbortedByUser(error: unknown): boolean {
+  const e = error as { signal?: string; status?: number | null; stderr?: string; stdout?: string; message?: string };
+
+  // Child killed by a signal (Ctrl-C, SIGTERM, etc.)
+  if (e.signal === 'SIGINT' || e.signal === 'SIGTERM') return true;
+
+  // drizzle-kit exits with status 0 when the user selects "No, abort"
+  // in its interactive prompts, but some versions use status 1.
+  // Check combined output for common abort phrases.
+  const combined = [e.stdout || '', e.stderr || '', e.message || ''].join('\n').toLowerCase();
+  if (/abort|cancell?ed|user\s+reject/i.test(combined)) return true;
+
+  return false;
+}
+
 async function runDrizzleKitGenerate(): Promise<void> {
   console.log(pc.dim('\n  Running drizzle-kit generate...\n'));
 
@@ -794,7 +875,7 @@ async function runDrizzleKitGenerate(): Promise<void> {
       ? `npx drizzle-kit generate --config ${configFile}`
       : 'npx drizzle-kit generate';
 
-    execSync(cmd, { stdio: 'inherit', cwd: process.cwd() });
+    execSync(cmd, { stdio: 'inherit', cwd: process.cwd(), env: drizzleKitEnv() });
 
     console.log(
       pc.bold(pc.green('\n✓ SQL migrations generated.\n')) +
@@ -802,13 +883,16 @@ async function runDrizzleKitGenerate(): Promise<void> {
         pc.cyan('npx invect-cli migrate') +
         pc.dim(' to apply them.\n'),
     );
-  } catch {
+  } catch (error: unknown) {
+    if (wasAbortedByUser(error)) {
+      console.log(pc.dim('\n  drizzle-kit generate was cancelled.\n'));
+      return;
+    }
+
     console.error(
-      pc.yellow('\n⚠ drizzle-kit generate failed.') +
+      pc.yellow('\n⚠ drizzle-kit generate encountered an error (see above).') +
         '\n' +
-        pc.dim('  Make sure drizzle-kit is installed and drizzle.config.ts exists.') +
-        '\n' +
-        pc.dim('  You can run it manually: ') +
+        pc.dim('  You can retry manually: ') +
         pc.cyan('npx drizzle-kit generate') +
         '\n',
     );
@@ -824,46 +908,31 @@ async function runDrizzleKitPush(): Promise<void> {
       ? `npx drizzle-kit push --config ${configFile}`
       : 'npx drizzle-kit push';
 
-    // Capture stdout/stderr so we can detect "already exists" errors on re-runs.
-    // drizzle-kit push for SQLite generates CREATE INDEX without IF NOT EXISTS,
-    // which fails when the schema is already applied.
-    const output = execSync(cmd, {
+    // Use stdio: 'inherit' so drizzle-kit can display interactive prompts
+    // (data-loss confirmations, etc.) and the user can respond to them.
+    execSync(cmd, {
       cwd: process.cwd(),
-      encoding: 'utf-8',
-      stdio: ['inherit', 'pipe', 'pipe'],
+      stdio: 'inherit',
+      env: drizzleKitEnv(),
     });
-
-    if (output) process.stdout.write(output);
 
     console.log(
       pc.bold(pc.green('\n✓ Schema pushed to database.\n')),
     );
   } catch (error: unknown) {
-    const execError = error as { stdout?: string; stderr?: string; message?: string };
-    const combinedOutput = [
-      execError.stdout || '',
-      execError.stderr || '',
-      execError.message || '',
-    ].join('\n');
-
-    if (/already exists/i.test(combinedOutput)) {
-      console.log(
-        pc.bold(pc.green('\n✓ Schema is already applied to the database.\n')),
-      );
-    } else {
-      // Print the captured output so the user can see what went wrong
-      if (execError.stderr) process.stderr.write(execError.stderr);
-      if (execError.stdout) process.stdout.write(execError.stdout);
-      console.error(
-        pc.yellow('\n⚠ drizzle-kit push failed.') +
-          '\n' +
-          pc.dim('  Make sure drizzle-kit is installed and drizzle.config.ts exists.') +
-          '\n' +
-          pc.dim('  You can run it manually: ') +
-          pc.cyan('npx drizzle-kit push') +
-          '\n',
-      );
+    if (wasAbortedByUser(error)) {
+      console.log(pc.dim('\n  drizzle-kit push was cancelled.\n'));
+      return;
     }
+
+    // The actual error was already printed to the terminal (stdio: inherit).
+    console.error(
+      pc.yellow('\n⚠ drizzle-kit push encountered an error (see above).') +
+        '\n' +
+        pc.dim('  You can retry manually: ') +
+        pc.cyan('npx drizzle-kit push') +
+        '\n',
+    );
   }
 }
 

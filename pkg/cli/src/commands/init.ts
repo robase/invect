@@ -198,7 +198,7 @@ export const initCommand = new Command('init')
             ? detected.dependency
             : detected.alsoDetect.find((alt) => alt in allDeps) ?? detected.dependency;
         console.log(pc.dim(`  Detected: ${detected.name} (found ${matchedPkg})`));
-        database = detected;
+        database = await askDatabase(framework, detected);
       } else {
         database = await askDatabase(framework);
       }
@@ -222,13 +222,18 @@ export const initCommand = new Command('init')
 
       const detected = parseDrizzleConfig(existingDrizzleConfig);
       if (detected?.schemaPath) {
-        existingSchemaPath = detected.schemaPath;
-        console.log(pc.dim(`  Schema: ${path.relative(process.cwd(), existingSchemaPath)}`));
+        existingSchemaPath = await askSchemaPath(
+          schemaTool,
+          [path.relative(process.cwd(), detected.schemaPath)],
+        );
       }
     } else if (existingPrismaSchema) {
       console.log(pc.dim(`  Detected: Prisma (${existingPrismaSchema})`));
       schemaTool = SCHEMA_TOOLS.find((s) => s.id === 'prisma')!;
-      existingSchemaPath = path.resolve(process.cwd(), existingPrismaSchema);
+      existingSchemaPath = await askSchemaPath(
+        schemaTool,
+        [existingPrismaSchema],
+      );
     } else {
       schemaTool = await askSchemaTool();
     }
@@ -237,13 +242,12 @@ export const initCommand = new Command('init')
 
     // Ask for existing schema path if not auto-detected
     if (!existingSchemaPath && schemaTool.id !== 'sql') {
-      const schemaFile = schemaTool.id === 'drizzle'
-        ? findExistingDrizzleSchemaFile()
-        : null;
+      const schemaFiles = schemaTool.id === 'prisma'
+        ? findExistingPrismaSchemaFiles()
+        : findExistingDrizzleSchemaFiles();
 
-      if (schemaFile) {
-        console.log(pc.dim(`  Found existing schema: ${schemaFile}`));
-        existingSchemaPath = path.resolve(process.cwd(), schemaFile);
+      if (schemaFiles.length > 0) {
+        existingSchemaPath = await askSchemaPath(schemaTool, schemaFiles);
       } else {
         const { customPath } = await prompts({
           type: 'text',
@@ -525,11 +529,16 @@ async function askFramework(): Promise<Framework> {
   return FRAMEWORKS.find((f) => f.id === framework)!;
 }
 
-async function askDatabase(framework?: Framework): Promise<Database> {
+async function askDatabase(framework?: Framework, detected?: Database): Promise<Database> {
   // For Next.js, exclude native better-sqlite3 but keep libsql (pure JS/WASM)
   const available = framework?.id === 'nextjs'
     ? DATABASES.filter((d) => !(d.id === 'sqlite' && d.driver === 'better-sqlite3'))
     : [...DATABASES];
+
+  // Pre-select the detected database if provided
+  const initialIndex = detected
+    ? available.findIndex((d) => d.driver === detected.driver)
+    : 0;
 
   const { database } = await prompts({
     type: 'select',
@@ -539,6 +548,7 @@ async function askDatabase(framework?: Framework): Promise<Database> {
       title: 'description' in d && d.description ? `${d.name} — ${d.description}` : d.name,
       value: available.indexOf(d),
     })),
+    initial: Math.max(initialIndex, 0),
   });
 
   if (database === undefined) {
@@ -617,7 +627,9 @@ function generateConfigFile(framework: Framework, database: Database): string {
  * Docs: https://invect.dev/docs
  */
 
-${adapterImport}export default {
+import { defineConfig } from '@invect/core';
+${adapterImport}
+export default defineConfig({
 ${dbConfig}
 
   // Add plugins here
@@ -629,7 +641,7 @@ ${dbConfig}
 
   // Encryption key for credential storage (auto-generated)
   // INVECT_ENCRYPTION_KEY: process.env.INVECT_ENCRYPTION_KEY,
-};
+});
 `;
 }
 
@@ -715,10 +727,21 @@ function findExistingPrismaSchema(): string | null {
   return null;
 }
 
+function findExistingPrismaSchemaFiles(): string[] {
+  const candidates = [
+    'prisma/schema.prisma',
+    'schema.prisma',
+  ];
+  return candidates.filter((file) =>
+    fs.existsSync(path.join(process.cwd(), file)),
+  );
+}
+
 /**
- * Search common locations for an existing Drizzle schema file.
+ * Search common locations for existing Drizzle schema files.
+ * Returns all matches (not just the first).
  */
-function findExistingDrizzleSchemaFile(): string | null {
+function findExistingDrizzleSchemaFiles(): string[] {
   const candidates = [
     'db/schema.ts',
     'src/db/schema.ts',
@@ -727,12 +750,56 @@ function findExistingDrizzleSchemaFile(): string | null {
     'lib/db/schema.ts',
     'src/lib/db/schema.ts',
   ];
-  for (const file of candidates) {
-    if (fs.existsSync(path.join(process.cwd(), file))) {
-      return file;
-    }
+  return candidates.filter((file) =>
+    fs.existsSync(path.join(process.cwd(), file)),
+  );
+}
+
+/**
+ * Let the user pick from discovered schema paths or enter their own.
+ */
+async function askSchemaPath(
+  schemaTool: SchemaTool,
+  discoveredPaths: string[],
+): Promise<string | null> {
+  const CUSTOM_VALUE = '__custom__';
+  const choices = [
+    ...discoveredPaths.map((p) => ({ title: p, value: p })),
+    { title: pc.dim('Enter a different path…'), value: CUSTOM_VALUE },
+  ];
+
+  // If there's only one discovered path, still let the user confirm or override
+  const { selected } = await prompts({
+    type: 'select',
+    name: 'selected',
+    message: `Which ${schemaTool.name} schema file should Invect use?`,
+    choices,
+    initial: 0,
+  });
+
+  if (selected === undefined) {
+    // User cancelled (Ctrl-C)
+    return null;
   }
-  return null;
+
+  if (selected === CUSTOM_VALUE) {
+    const { customPath } = await prompts({
+      type: 'text',
+      name: 'customPath',
+      message: `Path to ${schemaTool.name} schema file:`,
+      initial: '',
+    });
+
+    if (!customPath || !customPath.trim()) return null;
+
+    const resolved = path.resolve(process.cwd(), customPath.trim());
+    if (!fs.existsSync(resolved)) {
+      console.log(pc.dim(`  File doesn't exist yet — will create it`));
+    }
+    return resolved;
+  }
+
+  return path.resolve(process.cwd(), selected);
 }
 
 /**

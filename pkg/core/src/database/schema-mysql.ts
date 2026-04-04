@@ -91,16 +91,29 @@ export const flowRuns = mysqlTable('flow_executions', {
   lastHeartbeatAt: timestamp('last_heartbeat_at'), // Updated periodically during execution for stale run detection
 });
 
-// Execution trace table to track individual node executions
-export const nodeExecutions = mysqlTable('execution_traces', {
+// Action traces table — unified node executions + agent tool executions
+import type { AnyMySqlColumn } from 'drizzle-orm/mysql-core';
+
+export const actionTraces = mysqlTable('action_traces', {
   id: varchar('id', { length: 36 })
     .primaryKey()
     .$defaultFn(() => randomUUID()),
   flowRunId: varchar('flow_run_id', { length: 36 })
     .notNull()
     .references(() => flowRuns.id, { onDelete: 'cascade' }),
-  nodeId: varchar('node_id', { length: 255 }).notNull(),
-  nodeType: varchar('node_type', { length: 100 }).notNull(),
+  // Self-referential FK: NULL for node traces, set for tool traces
+  parentNodeExecutionId: varchar('parent_node_execution_id', { length: 36 }).references(
+    (): AnyMySqlColumn => actionTraces.id,
+    { onDelete: 'cascade' },
+  ),
+  // Node execution fields (null for tool traces)
+  nodeId: varchar('node_id', { length: 255 }),
+  nodeType: varchar('node_type', { length: 100 }),
+  // Tool execution fields (null for node traces)
+  toolId: varchar('tool_id', { length: 255 }),
+  toolName: varchar('tool_name', { length: 255 }),
+  iteration: int('iteration'),
+  // Shared fields
   status: mysqlEnum('status', [
     'PENDING',
     'RUNNING',
@@ -150,37 +163,6 @@ export const batchJobs = mysqlTable('batch_jobs', {
   updatedAt: timestamp('updated_at')
     .notNull()
     .default(sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`),
-});
-
-// Agent tool executions table to track individual tool calls during agent execution
-export const agentToolExecutions = mysqlTable('agent_tool_executions', {
-  id: varchar('id', { length: 36 })
-    .primaryKey()
-    .$defaultFn(() => randomUUID()),
-  // Reference to the node execution (agent node)
-  nodeExecutionId: varchar('node_execution_id', { length: 36 })
-    .notNull()
-    .references(() => nodeExecutions.id, { onDelete: 'cascade' }),
-  // Denormalized reference to flow run for efficient querying
-  flowRunId: varchar('flow_run_id', { length: 36 })
-    .notNull()
-    .references(() => flowRuns.id, { onDelete: 'cascade' }),
-  // Tool identification
-  toolId: varchar('tool_id', { length: 255 }).notNull(), // The instance ID or base tool ID
-  toolName: varchar('tool_name', { length: 255 }).notNull(), // Human-readable name
-  // Iteration within the agent loop (1-based)
-  iteration: int('iteration').notNull(),
-  // Input/output data
-  input: json('input').$type<JSONValue>().notNull(),
-  output: json('output').$type<JSONValue>(),
-  error: text('error'),
-  success: boolean('success').notNull(),
-  // Timing
-  startedAt: timestamp('started_at')
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  completedAt: timestamp('completed_at'),
-  duration: int('duration'), // in milliseconds
 });
 
 // Credentials table for storing API authentication credentials
@@ -341,32 +323,26 @@ export const flowRunsRelations = relations(flowRuns, ({ one, many }) => ({
     fields: [flowRuns.flowVersion, flowRuns.flowId],
     references: [flowVersions.version, flowVersions.flowId],
   }),
-  traces: many(nodeExecutions),
+  traces: many(actionTraces),
   batchJobs: many(batchJobs),
 }));
 
-export const nodeExecutionsRelations = relations(nodeExecutions, ({ one, many }) => ({
+export const actionTracesRelations = relations(actionTraces, ({ one, many }) => ({
   execution: one(flowRuns, {
-    fields: [nodeExecutions.flowRunId],
+    fields: [actionTraces.flowRunId],
     references: [flowRuns.id],
   }),
-  toolExecutions: many(agentToolExecutions),
+  parentNodeExecution: one(actionTraces, {
+    fields: [actionTraces.parentNodeExecutionId],
+    references: [actionTraces.id],
+    relationName: 'parentChild',
+  }),
+  childToolExecutions: many(actionTraces, { relationName: 'parentChild' }),
 }));
 
 export const batchJobsRelations = relations(batchJobs, ({ one }) => ({
   execution: one(flowRuns, {
     fields: [batchJobs.flowRunId],
-    references: [flowRuns.id],
-  }),
-}));
-
-export const agentToolExecutionsRelations = relations(agentToolExecutions, ({ one }) => ({
-  nodeExecution: one(nodeExecutions, {
-    fields: [agentToolExecutions.nodeExecutionId],
-    references: [nodeExecutions.id],
-  }),
-  flowRun: one(flowRuns, {
-    fields: [agentToolExecutions.flowRunId],
     references: [flowRuns.id],
   }),
 }));
@@ -384,59 +360,14 @@ export type NewFlowVersion = typeof flowVersions.$inferInsert;
 export type FlowRun = typeof flowRuns.$inferSelect;
 export type NewFlowRun = typeof flowRuns.$inferInsert;
 
-export type NodeExecution = typeof nodeExecutions.$inferSelect;
-export type NewNodeExecution = typeof nodeExecutions.$inferInsert;
+export type NodeExecution = typeof actionTraces.$inferSelect;
+export type NewNodeExecution = typeof actionTraces.$inferInsert;
 
 export type BatchJob = typeof batchJobs.$inferSelect;
 export type NewBatchJob = typeof batchJobs.$inferInsert;
 
-export type AgentToolExecution = typeof agentToolExecutions.$inferSelect;
-export type NewAgentToolExecution = typeof agentToolExecutions.$inferInsert;
-
 export type Credential = typeof credentials.$inferSelect;
 export type NewCredential = typeof credentials.$inferInsert;
-
-// =============================================================================
-// Flow Access Control (RBAC)
-// =============================================================================
-
-/**
- * Flow access table - tracks who can access which flows.
- * Supports both user-level and team-level access.
- */
-export const flowAccess = mysqlTable('flow_access', {
-  id: varchar('id', { length: 36 })
-    .primaryKey()
-    .$defaultFn(() => randomUUID()),
-  flowId: varchar('flow_id', { length: 36 })
-    .notNull()
-    .references(() => flows.id, { onDelete: 'cascade' }),
-
-  // Either userId OR teamId is set (not both)
-  userId: varchar('user_id', { length: 255 }), // External user ID from host app
-  teamId: varchar('team_id', { length: 255 }), // External team ID from host app
-
-  // Permission level for this flow: "owner" | "editor" | "operator" | "viewer"
-  permission: mysqlEnum('permission', ['owner', 'editor', 'operator', 'viewer'])
-    .notNull()
-    .default('viewer'),
-
-  // Audit fields
-  grantedBy: varchar('granted_by', { length: 255 }),
-  grantedAt: timestamp('granted_at')
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-
-  // Optional expiration
-  expiresAt: timestamp('expires_at'),
-});
-
-export const flowAccessRelations = relations(flowAccess, ({ one }) => ({
-  flow: one(flows, {
-    fields: [flowAccess.flowId],
-    references: [flows.id],
-  }),
-}));
 
 export const flowTriggersRelations = relations(flowTriggers, ({ one }) => ({
   flow: one(flows, {
@@ -444,9 +375,6 @@ export const flowTriggersRelations = relations(flowTriggers, ({ one }) => ({
     references: [flows.id],
   }),
 }));
-
-export type FlowAccess = typeof flowAccess.$inferSelect;
-export type NewFlowAccess = typeof flowAccess.$inferInsert;
 
 export type FlowTrigger = typeof flowTriggers.$inferSelect;
 export type NewFlowTrigger = typeof flowTriggers.$inferInsert;

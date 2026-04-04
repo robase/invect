@@ -212,6 +212,30 @@ export type ExecutionConfig = z.infer<typeof ExecutionConfigSchema>;
 export type LoggingConfig = z.infer<typeof LoggingConfigSchema>;
 export type InvectConfig = z.infer<typeof InvectConfigSchema>;
 
+/**
+ * Identity function that provides TypeScript type inference and
+ * autocompletion for Invect configuration objects.
+ *
+ * No runtime validation, transformation, or side effects — same pattern
+ * as Vite's `defineConfig`, Drizzle's `defineConfig`, etc.
+ *
+ * @example
+ * ```typescript
+ * import { defineConfig } from '@invect/core';
+ *
+ * export default defineConfig({
+ *   baseDatabaseConfig: {
+ *     id: 'main',
+ *     type: 'sqlite',
+ *     connectionString: 'file:./dev.db',
+ *   },
+ * });
+ * ```
+ */
+export function defineConfig(config: InvectConfig): InvectConfig {
+  return config;
+}
+
 export interface Logger {
   debug(message: string, ...args: unknown[]): void;
   info(message: string, ...args: unknown[]): void;

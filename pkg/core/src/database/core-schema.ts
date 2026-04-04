@@ -123,9 +123,9 @@ export const CORE_SCHEMA: InvectPluginSchema = {
     },
   },
 
-  // ----- Execution traces (node executions) table -----
-  nodeExecutions: {
-    tableName: 'execution_traces',
+  // ----- Action traces (node executions + agent tool executions, unified) -----
+  actionTraces: {
+    tableName: 'action_traces',
     order: 40,
     fields: {
       id: { type: 'uuid', primaryKey: true, defaultValue: 'uuid()' },
@@ -134,8 +134,19 @@ export const CORE_SCHEMA: InvectPluginSchema = {
         required: true,
         references: { table: 'flow_executions', field: 'id', onDelete: 'cascade' },
       },
-      nodeId: { type: 'string', required: true },
-      nodeType: { type: 'string', required: true },
+      parentNodeExecutionId: {
+        type: 'uuid',
+        required: false,
+        references: { table: 'action_traces', field: 'id', onDelete: 'cascade' },
+      },
+      // Node execution fields (null for tool traces)
+      nodeId: { type: 'string', required: false },
+      nodeType: { type: 'string', required: false },
+      // Tool execution fields (null for node traces)
+      toolId: { type: 'string', required: false },
+      toolName: { type: 'string', required: false },
+      iteration: { type: 'number', required: false },
+      // Shared fields
       status: {
         type: [...CORE_ENUMS.nodeExecutionStatus],
         required: true,
@@ -183,35 +194,6 @@ export const CORE_SCHEMA: InvectPluginSchema = {
       completedAt: { type: 'date', required: false },
       createdAt: { type: 'date', required: true, defaultValue: 'now()' },
       updatedAt: { type: 'date', required: true, defaultValue: 'now()' },
-    },
-  },
-
-  // ----- Agent tool executions table -----
-  agentToolExecutions: {
-    tableName: 'agent_tool_executions',
-    order: 60,
-    fields: {
-      id: { type: 'uuid', primaryKey: true, defaultValue: 'uuid()' },
-      nodeExecutionId: {
-        type: 'uuid',
-        required: true,
-        references: { table: 'execution_traces', field: 'id', onDelete: 'cascade' },
-      },
-      flowRunId: {
-        type: 'uuid',
-        required: true,
-        references: { table: 'flow_executions', field: 'id', onDelete: 'cascade' },
-      },
-      toolId: { type: 'string', required: true },
-      toolName: { type: 'string', required: true },
-      iteration: { type: 'number', required: true },
-      input: { type: 'json', required: true, typeAnnotation: 'JSONValue' },
-      output: { type: 'json', required: false, typeAnnotation: 'JSONValue' },
-      error: { type: 'text', required: false },
-      success: { type: 'boolean', required: true },
-      startedAt: { type: 'date', required: true, defaultValue: 'now()' },
-      completedAt: { type: 'date', required: false },
-      duration: { type: 'number', required: false },
     },
   },
 
@@ -282,31 +264,6 @@ export const CORE_SCHEMA: InvectPluginSchema = {
       content: { type: 'text', required: true, defaultValue: '' },
       toolMeta: { type: 'json', required: false, typeAnnotation: 'Record<string, unknown>' },
       createdAt: { type: 'date', required: true, defaultValue: 'now()' },
-    },
-  },
-
-  // ----- Flow access control (RBAC) table -----
-  flowAccess: {
-    tableName: 'flow_access',
-    order: 20,
-    fields: {
-      id: { type: 'uuid', primaryKey: true, defaultValue: 'uuid()' },
-      flowId: {
-        type: 'string',
-        required: true,
-        references: { table: 'flows', field: 'id', onDelete: 'cascade' },
-      },
-      userId: { type: 'string', required: false },
-      teamId: { type: 'string', required: false },
-      permission: {
-        type: 'string',
-        required: true,
-        defaultValue: 'viewer',
-        typeAnnotation: 'FlowAccessPermission',
-      },
-      grantedBy: { type: 'string', required: false },
-      grantedAt: { type: 'date', required: true, defaultValue: 'now()' },
-      expiresAt: { type: 'date', required: false },
     },
   },
 };

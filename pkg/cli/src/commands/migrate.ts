@@ -116,6 +116,7 @@ async function migrateAction(options: {
     execSync(cmd, {
       stdio: 'inherit',
       cwd: process.cwd(),
+      env: drizzleKitEnv(),
     });
 
     if (mode === 'push') {
@@ -123,16 +124,24 @@ async function migrateAction(options: {
     } else {
       console.log(pc.bold(pc.green('\n✓ Migrations applied successfully!\n')));
     }
-  } catch {
-    console.error(pc.red(`\n✗ drizzle-kit ${mode} failed.`));
-    console.error(
-      pc.dim('  Make sure drizzle-kit is installed and your drizzle config is correct.\n'),
-    );
+  } catch (error: unknown) {
+    if (wasAbortedByUser(error)) {
+      console.log(pc.dim(`\n  drizzle-kit ${mode} was cancelled.\n`));
+      process.exit(0);
+    }
+
+    console.error(pc.yellow(`\n⚠ drizzle-kit ${mode} encountered an error (see above).`));
 
     if (mode === 'migrate') {
       console.error(
         pc.dim('  Have you generated migrations? Run: ') +
           pc.cyan('npx invect-cli generate') +
+          '\n',
+      );
+    } else {
+      console.error(
+        pc.dim('  You can retry manually: ') +
+          pc.cyan(`npx drizzle-kit ${mode}`) +
           '\n',
       );
     }
@@ -144,6 +153,30 @@ async function migrateAction(options: {
 // =============================================================================
 // Helpers
 // =============================================================================
+
+/** Env for drizzle-kit subprocesses — suppresses Node.js deprecation warnings. */
+function drizzleKitEnv(): NodeJS.ProcessEnv {
+  const existing = process.env.NODE_OPTIONS || '';
+  return {
+    ...process.env,
+    NODE_OPTIONS: existing.includes('--no-deprecation')
+      ? existing
+      : `${existing} --no-deprecation`.trim(),
+  };
+}
+
+/**
+ * Detect whether an execSync error was caused by the user aborting the
+ * subprocess (Ctrl-C, SIGINT/SIGTERM) or by the tool's own interactive
+ * prompt being declined (e.g. drizzle-kit "No, abort").
+ */
+function wasAbortedByUser(error: unknown): boolean {
+  const e = error as { signal?: string; status?: number | null; stderr?: string; stdout?: string; message?: string };
+  if (e.signal === 'SIGINT' || e.signal === 'SIGTERM') return true;
+  const combined = [e.stdout || '', e.stderr || '', e.message || ''].join('\n');
+  if (/abort|cancell?ed|user\s+reject/i.test(combined)) return true;
+  return false;
+}
 
 /**
  * Detect which drizzle.config file to use based on the database type.

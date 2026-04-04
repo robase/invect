@@ -488,7 +488,7 @@ app.<span class="func">post</span>(<span class="string">'/webhooks/new-order'</s
             <ul className="footer-links">
               <li><Link href="/docs">Documentation</Link></li>
               <li><a href="https://github.com/robase/flow-backend">GitHub</a></li>
-              <li><a href="https://www.npmjs.com/package/invect">npm</a></li>
+              <li><a href="https://www.npmjs.com/search?q=%40invect">npm</a></li>
             </ul>
           </div>
         </footer>

@@ -8,11 +8,11 @@
 import { userAuth } from '@invect/user-auth';
 import { rbacPlugin } from '@invect/rbac';
 import { webhooksPlugin } from '@invect/webhooks';
-import type { InvectConfig } from '@invect/core';
+import { defineConfig } from '@invect/core';
 
 const webhookBaseUrl = process.env.INVECT_WEBHOOK_BASE_URL || 'http://localhost:3000/invect';
 
-export const invectConfig: InvectConfig = {
+export const invectConfig = defineConfig({
   baseDatabaseConfig: {
     id: 'main',
     type: 'sqlite',
@@ -51,11 +51,9 @@ export const invectConfig: InvectConfig = {
         },
       ],
     }),
-    rbacPlugin({
-      useFlowAccessTable: true,
-    }),
+    rbacPlugin(),
     webhooksPlugin({
       webhookBaseUrl,
     }),
   ],
-};
+});

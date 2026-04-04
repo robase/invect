@@ -159,7 +159,7 @@ export function createInvectRouter(config: InvectConfig): Router {
 
   /**
    * Create an authorization middleware for a specific permission.
-   * When useFlowAccessTable is enabled, looks up flow access from database.
+   * Uses the standard authorize() path which delegates to plugin hooks (e.g., RBAC).
    */
   function requirePermission(
     permission: InvectPermission,
@@ -170,84 +170,27 @@ export function createInvectRouter(config: InvectConfig): Router {
       const resourceId = getResourceId ? getResourceId(req) : undefined;
       const resourceType = permission.split(':')[0] as InvectResourceType;
 
-      // If useFlowAccessTable is enabled and this is a flow-related resource,
-      // check access via the database instead of resourceAccess
-      if (
-        core.isFlowAccessTableEnabled() &&
-        identity &&
-        resourceId &&
-        ['flow', 'flow-version', 'flow-run', 'node-execution'].includes(resourceType)
-      ) {
-        if (core.hasPermission(identity, 'admin:*')) {
-          return next();
-        }
+      const result = await core.authorize({
+        identity,
+        action: permission,
+        resource: resourceId
+          ? {
+              type: resourceType,
+              id: resourceId,
+            }
+          : undefined,
+      });
 
-        // For flow-related resources, check access via database
-        const hasAccess = await core.hasFlowAccess(
-          resourceId,
-          identity.id,
-          identity.teamIds || [],
-          getRequiredFlowPermission(permission),
-        );
-
-        if (!hasAccess) {
-          return res.status(403).json({
-            error: 'Forbidden',
-            message: `No access to flow '${resourceId}'`,
-          });
-        }
-
-        return next();
-      } else {
-        // Standard authorization (uses resourceAccess from identity if provided)
-        const result = await core.authorize({
-          identity,
-          action: permission,
-          resource: resourceId
-            ? {
-                type: resourceType,
-                id: resourceId,
-              }
-            : undefined,
+      if (!result.allowed) {
+        const status = identity ? 403 : 401;
+        return res.status(status).json({
+          error: status === 403 ? 'Forbidden' : 'Unauthorized',
+          message: result.reason || 'Access denied',
         });
-
-        if (!result.allowed) {
-          const status = identity ? 403 : 401;
-          return res.status(status).json({
-            error: status === 403 ? 'Forbidden' : 'Unauthorized',
-            message: result.reason || 'Access denied',
-          });
-        }
       }
 
       next();
     });
-  }
-
-  /**
-   * Map permission to required flow access level.
-   */
-  function getRequiredFlowPermission(
-    permission: InvectPermission,
-  ): 'owner' | 'editor' | 'operator' | 'viewer' {
-    // Destructive actions require owner
-    if (permission.includes(':delete')) {
-      return 'owner';
-    }
-    // Execution actions require operator
-    if (permission.startsWith('flow-run:') || permission === 'node:test') {
-      return 'operator';
-    }
-    // Modification actions require editor
-    if (
-      permission.includes(':create') ||
-      permission.includes(':update') ||
-      permission.includes(':publish')
-    ) {
-      return 'editor';
-    }
-    // Everything else requires viewer
-    return 'viewer';
   }
 
   // =====================================
@@ -1624,13 +1567,6 @@ export function createInvectRouter(config: InvectConfig): Router {
           getPermissions: (identity) => core.getPermissions(identity),
           getAvailableRoles: () => core.getAvailableRoles(),
           getResolvedRole: (identity) => core.getAuthService().getResolvedRole(identity),
-          isFlowAccessTableEnabled: () => core.isFlowAccessTableEnabled(),
-          listFlowAccess: (flowId) => core.listFlowAccess(flowId),
-          grantFlowAccess: (input) => core.grantFlowAccess(input),
-          revokeFlowAccess: (accessId) => core.revokeFlowAccess(accessId),
-          getAccessibleFlowIds: (userId, teamIds) => core.getAccessibleFlowIds(userId, teamIds),
-          getFlowPermission: (flowId, userId, teamIds) =>
-            core.getFlowPermission(flowId, userId, teamIds),
           authorize: (context) => core.authorize(context),
         },
       });

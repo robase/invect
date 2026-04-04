@@ -1079,14 +1079,6 @@ export class InvectController {
         getPermissions: (identity) => this.invect.getPermissions(identity),
         getAvailableRoles: () => this.invect.getAvailableRoles(),
         getResolvedRole: (identity) => this.invect.getAuthService().getResolvedRole(identity),
-        isFlowAccessTableEnabled: () => this.invect.isFlowAccessTableEnabled(),
-        listFlowAccess: (flowId) => this.invect.listFlowAccess(flowId),
-        grantFlowAccess: (input) => this.invect.grantFlowAccess(input),
-        revokeFlowAccess: (accessId) => this.invect.revokeFlowAccess(accessId),
-        getAccessibleFlowIds: (userId, teamIds) =>
-          this.invect.getAccessibleFlowIds(userId, teamIds),
-        getFlowPermission: (flowId, userId, teamIds) =>
-          this.invect.getFlowPermission(flowId, userId, teamIds),
         authorize: (context) => this.invect.authorize(context),
       },
     });

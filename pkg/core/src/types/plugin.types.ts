@@ -249,29 +249,6 @@ export interface PluginEndpointCoreApi {
   getAvailableRoles(): Array<{ role: string; permissions: InvectPermission[] }>;
   /** Get the resolved role string for an identity */
   getResolvedRole(identity: InvectIdentity): string | null;
-  /** Whether the flow access table feature is enabled */
-  isFlowAccessTableEnabled(): boolean;
-  /** List flow access records for a flow */
-  listFlowAccess(flowId: string): Promise<unknown[]>;
-  /** Grant access to a flow */
-  grantFlowAccess(input: {
-    flowId: string;
-    userId?: string;
-    teamId?: string;
-    permission: 'owner' | 'editor' | 'operator' | 'viewer';
-    grantedBy?: string;
-    expiresAt?: Date | string;
-  }): Promise<unknown>;
-  /** Revoke a specific flow access record */
-  revokeFlowAccess(accessId: string): Promise<void>;
-  /** Get all flow IDs accessible to a user/teams */
-  getAccessibleFlowIds(userId: string, teamIds?: string[]): Promise<string[]>;
-  /** Get the highest permission level a user/teams has for a flow */
-  getFlowPermission(
-    flowId: string,
-    userId: string,
-    teamIds?: string[],
-  ): Promise<'owner' | 'editor' | 'operator' | 'viewer' | null>;
   /** Authorize an action for an identity */
   authorize(context: AuthorizationContext): Promise<AuthorizationResult>;
 }

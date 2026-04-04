@@ -58,15 +58,7 @@ export { createPluginDatabaseApi } from './services/plugin-database-api';
 
 // Re-export auth types and service
 export { AuthorizationService, createAuthorizationService } from './services/auth';
-export { FlowAccessService } from './services/auth';
 export type { AuthorizationServiceOptions } from './services/auth';
-export type {
-  FlowAccessPermission,
-  FlowAccessRecord,
-  GrantFlowAccessInput,
-  FlowAccessQuery,
-  FlowAccessServiceOptions,
-} from './services/auth';
 export type {
   InvectIdentity,
   InvectResourceAccess,
@@ -131,6 +123,8 @@ export type {
   NodeExecution,
   CreateNodeExecutionInput,
   UpdateNodeExecutionInput,
+  AgentToolExecution,
+  CreateAgentToolExecutionInput,
 } from './services/node-executions/node-executions.model';
 
 // Re-export node data service types
@@ -201,6 +195,7 @@ export type { PaginatedResponse, QueryOptions } from './types/schemas/pagination
 export { FlowRunStatus, NodeExecutionStatus } from './types/base';
 
 export type { InvectConfig } from './types/schemas-fresh/invect-config';
+export { defineConfig } from './types/schemas-fresh/invect-config';
 
 // Plugin system
 export type {

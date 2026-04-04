@@ -8,9 +8,9 @@
 import { userAuth } from '@invect/user-auth';
 import { rbacPlugin } from '@invect/rbac';
 import { invectAuth } from './auth';
-import type { InvectConfig } from '@invect/core';
+import { defineConfig } from '@invect/core';
 
-export const invectConfig: InvectConfig = {
+export const invectConfig = defineConfig({
   baseDatabaseConfig: {
     connectionString: process.env.DATABASE_URL ?? 'postgresql://acme:acme@localhost:5432/acme_dashboard',
     type: 'postgresql',
@@ -60,8 +60,6 @@ export const invectConfig: InvectConfig = {
         },
       ],
     }),
-    rbacPlugin({
-      useFlowAccessTable: true,
-    }),
+    rbacPlugin(),
   ],
-};
+});

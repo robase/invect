@@ -34,10 +34,11 @@ export const INVECT_SCHEMA_META: SchemaMetadata = {
     last_heartbeat_at: { type: 'date' },
   },
 
-  execution_traces: {
+  action_traces: {
     id: { type: 'uuid', defaultValue: 'uuid' },
     inputs: { type: 'json' },
     outputs: { type: 'json' },
+    success: { type: 'boolean' },
     started_at: { type: 'date' },
     completed_at: { type: 'date' },
   },
@@ -50,15 +51,6 @@ export const INVECT_SCHEMA_META: SchemaMetadata = {
     completed_at: { type: 'date' },
     created_at: { type: 'date' },
     updated_at: { type: 'date' },
-  },
-
-  agent_tool_executions: {
-    id: { type: 'uuid', defaultValue: 'uuid' },
-    input: { type: 'json' },
-    output: { type: 'json' },
-    success: { type: 'boolean' },
-    started_at: { type: 'date' },
-    completed_at: { type: 'date' },
   },
 
   credentials: {
@@ -82,10 +74,5 @@ export const INVECT_SCHEMA_META: SchemaMetadata = {
     id: { type: 'uuid', defaultValue: 'uuid' },
     tool_meta: { type: 'json' },
     created_at: { type: 'date' },
-  },
-
-  flow_access: {
-    id: { type: 'uuid', defaultValue: 'uuid' },
-    granted_at: { type: 'date' },
   },
 };

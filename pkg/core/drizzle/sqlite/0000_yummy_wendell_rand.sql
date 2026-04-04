@@ -1,19 +1,22 @@
-CREATE TABLE `agent_tool_executions` (
+CREATE TABLE `action_traces` (
 	`id` text PRIMARY KEY NOT NULL,
-	`node_execution_id` text NOT NULL,
 	`flow_run_id` text NOT NULL,
-	`tool_id` text NOT NULL,
-	`tool_name` text NOT NULL,
-	`iteration` integer NOT NULL,
-	`input` text NOT NULL,
-	`output` text,
+	`parent_node_execution_id` text,
+	`node_id` text,
+	`node_type` text,
+	`tool_id` text,
+	`tool_name` text,
+	`iteration` integer,
+	`status` text DEFAULT 'PENDING' NOT NULL,
+	`inputs` text NOT NULL,
+	`outputs` text,
 	`error` text,
-	`success` integer NOT NULL,
 	`started_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	`completed_at` text,
 	`duration` integer,
-	FOREIGN KEY (`node_execution_id`) REFERENCES `execution_traces`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`flow_run_id`) REFERENCES `flow_executions`(`id`) ON UPDATE no action ON DELETE cascade
+	`retry_count` integer DEFAULT 0 NOT NULL,
+	FOREIGN KEY (`flow_run_id`) REFERENCES `flow_executions`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`parent_node_execution_id`) REFERENCES `action_traces`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
 CREATE TABLE `batch_jobs` (
@@ -63,18 +66,6 @@ CREATE TABLE `credentials` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `credentials_webhook_path_unique` ON `credentials` (`webhook_path`);--> statement-breakpoint
-CREATE TABLE `flow_access` (
-	`id` text PRIMARY KEY NOT NULL,
-	`flow_id` text NOT NULL,
-	`user_id` text,
-	`team_id` text,
-	`permission` text DEFAULT 'viewer' NOT NULL,
-	`granted_by` text,
-	`granted_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
-	`expires_at` text,
-	FOREIGN KEY (`flow_id`) REFERENCES `flows`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
 CREATE TABLE `flow_executions` (
 	`id` text PRIMARY KEY NOT NULL,
 	`flow_id` text NOT NULL,
@@ -131,20 +122,4 @@ CREATE TABLE `flows` (
 	`live_version_number` integer,
 	`created_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	`updated_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE `execution_traces` (
-	`id` text PRIMARY KEY NOT NULL,
-	`flow_run_id` text NOT NULL,
-	`node_id` text NOT NULL,
-	`node_type` text NOT NULL,
-	`status` text DEFAULT 'PENDING' NOT NULL,
-	`inputs` text NOT NULL,
-	`outputs` text,
-	`error` text,
-	`started_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
-	`completed_at` text,
-	`duration` integer,
-	`retry_count` integer DEFAULT 0 NOT NULL,
-	FOREIGN KEY (`flow_run_id`) REFERENCES `flow_executions`(`id`) ON UPDATE no action ON DELETE cascade
 );

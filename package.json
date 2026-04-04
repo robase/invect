@@ -4,40 +4,6 @@
   "private": true,
   "type": "module",
   "description": "Complete workflow management system with React frontend and NestJS backend",
-  "main": "dist/index.cjs",
-  "types": "dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
-    },
-    "./frontend": {
-      "types": "./pkg/frontend/dist/index.d.ts",
-      "style": "./pkg/frontend/dist/index.css",
-      "import": "./pkg/frontend/dist/index.js",
-      "require": "./pkg/frontend/dist/index.js"
-    },
-    "./frontend/styles": "./pkg/frontend/dist/index.css",
-    "./nestjs": {
-      "types": "./pkg/nestjs/dist/index.d.ts",
-      "import": "./pkg/nestjs/dist/index.js",
-      "require": "./pkg/nestjs/dist/index.cjs"
-    },
-    "./nextjs": {
-      "types": "./pkg/nextjs/dist/index.d.ts",
-      "import": "./pkg/nextjs/dist/index.js",
-      "require": "./pkg/nextjs/dist/index.cjs"
-    }
-  },
-  "files": [
-    "dist",
-    "pkg/frontend/dist",
-    "pkg/nestjs/dist",
-    "pkg/nextjs/dist",
-    "README.md",
-    "LICENSE"
-  ],
   "scripts": {
     "build": "pnpm --filter '@invect/*' run build",
     "link:all": "pnpm build && pnpm --filter '@invect/*' exec npm link",
@@ -46,7 +12,6 @@
     "build:nestjs": "pnpm --filter '@invect/nestjs' run build",
     "build:express": "pnpm --filter '@invect/express' run build",
     "build:nextjs": "pnpm --filter '@invect/nextjs' run build",
-    "build:main": "tsdown",
     "dev": "bash scripts/dev.sh",
     "dev:packages": "pnpm --filter '@invect/*' --parallel run dev",
     "dev:express-example": "pnpm --filter '@invect/core' --filter '@invect/express' --parallel run dev",

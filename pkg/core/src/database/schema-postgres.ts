@@ -105,16 +105,29 @@ export const flowRuns = pgTable('flow_executions', {
   lastHeartbeatAt: timestamp('last_heartbeat_at'), // Updated periodically during execution for stale run detection
 });
 
-// Execution trace table to track individual node executions
-export const nodeExecutions = pgTable('execution_traces', {
+// Action traces table — unified node executions + agent tool executions
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
+
+export const actionTraces = pgTable('action_traces', {
   id: uuid('id')
     .primaryKey()
     .$default(() => randomUUID()),
   flowRunId: uuid('flow_run_id')
     .notNull()
     .references(() => flowRuns.id, { onDelete: 'cascade' }),
-  nodeId: text('node_id').notNull(),
-  nodeType: text('node_type').notNull(),
+  // Self-referential FK: NULL for node traces, set for tool traces
+  parentNodeExecutionId: uuid('parent_node_execution_id').references(
+    (): AnyPgColumn => actionTraces.id,
+    { onDelete: 'cascade' },
+  ),
+  // Node execution fields (null for tool traces)
+  nodeId: text('node_id'),
+  nodeType: text('node_type'),
+  // Tool execution fields (null for node traces)
+  toolId: text('tool_id'),
+  toolName: text('tool_name'),
+  iteration: integer('iteration'),
+  // Shared fields
   status: nodeExecutionStatusEnum('status').notNull().default('PENDING'),
   inputs: json('inputs').$type<JSONValue>().notNull(),
   outputs: json('outputs').$type<JSONValue>(),
@@ -144,35 +157,6 @@ export const batchJobs = pgTable('batch_jobs', {
   completedAt: timestamp('completed_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
-
-// Agent tool executions table to track individual tool calls during agent execution
-export const agentToolExecutions = pgTable('agent_tool_executions', {
-  id: uuid('id')
-    .primaryKey()
-    .$default(() => randomUUID()),
-  // Reference to the node execution (agent node)
-  nodeExecutionId: uuid('node_execution_id')
-    .notNull()
-    .references(() => nodeExecutions.id, { onDelete: 'cascade' }),
-  // Denormalized reference to flow run for efficient querying
-  flowRunId: uuid('flow_run_id')
-    .notNull()
-    .references(() => flowRuns.id, { onDelete: 'cascade' }),
-  // Tool identification
-  toolId: text('tool_id').notNull(), // The instance ID or base tool ID
-  toolName: text('tool_name').notNull(), // Human-readable name
-  // Iteration within the agent loop (1-based)
-  iteration: integer('iteration').notNull(),
-  // Input/output data
-  input: json('input').$type<JSONValue>().notNull(),
-  output: json('output').$type<JSONValue>(),
-  error: text('error'),
-  success: boolean('success').notNull(),
-  // Timing
-  startedAt: timestamp('started_at').notNull().defaultNow(),
-  completedAt: timestamp('completed_at'),
-  duration: integer('duration'), // in milliseconds
 });
 
 // Credentials table for storing API authentication credentials
@@ -327,32 +311,26 @@ export const flowRunsRelations = relations(flowRuns, ({ one, many }) => ({
     fields: [flowRuns.flowVersion, flowRuns.flowId],
     references: [flowVersions.version, flowVersions.flowId],
   }),
-  traces: many(nodeExecutions),
+  traces: many(actionTraces),
   batchJobs: many(batchJobs),
 }));
 
-export const nodeExecutionsRelations = relations(nodeExecutions, ({ one, many }) => ({
+export const actionTracesRelations = relations(actionTraces, ({ one, many }) => ({
   execution: one(flowRuns, {
-    fields: [nodeExecutions.flowRunId],
+    fields: [actionTraces.flowRunId],
     references: [flowRuns.id],
   }),
-  toolExecutions: many(agentToolExecutions),
+  parentNodeExecution: one(actionTraces, {
+    fields: [actionTraces.parentNodeExecutionId],
+    references: [actionTraces.id],
+    relationName: 'parentChild',
+  }),
+  childToolExecutions: many(actionTraces, { relationName: 'parentChild' }),
 }));
 
 export const batchJobsRelations = relations(batchJobs, ({ one }) => ({
   execution: one(flowRuns, {
     fields: [batchJobs.flowRunId],
-    references: [flowRuns.id],
-  }),
-}));
-
-export const agentToolExecutionsRelations = relations(agentToolExecutions, ({ one }) => ({
-  nodeExecution: one(nodeExecutions, {
-    fields: [agentToolExecutions.nodeExecutionId],
-    references: [nodeExecutions.id],
-  }),
-  flowRun: one(flowRuns, {
-    fields: [agentToolExecutions.flowRunId],
     references: [flowRuns.id],
   }),
 }));
@@ -370,65 +348,14 @@ export type NewFlowVersion = typeof flowVersions.$inferInsert;
 export type FlowRun = typeof flowRuns.$inferSelect;
 export type NewFlowRun = typeof flowRuns.$inferInsert;
 
-export type NodeExecution = typeof nodeExecutions.$inferSelect;
-export type NewNodeExecution = typeof nodeExecutions.$inferInsert;
+export type NodeExecution = typeof actionTraces.$inferSelect;
+export type NewNodeExecution = typeof actionTraces.$inferInsert;
 
 export type BatchJob = typeof batchJobs.$inferSelect;
 export type NewBatchJob = typeof batchJobs.$inferInsert;
 
-export type AgentToolExecution = typeof agentToolExecutions.$inferSelect;
-export type NewAgentToolExecution = typeof agentToolExecutions.$inferInsert;
-
 export type Credential = typeof credentials.$inferSelect;
 export type NewCredential = typeof credentials.$inferInsert;
-
-// =============================================================================
-// Flow Access Control (RBAC)
-// =============================================================================
-
-/**
- * Flow access permission levels
- */
-export const flowAccessPermissionEnum = pgEnum('flow_access_permission', [
-  'owner',
-  'editor',
-  'operator',
-  'viewer',
-]);
-
-/**
- * Flow access table - tracks who can access which flows.
- * Supports both user-level and team-level access.
- */
-export const flowAccess = pgTable('flow_access', {
-  id: uuid('id')
-    .primaryKey()
-    .$default(() => randomUUID()),
-  flowId: text('flow_id')
-    .notNull()
-    .references(() => flows.id, { onDelete: 'cascade' }),
-
-  // Either userId OR teamId is set (not both)
-  userId: text('user_id'), // External user ID from host app
-  teamId: text('team_id'), // External team ID from host app
-
-  // Permission level for this flow
-  permission: flowAccessPermissionEnum('permission').notNull().default('viewer'),
-
-  // Audit fields
-  grantedBy: text('granted_by'),
-  grantedAt: timestamp('granted_at').notNull().defaultNow(),
-
-  // Optional expiration
-  expiresAt: timestamp('expires_at'),
-});
-
-export const flowAccessRelations = relations(flowAccess, ({ one }) => ({
-  flow: one(flows, {
-    fields: [flowAccess.flowId],
-    references: [flows.id],
-  }),
-}));
 
 export const flowTriggersRelations = relations(flowTriggers, ({ one }) => ({
   flow: one(flows, {
@@ -436,9 +363,6 @@ export const flowTriggersRelations = relations(flowTriggers, ({ one }) => ({
     references: [flows.id],
   }),
 }));
-
-export type FlowAccess = typeof flowAccess.$inferSelect;
-export type NewFlowAccess = typeof flowAccess.$inferInsert;
 
 export type FlowTrigger = typeof flowTriggers.$inferSelect;
 export type NewFlowTrigger = typeof flowTriggers.$inferInsert;
