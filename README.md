@@ -1,217 +1,106 @@
-# Invect
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/logo-light.svg">
+    <img alt="Invect" src=".github/assets/logo-dark.svg" width="50">
+  </picture>
+</p>
 
-Complete workflow management system with React frontend and NestJS backend for executing Invect workflows with batch processing capabilities.
+<h1 align="center">invect.</h1>
 
-## Installation
+<p align="center">
+  Drop-in AI workflows for your Node.js app.
+  <br />
+  <a href="https://invect.dev/docs"><strong>Documentation</strong></a> · <a href="https://invect.dev/docs/quick-start"><strong>Quick Start</strong></a> · <a href="https://github.com/robase/flow-backend"><strong>GitHub</strong></a>
+</p>
+
+<p align="center">
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License" /></a>
+</p>
+
+---
+
+Invect is an open-source workflow orchestration library you mount directly into your existing Express, NestJS, or Next.js app. Visual flow editor, AI agent nodes, 50+ built-in integrations, and batch processing — all as a library, not a platform.
+
+## Quick Start
 
 ```bash
-npm install invect
+npm install @invect/core @invect/express @invect/frontend
 ```
 
-## Usage
+### Backend
 
-### Frontend Components
+```ts
+import express from 'express';
+import { createInvectRouter } from '@invect/express';
 
-```typescript
-// Import React components and hooks
-import { Invect, useApiQueries } from 'invect/frontend';
+const app = express();
 
-// Import styles
-import 'invect/frontend/styles';
-
-// Use in your React app
-function App() {
-  return <Invect apiBaseUrl="http://localhost:3000/invect" />;
-}
-```
-
-### Backend Module
-
-```typescript
-// Import NestJS module
-import { InvectModule } from 'invect/backend';
-
-@Module({
-  imports: [
-    InvectModule.forRoot({
-      databaseUrl: process.env.DATABASE_URL,
-      anthropicApiKey: process.env.ANTHROPIC_API_KEY,
-    }),
-  ],
-})
-export class AppModule {}
-```
-
-## Package Structure
-
-- `invect/frontend` - React components, hooks, and utilities
-- `invect/backend` - NestJS module with services and controllers
-
-@Module({
-  imports: [
-    ConfigModule.forRoot(),
-    FlowBackendModule.forRootAsync({
-      useFactory: (configService: ConfigService) => ({
-        FLOW_DB_URL: configService.get('FLOW_DB_URL'),
-        ANTHROPIC_API_KEY: configService.get('ANTHROPIC_API_KEY'),
-        OPENAI_API_KEY: configService.get('OPENAI_API_KEY'),
-      }),
-      inject: [ConfigService],
-    }),
-  ],
-})
-export class AppModule {}
-```
-
-### Frontend (React Router Routes)
-
-The package exports React Router route configurations that you can integrate into your React Router application:
-
-```typescript
-import { createBrowserRouter } from 'react-router';
-import { FlowRoutes } from 'invect/backend/frontend';
-
-const router = createBrowserRouter([
-  {
-    path: "/",
-    element: <YourRootLayout />,
-    children: [
-      // Your other routes...
-      FlowRoutes({
-        apiBaseUrl: 'http://localhost:3000/invect', // Configure API endpoint
-        queryClient: myQueryClient, // Optional: provide your own QueryClient
-      }),
-    ],
+app.use('/invect', createInvectRouter({
+  baseDatabaseConfig: {
+    type: 'sqlite',
+    connectionString: 'file:./dev.db',
+    id: 'main',
   },
-]);
+}));
+
+app.listen(3000);
 ```
 
-#### Alternative: Individual Route Configuration
+### Frontend
 
-```typescript
-import { createFlowRoutes } from 'invect/backend/frontend';
+```tsx
+import { Invect } from '@invect/frontend';
+import '@invect/frontend/styles';
 
-const flowRoutes = createFlowRoutes({
-  apiBaseUrl: 'http://localhost:3000/invect',
-});
-
-const router = createBrowserRouter([
-  {
-    path: "/",
-    element: <YourRootLayout />,
-    children: [
-      ...flowRoutes,
-      // Your other routes...
-    ],
-  },
-]);
-```
-
-#### Using with Custom Layout
-
-```typescript
-import { FlowFrontendLayout } from 'invect/backend/frontend';
-
-function App() {
-  return (
-    <FlowFrontendLayout config={{ apiBaseUrl: 'http://localhost:3000/invect' }}>
-      <Outlet />
-    </FlowFrontendLayout>
-  );
-}
-```
-
-### API Client
-
-You can also use the API client directly:
-
-```typescript
-import { createApiClient } from 'invect/backend/frontend';
-
-const apiClient = createApiClient('http://localhost:3000/invect');
-
-// Use the API client
-const flows = await apiClient.getFlows();
-const execution = await apiClient.executeFlow(flowId, inputs);
+export default () => (
+  <Invect apiBaseUrl="http://localhost:3000/invect" />
+);
 ```
 
 ## Features
 
-### Backend Features
+- **Visual Flow Editor** — Drag-and-drop workflow builder with real-time execution monitoring.
+- **AI Agent Nodes** — Iterative tool-calling loops with OpenAI and Anthropic APIs.
+- **50+ Built-in Actions** — Gmail, Slack, GitHub, Google Drive, Linear, Postgres, and more.
+- **Batch Processing** — Cut AI costs 50% with native OpenAI and Anthropic batch APIs.
+- **AI-Assisted Builder** — Describe what you need in plain language and the assistant wires up nodes for you.
+- **Multi-Database** — SQLite, PostgreSQL, and MySQL via Drizzle ORM.
+- **OAuth2 Credentials** — AES-256-GCM encrypted credential storage with full OAuth2 support.
+- **Framework Agnostic** — One core, thin adapters for Express, NestJS, and Next.js.
 
-- **Flow Management**: Create, read, update, and delete workflow definitions
-- **Version Control**: Track different versions of workflows
-- **Execution Engine**: Execute workflows with topological sorting
-- **Batch Processing**: Support for OpenAI and Anthropic batch APIs
-- **Database Support**: Works with SQLite, PostgreSQL, and MySQL
-- **Pause/Resume**: Control workflow execution
+## Packages
 
-### Supported Node Types
+| Package | Description |
+|---|---|
+| [`@invect/core`](pkg/core) | Framework-agnostic engine — flows, execution, actions, database |
+| [`@invect/express`](pkg/express) | Express router adapter |
+| [`@invect/nestjs`](pkg/nestjs) | NestJS module adapter |
+| [`@invect/nextjs`](pkg/nextjs) | Next.js App Router handler |
+| [`@invect/frontend`](pkg/frontend) | React flow editor and dashboard |
+| [`@invect/cli`](pkg/cli) | CLI for schema generation, migrations, and project setup |
+| [`@invect/user-auth`](pkg/plugins/auth) | Authentication plugin (Better Auth) |
+| [`@invect/rbac`](pkg/plugins/rbac) | Role-based access control plugin |
 
-- **Prompt Template Node**: Template text with variable substitution
-- **Language Model Node**: Uses Anthropic Claude or OpenAI APIs
-- **SQL Query Node**: Execute SQL queries against databases
-- **If-Else Node**: Conditional branching for flow control
+## Examples
 
-### Frontend Features
+| Example | Stack | Purpose |
+|---|---|---|
+| [`express-drizzle`](examples/express-drizzle) | Express + SQLite | Primary backend dev server |
+| [`vite-react-frontend`](examples/vite-react-frontend) | Vite + React | Standalone frontend for the flow editor |
+| [`nextjs-app-router`](examples/nextjs-app-router) | Next.js 15 | Self-contained Next.js example |
+| [`nextjs-drizzle-auth-rbac`](examples/nextjs-drizzle-auth-rbac) | Next.js + Auth + RBAC | Full-featured example with plugins |
 
-- **Flow Visualization**: Interactive workflow diagrams using React Flow
-- **Flow Editor**: Visual workflow builder with drag-and-drop
-- **Execution Monitoring**: Real-time execution status and logs
-- **Version Management**: Switch between different flow versions
-- **Query Testing**: Test SQL queries directly in the interface
-
-## Configuration
-
-### Environment Variables
-
-The backend module accepts these configuration options:
-
-- `FLOW_DB_URL` (required): Database connection string
-- `ANTHROPIC_API_KEY` (optional): For Anthropic Claude models
-- `OPENAI_API_KEY` (optional): For OpenAI models
-- `PORT` (optional): Server port (default: 3001)
-
-### Database Setup
-
-The package uses Prisma for database management. Ensure your database is set up with the required schema. For SQLite (development):
+## Development
 
 ```bash
-# If using the package in development, you may need to run migrations
-npx prisma migrate dev
-```
-
-## TypeScript Support
-
-The package includes full TypeScript definitions. Import types as needed:
-
-```typescript
-import type { 
-  FlowBackendConfig,
-  FlowFrontendConfig,
-  FlowNode,
-  FlowEdge,
-  ExecutionResult
-} from 'invect/backend';
-```
-
-## Peer Dependencies
-
-Make sure your project includes these peer dependencies:
-
-```json
-{
-  "peerDependencies": {
-    "@nestjs/common": "^11.0.0",
-    "@nestjs/core": "^11.0.0",
-    "react": "^18.0.0 || ^19.0.0",
-    "react-dom": "^18.0.0 || ^19.0.0",
-    "react-router": "^7.0.0",
-    "@tanstack/react-query": "^5.0.0"
-  }
-}
+pnpm install
+pnpm dev           # Interactive menu
+pnpm dev:fullstack # Express backend + Vite frontend
+pnpm test          # Unit + integration tests
+pnpm test:pw       # Playwright tests
+pnpm typecheck     # Type-check all packages
 ```
 
 ## License
 
-MIT
+[MIT](LICENSE)

@@ -1,151 +1,67 @@
-# @invect/nextjs
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../.github/assets/logo-light.svg">
+    <img alt="Invect" src="../../.github/assets/logo-dark.svg" width="50">
+  </picture>
+</p>
 
-Next.js integration for Invect - easily add Invect API routes to your Next.js application.
+<h1 align="center">@invect/nextjs</h1>
 
-## Installation
+<p align="center">
+  Next.js App Router handler for Invect.
+  <br />
+  <a href="https://invect.dev/docs/integrations/nextjs"><strong>Docs</strong></a> · <a href="https://invect.dev/docs/quick-start"><strong>Quick Start</strong></a>
+</p>
+
+---
+
+Add Invect to any Next.js app with a single catch-all API route. Handles all endpoints — flows, executions, credentials, agent tools, and OAuth2.
+
+## Install
 
 ```bash
-npm install @invect/nextjs @invect/core
-# or
-npm install invect
+npm install @invect/core @invect/nextjs
 ```
 
-If you install the main `invect` package, you can import from the nextjs subpath:
+## Usage
 
-```typescript
-import { createInvectHandler } from "invect/nextjs";
-```
+Create a catch-all route in your Next.js App Router:
 
-## Quick Start
-
-Create a catch-all API route in your Next.js app:
-
-```typescript
+```ts
 // app/api/invect/[...invect]/route.ts
-import { createInvectHandler } from "@invect/nextjs";
+import { createInvectHandler } from '@invect/nextjs';
 
-const config = {
-  database: {
-    type: "sqlite" as const,
-    connection: {
-      filename: "./invect.db"
-    }
+const handler = createInvectHandler({
+  baseDatabaseConfig: {
+    type: 'sqlite',
+    connectionString: process.env.DATABASE_URL || 'file:./dev.db',
+    id: 'main',
   },
-  ai: {
-    openai: {
-      apiKey: process.env.OPENAI_API_KEY!
-    }
-  }
-};
-
-const handler = createInvectHandler(config);
+});
 
 export const GET = handler.GET;
 export const POST = handler.POST;
 export const PUT = handler.PUT;
+export const PATCH = handler.PATCH;
 export const DELETE = handler.DELETE;
 ```
 
-This creates all Invect API endpoints under `/api/invect/`:
+All Invect API endpoints are now available under `/api/invect/`.
 
-- Flow management (`/api/invect/flows/*`)
-- Flow execution (`/api/invect/flows/*/run`, `/api/invect/flow-runs/*`)
-- Node testing (`/api/invect/node-data/*`)
-- And more...
+## Frontend
 
-## Usage
+Add the flow editor to any page:
 
-### Frontend Integration
+```tsx
+// app/invect/[[...slug]]/page.tsx
+import { Invect } from '@invect/frontend';
+import '@invect/frontend/styles';
 
-```typescript
-// Create a flow
-const response = await fetch('/api/invect/flows', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    name: "My Flow",
-    description: "A sample workflow"
-  })
-});
-
-// List flows
-const flows = await fetch('/api/invect/flows/list', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ limit: 10 })
-});
-
-// Execute a flow
-const execution = await fetch('/api/invect/flows/my-flow-id/run', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    inputs: { message: "Hello World" }
-  })
-});
+export default function InvectPage() {
+  return <Invect apiBaseUrl="/api/invect" basePath="/invect" />;
+}
 ```
 
-### Configuration
+## License
 
-The handler accepts the same `InvectConfig` as the core Invect class:
-
-```typescript
-import type { InvectConfig } from "@invect/nextjs";
-
-const config: InvectConfig = {
-  database: {
-    type: "postgres", // or "sqlite"
-    connection: process.env.DATABASE_URL!
-  },
-  ai: {
-    openai: {
-      apiKey: process.env.OPENAI_API_KEY!
-    },
-    anthropic: {
-      apiKey: process.env.ANTHROPIC_API_KEY!
-    }
-  },
-  execution: {
-    maxConcurrentNodes: 10,
-    nodeTimeoutMs: 30000
-  }
-};
-```
-
-### Individual Endpoints
-
-For more control, create individual endpoint handlers:
-
-```typescript
-// app/api/flows/route.ts
-import { createInvectEndpoint } from "@invect/nextjs";
-
-const { createEndpoint } = createInvectEndpoint(config);
-
-export const POST = createEndpoint(async (core, request) => {
-  const body = await request.json();
-  const flow = await core.createFlow(body);
-  return NextResponse.json(flow, { status: 201 });
-});
-```
-
-## API Reference
-
-See the [Invect Core documentation](../core/README.md) for complete API reference and configuration options.
-
-## Examples
-
-- [Next.js App Router Example](../../examples/nextjs-app-router/)
-- [Next.js Pages Router Example](../../examples/nextjs-pages-router/)
-
-## TypeScript Support
-
-Full TypeScript support with all Invect types:
-
-```typescript
-import type { 
-  Flow, 
-  FlowRun, 
-  CreateFlowRequest 
-} from "@invect/nextjs";
-```
+[MIT](../../LICENSE)

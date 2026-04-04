@@ -1,6 +1,21 @@
-# @invect/user-auth
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../../.github/assets/logo-light.svg">
+    <img alt="Invect" src="../../../.github/assets/logo-dark.svg" width="50">
+  </picture>
+</p>
 
-Better Auth integration for [Invect](https://github.com/invect/invect). Adds user authentication, session management, identity resolution, and auth UI components.
+<h1 align="center">@invect/user-auth</h1>
+
+<p align="center">
+  Authentication plugin for Invect, powered by Better Auth.
+  <br />
+  <a href="https://invect.dev/docs/plugins"><strong>Docs</strong></a>
+</p>
+
+---
+
+Adds user authentication, session management, and auth UI components to Invect. Built on [Better Auth](https://www.better-auth.com/).
 
 ## Install
 
@@ -8,99 +23,77 @@ Better Auth integration for [Invect](https://github.com/invect/invect). Adds use
 pnpm add @invect/user-auth better-auth
 ```
 
-## Usage
-
-### Backend
+## Backend
 
 ```ts
 import { betterAuth } from 'better-auth';
 import { userAuth } from '@invect/user-auth';
 import { createInvectRouter } from '@invect/express';
 
-// 1. Configure better-auth
 const auth = betterAuth({
   database: { url: 'file:./auth.db', type: 'sqlite' },
   emailAndPassword: { enabled: true },
 });
 
-// 2. Add the plugin
 app.use('/invect', createInvectRouter({
-  databaseUrl: 'file:./dev.db',
+  baseDatabaseConfig: { type: 'sqlite', connectionString: 'file:./dev.db', id: 'main' },
   plugins: [
     userAuth({
       auth,
-      globalAdmins: [
-        {
-          email: process.env.INVECT_ADMIN_EMAIL,
-          pw: process.env.INVECT_ADMIN_PASSWORD,
-          name: 'Admin',
-        },
-      ],
+      globalAdmins: [{
+        email: process.env.INVECT_ADMIN_EMAIL,
+        pw: process.env.INVECT_ADMIN_PASSWORD,
+        name: 'Admin',
+      }],
     }),
   ],
 }));
 ```
 
-`globalAdmins` is the explicit source of truth for seeded admin accounts. If you
-want to use environment variables, wire them into that array yourself.
+Sign-up is disabled in the UI. The initial admin is seeded from `globalAdmins`. Subsequent users are created by admins through the user management UI or API.
 
-### Frontend
+## Frontend
 
 ```tsx
-import { AuthProvider, useAuth, SignInForm, UserButton, AuthGate } from '@invect/user-auth/ui';
+import { Invect, InvectShell } from '@invect/frontend';
+import { AuthenticatedInvect } from '@invect/user-auth/ui';
+import '@invect/frontend/styles';
 
-function App() {
-  return (
-    <AuthProvider baseUrl="http://localhost:3000/invect">
-      <AuthGate fallback={<SignInPage />}>
-        <Header />
-        <MainApp />
-      </AuthGate>
-    </AuthProvider>
-  );
-}
-
-function Header() {
-  return (
-    <header>
-      <UserButton />
-    </header>
-  );
-}
-
-function SignInPage() {
-  return <SignInForm onSuccess={() => window.location.reload()} />;
-}
+<AuthenticatedInvect
+  apiBaseUrl="/api/invect"
+  basePath="/invect"
+  InvectComponent={Invect}
+  ShellComponent={InvectShell}
+  theme="light"
+/>
 ```
 
-## Package Exports
+Or compose manually:
 
-| Entry Point | Import | Content |
-|-------------|--------|---------|
-| `@invect/user-auth` | `import { userAuth } from '@invect/user-auth'` | Backend plugin (Node.js) |
-| `@invect/user-auth/ui` | `import { AuthProvider, useAuth } from '@invect/user-auth/ui'` | Frontend components (Browser) |
-| `@invect/user-auth/types` | `import type { AuthUser } from '@invect/user-auth/types'` | Shared types |
+```tsx
+import { AuthProvider, AuthGate, SignInPage, UserButton } from '@invect/user-auth/ui';
+
+<AuthProvider baseUrl="http://localhost:3000/invect">
+  <AuthGate fallback={<SignInPage />}>
+    <Invect apiBaseUrl="http://localhost:3000/invect" />
+  </AuthGate>
+</AuthProvider>
+```
+
+## Exports
+
+| Entry Point | Content |
+|---|---|
+| `@invect/user-auth` | Backend plugin (Node.js) |
+| `@invect/user-auth/ui` | Frontend components — `AuthProvider`, `AuthGate`, `SignInForm`, `UserButton`, `AuthenticatedInvect` |
+| `@invect/user-auth/types` | Shared types |
 
 ## What It Does
 
-### Backend (`@invect/user-auth`)
-- **Proxies auth routes** — Sign-in, sign-up, OAuth, session endpoints at `/plugins/auth/*`
-- **Resolves sessions** — Every Invect API request calls `auth.api.getSession()` to populate `InvectIdentity`
-- **Maps roles** — better-auth user roles align with Invect RBAC (`owner`, `editor`, `operator`, `viewer`), preserve `admin`, and fall back to `default` for no global access
-- **Middleware helper** — `createSessionResolver()` for use as `auth.resolveUser` callback
+**Backend** — Proxies auth routes (sign-in, session, OAuth) at `/plugins/auth/*`. Resolves sessions on every Invect API request. Maps better-auth roles to Invect RBAC roles.
 
-### Frontend (`@invect/user-auth/ui`)
-- **AuthProvider** — Context provider that fetches session state and provides sign-in/sign-up/sign-out actions
-- **useAuth()** — Hook for accessing current user, auth state, and actions
-- **SignInForm** — Email/password sign-in form
-- **SignUpForm** — Email/password sign-up form
-- **UserButton** — User avatar with dropdown (name, email, role, sign-out)
-- **AuthGate** — Conditionally renders children based on auth state
-
-## Docs
-
-Full documentation: [invect.dev/docs/authentication](https://invect.dev/docs/authentication)
+**Frontend** — `AuthProvider` for session state, `AuthGate` for conditional rendering, `SignInForm` / `UserButton` for auth UI.
 
 ## License
 
-MIT
+[MIT](../../../LICENSE)

@@ -1,103 +1,72 @@
-# @invect/core
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../.github/assets/logo-light.svg">
+    <img alt="Invect" src="../../.github/assets/logo-dark.svg" width="50">
+  </picture>
+</p>
 
-Framework-agnostic core package for Invect workflow execution engine.
+<h1 align="center">@invect/core</h1>
 
-## Overview
+<p align="center">
+  Framework-agnostic workflow orchestration engine.
+  <br />
+  <a href="https://invect.dev/docs"><strong>Docs</strong></a> · <a href="https://invect.dev/docs/quick-start"><strong>Quick Start</strong></a>
+</p>
 
-This package contains the core business logic for Invect, including:
+---
 
-- Flow management and execution
-- Node type implementations (Template String, Language Model, SQL Query, If-Else)
-- Database operations using Drizzle ORM
-- Framework-agnostic service interfaces
+The core engine behind Invect. Contains all business logic — flows, execution, actions, agents, credentials, and database — independent of any web framework.
 
-## Installation
+Framework packages ([`@invect/express`](../express), [`@invect/nestjs`](../nestjs), [`@invect/nextjs`](../nextjs)) are thin adapters that wrap this core.
+
+## Install
 
 ```bash
-npm install @invect/core @invect/types
+npm install @invect/core
 ```
 
-## Quick Start
+## Usage
 
-```typescript
-import { CoreConfigBuilder, InvectCore } from '@invect/core';
+```ts
+import { Invect } from '@invect/core';
 
-// Create configuration
-const config = new CoreConfigBuilder()
-  .database({
-    url: 'postgresql://localhost:5432/invect',
-    type: 'postgresql'
-  })
-  .anthropicApiKey('your-anthropic-key')
-  .build();
+const core = new Invect({
+  baseDatabaseConfig: {
+    type: 'sqlite',
+    connectionString: 'file:./dev.db',
+    id: 'main',
+  },
+});
 
-// Initialize core
-const core = new InvectCore(config, logger, databaseAdapter);
 await core.initialize();
 
-// Use services
-const flow = await core.flowService.createFlow({
-  name: 'My Workflow',
-  description: 'A sample workflow'
-});
+// Create and run flows programmatically
+const flow = await core.createFlow({ name: 'My Workflow' });
+const result = await core.startFlowRun(flow.id, { message: 'Hello' });
 ```
 
-## Configuration
+## What's Inside
 
-### Environment Variables
+- **Flow engine** — Topological execution with dependency resolution, branching, loops, and pause/resume.
+- **50+ actions** — Gmail, Slack, GitHub, Google Drive, Linear, Postgres, HTTP, JQ, and more. Each action works as both a flow node and an agent tool.
+- **AI agents** — Iterative tool-calling loops with OpenAI and Anthropic APIs.
+- **Batch processing** — Native OpenAI and Anthropic batch API support with automatic pause/resume.
+- **Credentials** — AES-256-GCM encrypted storage with full OAuth2 flow support.
+- **Multi-database** — SQLite, PostgreSQL, and MySQL via Drizzle ORM.
+- **Plugin system** — Composable plugins for auth, RBAC, and custom extensions.
 
-- `FLOW_DB_URL` - Database connection string
-- `ANTHROPIC_API_KEY` - Anthropic API key for LLM nodes
-- `OPENAI_API_KEY` - OpenAI API key for LLM nodes
-- `FLOW_DEFAULT_TIMEOUT` - Default execution timeout (ms)
-- `FLOW_MAX_CONCURRENT` - Maximum concurrent executions
-- `FLOW_ENABLE_TRACING` - Enable execution tracing
-- `FLOW_LOG_LEVEL` - Logging level (debug, info, warn, error)
+## Types
 
-### Configuration Builder
+Import types for frontend consumption from the `/types` subpath (no runtime code):
 
-```typescript
-import { createConfigFromEnv } from '@invect/core';
-
-const config = createConfigFromEnv()
-  .execution({
-    defaultTimeout: 30000,
-    maxConcurrentExecutions: 5
-  })
-  .build();
-```
-
-## Supported Databases
-
-- PostgreSQL
-- SQLite
-- MySQL
-
-## Node Types
-
-- **Template String Node**: Text templating with variable substitution
-- **Language Model Node**: AI text generation using Anthropic Claude or OpenAI
-- **SQL Query Node**: Database query execution
-- **If-Else Node**: Conditional flow control
-
-## Development
-
-```bash
-# Build
-npm run build
-
-# Development mode
-npm run dev
-
-# Type checking
-npm run type-check
-
-# Database operations
-npm run db:generate  # Generate migrations
-npm run db:migrate   # Run migrations
-npm run db:studio    # Open Drizzle Studio
+```ts
+import type { FlowDefinition, FlowRunResult } from '@invect/core/types';
 ```
 
 ## License
 
-MIT
+[MIT](../../LICENSE)
+
+## License
+
+[MIT](../../LICENSE)
