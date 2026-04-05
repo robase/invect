@@ -13,6 +13,7 @@
 
 import type { Logger } from 'src/types/schemas';
 import type { InvectIdentity } from 'src/types/auth.types';
+import type { InvectInstance } from 'src/api/types';
 import type { ActionRegistry } from 'src/actions';
 import type { ProviderAdapter } from '../ai/provider-adapter';
 import type {
@@ -57,8 +58,8 @@ export class ChatStreamService {
     private readonly flowsService: FlowsService,
     private readonly flowVersionsService: FlowVersionsService,
     private readonly actionRegistry: ActionRegistry | null,
-    /** Invect core instance — passed to tools as an opaque handle */
-    private readonly invect: unknown,
+    /** Invect core instance — wired post-init via setInvectInstance() */
+    private invect: InvectInstance | null,
   ) {
     // Parse and apply defaults to chat config
     this.chatConfig = ChatConfigSchema.parse({});
@@ -67,6 +68,15 @@ export class ChatStreamService {
     logger.info(
       `ChatStreamService initialized (enabled: ${this.chatConfig.enabled}, tools: ${this.toolkit.size})`,
     );
+  }
+
+  /**
+   * Wire the InvectInstance reference post-construction.
+   * Called by createInvect() after the instance is fully assembled,
+   * breaking the circular dependency between ServiceFactory and InvectInstance.
+   */
+  setInvectInstance(instance: InvectInstance): void {
+    this.invect = instance;
   }
 
   /**
@@ -122,7 +132,7 @@ export class ChatStreamService {
       config: resolvedConfig,
       adapter,
       identity,
-      invect: this.invect,
+      invect: this.invect as NonNullable<typeof this.invect>,
       actionRegistry: this.actionRegistry,
     });
 

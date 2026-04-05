@@ -4,10 +4,7 @@ import type { Logger } from '../types/schemas';
 import * as Schemas from '../types/schemas';
 import { createFlowVersionRequestSchema } from '../services/flow-versions/schemas-fresh';
 
-export function createFlowVersionsAPI(
-  sf: ServiceFactory,
-  logger: Logger,
-): FlowVersionsAPI {
+export function createFlowVersionsAPI(sf: ServiceFactory, logger: Logger): FlowVersionsAPI {
   const svc = sf.getFlowVersionsService();
   const triggersService = sf.getTriggersService();
 

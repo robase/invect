@@ -1945,7 +1945,6 @@ export class Invect {
     this.serviceFactory = new ServiceFactory(
       this.config,
       nodeRegistry,
-      this,
       this.actionRegistry,
       this.pluginManager,
       this.jsExpressionService ?? undefined,

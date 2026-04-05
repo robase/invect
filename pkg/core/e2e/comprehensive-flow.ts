@@ -51,15 +51,14 @@ import {
   FlowRunStatus,
   type InvectDefinition,
   type NodeOutput,
-  type Invect,
 } from "../src";
 import type { FlowExample } from "./example-types";
 
 /**
  * Ensure we have an AI credential for Model nodes.
  */
-async function ensureAICredential(invect: Invect): Promise<{ id: string; name: string; isOpenAI: boolean }> {
-  const credentialsService = invect.getCredentialsService();
+async function ensureAICredential(invect: InvectInstance): Promise<{ id: string; name: string; isOpenAI: boolean }> {
+  
 
   const openaiKey = process.env.OPENAI_API_KEY;
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
@@ -74,7 +73,7 @@ async function ensureAICredential(invect: Invect): Promise<{ id: string; name: s
   const apiKey = openaiKey || anthropicKey!;
   const providerName = isOpenAI ? "openai" : "anthropic";
 
-  const created = await credentialsService.create({
+  const created = await invect.credentials.create({
     name: `E2E Comprehensive ${providerName.charAt(0).toUpperCase() + providerName.slice(1)} Credential`,
     type: "http-api",
     authType: "bearer",
@@ -490,7 +489,7 @@ export const comprehensiveFlowPremiumExample: FlowExample = {
     console.log(`  📝 Using credential: ${credential.name}`);
     console.log(`  🤖 Provider: ${credential.isOpenAI ? "OpenAI" : "Anthropic"}`);
 
-    const flow = await invect.createFlow({
+    const flow = await invect.flows.create({
       name: `e2e-comprehensive-premium-${Date.now()}`,
     });
     console.log(`  📁 Created flow: ${flow.name} (${flow.id})`);
@@ -500,7 +499,7 @@ export const comprehensiveFlowPremiumExample: FlowExample = {
       credential.isOpenAI,
       true // Premium user
     );
-    await invect.createFlowVersion(flow.id, {
+    await invect.versions.create(flow.id, {
       invectDefinition: flowDefinition,
     });
     console.log(`  💾 Saved flow version with ${flowDefinition.nodes.length} nodes, ${flowDefinition.edges.length} edges`);
@@ -508,7 +507,7 @@ export const comprehensiveFlowPremiumExample: FlowExample = {
     console.log(`  🚀 Executing comprehensive flow (premium path)...`);
     console.log(`  ⏳ This involves HTTP request + 2 LLM calls, may take 30-60 seconds...`);
     
-    const result = await invect.startFlowRun(flow.id, {}, { useBatchProcessing: false });
+    const result = await invect.runs.start(flow.id, {}, { useBatchProcessing: false });
     console.log(`  ✅ Flow completed with status: ${result.status}`);
 
     return result;
@@ -610,7 +609,7 @@ export const comprehensiveFlowBasicExample: FlowExample = {
     console.log(`  📝 Using credential: ${credential.name}`);
     console.log(`  🤖 Provider: ${credential.isOpenAI ? "OpenAI" : "Anthropic"}`);
 
-    const flow = await invect.createFlow({
+    const flow = await invect.flows.create({
       name: `e2e-comprehensive-basic-${Date.now()}`,
     });
     console.log(`  📁 Created flow: ${flow.name} (${flow.id})`);
@@ -620,7 +619,7 @@ export const comprehensiveFlowBasicExample: FlowExample = {
       credential.isOpenAI,
       false // Basic user
     );
-    await invect.createFlowVersion(flow.id, {
+    await invect.versions.create(flow.id, {
       invectDefinition: flowDefinition,
     });
     console.log(`  💾 Saved flow version with ${flowDefinition.nodes.length} nodes, ${flowDefinition.edges.length} edges`);
@@ -628,7 +627,7 @@ export const comprehensiveFlowBasicExample: FlowExample = {
     console.log(`  🚀 Executing comprehensive flow (basic path)...`);
     console.log(`  ⏳ This involves HTTP request + 2 LLM calls, may take 20-40 seconds...`);
     
-    const result = await invect.startFlowRun(flow.id, {}, { useBatchProcessing: false });
+    const result = await invect.runs.start(flow.id, {}, { useBatchProcessing: false });
     console.log(`  ✅ Flow completed with status: ${result.status}`);
 
     return result;

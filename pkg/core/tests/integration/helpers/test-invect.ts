@@ -13,7 +13,8 @@ import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { dirname, join, resolve } from 'path';
-import { Invect } from '../../../src/invect-core';
+import { createInvect } from '../../../src/api/create-invect';
+import type { InvectInstance } from '../../../src/api/types';
 import type { InvectPlugin } from '../../../src/types/plugin.types';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -31,7 +32,7 @@ const MIGRATIONS_FOLDER = resolve(__dirname, '../../../drizzle/sqlite');
  */
 export async function createTestInvect(opts?: {
   plugins?: InvectPlugin[];
-}): Promise<Invect> {
+}): Promise<InvectInstance> {
   // Set encryption key for credential tests
   process.env.INVECT_ENCRYPTION_KEY = randomBytes(32).toString('base64');
 
@@ -46,7 +47,7 @@ export async function createTestInvect(opts?: {
   migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
   sqlite.close();
 
-  const invect = new Invect({
+  const invect = await createInvect({
     database: {
       type: 'sqlite',
       connectionString: `file:${dbPath}`,
@@ -57,8 +58,6 @@ export async function createTestInvect(opts?: {
     },
     plugins: opts?.plugins ?? [],
   });
-
-  await invect.initialize();
 
   // Attach cleanup to shutdown so temp files are removed
   const originalShutdown = invect.shutdown.bind(invect);

@@ -168,6 +168,9 @@ export type {
 // Dashboard stats type (pure interface — safe for frontend)
 export type { DashboardStats } from './invect-core';
 
+// InvectInstance type (the new namespaced API surface)
+export type { InvectInstance } from './api/types';
+
 // Execution streaming event types (SSE)
 export type {
   ExecutionStreamEvent,

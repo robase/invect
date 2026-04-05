@@ -54,8 +54,6 @@ export class ServiceFactory {
   constructor(
     private readonly config: InvectConfig,
     private readonly nodeRegistry: NodeExecutorRegistry,
-    /** The Invect core instance (for passing to ChatStreamService → tools) */
-    private readonly invectRef?: unknown,
     /** Action registry for chat system prompt context */
     private readonly actionRegistryRef?: unknown,
     /** Plugin hook runner for lifecycle hooks */
@@ -182,7 +180,7 @@ export class ServiceFactory {
         flowsService,
         flowVersionsService,
         (this.actionRegistryRef as import('src/actions').ActionRegistry) ?? null,
-        this.invectRef,
+        null, // invect instance wired post-init via chatStreamService.setInvectInstance()
       );
 
       // 6e. Wire execution event bus to services that write state

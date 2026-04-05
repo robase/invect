@@ -10,7 +10,7 @@ import {
   InvectResourceType,
   createPluginDatabaseApi,
 } from '@invect/core';
-import type { CredentialFilters, InvectInstance } from '@invect/core';
+import type { CredentialFilters } from '@invect/core';
 import { asyncHandler } from './async-handler';
 import { ZodError } from 'zod';
 
@@ -748,7 +748,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
         }
       }
 
-      const result = await invect.actions.resolveFieldOptions(actionId, fieldName, dependencyValues);
+      const result = await invect.actions.resolveFieldOptions(
+        actionId,
+        fieldName,
+        dependencyValues,
+      );
       res.json(result);
     }),
   );

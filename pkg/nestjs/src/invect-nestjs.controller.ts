@@ -40,6 +40,7 @@ import type {
   UpdateTriggerInput,
   ChatStreamEvent,
   InvectIdentity,
+  ChatMessage,
 } from '@invect/core';
 import { GraphNodeType } from '@invect/core/types';
 import type { Request, Response } from 'express';
@@ -492,7 +493,19 @@ export class InvectController {
   async handleNodeConfigUpdate(
     @Body() body: NodeConfigUpdateEvent,
   ): Promise<NodeConfigUpdateResponse> {
-    return await this.invect.actions.handleConfigUpdate(body);
+    try {
+      return await this.invect.actions.handleConfigUpdate(body);
+    } catch (error: unknown) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'statusCode' in error &&
+        (error as { statusCode: number }).statusCode < 500
+      ) {
+        throw new BadRequestException(error instanceof Error ? error.message : 'Invalid request');
+      }
+      throw error;
+    }
   }
 
   @Get('node-definition/:nodeType')
@@ -955,12 +968,7 @@ export class InvectController {
 
     try {
       const stream = await this.invect.chat.createStream({
-        messages: messages as Array<{
-          role: string;
-          content: string;
-          toolCalls?: unknown[];
-          toolCallId?: string;
-        }>,
+        messages: messages as ChatMessage[],
         context: context || {},
       });
       for await (const event of stream) {
@@ -1080,7 +1088,7 @@ export class InvectController {
         getPermissions: (identity) => this.invect.auth.getPermissions(identity),
         getAvailableRoles: () => this.invect.auth.getAvailableRoles(),
         getResolvedRole: (identity) => this.invect.auth.getResolvedRole(identity),
-        authorize: (context) => this.invect.authorize(context),
+        authorize: (context) => this.invect.auth.authorize(context),
       },
     });
 

@@ -1,7 +1,7 @@
 import "dotenv/config";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { Invect } from "../src";
+import { createInvect } from "../src/api/create-invect";
 import type { FlowExample } from "./example-types";
 import { inputTemplateModelExample } from "./input-template-model";
 import { complexBranchingFlowExample, complexBranchingFlowMinorExample } from "./complex-branching-flow";
@@ -38,7 +38,7 @@ async function runExamples(): Promise<void> {
   }
 
   // Initialize Invect
-  const invect = new Invect({
+  const invect = await createInvect({
     database: {
       type: "sqlite",
       connectionString: `file:${sqlitePath}`,
@@ -50,8 +50,6 @@ async function runExamples(): Promise<void> {
   });
 
   try {
-    console.log("⚙️  Initializing Invect...");
-    await invect.initialize();
     console.log("✅ Invect initialized\n");
 
     let passed = 0;

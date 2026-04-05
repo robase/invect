@@ -6,7 +6,7 @@
  * hook invocations so assertions can inspect ordering and side effects.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { Invect, FlowRunStatus } from '../../../src';
+import { FlowRunStatus } from '../../../src';
 import type {
   InvectPlugin,
   FlowRunHookContext,
@@ -30,9 +30,9 @@ const simpleFlowDef = {
 };
 
 async function createAndRunFlow(invect: Invect) {
-  const flow = await invect.createFlow({ name: `hook-test-${Date.now()}` });
-  await invect.createFlowVersion(flow.id, { invectDefinition: simpleFlowDef });
-  return invect.startFlowRun(flow.id, {}, { useBatchProcessing: false });
+  const flow = await invect.flows.create({ name: `hook-test-${Date.now()}` });
+  await invect.versions.create(flow.id, { invectDefinition: simpleFlowDef });
+  return invect.runs.start(flow.id, {}, { useBatchProcessing: false });
 }
 
 // ---------------------------------------------------------------------------
@@ -84,9 +84,9 @@ describe('Plugin Hooks — Flow Run Lifecycle', () => {
     const invect = await createTestInvect({ plugins: [plugin] });
 
     try {
-      const flow = await invect.createFlow({ name: `cancel-test-${Date.now()}` });
-      await invect.createFlowVersion(flow.id, { invectDefinition: simpleFlowDef });
-      const result = await invect.startFlowRun(flow.id, {}, { useBatchProcessing: false });
+      const flow = await invect.flows.create({ name: `cancel-test-${Date.now()}` });
+      await invect.versions.create(flow.id, { invectDefinition: simpleFlowDef });
+      const result = await invect.runs.start(flow.id, {}, { useBatchProcessing: false });
 
       // Flow should be failed when cancelled by plugin hook
       expect(result.status).toBe(FlowRunStatus.FAILED);

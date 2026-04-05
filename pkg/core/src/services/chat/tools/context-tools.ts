@@ -7,7 +7,6 @@
 
 import { z } from 'zod/v4';
 import type { ChatToolDefinition, ChatToolContext, ChatToolResult } from '../chat-types';
-import type { Invect } from 'src/invect-core';
 
 // =====================================
 // get_current_flow_context
@@ -25,7 +24,7 @@ export const getCurrentFlowContextTool: ChatToolDefinition = {
   }),
   async execute(params: unknown, ctx: ChatToolContext): Promise<ChatToolResult> {
     const { nodeId } = params as { nodeId?: string };
-    const invect = ctx.invect as Invect;
+    const invect = ctx.invect;
     const flowId = ctx.chatContext.flowId;
 
     if (!flowId) {
@@ -33,7 +32,7 @@ export const getCurrentFlowContextTool: ChatToolDefinition = {
     }
 
     try {
-      const version = await invect.getFlowVersion(flowId, 'latest');
+      const version = await invect.versions.get(flowId, 'latest');
       if (!version) {
         return { success: false, error: 'No flow version found' };
       }
@@ -90,11 +89,11 @@ export const searchActionsTool: ChatToolDefinition = {
   }),
   async execute(params: unknown, ctx: ChatToolContext): Promise<ChatToolResult> {
     const { query, limit } = params as { query: string; limit?: number };
-    const invect = ctx.invect as Invect;
+    const invect = ctx.invect;
 
     try {
       // Use getAvailableNodes() which returns NodeDefinition[] from both actions and legacy executors
-      const allNodes = invect.getAvailableNodes();
+      const allNodes = invect.actions.getAvailableNodes();
       // Split query into individual terms for relevance scoring
       const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
       const maxResults = limit ?? 10;
@@ -168,10 +167,10 @@ export const listCredentialsTool: ChatToolDefinition = {
     'Use this to find credential IDs for nodes that need authentication.',
   parameters: z.object({}),
   async execute(_params: unknown, ctx: ChatToolContext): Promise<ChatToolResult> {
-    const invect = ctx.invect as Invect;
+    const invect = ctx.invect;
 
     try {
-      const credentials = await invect.listCredentials();
+      const credentials = await invect.credentials.list();
       return {
         success: true,
         data: credentials.map((c) => ({
@@ -237,10 +236,10 @@ export const getActionDetailsTool: ChatToolDefinition = {
   }),
   async execute(params: unknown, ctx: ChatToolContext): Promise<ChatToolResult> {
     const { actionId } = params as { actionId: string };
-    const invect = ctx.invect as Invect;
+    const invect = ctx.invect;
 
     try {
-      const allNodes = invect.getAvailableNodes();
+      const allNodes = invect.actions.getAvailableNodes();
       const node = allNodes.find((n) => n.type === actionId);
 
       if (!node) {
@@ -299,17 +298,17 @@ export const listProvidersTool: ChatToolDefinition = {
     'Follow up with search_actions to find specific actions within a provider.',
   parameters: z.object({}),
   async execute(_params: unknown, ctx: ChatToolContext): Promise<ChatToolResult> {
-    const invect = ctx.invect as Invect;
+    const invect = ctx.invect;
 
     try {
-      const providers = invect.getProviders();
+      const providers = invect.actions.getProviders();
 
       return {
         success: true,
         data: {
           total: providers.length,
           providers: providers.map((p) => {
-            const actions = invect.getActionsForProvider(p.id);
+            const actions = invect.actions.getForProvider(p.id);
             return {
               id: p.id,
               name: p.name,

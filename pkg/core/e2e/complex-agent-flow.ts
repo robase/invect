@@ -30,7 +30,6 @@ import {
   GraphNodeType,
   FlowRunStatus,
   type InvectDefinition,
-  type Invect,
   BatchProvider,
 } from "../src";
 import { getOutputVariable, type AgentOutputLike, type FlowExample } from "./example-types";
@@ -38,8 +37,8 @@ import { getOutputVariable, type AgentOutputLike, type FlowExample } from "./exa
 /**
  * Ensure we have an AI credential for Agent node.
  */
-async function ensureAICredential(invect: Invect): Promise<{ id: string; name: string; isOpenAI: boolean }> {
-  const credentialsService = invect.getCredentialsService();
+async function ensureAICredential(invect: InvectInstance): Promise<{ id: string; name: string; isOpenAI: boolean }> {
+  
 
   const openaiKey = process.env.OPENAI_API_KEY;
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
@@ -54,7 +53,7 @@ async function ensureAICredential(invect: Invect): Promise<{ id: string; name: s
   const apiKey = openaiKey || anthropicKey!;
   const providerName = isOpenAI ? "openai" : "anthropic";
 
-  const created = await credentialsService.create({
+  const created = await invect.credentials.create({
     name: `E2E Complex Agent ${providerName.charAt(0).toUpperCase() + providerName.slice(1)} Credential`,
     type: "http-api",
     authType: "bearer",
@@ -247,7 +246,7 @@ export const complexAgentFlowExample: FlowExample = {
   name: "Complex Agent Flow - Data Analyst",
   description: "Tests AI Agent node with multiple tools (JQ, Math, JSON Logic) for data analysis",
 
-  async execute(invect: Invect) {
+  async execute(invect: InvectInstance) {
     // Create credential
     const { id: credentialId, isOpenAI } = await ensureAICredential(invect);
 
@@ -255,15 +254,15 @@ export const complexAgentFlowExample: FlowExample = {
     const definition = buildComplexAgentFlowDefinition(credentialId, isOpenAI);
 
     // Create flow
-    const flow = await invect.createFlow({
+    const flow = await invect.flows.create({
       name: "E2E Complex Agent Flow",
     });
 
     // Create flow version with definition
-    await invect.createFlowVersion(flow.id, { invectDefinition: definition });
+    await invect.versions.create(flow.id, { invectDefinition: definition });
 
     // Execute flow
-    const result = await invect.startFlowRun(flow.id, {}, {
+    const result = await invect.runs.start(flow.id, {}, {
       useBatchProcessing: false,
     });
 
@@ -299,7 +298,7 @@ export const complexAgentFlowExample: FlowExample = {
     }
 
     // Cleanup
-    await invect.getCredentialsService().delete(credentialId);
+    await invect.credentials.delete(credentialId);
 
     return result;
   },

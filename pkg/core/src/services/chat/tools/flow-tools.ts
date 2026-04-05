@@ -7,7 +7,6 @@
 
 import { z } from 'zod/v4';
 import type { ChatToolDefinition, ChatToolContext, ChatToolResult } from '../chat-types';
-import type { Invect } from 'src/invect-core';
 
 // =====================================
 // update_flow_definition
@@ -62,7 +61,7 @@ export const updateFlowDefinitionTool: ChatToolDefinition = {
         targetHandle?: string;
       }>;
     };
-    const invect = ctx.invect as Invect;
+    const invect = ctx.invect;
     const flowId = ctx.chatContext.flowId;
 
     if (!flowId) {
@@ -71,7 +70,7 @@ export const updateFlowDefinitionTool: ChatToolDefinition = {
 
     try {
       // Validate all node types exist in the action registry
-      const availableNodes = invect.getAvailableNodes();
+      const availableNodes = invect.actions.getAvailableNodes();
       const validTypes = new Set(availableNodes.map((n) => n.type));
       // Allow legacy AGENT type
       validTypes.add('AGENT');
@@ -91,7 +90,7 @@ export const updateFlowDefinitionTool: ChatToolDefinition = {
         position: n.position ?? { x: 250, y: i * 150 },
       }));
 
-      const version = await invect.createFlowVersion(flowId, {
+      const version = await invect.versions.create(flowId, {
         invectDefinition: {
           nodes: positionedNodes,
           edges,
@@ -140,7 +139,7 @@ export const runFlowTool: ChatToolDefinition = {
   }),
   async execute(params: unknown, ctx: ChatToolContext): Promise<ChatToolResult> {
     const { inputs } = params as { inputs?: Record<string, unknown> };
-    const invect = ctx.invect as Invect;
+    const invect = ctx.invect;
     const flowId = ctx.chatContext.flowId;
 
     if (!flowId) {
@@ -148,7 +147,7 @@ export const runFlowTool: ChatToolDefinition = {
     }
 
     try {
-      const result = await invect.startFlowRun(flowId, inputs ?? {});
+      const result = await invect.runs.start(flowId, inputs ?? {});
 
       return {
         success: true,
@@ -186,10 +185,10 @@ export const createFlowTool: ChatToolDefinition = {
   }),
   async execute(params: unknown, ctx: ChatToolContext): Promise<ChatToolResult> {
     const { name } = params as { name: string };
-    const invect = ctx.invect as Invect;
+    const invect = ctx.invect;
 
     try {
-      const flow = await invect.createFlow({ name });
+      const flow = await invect.flows.create({ name });
 
       return {
         success: true,
@@ -224,10 +223,10 @@ export const listFlowsTool: ChatToolDefinition = {
   }),
   async execute(params: unknown, ctx: ChatToolContext): Promise<ChatToolResult> {
     const { search, limit } = params as { search?: string; limit?: number };
-    const invect = ctx.invect as Invect;
+    const invect = ctx.invect;
 
     try {
-      const result = await invect.listFlows();
+      const result = await invect.flows.list();
       let flows = result.data;
 
       // Relevance scoring: match any term, sort by number of matches
@@ -283,7 +282,7 @@ export const validateFlowTool: ChatToolDefinition = {
     'Use this proactively after making changes.',
   parameters: z.object({}),
   async execute(_params: unknown, ctx: ChatToolContext): Promise<ChatToolResult> {
-    const invect = ctx.invect as Invect;
+    const invect = ctx.invect;
     const flowId = ctx.chatContext.flowId;
 
     if (!flowId) {
@@ -292,12 +291,12 @@ export const validateFlowTool: ChatToolDefinition = {
 
     try {
       // Get the latest definition to validate
-      const version = await invect.getFlowVersion(flowId, 'latest');
+      const version = await invect.versions.get(flowId, 'latest');
       if (!version) {
         return { success: false, error: 'No flow version found to validate' };
       }
 
-      const result = await invect.validateFlowDefinition(flowId, version.invectDefinition);
+      const result = await invect.flows.validate(flowId, version.invectDefinition);
 
       if (result.isValid) {
         return {

@@ -6,11 +6,11 @@
  * definitions and agent tool definitions.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { Invect } from '../../../src/invect-core';
+import type { InvectInstance } from '../../../src/api/types';
 import { createTestInvect } from '../helpers/test-invect';
 
 describe('Action Registry', () => {
-  let invect: Invect;
+  let invect: InvectInstance;
 
   beforeAll(async () => {
     invect = await createTestInvect();
@@ -21,14 +21,14 @@ describe('Action Registry', () => {
   });
 
   it('should register all built-in actions during initialization', async () => {
-    const tools = await invect.getAgentTools();
+    const tools = await invect.agent.getTools();
 
     // There should be a significant number of registered tools
     expect(tools.length).toBeGreaterThan(10);
   });
 
   it('should include core actions (javascript, if_else, template_string, input, output)', async () => {
-    const tools = await invect.getAgentTools();
+    const tools = await invect.agent.getTools();
     const ids = tools.map((t) => t.id);
 
     expect(ids).toContain('core.javascript');
@@ -39,7 +39,7 @@ describe('Action Registry', () => {
   });
 
   it('should include provider actions (http, gmail, slack, github)', async () => {
-    const tools = await invect.getAgentTools();
+    const tools = await invect.agent.getTools();
     const ids = tools.map((t) => t.id);
 
     expect(ids.some((id) => id.startsWith('http.'))).toBe(true);
@@ -49,7 +49,7 @@ describe('Action Registry', () => {
   });
 
   it('should produce valid agent tool definitions with id, name, and inputSchema', async () => {
-    const tools = await invect.getAgentTools();
+    const tools = await invect.agent.getTools();
 
     for (const tool of tools) {
       expect(tool.id).toBeTruthy();
@@ -61,7 +61,7 @@ describe('Action Registry', () => {
   });
 
   it('should include standalone tools (math_eval, json_logic)', async () => {
-    const tools = await invect.getAgentTools();
+    const tools = await invect.agent.getTools();
     const ids = tools.map((t) => t.id);
 
     expect(ids).toContain('math_eval');
@@ -93,7 +93,7 @@ describe('Action Registry', () => {
     });
 
     try {
-      const tools = await customInvect.getAgentTools();
+      const tools = await customInvect.agent.getTools();
       const ids = tools.map((t) => t.id);
 
       expect(ids).toContain('test.custom_action');

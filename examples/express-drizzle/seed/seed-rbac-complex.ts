@@ -32,7 +32,7 @@ import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
 import { hashPassword } from 'better-auth/crypto';
-import { Invect, type InvectDefinition } from '@invect/core';
+import { createInvect, type InvectDefinition } from '@invect/core';
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const sqlitePath = path.resolve(currentDir, '../dev.db');
@@ -508,7 +508,7 @@ async function main() {
   // ── 4. Seed flows ──────────────────────────────────────────
   console.log('\n📦 Seeding flows…');
 
-  const invect = new Invect({
+  const invect = await createInvect({
     database: {
       type: 'sqlite',
       connectionString: `file:${sqlitePath}`,
@@ -516,18 +516,17 @@ async function main() {
     },
     logging: { level: 'warn' },
   });
-  await invect.initialize();
 
-  const { data: existingFlows } = await invect.listFlows();
+  const { data: existingFlows } = await invect.flows.list();
   const flowNameSet = new Set(FLOWS.map((f) => f.name));
   for (const old of existingFlows.filter((fl) => flowNameSet.has(fl.name))) {
-    await invect.deleteFlow(old.id);
+    await invect.flows.delete(old.id);
   }
 
   const createdFlowIds: string[] = [];
   for (const f of FLOWS) {
-    const flow = await invect.createFlow({ name: f.name, isActive: false });
-    await invect.createFlowVersion(flow.id, {
+    const flow = await invect.flows.create({ name: f.name, isActive: false });
+    await invect.versions.create(flow.id, {
       invectDefinition: simpleFlow(f.name, f.desc),
     });
     createdFlowIds.push(flow.id);

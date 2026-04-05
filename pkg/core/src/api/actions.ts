@@ -5,6 +5,7 @@ import { getGlobalToolRegistry, type AgentToolRegistry } from '../services/agent
 import type { NodeExecutorRegistry } from '../nodes/executor-registry';
 import type { ServiceFactory } from '../services/service-factory';
 import type { Logger } from '../types/schemas';
+import { ValidationError } from '../types/common/errors.types';
 
 export function createActionsAPI(
   actionRegistry: ActionRegistry,
@@ -61,7 +62,7 @@ export function createActionsAPI(
 
     async handleConfigUpdate(event) {
       if (!event?.nodeType) {
-        throw new Error('nodeType is required for node config updates');
+        throw new ValidationError('nodeType is required for node config updates');
       }
 
       if (!event.params || typeof event.params !== 'object') {
@@ -99,7 +100,7 @@ export function createActionsAPI(
         }
       }
 
-      throw new Error(`Unknown node type '${event.nodeType}' for config update`);
+      throw new ValidationError(`Unknown node type '${event.nodeType}' for config update`);
     },
 
     resolveFieldOptions(actionId, fieldName, deps) {

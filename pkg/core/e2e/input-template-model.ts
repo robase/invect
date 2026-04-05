@@ -11,7 +11,6 @@ import {
   FlowRunStatus,
   type InvectDefinition,
   type NodeOutput,
-  type Invect,
 } from "../src";
 import type { FlowExample } from "./example-types";
 
@@ -19,8 +18,8 @@ import type { FlowExample } from "./example-types";
  * Ensure we have an OpenAI or Anthropic credential for the Model node.
  * Creates a credential with proper provider metadata for detection.
  */
-async function ensureAICredential(invect: Invect): Promise<{ id: string; name: string; isOpenAI: boolean }> {
-  const credentialsService = invect.getCredentialsService();
+async function ensureAICredential(invect: InvectInstance): Promise<{ id: string; name: string; isOpenAI: boolean }> {
+  
 
   // Check for API keys in environment
   const openaiKey = process.env.OPENAI_API_KEY;
@@ -38,7 +37,7 @@ async function ensureAICredential(invect: Invect): Promise<{ id: string; name: s
   const providerName = isOpenAI ? "openai" : "anthropic";
 
   // Create credential with provider metadata for detection
-  const created = await credentialsService.create({
+  const created = await invect.credentials.create({
     name: `E2E ${providerName.charAt(0).toUpperCase() + providerName.slice(1)} Credential`,
     type: "http-api",
     authType: "bearer",
@@ -135,14 +134,14 @@ export const inputTemplateModelExample: FlowExample = {
     console.log(`  🤖 Provider: ${credential.isOpenAI ? "OpenAI" : "Anthropic"}`);
 
     // Step 2: Create a new flow
-    const flow = await invect.createFlow({
+    const flow = await invect.flows.create({
       name: `e2e-input-template-model-${Date.now()}`,
     });
     console.log(`  📁 Created flow: ${flow.name} (${flow.id})`);
 
     // Step 3: Build and save the flow definition
     const flowDefinition = buildFlowDefinition(credential.id, credential.isOpenAI);
-    await invect.createFlowVersion(flow.id, {
+    await invect.versions.create(flow.id, {
       invectDefinition: flowDefinition,
     });
     console.log(`  💾 Saved flow version with ${flowDefinition.nodes.length} nodes`);
@@ -150,7 +149,7 @@ export const inputTemplateModelExample: FlowExample = {
     // Step 4: Execute the flow with a custom topic
     // Disable batch processing for direct API execution in e2e tests
     console.log(`  🚀 Executing flow...`);
-    const result = await invect.startFlowRun(
+    const result = await invect.runs.start(
       flow.id,
       { topic: "the invention of the telephone" },
       { useBatchProcessing: false }

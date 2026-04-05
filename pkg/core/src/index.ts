@@ -1,6 +1,7 @@
 // Invect Core Package - Main entry point
 // Framework-agnostic core package for Invect execution engine
 
+// Legacy class (deprecated — use createInvect instead)
 export * from './invect-core';
 export * from './nodes';
 export * from './database';

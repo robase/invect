@@ -31,7 +31,8 @@ export function createAgentAPI(sf: ServiceFactory): AgentAPI {
     }
 
     const { BatchProvider: BP } = await import('../services/ai/base-client');
-    const label = detected === BP.OPENAI ? 'OPENAI' : detected === BP.ANTHROPIC ? 'ANTHROPIC' : 'OPENROUTER';
+    const label =
+      detected === BP.OPENAI ? 'OPENAI' : detected === BP.ANTHROPIC ? 'ANTHROPIC' : 'OPENROUTER';
     baseAIClient.registerAdapter(label, apiKey);
   }
 

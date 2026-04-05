@@ -33,71 +33,71 @@ app.use(express.json());
 
 // Mount Invect routes under /invect (or a path of your choice)
 const invectRouter = await createInvectRouter({
-    database: {
-      id: 'my-db-name',
-      type: 'sqlite', // Example, adjust based on your setup
-      connectionString: sqliteConnectionString,
+  database: {
+    id: 'my-db-name',
+    type: 'sqlite', // Example, adjust based on your setup
+    connectionString: sqliteConnectionString,
+  },
+  logging: {
+    level: 'debug', // Default to info level, use 'debug' for verbose logging
+    scopes: {
+      // Uncomment to enable debug logging for specific areas:
+      execution: 'debug',
+      node: 'debug',
+      ai: 'debug',
     },
-    logging: {
-      level: 'debug', // Default to info level, use 'debug' for verbose logging
-      scopes: {
-        // Uncomment to enable debug logging for specific areas:
-        execution: 'debug',
-        node: 'debug',
-        ai: 'debug',
-      },
-    },
-    defaultCredentials: [
-      ...(process.env.SEED_ANTHROPIC_API_KEY
-        ? [
-            {
-              name: 'Anthropic API Key',
-              type: 'llm',
-              authType: 'apiKey',
-              config: { apiKey: process.env.SEED_ANTHROPIC_API_KEY },
-              description: 'Anthropic Claude API credential for AI model nodes',
-              isShared: true,
-              metadata: { provider: 'anthropic' },
-            },
-          ]
-        : []),
-      ...(process.env.SEED_LINEAR_CLIENT_ID && process.env.SEED_LINEAR_CLIENT_SECRET
-        ? [
-            {
-              name: 'Linear OAuth2',
-              type: 'http-api',
-              authType: 'oauth2',
-              config: {
-                clientId: process.env.SEED_LINEAR_CLIENT_ID,
-                clientSecret: process.env.SEED_LINEAR_CLIENT_SECRET,
-                oauth2Provider: 'linear',
-              },
-              description: 'Linear OAuth2 credential for issue tracking',
-              isShared: true,
-              metadata: { provider: 'linear' },
-            },
-          ]
-        : []),
-    ],
-    // Note: Don't pass `logger: console` - use the built-in scoped logger
-    // which respects log levels. The console logger ignores log levels.
-    plugins: [
-      userAuth({
-        onSessionError: 'continue',
-        globalAdmins: [
+  },
+  defaultCredentials: [
+    ...(process.env.SEED_ANTHROPIC_API_KEY
+      ? [
           {
-            email: process.env.INVECT_ADMIN_EMAIL,
-            pw: process.env.INVECT_ADMIN_PASSWORD,
-            name: 'Admin',
+            name: 'Anthropic API Key',
+            type: 'llm',
+            authType: 'apiKey',
+            config: { apiKey: process.env.SEED_ANTHROPIC_API_KEY },
+            description: 'Anthropic Claude API credential for AI model nodes',
+            isShared: true,
+            metadata: { provider: 'anthropic' },
           },
-        ],
-      }),
-      rbacPlugin(),
-      webhooksPlugin({
-        webhookBaseUrl,
-      }),
-    ],
-  });
+        ]
+      : []),
+    ...(process.env.SEED_LINEAR_CLIENT_ID && process.env.SEED_LINEAR_CLIENT_SECRET
+      ? [
+          {
+            name: 'Linear OAuth2',
+            type: 'http-api',
+            authType: 'oauth2',
+            config: {
+              clientId: process.env.SEED_LINEAR_CLIENT_ID,
+              clientSecret: process.env.SEED_LINEAR_CLIENT_SECRET,
+              oauth2Provider: 'linear',
+            },
+            description: 'Linear OAuth2 credential for issue tracking',
+            isShared: true,
+            metadata: { provider: 'linear' },
+          },
+        ]
+      : []),
+  ],
+  // Note: Don't pass `logger: console` - use the built-in scoped logger
+  // which respects log levels. The console logger ignores log levels.
+  plugins: [
+    userAuth({
+      onSessionError: 'continue',
+      globalAdmins: [
+        {
+          email: process.env.INVECT_ADMIN_EMAIL,
+          pw: process.env.INVECT_ADMIN_PASSWORD,
+          name: 'Admin',
+        },
+      ],
+    }),
+    rbacPlugin(),
+    webhooksPlugin({
+      webhookBaseUrl,
+    }),
+  ],
+});
 app.use('/invect', invectRouter);
 
 // Health check endpoint

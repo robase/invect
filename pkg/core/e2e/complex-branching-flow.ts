@@ -156,19 +156,19 @@ export const complexBranchingFlowExample: FlowExample = {
   
   async execute(invect) {
     // Create flow for adult user (age 25)
-    const flow = await invect.createFlow({
+    const flow = await invect.flows.create({
       name: `e2e-complex-branching-adult-${Date.now()}`,
     });
     console.log(`  📁 Created flow: ${flow.name} (${flow.id})`);
 
     const flowDefinition = buildFlowDefinition(true); // isAdult = true
-    await invect.createFlowVersion(flow.id, {
+    await invect.versions.create(flow.id, {
       invectDefinition: flowDefinition,
     });
     console.log(`  💾 Saved flow version with ${flowDefinition.nodes.length} nodes`);
 
     console.log(`  🚀 Executing flow with adult user (age 25)...`);
-    const result = await invect.startFlowRun(flow.id, {}, { useBatchProcessing: false });
+    const result = await invect.runs.start(flow.id, {}, { useBatchProcessing: false });
     console.log(`  ✅ Flow completed with status: ${result.status}`);
 
     return result;
@@ -247,19 +247,19 @@ export const complexBranchingFlowMinorExample: FlowExample = {
   
   async execute(invect) {
     // Create flow for minor user (age 15)
-    const flow = await invect.createFlow({
+    const flow = await invect.flows.create({
       name: `e2e-complex-branching-minor-${Date.now()}`,
     });
     console.log(`  📁 Created flow: ${flow.name} (${flow.id})`);
 
     const flowDefinition = buildFlowDefinition(false); // isAdult = false
-    await invect.createFlowVersion(flow.id, {
+    await invect.versions.create(flow.id, {
       invectDefinition: flowDefinition,
     });
     console.log(`  💾 Saved flow version with ${flowDefinition.nodes.length} nodes`);
 
     console.log(`  🚀 Executing flow with minor user (age 15)...`);
-    const result = await invect.startFlowRun(flow.id, {}, { useBatchProcessing: false });
+    const result = await invect.runs.start(flow.id, {}, { useBatchProcessing: false });
     console.log(`  ✅ Flow completed with status: ${result.status}`);
 
     return result;

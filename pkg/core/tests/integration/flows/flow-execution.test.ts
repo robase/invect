@@ -8,13 +8,14 @@
  * No AI/LLM calls are needed — these tests use deterministic node types only.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { Invect, FlowRunStatus } from '../../../src';
+import { FlowRunStatus } from '../../../src';
+import type { InvectInstance } from '../../../src/api/types';
 import type { InvectDefinition } from '../../../src/services/flow-versions/schemas-fresh';
 import type { NodeOutput } from '../../../src/types/node-io-types';
 import { createTestInvect } from '../helpers/test-invect';
 
 describe('Flow Execution', () => {
-  let invect: Invect;
+  let invect: InvectInstance;
 
   beforeAll(async () => {
     invect = await createTestInvect();
@@ -26,9 +27,9 @@ describe('Flow Execution', () => {
 
   /** Helper: create a flow, save a version, and execute it */
   async function runFlow(name: string, definition: InvectDefinition) {
-    const flow = await invect.createFlow({ name: `exec-${name}-${Date.now()}` });
-    await invect.createFlowVersion(flow.id, { invectDefinition: definition });
-    return invect.startFlowRun(flow.id, {}, { useBatchProcessing: false });
+    const flow = await invect.flows.create({ name: `exec-${name}-${Date.now()}` });
+    await invect.versions.create(flow.id, { invectDefinition: definition });
+    return invect.runs.start(flow.id, {}, { useBatchProcessing: false });
   }
 
   /** Helper to extract a node's output value */
@@ -377,8 +378,8 @@ describe('Flow Execution', () => {
   // ---------------------------------------------------------------------------
 
   it('should persist flow run records', async () => {
-    const flow = await invect.createFlow({ name: `run-record-${Date.now()}` });
-    await invect.createFlowVersion(flow.id, {
+    const flow = await invect.flows.create({ name: `run-record-${Date.now()}` });
+    await invect.versions.create(flow.id, {
       invectDefinition: {
         nodes: [
           {
@@ -394,11 +395,11 @@ describe('Flow Execution', () => {
       },
     });
 
-    const result = await invect.startFlowRun(flow.id, {}, { useBatchProcessing: false });
+    const result = await invect.runs.start(flow.id, {}, { useBatchProcessing: false });
     expect(result.flowRunId).toBeTruthy();
 
     // Verify the run is persisted
-    const runs = await invect.listFlowRunsByFlowId(flow.id);
+    const runs = await invect.runs.listByFlowId(flow.id);
     expect(runs.data.length).toBeGreaterThanOrEqual(1);
     expect(runs.data.some((r) => r.id === result.flowRunId)).toBe(true);
   });
@@ -408,8 +409,8 @@ describe('Flow Execution', () => {
   // ---------------------------------------------------------------------------
 
   it('should persist node execution traces', async () => {
-    const flow = await invect.createFlow({ name: `trace-test-${Date.now()}` });
-    await invect.createFlowVersion(flow.id, {
+    const flow = await invect.flows.create({ name: `trace-test-${Date.now()}` });
+    await invect.versions.create(flow.id, {
       invectDefinition: {
         nodes: [
           {
@@ -433,8 +434,8 @@ describe('Flow Execution', () => {
       },
     });
 
-    const result = await invect.startFlowRun(flow.id, {}, { useBatchProcessing: false });
-    const traces = await invect.getNodeExecutionsByRunId(result.flowRunId);
+    const result = await invect.runs.start(flow.id, {}, { useBatchProcessing: false });
+    const traces = await invect.runs.getNodeExecutions(result.flowRunId);
 
     expect(traces.length).toBeGreaterThanOrEqual(2);
   });

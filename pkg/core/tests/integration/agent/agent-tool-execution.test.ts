@@ -18,7 +18,8 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
-import { Invect, FlowRunStatus } from '../../../src';
+import { FlowRunStatus } from '../../../src';
+import type { InvectInstance } from '../../../src/api/types';
 import { GraphNodeType } from '../../../src/types/graph-node-types';
 import type { InvectDefinition } from '../../../src/services/flow-versions/schemas-fresh';
 import type {
@@ -81,7 +82,7 @@ function toolCallResponse(
 // Shared state
 // ---------------------------------------------------------------------------
 
-let invect: Invect;
+let invect: InvectInstance;
 let credentialId: string;
 /** Ordered list of responses the mock server should return */
 let responseQueue: Array<Record<string, unknown>> = [];
@@ -118,7 +119,7 @@ beforeAll(async () => {
   invect = await createTestInvect();
 
   // Create an OpenAI credential for agent tests
-  const cred = await invect.createCredential({
+  const cred = await invect.credentials.create({
     name: 'Test OpenAI',
     type: 'llm',
     authType: 'apiKey',
@@ -175,9 +176,9 @@ async function runAgentFlow(
   definition: InvectDefinition,
   inputs: Record<string, unknown> = {},
 ) {
-  const flow = await invect.createFlow({ name: `agent-test-${Date.now()}` });
-  await invect.createFlowVersion(flow.id, { invectDefinition: definition });
-  return invect.startFlowRun(flow.id, inputs, { useBatchProcessing: false });
+  const flow = await invect.flows.create({ name: `agent-test-${Date.now()}` });
+  await invect.versions.create(flow.id, { invectDefinition: definition });
+  return invect.runs.start(flow.id, inputs, { useBatchProcessing: false });
 }
 
 function getAgentOutput(

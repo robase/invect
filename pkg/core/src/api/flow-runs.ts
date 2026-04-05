@@ -64,8 +64,7 @@ export function createFlowRunsAPI(sf: ServiceFactory, logger: Logger): FlowRunsA
 
       // 1. Send initial snapshot
       const flowRun = await flowRunsService.getRunById(flowRunId);
-      const nodeExecutions =
-        await nodeExecutionsService.listNodeExecutionsByFlowRunId(flowRunId);
+      const nodeExecutions = await nodeExecutionsService.listNodeExecutionsByFlowRunId(flowRunId);
 
       yield { type: 'snapshot', flowRun, nodeExecutions };
 

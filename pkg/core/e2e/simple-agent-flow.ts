@@ -25,15 +25,14 @@ import {
   GraphNodeType,
   FlowRunStatus,
   type InvectDefinition,
-  type Invect,
 } from "../src";
 import { getOutputVariable, type AgentOutputLike, type FlowExample } from "./example-types";
 
 /**
  * Ensure we have an AI credential for Agent node.
  */
-async function ensureAICredential(invect: Invect): Promise<{ id: string; name: string; isOpenAI: boolean }> {
-  const credentialsService = invect.getCredentialsService();
+async function ensureAICredential(invect: InvectInstance): Promise<{ id: string; name: string; isOpenAI: boolean }> {
+  
 
   const openaiKey = process.env.OPENAI_API_KEY;
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
@@ -48,7 +47,7 @@ async function ensureAICredential(invect: Invect): Promise<{ id: string; name: s
   const apiKey = openaiKey || anthropicKey!;
   const providerName = isOpenAI ? "openai" : "anthropic";
 
-  const created = await credentialsService.create({
+  const created = await invect.credentials.create({
     name: `E2E Simple Agent ${providerName.charAt(0).toUpperCase() + providerName.slice(1)} Credential`,
     type: "http-api",
     authType: "bearer",
@@ -143,7 +142,7 @@ export const simpleAgentFlowExample: FlowExample = {
   name: "Simple Agent Flow - Math Calculator",
   description: "Tests AI Agent node with math_eval tool to perform calculations",
 
-  async execute(invect: Invect) {
+  async execute(invect: InvectInstance) {
     // Create credential
     const { id: credentialId, isOpenAI } = await ensureAICredential(invect);
 
@@ -151,15 +150,15 @@ export const simpleAgentFlowExample: FlowExample = {
     const definition = buildSimpleAgentFlowDefinition(credentialId, isOpenAI);
 
     // Create flow
-    const flow = await invect.createFlow({
+    const flow = await invect.flows.create({
       name: "E2E Simple Agent Flow",
     });
 
     // Create flow version with definition
-    await invect.createFlowVersion(flow.id, { invectDefinition: definition });
+    await invect.versions.create(flow.id, { invectDefinition: definition });
 
     // Execute flow
-    const result = await invect.startFlowRun(flow.id, {}, {
+    const result = await invect.runs.start(flow.id, {}, {
       useBatchProcessing: false,
     });
 
@@ -192,7 +191,7 @@ export const simpleAgentFlowExample: FlowExample = {
     }
 
     // Cleanup
-    await invect.getCredentialsService().delete(credentialId);
+    await invect.credentials.delete(credentialId);
 
     return result;
   },

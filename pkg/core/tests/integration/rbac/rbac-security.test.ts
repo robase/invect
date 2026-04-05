@@ -27,7 +27,8 @@ import { mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { dirname, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
-import { Invect } from '../../../src/invect-core';
+import { createInvect } from '../../../src/api/create-invect';
+import type { InvectInstance } from '../../../src/api/types';
 import { rbacPlugin } from '../../../../plugins/rbac/src/backend/plugin';
 import type { InvectIdentity } from '../../../src/types/auth.types';
 import type {
@@ -155,7 +156,7 @@ const OUTSIDER: InvectIdentity = {
 // Shared test state
 // ─────────────────────────────────────────────────────────────
 
-let invect: Invect;
+let invect: InvectInstance;
 let plugin: InvectPlugin;
 let rawDb: Database.Database;
 let tmpDir: string;
@@ -216,10 +217,10 @@ function createContext(overrides: {
     database: dbApi,
     request: new Request('http://localhost/test'),
     core: {
-      getPermissions: (id) => invect.getPermissions(id),
-      getAvailableRoles: () => invect.getAvailableRoles(),
-      getResolvedRole: (id) => invect.getAuthService().getResolvedRole(id),
-      authorize: (context) => invect.authorize(context),
+      getPermissions: (id) => invect.auth.getPermissions(id),
+      getAvailableRoles: () => invect.auth.getAvailableRoles(),
+      getResolvedRole: (id) => invect.auth.getService().getResolvedRole(id),
+      authorize: (context) => invect.auth.authorize(context),
     },
   };
 }
@@ -305,7 +306,7 @@ describe('RBAC Plugin — Security Red Team', () => {
 
     // 7. Create plugin + Invect
     plugin = rbacPlugin({ enableTeams: true });
-    invect = new Invect({
+    invect = await createInvect({
       database: {
         type: 'sqlite',
         connectionString: `file:${dbPath}`,
@@ -314,7 +315,6 @@ describe('RBAC Plugin — Security Red Team', () => {
       logging: { level: 'warn' },
       plugins: [plugin],
     });
-    await invect.initialize();
 
     // 8. Open a raw connection for the test PluginDatabaseApi
     rawDb = new Database(dbPath);
@@ -329,9 +329,9 @@ describe('RBAC Plugin — Security Red Team', () => {
     };
 
     // 9. Create test flows via Invect (gets correct schema)
-    const f1 = await invect.createFlow({ name: 'Flow Unscoped' });
-    const f2 = await invect.createFlow({ name: 'Flow Scoped A' });
-    const f3 = await invect.createFlow({ name: 'Flow Scoped B-Child' });
+    const f1 = await invect.flows.create({ name: 'Flow Unscoped' });
+    const f2 = await invect.flows.create({ name: 'Flow Scoped A' });
+    const f3 = await invect.flows.create({ name: 'Flow Scoped B-Child' });
     flowId1 = f1.id;
     flowId2 = f2.id;
     flowId3 = f3.id;
@@ -1156,7 +1156,7 @@ describe('RBAC Plugin — Security Red Team', () => {
       const tempTeamId = (createRes.body as Record<string, unknown>).id as string;
 
       // Create a flow scoped to it
-      const flow = await invect.createFlow({ name: 'Temp Flow' });
+      const flow = await invect.flows.create({ name: 'Temp Flow' });
       rawDb.prepare('UPDATE flows SET scope_id = ? WHERE id = ?').run(tempTeamId, flow.id);
 
       // Delete the temp team

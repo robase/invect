@@ -7,7 +7,6 @@
 
 import { z } from 'zod/v4';
 import type { ChatToolDefinition, ChatToolContext, ChatToolResult } from '../chat-types';
-import type { Invect } from 'src/invect-core';
 
 // =====================================
 // get_flow_run
@@ -25,10 +24,10 @@ export const getFlowRunTool: ChatToolDefinition = {
   }),
   async execute(params: unknown, ctx: ChatToolContext): Promise<ChatToolResult> {
     const { flowRunId } = params as { flowRunId: string };
-    const invect = ctx.invect as Invect;
+    const invect = ctx.invect;
 
     try {
-      const run = await invect.getFlowRunById(flowRunId);
+      const run = await invect.runs.get(flowRunId);
       if (!run) {
         return { success: false, error: `Flow run "${flowRunId}" not found` };
       }
@@ -71,10 +70,10 @@ export const getNodeExecutionResultsTool: ChatToolDefinition = {
   }),
   async execute(params: unknown, ctx: ChatToolContext): Promise<ChatToolResult> {
     const { flowRunId } = params as { flowRunId: string };
-    const invect = ctx.invect as Invect;
+    const invect = ctx.invect;
 
     try {
-      const executions = await invect.getNodeExecutionsByRunId(flowRunId);
+      const executions = await invect.runs.getNodeExecutions(flowRunId);
 
       // Return a compact view — full outputs can be huge
       const traces = executions.map((ex) => ({
@@ -134,7 +133,7 @@ export const listFlowRunsTool: ChatToolDefinition = {
   }),
   async execute(params: unknown, ctx: ChatToolContext): Promise<ChatToolResult> {
     const { limit } = params as { limit?: number };
-    const invect = ctx.invect as Invect;
+    const invect = ctx.invect;
     const flowId = ctx.chatContext.flowId;
 
     if (!flowId) {
@@ -142,7 +141,7 @@ export const listFlowRunsTool: ChatToolDefinition = {
     }
 
     try {
-      const result = await invect.listFlowRunsByFlowId(flowId);
+      const result = await invect.runs.listByFlowId(flowId);
       const runs = result.data;
       const limited = runs.slice(0, limit ?? 10);
 

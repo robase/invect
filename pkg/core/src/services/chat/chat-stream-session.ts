@@ -17,6 +17,7 @@ import type { Logger } from 'src/types/schemas';
 import type { AgentMessage, AgentPromptResult } from 'src/types/agent-tool.types';
 import type { ProviderAdapter } from '../ai/provider-adapter';
 import type { InvectIdentity } from 'src/types/auth.types';
+import type { InvectInstance } from 'src/api/types';
 import type {
   ChatMessage,
   ChatContext,
@@ -39,8 +40,8 @@ export interface ChatStreamSessionDeps {
   config: ResolvedChatConfig;
   adapter: ProviderAdapter;
   identity?: InvectIdentity;
-  /** The Invect core instance (passed as unknown to avoid circular import) */
-  invect: unknown;
+  /** The Invect core instance */
+  invect: InvectInstance;
   /** Action registry for provider summary in system prompt */
   actionRegistry: ActionRegistry | null;
 }

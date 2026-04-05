@@ -12,15 +12,15 @@
 
 import { z } from 'zod/v4';
 import type { ChatToolDefinition, ChatToolContext, ChatToolResult } from '../chat-types';
-import type { Invect } from 'src/invect-core';
+import type { InvectInstance } from 'src/api/types';
 import type { AddedToolInstance } from 'src/types/agent-tool.types';
 import type { FlowNodeDefinitions, FlowEdge } from 'src/services/flow-versions/schemas-fresh';
 
 /**
  * Helper: Load the latest flow version's nodes and edges.
  */
-async function loadLatestDefinition(invect: Invect, flowId: string) {
-  const version = await invect.getFlowVersion(flowId, 'latest');
+async function loadLatestDefinition(invect: InvectInstance, flowId: string) {
+  const version = await invect.versions.get(flowId, 'latest');
   if (!version) {
     throw new Error('No flow version found — publish a version first');
   }
@@ -36,12 +36,12 @@ async function loadLatestDefinition(invect: Invect, flowId: string) {
  * Helper: Save a mutated definition as a new flow version.
  */
 async function saveNewVersion(
-  invect: Invect,
+  invect: InvectInstance,
   flowId: string,
   nodes: FlowNodeDefinitions[],
   edges: FlowEdge[],
 ) {
-  return invect.createFlowVersion(flowId, {
+  return invect.versions.create(flowId, {
     invectDefinition: { nodes, edges },
   });
 }
@@ -113,10 +113,10 @@ export const listAgentToolsTool: ChatToolDefinition = {
   }),
   async execute(params: unknown, ctx: ChatToolContext): Promise<ChatToolResult> {
     const { search, limit } = params as { search?: string; limit?: number };
-    const invect = ctx.invect as Invect;
+    const invect = ctx.invect;
 
     try {
-      const allTools = invect.getAgentTools();
+      const allTools = invect.agent.getTools();
       let tools = allTools;
 
       if (search) {
@@ -186,7 +186,7 @@ export const getAgentNodeToolsTool: ChatToolDefinition = {
   }),
   async execute(params: unknown, ctx: ChatToolContext): Promise<ChatToolResult> {
     const { nodeId } = params as { nodeId: string };
-    const invect = ctx.invect as Invect;
+    const invect = ctx.invect;
     const flowId = ctx.chatContext.flowId;
 
     if (!flowId) {
@@ -280,7 +280,7 @@ export const addToolToAgentTool: ChatToolDefinition = {
       params: Record<string, unknown>;
       aiChosenParams?: string[];
     };
-    const invect = ctx.invect as Invect;
+    const invect = ctx.invect;
     const flowId = ctx.chatContext.flowId;
 
     if (!flowId) {
@@ -289,7 +289,7 @@ export const addToolToAgentTool: ChatToolDefinition = {
 
     try {
       // Validate the tool ID exists
-      const allTools = invect.getAgentTools();
+      const allTools = invect.agent.getTools();
       const baseTool = allTools.find((t) => t.id === toolId);
       if (!baseTool) {
         const similar = allTools
@@ -399,7 +399,7 @@ export const removeToolFromAgentTool: ChatToolDefinition = {
       instanceId?: string;
       toolId?: string;
     };
-    const invect = ctx.invect as Invect;
+    const invect = ctx.invect;
     const flowId = ctx.chatContext.flowId;
 
     if (!flowId) {
@@ -516,7 +516,7 @@ export const updateAgentToolTool: ChatToolDefinition = {
       params?: Record<string, unknown>;
       aiChosenParams?: string[];
     };
-    const invect = ctx.invect as Invect;
+    const invect = ctx.invect;
     const flowId = ctx.chatContext.flowId;
 
     if (!flowId) {
@@ -651,7 +651,7 @@ export const configureAgentTool: ChatToolDefinition = {
       nodeId: string;
       [key: string]: unknown;
     };
-    const invect = ctx.invect as Invect;
+    const invect = ctx.invect;
     const flowId = ctx.chatContext.flowId;
 
     if (!flowId) {

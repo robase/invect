@@ -9,10 +9,7 @@ import { ServiceFactory } from '../services/service-factory';
 import { DefaultNodeRegistryFactory, NodeExecutorRegistry } from '../nodes/executor-registry';
 import { InvectConfig, InvectConfigSchema } from '../types/schemas';
 import { DatabaseError } from '../types/common/errors.types';
-import {
-  LoggerManager,
-  type ScopedLoggingConfig,
-} from '../utils/logger';
+import { LoggerManager, type ScopedLoggingConfig } from '../utils/logger';
 import { JsExpressionService, getTemplateService } from '../services/templating';
 import type { TemplateService } from '../services/templating';
 import { PluginManager } from '../services/plugin-manager';
@@ -89,10 +86,7 @@ function registerActionsAsTools(actionRegistry: ActionRegistry): void {
 /**
  * Seed default credentials (non-blocking helper).
  */
-async function seedDefaultCredentials(
-  sf: ServiceFactory,
-  config: InvectConfig,
-): Promise<void> {
+async function seedDefaultCredentials(sf: ServiceFactory, config: InvectConfig): Promise<void> {
   const seeds = config.defaultCredentials;
   if (!seeds?.length) {
     return;
@@ -225,12 +219,9 @@ export async function createInvect(config: InvectConfig): Promise<InvectInstance
     registerActionsAsTools(actionRegistry);
 
     // Initialize service factory
-    // Note: invectRef is null during construction. ChatStreamService will get the
-    // InvectInstance wired post-init via setInvectInstance().
     const sf = new ServiceFactory(
       parsedConfig,
       nodeRegistry,
-      null, // invectRef — wired post-init
       actionRegistry,
       pluginManager,
       jsExpressionService ?? undefined,
@@ -356,11 +347,7 @@ export async function createInvect(config: InvectConfig): Promise<InvectInstance
 
     // Wire InvectInstance into ChatStreamService (post-init, breaking the circular dep)
     const chatService = sf.getChatStreamService();
-    if ('setInvectInstance' in chatService) {
-      (chatService as unknown as { setInvectInstance(i: unknown): void }).setInvectInstance(
-        instance,
-      );
-    }
+    chatService.setInvectInstance(instance);
 
     // Seed default credentials (non-blocking)
     seedDefaultCredentials(sf, parsedConfig).catch((err) => {

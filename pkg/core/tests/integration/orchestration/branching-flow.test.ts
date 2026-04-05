@@ -5,13 +5,14 @@
  * in branching scenarios through the real Invect core.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { Invect, FlowRunStatus } from '../../../src';
+import { FlowRunStatus } from '../../../src';
+import type { InvectInstance } from '../../../src/api/types';
 import type { InvectDefinition } from '../../../src/services/flow-versions/schemas-fresh';
 import type { NodeOutput } from '../../../src/types/node-io-types';
 import { createTestInvect } from '../helpers/test-invect';
 
 describe('Branching Flows', () => {
-  let invect: Invect;
+  let invect: InvectInstance;
 
   beforeAll(async () => {
     invect = await createTestInvect();
@@ -37,9 +38,9 @@ describe('Branching Flows', () => {
   }
 
   async function runFlow(name: string, definition: InvectDefinition) {
-    const flow = await invect.createFlow({ name: `branch-${name}-${Date.now()}` });
-    await invect.createFlowVersion(flow.id, { invectDefinition: definition });
-    return invect.startFlowRun(flow.id, {}, { useBatchProcessing: false });
+    const flow = await invect.flows.create({ name: `branch-${name}-${Date.now()}` });
+    await invect.versions.create(flow.id, { invectDefinition: definition });
+    return invect.runs.start(flow.id, {}, { useBatchProcessing: false });
   }
 
   /** Builds an if/else flow with configurable input data */

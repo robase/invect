@@ -538,7 +538,9 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
             { status: 400 },
           );
         }
-        return Response.json(await initializedCore.testing.testNode(nodeType, nodeParams, inputData || {}));
+        return Response.json(
+          await initializedCore.testing.testNode(nodeType, nodeParams, inputData || {}),
+        );
       }
 
       // =====================================
@@ -881,8 +883,8 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
           method,
           identity: null as import('@invect/core').InvectIdentity | null,
         };
-        const hookResult = await initializedCore
-          .getPluginHookRunner()
+        const hookResult = await initializedCore.plugins
+          .getHookRunner()
           .runOnRequest(requestClone.clone(), pluginRequestContext);
         if (hookResult.intercepted && hookResult.response) {
           return hookResult.response;
@@ -905,8 +907,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
           core: {
             getPermissions: (identity) => initializedCore.auth.getPermissions(identity),
             getAvailableRoles: () => initializedCore.auth.getAvailableRoles(),
-            getResolvedRole: (identity) =>
-              initializedCore.auth.getResolvedRole(identity),
+            getResolvedRole: (identity) => initializedCore.auth.getResolvedRole(identity),
             authorize: (context) => initializedCore.auth.authorize(context),
           },
         });
@@ -994,9 +995,7 @@ export function createInvectEndpoint(config: InvectConfig) {
     core: () => core,
 
     // Helper to create individual endpoint handlers
-    createEndpoint: (
-      handler: (core: InvectInstance, request: Request) => Promise<Response>,
-    ) => {
+    createEndpoint: (handler: (core: InvectInstance, request: Request) => Promise<Response>) => {
       return async (request: Request) => {
         try {
           const initializedCore = await ensureInitialized();

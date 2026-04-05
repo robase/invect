@@ -1,4 +1,5 @@
-import type { Invect, FlowRunResult } from "../src";
+import type { FlowRunResult } from "../src";
+import type { InvectInstance } from "../src/api/types";
 
 export interface StructuredNodeOutput {
   data?: {
@@ -37,7 +38,7 @@ export interface FlowExample {
   /**
    * Create the flow, execute it, and return the resulting FlowRun payload.
    */
-  execute(invect: Invect): Promise<FlowRunResult>;
+  execute(invect: InvectInstance): Promise<FlowRunResult>;
   /**
    * Perform assertions against the execution result. Throw to signal failure.
    */

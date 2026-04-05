@@ -11,14 +11,14 @@
 
 import { z } from 'zod/v4';
 import type { ChatToolDefinition, ChatToolContext, ChatToolResult } from '../chat-types';
-import type { Invect } from 'src/invect-core';
+import type { InvectInstance } from 'src/api/types';
 import type { FlowNodeDefinitions, FlowEdge } from 'src/services/flow-versions/schemas-fresh';
 
 /**
  * Helper: Load the latest flow version's nodes and edges.
  */
-async function loadLatestDefinition(invect: Invect, flowId: string) {
-  const version = await invect.getFlowVersion(flowId, 'latest');
+async function loadLatestDefinition(invect: InvectInstance, flowId: string) {
+  const version = await invect.versions.get(flowId, 'latest');
   if (!version) {
     throw new Error('No flow version found — publish a version first');
   }
@@ -34,12 +34,12 @@ async function loadLatestDefinition(invect: Invect, flowId: string) {
  * Helper: Save a mutated definition as a new flow version.
  */
 async function saveNewVersion(
-  invect: Invect,
+  invect: InvectInstance,
   flowId: string,
   nodes: FlowNodeDefinitions[],
   edges: FlowEdge[],
 ) {
-  return invect.createFlowVersion(flowId, {
+  return invect.versions.create(flowId, {
     invectDefinition: { nodes, edges },
   });
 }
@@ -101,7 +101,7 @@ export const addNodeTool: ChatToolDefinition = {
       params: Record<string, unknown>;
       connectAfter?: string;
     };
-    const invect = ctx.invect as Invect;
+    const invect = ctx.invect;
     const flowId = ctx.chatContext.flowId;
 
     if (!flowId) {
@@ -110,7 +110,7 @@ export const addNodeTool: ChatToolDefinition = {
 
     try {
       // Validate action ID exists in the registry
-      const availableNodes = invect.getAvailableNodes();
+      const availableNodes = invect.actions.getAvailableNodes();
       const validAction = availableNodes.find((n) => n.type === actionId);
       if (!validAction) {
         const searchLower = actionId.toLowerCase();
@@ -216,7 +216,7 @@ export const removeNodeTool: ChatToolDefinition = {
   }),
   async execute(params: unknown, ctx: ChatToolContext): Promise<ChatToolResult> {
     const { nodeId } = params as { nodeId: string };
-    const invect = ctx.invect as Invect;
+    const invect = ctx.invect;
     const flowId = ctx.chatContext.flowId;
 
     if (!flowId) {
@@ -296,7 +296,7 @@ export const updateNodeConfigTool: ChatToolDefinition = {
       params: Record<string, unknown>;
       label?: string;
     };
-    const invect = ctx.invect as Invect;
+    const invect = ctx.invect;
     const flowId = ctx.chatContext.flowId;
 
     if (!flowId) {
@@ -372,7 +372,7 @@ export const connectNodesTool: ChatToolDefinition = {
       sourceHandle?: string;
       targetHandle?: string;
     };
-    const invect = ctx.invect as Invect;
+    const invect = ctx.invect;
     const flowId = ctx.chatContext.flowId;
 
     if (!flowId) {

@@ -8,6 +8,7 @@
 
 import { z } from 'zod/v4';
 import type { InvectIdentity } from 'src/types/auth.types';
+import type { InvectInstance } from 'src/api/types';
 
 // =====================================
 // CHAT MESSAGES
@@ -79,7 +80,7 @@ export interface ChatToolResult {
  */
 export interface ChatToolContext {
   /** The Invect core instance for accessing all services */
-  invect: unknown; // Typed as unknown to avoid circular import; cast in tools
+  invect: InvectInstance;
   /** The requesting user's identity (for RBAC) */
   identity?: InvectIdentity;
   /** Chat context from the frontend */

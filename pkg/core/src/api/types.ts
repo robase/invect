@@ -25,6 +25,8 @@ import type {
   UpdateCredentialInput,
   CredentialFilters,
 } from '../services/credentials';
+import type { OAuth2PendingState } from '../services/credentials/oauth2.service';
+import type { OAuth2ProviderDefinition } from '../services/credentials/oauth2-providers';
 import type {
   FlowTriggerRegistration,
   CreateTriggerInput,
@@ -39,10 +41,7 @@ import type { CreateFlowVersionRequest, FlowEdge } from '../services/flow-versio
 import type { ExecutionStreamEvent } from '../services/execution-event-bus';
 import type { ActionDefinition, ProviderDef, LoadOptionsResult } from '../actions';
 import type { ActionRegistry } from '../actions';
-import type {
-  AgentToolDefinition,
-  AgentPromptResult,
-} from '../types/agent-tool.types';
+import type { AgentToolDefinition, AgentPromptResult } from '../types/agent-tool.types';
 import type { SubmitAgentPromptRequest } from '../types-fresh';
 import type {
   NodeConfigUpdateEvent,
@@ -99,11 +98,7 @@ export interface FlowVersionsAPI {
 // =====================================
 
 export interface FlowRunsAPI {
-  start(
-    flowId: string,
-    inputs?: FlowInputs,
-    options?: ExecuteFlowOptions,
-  ): Promise<FlowRunResult>;
+  start(flowId: string, inputs?: FlowInputs, options?: ExecuteFlowOptions): Promise<FlowRunResult>;
   startAsync(
     flowId: string,
     inputs?: FlowInputs,
@@ -120,13 +115,8 @@ export interface FlowRunsAPI {
   listByFlowId(flowId: string): Promise<PaginatedResponse<FlowRun>>;
   get(flowRunId: string): Promise<FlowRun>;
   cancel(flowRunId: string): Promise<{ message: string; timestamp: string }>;
-  pause(
-    flowRunId: string,
-    reason?: string,
-  ): Promise<{ message: string; timestamp: string }>;
-  createEventStream(
-    flowRunId: string,
-  ): AsyncGenerator<ExecutionStreamEvent, void, undefined>;
+  pause(flowRunId: string, reason?: string): Promise<{ message: string; timestamp: string }>;
+  createEventStream(flowRunId: string): AsyncGenerator<ExecutionStreamEvent, void, undefined>;
   getNodeExecutions(flowRunId: string): Promise<NodeExecution[]>;
   listNodeExecutions(
     options?: QueryOptions<NodeExecution>,
@@ -153,14 +143,14 @@ export interface CredentialsAPI {
   findByWebhookPath(webhookPath: string): Promise<Credential | null>;
 
   // OAuth2
-  getOAuth2Providers(): unknown[];
-  getOAuth2Provider(providerId: string): unknown;
+  getOAuth2Providers(): OAuth2ProviderDefinition[];
+  getOAuth2Provider(providerId: string): OAuth2ProviderDefinition | undefined;
   startOAuth2Flow(
     providerId: string,
     appConfig: { clientId: string; clientSecret: string; redirectUri: string },
     options?: { scopes?: string[]; returnUrl?: string; credentialName?: string },
   ): { authorizationUrl: string; state: string };
-  getOAuth2PendingState(state: string): unknown;
+  getOAuth2PendingState(state: string): OAuth2PendingState | undefined;
   handleOAuth2Callback(
     code: string,
     state: string,
@@ -177,10 +167,7 @@ export interface TriggersAPI {
   list(flowId: string): Promise<FlowTriggerRegistration[]>;
   get(triggerId: string): Promise<FlowTriggerRegistration | null>;
   create(input: CreateTriggerInput): Promise<FlowTriggerRegistration>;
-  update(
-    triggerId: string,
-    input: UpdateTriggerInput,
-  ): Promise<FlowTriggerRegistration | null>;
+  update(triggerId: string, input: UpdateTriggerInput): Promise<FlowTriggerRegistration | null>;
   delete(triggerId: string): Promise<void>;
   sync(
     flowId: string,
@@ -190,9 +177,7 @@ export interface TriggersAPI {
     },
   ): Promise<FlowTriggerRegistration[]>;
   getEnabledCron(): Promise<FlowTriggerRegistration[]>;
-  executeCron(
-    triggerId: string,
-  ): Promise<{ flowRunId: string; flowId: string }>;
+  executeCron(triggerId: string): Promise<{ flowRunId: string; flowId: string }>;
 }
 
 // =====================================
@@ -242,9 +227,7 @@ export interface ActionsAPI {
   getProviders(): ProviderDef[];
   getForProvider(providerId: string): ActionDefinition[];
   getAvailableNodes(): NodeDefinition[];
-  handleConfigUpdate(
-    event: NodeConfigUpdateEvent,
-  ): Promise<NodeConfigUpdateResponse>;
+  handleConfigUpdate(event: NodeConfigUpdateEvent): Promise<NodeConfigUpdateResponse>;
   resolveFieldOptions(
     actionId: string,
     fieldName: string,
@@ -295,10 +278,7 @@ export interface TestingAPI {
 
 export interface AuthAPI {
   authorize(context: AuthorizationContext): Promise<AuthorizationResult>;
-  hasPermission(
-    identity: InvectIdentity | null,
-    permission: InvectPermission,
-  ): boolean;
+  hasPermission(identity: InvectIdentity | null, permission: InvectPermission): boolean;
   getPermissions(identity: InvectIdentity | null): InvectPermission[];
   getService(): AuthorizationService;
   getAvailableRoles(): ReturnType<AuthorizationService['getAvailableRoles']>;
