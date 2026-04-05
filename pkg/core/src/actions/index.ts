@@ -65,6 +65,7 @@ export {
   GOOGLE_ANALYTICS_PROVIDER,
   GITLAB_PROVIDER,
   RESEND_PROVIDER,
+  SENDGRID_PROVIDER,
 } from './providers';
 
 // Registry
@@ -122,6 +123,7 @@ export { mixpanelActions } from './mixpanel';
 export { googleAnalyticsActions } from './google-analytics';
 export { gitlabActions } from './gitlab';
 export { resendActions } from './resend';
+export { sendgridActions } from './sendgrid';
 
 // ── Convenience: all built-in actions ───────────────────────────────────
 
@@ -163,6 +165,7 @@ import { mixpanelActions } from './mixpanel';
 import { googleAnalyticsActions } from './google-analytics';
 import { gitlabActions } from './gitlab';
 import { resendActions } from './resend';
+import { sendgridActions } from './sendgrid';
 
 /** Every built-in action across all providers. */
 export const allBuiltinActions: ActionDefinition[] = [
@@ -203,6 +206,7 @@ export const allBuiltinActions: ActionDefinition[] = [
   ...googleAnalyticsActions,
   ...gitlabActions,
   ...resendActions,
+  ...sendgridActions,
 ];
 
 // ── Registration helper ─────────────────────────────────────────────────

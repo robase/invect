@@ -39,7 +39,7 @@ describe('Webhook Security', () => {
       const providedSecret = 'whsec_any_value';
 
       // The handler checks: !credential.webhookSecret || providedSecret !== credential.webhookSecret
-      const isValid = storedSecret != null && providedSecret === storedSecret;
+      const isValid = storedSecret !== null && providedSecret === storedSecret;
       expect(isValid).toBe(false);
     });
   });

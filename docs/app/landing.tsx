@@ -612,14 +612,14 @@ app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <spa
                   <h3>Execute flows directly in code</h3>
                   <p>
                     The visual editor is optional. Every operation is a typed method — build flows
-                    in the UI, trigger them from your backend&nbsp;code.
+                    in the UI, trigger them from anywhere in your&nbsp;codebase.
                   </p>
                   <ul>
                     <li>
                       Call <code>core.startFlowRun(flowId, inputs)</code> from any server-side code
                     </li>
-                    <li>Trigger from webhooks, cron, or queue workers</li>
-                    <li>Full TypeScript types for inputs, outputs, and flow definitions</li>
+                    <li>Trigger from queue consumers, webhooks, cron jobs, or CLI scripts</li>
+                    <li>Use the result synchronously — no callbacks or polling</li>
                   </ul>
                   <Link href="/docs/programmatic-usage" className="why-link">
                     See the programmatic API →
@@ -630,28 +630,139 @@ app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <spa
                     <span className="code-dot red" />
                     <span className="code-dot yellow" />
                     <span className="code-dot green" />
-                    <span>worker.ts</span>
+                    <span>consumer.ts</span>
                   </div>
                   <pre
                     dangerouslySetInnerHTML={{
                       __html: `<span class="keyword">import</span> { <span class="type">Invect</span> } <span class="keyword">from</span> <span class="string">'@invect/core'</span>;
+<span class="keyword">import</span> { <span class="type">Kafka</span> } <span class="keyword">from</span> <span class="string">'kafkajs'</span>;
 
-<span class="keyword">const</span> core = <span class="keyword">new</span> <span class="type">Invect</span>({
-  <span class="type">database</span>: {
-    <span class="type">type</span>: <span class="string">'sqlite'</span>,
-    <span class="type">connectionString</span>: <span class="string">'file:./dev.db'</span>,
-  },
-});
+<span class="keyword">const</span> core = <span class="keyword">new</span> <span class="type">Invect</span>({ <span class="type">database</span>: {
+  <span class="type">type</span>: <span class="string">'postgres'</span>,
+  <span class="type">connectionString</span>: process.env.<span class="type">DATABASE_URL</span>,
+}});
 <span class="keyword">await</span> core.<span class="func">initialize</span>();
 
-<span class="comment">// Trigger a flow from a webhook handler</span>
-app.<span class="func">post</span>(<span class="string">'/webhooks/new-order'</span>, <span class="keyword">async</span> (req, res) =&gt; {
-  <span class="keyword">const</span> result = <span class="keyword">await</span> core.<span class="func">startFlowRun</span>(
-    <span class="string">'order-processing-flow'</span>,
-    { order: req.body }
-  );
-  res.<span class="func">json</span>({ runId: result.flowRunId });
+<span class="keyword">const</span> kafka = <span class="keyword">new</span> <span class="type">Kafka</span>({ <span class="type">brokers</span>: [<span class="string">'localhost:9092'</span>] });
+<span class="keyword">const</span> consumer = kafka.<span class="func">consumer</span>({ <span class="type">groupId</span>: <span class="string">'orders'</span> });
+<span class="keyword">await</span> consumer.<span class="func">subscribe</span>({ <span class="type">topic</span>: <span class="string">'new-orders'</span> });
+
+<span class="keyword">await</span> consumer.<span class="func">run</span>({
+  <span class="func">eachMessage</span>: <span class="keyword">async</span> ({ message }) =&gt; {
+    <span class="keyword">const</span> order = JSON.<span class="func">parse</span>(message.value);
+    <span class="keyword">const</span> result = <span class="keyword">await</span> core.<span class="func">startFlowRun</span>(
+      <span class="string">'order-processing'</span>, { order }
+    );
+    console.<span class="func">log</span>(result.status); <span class="comment">// use the result inline</span>
+  },
 });`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="why-item">
+                <div className="why-item-text">
+                  <h3>Test workflows like any other code</h3>
+                  <p>
+                    Because Invect is a library, your workflows are testable with standard tooling.
+                    No mock servers, no Docker containers running a workflow engine — just
+                    instantiate, run,&nbsp;assert.
+                  </p>
+                  <ul>
+                    <li>Spin up an in-memory SQLite instance per test suite</li>
+                    <li>Assert on flow outputs, node execution order, and side effects</li>
+                    <li>Run in CI with zero external dependencies</li>
+                  </ul>
+                  <Link href="/docs/programmatic-usage" className="why-link">
+                    See the programmatic API →
+                  </Link>
+                </div>
+                <div className="why-code">
+                  <div className="code-header">
+                    <span className="code-dot red" />
+                    <span className="code-dot yellow" />
+                    <span className="code-dot green" />
+                    <span>flows.test.ts</span>
+                  </div>
+                  <pre
+                    dangerouslySetInnerHTML={{
+                      __html: `<span class="keyword">import</span> { describe, it, expect, beforeAll } <span class="keyword">from</span> <span class="string">'vitest'</span>;
+<span class="keyword">import</span> { <span class="type">Invect</span> } <span class="keyword">from</span> <span class="string">'@invect/core'</span>;
+
+<span class="func">describe</span>(<span class="string">'order processing'</span>, () =&gt; {
+  <span class="keyword">let</span> core: <span class="type">Invect</span>;
+
+  <span class="func">beforeAll</span>(<span class="keyword">async</span> () =&gt; {
+    core = <span class="keyword">new</span> <span class="type">Invect</span>({ <span class="type">database</span>: {
+      <span class="type">type</span>: <span class="string">'sqlite'</span>,
+      <span class="type">connectionString</span>: <span class="string">':memory:'</span>,
+    }});
+    <span class="keyword">await</span> core.<span class="func">initialize</span>();
+    <span class="keyword">await</span> <span class="func">seedTestFlow</span>(core);
+  });
+
+  <span class="func">it</span>(<span class="string">'routes high-value orders to review'</span>, <span class="keyword">async</span> () =&gt; {
+    <span class="keyword">const</span> result = <span class="keyword">await</span> core.<span class="func">startFlowRun</span>(
+      flowId, { total: 10_000, riskScore: 0.8 }
+    );
+    <span class="func">expect</span>(result.output.route).<span class="func">toBe</span>(<span class="string">'manual_review'</span>);
+  });
+
+  <span class="func">it</span>(<span class="string">'auto-approves low-risk orders'</span>, <span class="keyword">async</span> () =&gt; {
+    <span class="keyword">const</span> result = <span class="keyword">await</span> core.<span class="func">startFlowRun</span>(
+      flowId, { total: 25, riskScore: 0.1 }
+    );
+    <span class="func">expect</span>(result.output.route).<span class="func">toBe</span>(<span class="string">'auto_approved'</span>);
+  });
+});`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="why-item">
+                <div className="why-item-text">
+                  <h3>Scales with your infrastructure, not your bill</h3>
+                  <p>
+                    Hosted workflow tools charge per execution. Self-hosted alternatives need a
+                    separate Docker deployment to manage. Invect runs in your existing&nbsp;process.
+                  </p>
+                  <ul>
+                    <li>
+                      No per-task or per-execution pricing — it&apos;s a library, not a&nbsp;service
+                    </li>
+                    <li>No extra containers, sidecars, or orchestrators to operate</li>
+                    <li>
+                      Throughput is bounded by your app&apos;s compute, not an external
+                      platform&apos;s&nbsp;limits
+                    </li>
+                    <li>Scale horizontally the same way you scale the rest of your&nbsp;app</li>
+                  </ul>
+                </div>
+                <div className="why-code">
+                  <div className="code-header">
+                    <span className="code-dot red" />
+                    <span className="code-dot yellow" />
+                    <span className="code-dot green" />
+                    <span>comparison</span>
+                  </div>
+                  <pre
+                    dangerouslySetInnerHTML={{
+                      __html: `<span class="comment">// Hosted platforms</span>
+Zapier       →  $0.01–0.05 / task
+Make         →  metered ops
+Inngest      →  per-execution pricing
+
+<span class="comment">// Self-hosted alternatives</span>
+n8n          →  separate Docker service
+Temporal     →  cluster + workers + DB
+Windmill     →  dedicated server
+
+<span class="comment">// Invect</span>
+<span class="keyword">npm install</span> <span class="string">@invect/core</span>
+<span class="comment">// Runs in your app. Uses your database.</span>
+<span class="comment">// Costs nothing beyond your existing infra.</span>`,
                     }}
                   />
                 </div>

@@ -94,8 +94,7 @@ export const resendSendEmailAction = defineAction({
         type: 'textarea',
         required: false,
         placeholder: 'Hello, ...',
-        description:
-          'Plain text version. If omitted, Resend auto-generates from HTML.',
+        description: 'Plain text version. If omitted, Resend auto-generates from HTML.',
         aiProvided: true,
       },
       {
@@ -130,8 +129,7 @@ export const resendSendEmailAction = defineAction({
         label: 'Schedule At',
         type: 'text',
         placeholder: '2024-12-25T10:00:00Z',
-        description:
-          'Schedule delivery time in ISO 8601 or natural language (e.g. "in 1 hour")',
+        description: 'Schedule delivery time in ISO 8601 or natural language (e.g. "in 1 hour")',
         extended: true,
         aiProvided: true,
       },
@@ -152,8 +150,7 @@ export const resendSendEmailAction = defineAction({
       };
     }
 
-    const apiKey =
-      (credential.config?.apiKey as string) ?? (credential.config?.token as string);
+    const apiKey = (credential.config?.apiKey as string) ?? (credential.config?.token as string);
     if (!apiKey) {
       return {
         success: false,
@@ -173,8 +170,12 @@ export const resendSendEmailAction = defineAction({
       subject,
     };
 
-    if (html) body.html = html;
-    if (text) body.text = text;
+    if (html) {
+      body.html = html;
+    }
+    if (text) {
+      body.text = text;
+    }
     if (cc) {
       body.cc = cc
         .split(',')
@@ -193,7 +194,9 @@ export const resendSendEmailAction = defineAction({
         .map((s) => s.trim())
         .filter(Boolean);
     }
-    if (scheduledAt) body.scheduledAt = scheduledAt;
+    if (scheduledAt) {
+      body.scheduledAt = scheduledAt;
+    }
 
     context.logger.debug('Sending email via Resend', { from, to: toArray, subject });
 

@@ -68,8 +68,7 @@ export const resendListDomainsAction = defineAction({
       };
     }
 
-    const apiKey =
-      (credential.config?.apiKey as string) ?? (credential.config?.token as string);
+    const apiKey = (credential.config?.apiKey as string) ?? (credential.config?.token as string);
     if (!apiKey) {
       return {
         success: false,
@@ -78,7 +77,9 @@ export const resendListDomainsAction = defineAction({
     }
 
     const queryParams = new URLSearchParams();
-    if (limit) queryParams.set('limit', String(limit));
+    if (limit) {
+      queryParams.set('limit', String(limit));
+    }
 
     const qs = queryParams.toString();
     const url = `${RESEND_API_BASE}/domains${qs ? `?${qs}` : ''}`;

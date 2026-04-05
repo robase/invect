@@ -68,8 +68,7 @@ export const resendGetEmailAction = defineAction({
       };
     }
 
-    const apiKey =
-      (credential.config?.apiKey as string) ?? (credential.config?.token as string);
+    const apiKey = (credential.config?.apiKey as string) ?? (credential.config?.token as string);
     if (!apiKey) {
       return {
         success: false,

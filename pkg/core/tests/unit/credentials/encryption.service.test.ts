@@ -226,7 +226,9 @@ describe('EncryptionService', () => {
       try {
         expect(() => createEncryptionService()).toThrow('INVECT_ENCRYPTION_KEY');
       } finally {
-        if (original) {process.env.INVECT_ENCRYPTION_KEY = original;}
+        if (original) {
+          process.env.INVECT_ENCRYPTION_KEY = original;
+        }
       }
     });
 

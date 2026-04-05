@@ -372,3 +372,13 @@ export const RESEND_PROVIDER: ProviderDef = {
   description: 'Resend transactional email API — send, track, and manage emails',
   docsUrl: 'https://resend.com/docs/api-reference/introduction',
 };
+
+export const SENDGRID_PROVIDER: ProviderDef = {
+  id: 'sendgrid',
+  name: 'SendGrid',
+  icon: 'Mail',
+  category: 'email',
+  nodeCategory: 'Integrations',
+  description: 'Twilio SendGrid email API — transactional and marketing email delivery',
+  docsUrl: 'https://www.twilio.com/docs/sendgrid/api-reference',
+};
