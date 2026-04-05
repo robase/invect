@@ -7,8 +7,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
 const DATABASE_URL =
-  process.env.DATABASE_URL ||
-  'postgresql://invect:invect@localhost:5433/acme_saas';
+  process.env.DATABASE_URL || 'postgresql://invect:invect@localhost:5433/acme_saas';
 
 @Module({
   imports: [
@@ -40,15 +39,13 @@ const DATABASE_URL =
                 type: 'llm',
                 authType: 'apiKey',
                 config: { apiKey: process.env.SEED_ANTHROPIC_API_KEY },
-                description:
-                  'Anthropic Claude API credential for AI model nodes',
+                description: 'Anthropic Claude API credential for AI model nodes',
                 isShared: true,
                 metadata: { provider: 'anthropic' },
               },
             ]
           : []),
-        ...(process.env.SEED_LINEAR_CLIENT_ID &&
-        process.env.SEED_LINEAR_CLIENT_SECRET
+        ...(process.env.SEED_LINEAR_CLIENT_ID && process.env.SEED_LINEAR_CLIENT_SECRET
           ? [
               {
                 name: 'Linear OAuth2',

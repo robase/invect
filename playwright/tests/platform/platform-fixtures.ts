@@ -17,13 +17,10 @@
  *     const res = await fetch(`${isolatedServer.apiBase}/flows/list`);
  *   });
  */
-import { test as base, expect } from "@playwright/test";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import {
-  spawnSqliteIsolatedServer,
-  type ServerFixture,
-} from "../../test-support/sqlite-isolation";
+import { test as base, expect } from '@playwright/test';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawnSqliteIsolatedServer, type ServerFixture } from '../../test-support/sqlite-isolation';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -52,7 +49,7 @@ async function spawnIsolatedServer(
       apiPrefix: opts.apiPrefix,
       dbFilePrefix: opts.dbFilePrefix,
       readyPath: opts.readyPath,
-      serverCwd: path.resolve(__dirname, "../../"),
+      serverCwd: path.resolve(__dirname, '../../'),
       serverScript,
     },
     workerInfo.workerIndex,
@@ -70,33 +67,33 @@ function createServerTest(opts: ServerOptions) {
         await use(fixture);
         await cleanup();
       },
-      { scope: "worker" },
+      { scope: 'worker' },
     ],
   });
 }
 
 /** Express adapter tests — each worker gets its own Express server */
 export const expressTest = createServerTest({
-  script: "test-server.ts",
-  dbFilePrefix: "invect-pw-express",
-  apiPrefix: "/invect",
-  readyPath: "/invect/flows/list",
+  script: 'test-server.ts',
+  dbFilePrefix: 'invect-pw-express',
+  apiPrefix: '/invect',
+  readyPath: '/invect/flows/list',
 });
 
 /** NestJS adapter tests — each worker gets its own NestJS server */
 export const nestjsTest = createServerTest({
-  script: "test-server-nestjs.ts",
-  dbFilePrefix: "invect-pw-nestjs",
-  apiPrefix: "/invect",
-  readyPath: "/invect/flows/list",
+  script: 'test-server-nestjs.ts',
+  dbFilePrefix: 'invect-pw-nestjs',
+  apiPrefix: '/invect',
+  readyPath: '/invect/flows/list',
 });
 
 /** Next.js adapter tests — each worker gets its own lightweight handler server */
 export const nextjsTest = createServerTest({
-  script: "test-server-nextjs.ts",
-  dbFilePrefix: "invect-pw-nextjs",
-  apiPrefix: "/api/invect",
-  readyPath: "/api/invect/credentials",
+  script: 'test-server-nextjs.ts',
+  dbFilePrefix: 'invect-pw-nextjs',
+  apiPrefix: '/api/invect',
+  readyPath: '/api/invect/credentials',
 });
 
 /** Backward compat: default export is the Express test */

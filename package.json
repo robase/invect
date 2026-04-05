@@ -2,8 +2,31 @@
   "name": "invect",
   "version": "0.0.1",
   "private": true,
-  "type": "module",
   "description": "Complete workflow management system with React frontend and NestJS backend",
+  "keywords": [
+    "Invect",
+    "ai",
+    "backend",
+    "batch-processing",
+    "components",
+    "frontend",
+    "invect",
+    "nestjs",
+    "react",
+    "typescript",
+    "workflow"
+  ],
+  "homepage": "https://invect.dev",
+  "bugs": {
+    "url": "https://github.com/robase/invect/issues"
+  },
+  "license": "MIT",
+  "author": "robase <team@invect.dev>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/robase/invect.git"
+  },
+  "type": "module",
   "scripts": {
     "build": "pnpm --filter '@invect/*' run build",
     "link:all": "pnpm build && pnpm --filter '@invect/*' exec npm link",
@@ -33,48 +56,15 @@
     "ux:analyze": "npx tsx playwright/visual-audit/analyze.ts",
     "ux:audit": "pnpm ux:capture && pnpm ux:analyze",
     "setup:credentials": "bash scripts/setup-credentials.sh",
-    "format": "pnpm --parallel run format",
-    "lint": "pnpm -r run lint --fix",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "lint": "oxlint --fix",
+    "lint:check": "oxlint",
     "typecheck": "pnpm -r run typecheck",
     "clean": "rm -rf dist && pnpm --filter '@invect/*' run clean",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "pnpm build && pnpm publish -r --access public --no-git-checks"
-  },
-  "keywords": [
-    "invect",
-    "workflow",
-    "react",
-    "nestjs",
-    "typescript",
-    "frontend",
-    "backend",
-    "batch-processing",
-    "ai",
-    "Invect",
-    "components"
-  ],
-  "author": "robase <team@invect.dev>",
-  "license": "MIT",
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=8.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/robase/invect.git"
-  },
-  "bugs": {
-    "url": "https://github.com/robase/invect/issues"
-  },
-  "homepage": "https://invect.dev",
-  "peerDependencies": {
-    "@nestjs/common": "^11.0.0",
-    "@nestjs/core": "^11.0.0",
-    "@tanstack/react-query": "^5.0.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router": "^7.0.0"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.56.0",
@@ -107,7 +97,6 @@
   "devDependencies": {
     "@changesets/changelog-github": "^0.6.0",
     "@changesets/cli": "^2.30.0",
-    "@eslint/js": "^9.31.0",
     "@nestjs/common": "^11.1.16",
     "@nestjs/core": "^11.1.16",
     "@playwright/test": "^1.58.2",
@@ -117,17 +106,27 @@
     "chokidar": "^4.0.1",
     "cors": "^2.8.6",
     "drizzle-orm": "^0.45.1",
-    "eslint": "^9.31.0",
     "express": "^5.2.1",
-    "globals": "^16.3.0",
     "knip": "^6.3.0",
     "msw": "^2.11.2",
-    "prettier": "^3.6.2",
+    "oxfmt": "^0.43.0",
+    "oxlint": "^1.58.0",
     "rollup": "^4.14.0",
     "tsdown": "^0.21.1",
     "tsx": "^4.21.0",
-    "typescript": "^5.0.0",
-    "typescript-eslint": "^8.36.0"
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@tanstack/react-query": "^5.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   },
   "pnpm": {
     "overrides": {

@@ -35,9 +35,7 @@ export default async function TeamPage() {
               <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-medium capitalize">
                 {member.role}
               </span>
-              {member.department && (
-                <span className="text-xs text-muted">{member.department}</span>
-              )}
+              {member.department && <span className="text-xs text-muted">{member.department}</span>}
               {!member.isActive && (
                 <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
                   Inactive

@@ -74,7 +74,11 @@ export async function generateSchema(opts: {
 }
 
 // Re-export everything
-export { generateDrizzleSchema, generateAllDrizzleSchemas, generateAppendSchema } from './drizzle.js';
+export {
+  generateDrizzleSchema,
+  generateAllDrizzleSchemas,
+  generateAppendSchema,
+} from './drizzle.js';
 export { generatePrismaSchema } from './prisma.js';
 export { generateRawSql } from './sql.js';
 export type { PrismaSchemaGeneratorOptions } from './prisma.js';

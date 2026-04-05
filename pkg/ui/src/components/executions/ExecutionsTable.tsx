@@ -277,7 +277,9 @@ export const ExecutionsTable: React.FC<ExecutionsTableProps> = ({ basePath = '' 
   // Resolve flowFilter: find the flow whose name matches the search
   const flowFilter = useMemo(() => {
     const q = flowSearch.trim().toLowerCase();
-    if (!q) return undefined;
+    if (!q) {
+      return undefined;
+    }
     const match = flows.find((f: Flow) => f.name.toLowerCase().includes(q));
     return match?.id;
   }, [flowSearch, flows]);

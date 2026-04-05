@@ -1,16 +1,22 @@
-import "dotenv/config";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { createInvect } from "../../src/api/create-invect";
-import type { FlowExample } from "./example-types";
-import { inputTemplateModelExample } from "./input-template-model";
-import { complexBranchingFlowExample, complexBranchingFlowMinorExample } from "./complex-branching-flow";
-import { comprehensiveFlowPremiumExample, comprehensiveFlowBasicExample } from "./comprehensive-flow";
-import { simpleAgentFlowExample } from "./simple-agent-flow";
-import { complexAgentFlowExample } from "./complex-agent-flow";
+import 'dotenv/config';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createInvect } from '../../src/api/create-invect';
+import type { FlowExample } from './example-types';
+import { inputTemplateModelExample } from './input-template-model';
+import {
+  complexBranchingFlowExample,
+  complexBranchingFlowMinorExample,
+} from './complex-branching-flow';
+import {
+  comprehensiveFlowPremiumExample,
+  comprehensiveFlowBasicExample,
+} from './comprehensive-flow';
+import { simpleAgentFlowExample } from './simple-agent-flow';
+import { complexAgentFlowExample } from './complex-agent-flow';
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
-const sqlitePath = path.resolve(currentDir, "../dev.db");
+const sqlitePath = path.resolve(currentDir, '../dev.db');
 
 // Register all examples to run
 const examples: FlowExample[] = [
@@ -28,37 +34,37 @@ const examples: FlowExample[] = [
 ];
 
 async function runExamples(): Promise<void> {
-  console.log("🚀 Starting Invect E2E Examples\n");
-  console.log("=".repeat(80));
+  console.log('🚀 Starting Invect E2E Examples\n');
+  console.log('='.repeat(80));
 
   const hasApiKey = !!(process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY);
   if (!hasApiKey) {
-    console.error("❌ No AI API keys found. Set OPENAI_API_KEY or ANTHROPIC_API_KEY.");
+    console.error('❌ No AI API keys found. Set OPENAI_API_KEY or ANTHROPIC_API_KEY.');
     process.exit(1);
   }
 
   // Initialize Invect
   const invect = await createInvect({
     database: {
-      type: "sqlite",
+      type: 'sqlite',
       connectionString: `file:${sqlitePath}`,
     },
     logging: {
-      level: "warn", // Use "debug" for verbose output
+      level: 'warn', // Use "debug" for verbose output
     },
   });
 
   try {
-    console.log("✅ Invect initialized\n");
+    console.log('✅ Invect initialized\n');
 
     let passed = 0;
     let failed = 0;
 
     for (const example of examples) {
-      console.log("=".repeat(80));
+      console.log('='.repeat(80));
       console.log(`▶️  ${example.name}`);
       console.log(`   ${example.description}`);
-      console.log("-".repeat(80));
+      console.log('-'.repeat(80));
 
       try {
         const result = await example.execute(invect);
@@ -81,26 +87,26 @@ async function runExamples(): Promise<void> {
     }
 
     // Summary
-    console.log("=".repeat(80));
-    console.log("📊 SUMMARY");
-    console.log("-".repeat(80));
+    console.log('='.repeat(80));
+    console.log('📊 SUMMARY');
+    console.log('-'.repeat(80));
     console.log(`   Total:  ${examples.length}`);
     console.log(`   Passed: ${passed}`);
     console.log(`   Failed: ${failed}`);
-    console.log("=".repeat(80));
+    console.log('='.repeat(80));
 
     if (failed > 0) {
       throw new Error(`${failed} example(s) failed`);
     }
 
-    console.log("\n🎉 All E2E examples completed successfully!\n");
+    console.log('\n🎉 All E2E examples completed successfully!\n');
   } finally {
-    console.log("🧹 Shutting down Invect...");
+    console.log('🧹 Shutting down Invect...');
     try {
       await invect.shutdown();
-      console.log("✅ Shutdown complete\n");
+      console.log('✅ Shutdown complete\n');
     } catch (error) {
-      console.error("⚠️  Error during shutdown:", error);
+      console.error('⚠️  Error during shutdown:', error);
     }
   }
 }
@@ -109,6 +115,6 @@ async function runExamples(): Promise<void> {
 runExamples()
   .then(() => process.exit(0))
   .catch(() => {
-    console.error("\n💥 E2E run failed");
+    console.error('\n💥 E2E run failed');
     process.exit(1);
   });

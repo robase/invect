@@ -32,7 +32,7 @@ const result = await invect.runs.start('flow-id-here', {
   data: { key: 'value' },
 });
 
-console.log(result.status);  // 'SUCCESS' | 'FAILED'
+console.log(result.status); // 'SUCCESS' | 'FAILED'
 console.log(result.outputs); // Flow output data
 ```
 
@@ -49,7 +49,7 @@ const run = await invect.runs.startAsync('flow-id-here', inputs);
 
 ```ts
 const result = await invect.runs.start('flow-id-here', inputs, {
-  version: 3,        // specific version number
+  version: 3, // specific version number
   // version: 'latest',  // always run the latest (default)
 });
 ```
@@ -109,7 +109,7 @@ const version = await invect.versions.get(flowId, 2); // or 'latest'
 
 ```ts
 const run = await invect.runs.get(runId);
-console.log(run.status);  // 'SUCCESS' | 'FAILED' | 'PAUSED_FOR_BATCH'
+console.log(run.status); // 'SUCCESS' | 'FAILED' | 'PAUSED_FOR_BATCH'
 
 const nodeTraces = await invect.runs.getNodeExecutions(runId);
 const runs = await invect.runs.listByFlowId(flowId);
@@ -121,53 +121,52 @@ The `InvectInstance` organizes methods into namespaced APIs:
 
 ### `invect.flows`
 
-| Method | Description |
-|--------|-------------|
-| `create(input)` | Create a new flow |
-| `list(options?)` | List all flows (paginated) |
-| `get(flowId)` | Get a flow by ID |
-| `update(flowId, input)` | Update a flow |
-| `delete(flowId)` | Delete a flow |
-| `getDashboardStats()` | Flow counts, run counts by status, recent activity |
+| Method                  | Description                                        |
+| ----------------------- | -------------------------------------------------- |
+| `create(input)`         | Create a new flow                                  |
+| `list(options?)`        | List all flows (paginated)                         |
+| `get(flowId)`           | Get a flow by ID                                   |
+| `update(flowId, input)` | Update a flow                                      |
+| `delete(flowId)`        | Delete a flow                                      |
+| `getDashboardStats()`   | Flow counts, run counts by status, recent activity |
 
 ### `invect.versions`
 
-| Method | Description |
-|--------|-------------|
-| `create(flowId, data)` | Create a new flow version |
-| `list(flowId, options?)` | List all versions of a flow |
-| `get(flowId, version)` | Get a specific version (`number` or `'latest'`) |
+| Method                   | Description                                     |
+| ------------------------ | ----------------------------------------------- |
+| `create(flowId, data)`   | Create a new flow version                       |
+| `list(flowId, options?)` | List all versions of a flow                     |
+| `get(flowId, version)`   | Get a specific version (`number` or `'latest'`) |
 
 ### `invect.runs`
 
-| Method | Description |
-|--------|-------------|
-| `start(flowId, inputs?, opts?)` | Execute a flow synchronously |
+| Method                               | Description                      |
+| ------------------------------------ | -------------------------------- |
+| `start(flowId, inputs?, opts?)`      | Execute a flow synchronously     |
 | `startAsync(flowId, inputs?, opts?)` | Execute a flow in the background |
-| `get(flowRunId)` | Get execution details |
-| `list(options?)` | List all executions (paginated) |
-| `listByFlowId(flowId)` | List executions for a flow |
-| `getNodeExecutions(flowRunId)` | Get per-node execution traces |
-| `cancel(flowRunId)` | Cancel a running flow |
-| `pause(flowRunId, reason?)` | Pause a running flow |
-| `resume(executionId)` | Resume a paused flow |
+| `get(flowRunId)`                     | Get execution details            |
+| `list(options?)`                     | List all executions (paginated)  |
+| `listByFlowId(flowId)`               | List executions for a flow       |
+| `getNodeExecutions(flowRunId)`       | Get per-node execution traces    |
+| `cancel(flowRunId)`                  | Cancel a running flow            |
+| `pause(flowRunId, reason?)`          | Pause a running flow             |
+| `resume(executionId)`                | Resume a paused flow             |
 
 ### `invect.credentials`
 
-| Method | Description |
-|--------|-------------|
-| `create(input)` | Store a credential |
-| `list(filters?)` | List all credentials |
-| `get(id)` | Get a credential by ID |
-| `update(id, input)` | Update a credential |
-| `delete(id)` | Delete a credential |
+| Method              | Description            |
+| ------------------- | ---------------------- |
+| `create(input)`     | Store a credential     |
+| `list(filters?)`    | List all credentials   |
+| `get(id)`           | Get a credential by ID |
+| `update(id, input)` | Update a credential    |
+| `delete(id)`        | Delete a credential    |
 
 ### Lifecycle
 
-| Method | Description |
-|--------|-------------|
-| `startBatchPolling()` | Start background batch job polling |
-| `stopBatchPolling()` | Stop batch job polling |
-| `startCronScheduler()` | Start the cron trigger scheduler |
-| `shutdown()` | Gracefully shut down |
-
+| Method                 | Description                        |
+| ---------------------- | ---------------------------------- |
+| `startBatchPolling()`  | Start background batch job polling |
+| `stopBatchPolling()`   | Stop batch job polling             |
+| `startCronScheduler()` | Start the cron trigger scheduler   |
+| `shutdown()`           | Gracefully shut down               |

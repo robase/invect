@@ -22,9 +22,7 @@ import { FlowRunStatus } from '../../../src';
 import type { InvectInstance } from '../../../src/api/types';
 import { GraphNodeType } from '../../../src/types/graph-node-types';
 import type { InvectDefinition } from '../../../src/services/flow-versions/schemas-fresh';
-import type {
-  AgentExecutionOutput,
-} from '../../../src/types/agent-tool.types';
+import type { AgentExecutionOutput } from '../../../src/types/agent-tool.types';
 import { createTestInvect } from '../helpers/test-invect';
 
 // ---------------------------------------------------------------------------
@@ -172,10 +170,7 @@ function agentNode(
   };
 }
 
-async function runAgentFlow(
-  definition: InvectDefinition,
-  inputs: Record<string, unknown> = {},
-) {
+async function runAgentFlow(definition: InvectDefinition, inputs: Record<string, unknown> = {}) {
   const flow = await invect.flows.create({ name: `agent-test-${Date.now()}` });
   await invect.versions.create(flow.id, { invectDefinition: definition });
   return invect.runs.start(flow.id, inputs, { useBatchProcessing: false });
@@ -245,9 +240,7 @@ describe('Agent Node + Tool Execution', () => {
     it('should call math_eval tool and return final response', async () => {
       // LLM requests math tool
       responseQueue.push(
-        toolCallResponse([
-          { id: 'call_1', name: 'math_eval', arguments: { expression: '6 * 7' } },
-        ]),
+        toolCallResponse([{ id: 'call_1', name: 'math_eval', arguments: { expression: '6 * 7' } }]),
       );
       // After receiving the tool result, LLM produces final text
       responseQueue.push(textResponse('The result of 6 * 7 is 42.'));
@@ -293,9 +286,7 @@ describe('Agent Node + Tool Execution', () => {
 
       // Tool result content should contain the math result
       const content =
-        typeof toolMsg!.content === 'string'
-          ? toolMsg!.content
-          : JSON.stringify(toolMsg!.content);
+        typeof toolMsg!.content === 'string' ? toolMsg!.content : JSON.stringify(toolMsg!.content);
       expect(content).toContain('5');
     });
   });
@@ -307,15 +298,11 @@ describe('Agent Node + Tool Execution', () => {
     it('should support multiple tool-call rounds before final response', async () => {
       // Iteration 1: LLM calls math
       responseQueue.push(
-        toolCallResponse([
-          { id: 'c1', name: 'math_eval', arguments: { expression: '10 + 5' } },
-        ]),
+        toolCallResponse([{ id: 'c1', name: 'math_eval', arguments: { expression: '10 + 5' } }]),
       );
       // Iteration 2: LLM calls math again with the first result
       responseQueue.push(
-        toolCallResponse([
-          { id: 'c2', name: 'math_eval', arguments: { expression: '15 * 2' } },
-        ]),
+        toolCallResponse([{ id: 'c2', name: 'math_eval', arguments: { expression: '15 * 2' } }]),
       );
       // Iteration 3: LLM produces final answer
       responseQueue.push(textResponse('After two calculations: 10+5=15, 15*2=30.'));
@@ -398,9 +385,7 @@ describe('Agent Node + Tool Execution', () => {
     it('explicit_stop: should loop until LLM responds with text (no tools)', async () => {
       // First iteration: tool call
       responseQueue.push(
-        toolCallResponse([
-          { id: 'es1', name: 'math_eval', arguments: { expression: '1+1' } },
-        ]),
+        toolCallResponse([{ id: 'es1', name: 'math_eval', arguments: { expression: '1+1' } }]),
       );
       // Second iteration: text response → stops the loop
       responseQueue.push(textResponse('All done.'));
@@ -417,9 +402,7 @@ describe('Agent Node + Tool Execution', () => {
 
     it('tool_result: should stop after the first tool execution', async () => {
       responseQueue.push(
-        toolCallResponse([
-          { id: 'tr1', name: 'math_eval', arguments: { expression: '9 * 9' } },
-        ]),
+        toolCallResponse([{ id: 'tr1', name: 'math_eval', arguments: { expression: '9 * 9' } }]),
       );
       // Should NOT be consumed — loop stops after tool result
       responseQueue.push(textResponse('Should not reach here'));
@@ -696,9 +679,7 @@ describe('Agent Node + Tool Execution', () => {
   describe('execution traces', () => {
     it('should persist node execution traces for agent runs', async () => {
       responseQueue.push(
-        toolCallResponse([
-          { id: 'trace1', name: 'math_eval', arguments: { expression: '5+5' } },
-        ]),
+        toolCallResponse([{ id: 'trace1', name: 'math_eval', arguments: { expression: '5+5' } }]),
       );
       responseQueue.push(textResponse('Ten.'));
 
@@ -718,9 +699,7 @@ describe('Agent Node + Tool Execution', () => {
 
     it('should record tool execution metadata', async () => {
       responseQueue.push(
-        toolCallResponse([
-          { id: 'rec1', name: 'math_eval', arguments: { expression: '7*8' } },
-        ]),
+        toolCallResponse([{ id: 'rec1', name: 'math_eval', arguments: { expression: '7*8' } }]),
       );
       responseQueue.push(textResponse('56'));
 
@@ -763,9 +742,7 @@ describe('Agent Node + Tool Execution', () => {
       );
       // Then calls math
       responseQueue.push(
-        toolCallResponse([
-          { id: 'me1', name: 'math_eval', arguments: { expression: '25 - 18' } },
-        ]),
+        toolCallResponse([{ id: 'me1', name: 'math_eval', arguments: { expression: '25 - 18' } }]),
       );
       // Final text
       responseQueue.push(textResponse('Age 25 is adult, 7 years over 18.'));

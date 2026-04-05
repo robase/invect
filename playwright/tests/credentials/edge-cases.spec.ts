@@ -1,26 +1,26 @@
 // spec: specs/credential-management.plan.md
 // seed: tests/seed.spec.ts
 
-import { test, expect } from "../fixtures";
+import { test, expect } from '../fixtures';
 
 /** Helper: navigate to /invect/credentials and wait for the page to load */
-async function goToCredentials(page: import("@playwright/test").Page) {
-  await page.goto("/invect/credentials");
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Credentials" })
-  ).toBeVisible({ timeout: 15_000 });
+async function goToCredentials(page: import('@playwright/test').Page) {
+  await page.goto('/invect/credentials');
+  await expect(page.getByRole('heading', { level: 1, name: 'Credentials' })).toBeVisible({
+    timeout: 15_000,
+  });
 }
 
 /** Helper: create a credential via the API */
 async function createCredentialViaApi(
-  request: import("@playwright/test").APIRequestContext,
+  request: import('@playwright/test').APIRequestContext,
   apiBase: string,
   name: string,
-  authType = "bearer",
-  config: Record<string, string> = { token: "test-token" }
+  authType = 'bearer',
+  config: Record<string, string> = { token: 'test-token' },
 ) {
   const resp = await request.post(`${apiBase}/credentials`, {
-    data: { name, type: "http-api", authType, config },
+    data: { name, type: 'http-api', authType, config },
   });
   expect(resp.ok()).toBeTruthy();
   return (await resp.json()) as { id: string; name: string };
@@ -28,12 +28,14 @@ async function createCredentialViaApi(
 
 /** Helper: delete a credential by name via API */
 async function cleanupCredentialByName(
-  request: import("@playwright/test").APIRequestContext,
+  request: import('@playwright/test').APIRequestContext,
   apiBase: string,
-  name: string
+  name: string,
 ) {
   const list = await request.get(`${apiBase}/credentials`);
-  if (!list.ok()) return;
+  if (!list.ok()) {
+    return;
+  }
   const creds: Array<{ id: string; name: string }> = await list.json();
   for (const c of creds) {
     if (c.name === name) {
@@ -42,8 +44,8 @@ async function cleanupCredentialByName(
   }
 }
 
-test.describe("Credential Edge Cases & Error Handling", () => {
-  test("empty state shows create prompt when no credentials exist", async ({
+test.describe('Credential Edge Cases & Error Handling', () => {
+  test('empty state shows create prompt when no credentials exist', async ({
     page,
     request,
     apiBase,
@@ -51,15 +53,12 @@ test.describe("Credential Edge Cases & Error Handling", () => {
     // 1. Save existing credentials, then delete all via the API
     const listResp = await request.get(`${apiBase}/credentials`);
     expect(listResp.ok()).toBeTruthy();
-    const existingCreds: Array<{ id: string; name: string }> =
-      await listResp.json();
+    const existingCreds: Array<{ id: string; name: string }> = await listResp.json();
 
     // Store IDs for restoration
     const deletedIds: string[] = [];
     for (const c of existingCreds) {
-      const delResp = await request.delete(
-        `${apiBase}/credentials/${c.id}`
-      );
+      const delResp = await request.delete(`${apiBase}/credentials/${c.id}`);
       if (delResp.ok()) {
         deletedIds.push(c.id);
       }
@@ -70,16 +69,14 @@ test.describe("Credential Edge Cases & Error Handling", () => {
       await goToCredentials(page);
 
       // Empty state is shown
-      await expect(page.getByText("No credentials yet")).toBeVisible({
+      await expect(page.getByText('No credentials yet')).toBeVisible({
         timeout: 10_000,
       });
-      await expect(
-        page.getByText(/Add API keys, connect OAuth providers/)
-      ).toBeVisible();
+      await expect(page.getByText(/Add API keys, connect OAuth providers/)).toBeVisible();
 
       // A 'Create Credential' button is visible in the empty state
-      const createBtn = page.getByRole("button", {
-        name: "Create Credential",
+      const createBtn = page.getByRole('button', {
+        name: 'Create Credential',
       });
       await expect(createBtn).toBeVisible();
 
@@ -87,40 +84,34 @@ test.describe("Credential Edge Cases & Error Handling", () => {
       await createBtn.click();
 
       // Create dialog opens
-      await expect(
-        page.getByRole("heading", { name: "Create Credential" })
-      ).toBeVisible({ timeout: 5_000 });
+      await expect(page.getByRole('heading', { name: 'Create Credential' })).toBeVisible({
+        timeout: 5_000,
+      });
     } finally {
       // Restore the seeded credentials expected by the rest of the suite.
       await request.post(`${apiBase}/credentials`, {
         data: {
-          name: "Anthropic API Key",
-          type: "http-api",
-          authType: "bearer",
-          config: { token: "sk-ant-placeholder" },
-          description:
-            "Anthropic Claude API credential for AI model nodes",
+          name: 'Anthropic API Key',
+          type: 'http-api',
+          authType: 'bearer',
+          config: { token: 'sk-ant-placeholder' },
+          description: 'Anthropic Claude API credential for AI model nodes',
         },
       });
       await request.post(`${apiBase}/credentials`, {
         data: {
-          name: "Linear OAuth2",
-          type: "http-api",
-          authType: "oauth2",
-          config: { accessToken: "placeholder" },
-          description:
-            "Linear OAuth2 credential for issue tracking and project management",
+          name: 'Linear OAuth2',
+          type: 'http-api',
+          authType: 'oauth2',
+          config: { accessToken: 'placeholder' },
+          description: 'Linear OAuth2 credential for issue tracking and project management',
         },
       });
     }
   });
 
-  test("duplicate credential names are allowed", async ({
-    page,
-    request,
-    apiBase,
-  }) => {
-    const credName = "Duplicate Test";
+  test('duplicate credential names are allowed', async ({ page, request, apiBase }) => {
+    const credName = 'Duplicate Test';
     // Cleanup prior runs
     await cleanupCredentialByName(request, apiBase, credName);
 
@@ -138,35 +129,29 @@ test.describe("Credential Edge Cases & Error Handling", () => {
 
     // Refresh the page
     await page.reload();
-    await expect(
-      page.getByRole("heading", { level: 1, name: "Credentials" })
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('heading', { level: 1, name: 'Credentials' })).toBeVisible({
+      timeout: 15_000,
+    });
 
     // Both appear in the list — count the occurrences
-    const matches = page
-      .getByRole("button")
-      .filter({ hasText: credName });
+    const matches = page.getByRole('button').filter({ hasText: credName });
     await expect(matches).toHaveCount(2, { timeout: 5_000 });
   });
 
-  test("credential config secrets are masked in password fields", async ({
-    page,
-  }) => {
+  test('credential config secrets are masked in password fields', async ({ page }) => {
     // 1. Open a bearer credential's detail, click 'Edit' tab
     await goToCredentials(page);
-    const row = page
-      .getByRole("button")
-      .filter({ hasText: "Anthropic API Key" });
+    const row = page.getByRole('button').filter({ hasText: 'Anthropic API Key' });
     await row.click();
 
-    const dialog = page.getByRole("dialog");
+    const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible({ timeout: 5_000 });
 
-    await dialog.getByRole("button", { name: "Edit", exact: true }).click();
+    await dialog.getByRole('button', { name: 'Edit', exact: true }).click();
 
     // The Token field should be type='password' (masked)
-    const tokenField = dialog.getByLabel("Token");
+    const tokenField = dialog.getByLabel('Token');
     await expect(tokenField).toBeVisible();
-    await expect(tokenField).toHaveAttribute("type", "password");
+    await expect(tokenField).toHaveAttribute('type', 'password');
   });
 });

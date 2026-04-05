@@ -112,7 +112,9 @@ export function FlowHeader({
               variant="ghost"
               size="sm"
               onClick={() => {
-                if (!isActive) onToggleActive();
+                if (!isActive) {
+                  onToggleActive();
+                }
               }}
               disabled={isTogglingActive}
               className={cn(
@@ -133,7 +135,9 @@ export function FlowHeader({
               variant="ghost"
               size="sm"
               onClick={() => {
-                if (isActive) onToggleActive();
+                if (isActive) {
+                  onToggleActive();
+                }
               }}
               disabled={isTogglingActive}
               className={cn(

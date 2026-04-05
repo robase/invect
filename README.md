@@ -41,12 +41,15 @@ import { createInvectRouter } from '@invect/express';
 
 const app = express();
 
-app.use('/invect', createInvectRouter({
-  database: {
-    type: 'sqlite',
-    connectionString: 'file:./dev.db',
-  },
-}));
+app.use(
+  '/invect',
+  createInvectRouter({
+    database: {
+      type: 'sqlite',
+      connectionString: 'file:./dev.db',
+    },
+  }),
+);
 
 app.listen(3000);
 ```
@@ -57,9 +60,7 @@ app.listen(3000);
 import { Invect } from '@invect/ui';
 import '@invect/ui/styles';
 
-export default () => (
-  <Invect apiBaseUrl="http://localhost:3000/invect" />
-);
+export default () => <Invect apiBaseUrl="http://localhost:3000/invect" />;
 ```
 
 ## Features
@@ -75,25 +76,25 @@ export default () => (
 
 ## Packages
 
-| Package | Description |
-|---|---|
-| [`@invect/core`](pkg/core) | Framework-agnostic engine — flows, execution, actions, database |
-| [`@invect/express`](pkg/express) | Express router adapter |
-| [`@invect/nestjs`](pkg/nestjs) | NestJS module adapter |
-| [`@invect/nextjs`](pkg/nextjs) | Next.js App Router handler |
-| [`@invect/ui`](pkg/ui) | React flow editor and dashboard |
-| [`@invect/cli`](pkg/cli) | CLI for schema generation, migrations, and project setup |
-| [`@invect/user-auth`](pkg/plugins/auth) | Authentication plugin (Better Auth) |
-| [`@invect/rbac`](pkg/plugins/rbac) | Role-based access control plugin |
+| Package                                 | Description                                                     |
+| --------------------------------------- | --------------------------------------------------------------- |
+| [`@invect/core`](pkg/core)              | Framework-agnostic engine — flows, execution, actions, database |
+| [`@invect/express`](pkg/express)        | Express router adapter                                          |
+| [`@invect/nestjs`](pkg/nestjs)          | NestJS module adapter                                           |
+| [`@invect/nextjs`](pkg/nextjs)          | Next.js App Router handler                                      |
+| [`@invect/ui`](pkg/ui)                  | React flow editor and dashboard                                 |
+| [`@invect/cli`](pkg/cli)                | CLI for schema generation, migrations, and project setup        |
+| [`@invect/user-auth`](pkg/plugins/auth) | Authentication plugin (Better Auth)                             |
+| [`@invect/rbac`](pkg/plugins/rbac)      | Role-based access control plugin                                |
 
 ## Examples
 
-| Example | Stack | Purpose |
-|---|---|---|
-| [`express-drizzle`](examples/express-drizzle) | Express + SQLite | Primary backend dev server |
-| [`vite-react-frontend`](examples/vite-react-frontend) | Vite + React | Standalone frontend for the flow editor |
-| [`nextjs-app-router`](examples/nextjs-app-router) | Next.js 15 | Self-contained Next.js example |
-| [`nextjs-drizzle-auth-rbac`](examples/nextjs-drizzle-auth-rbac) | Next.js + Auth + RBAC | Full-featured example with plugins |
+| Example                                                         | Stack                 | Purpose                                 |
+| --------------------------------------------------------------- | --------------------- | --------------------------------------- |
+| [`express-drizzle`](examples/express-drizzle)                   | Express + SQLite      | Primary backend dev server              |
+| [`vite-react-frontend`](examples/vite-react-frontend)           | Vite + React          | Standalone frontend for the flow editor |
+| [`nextjs-app-router`](examples/nextjs-app-router)               | Next.js 15            | Self-contained Next.js example          |
+| [`nextjs-drizzle-auth-rbac`](examples/nextjs-drizzle-auth-rbac) | Next.js + Auth + RBAC | Full-featured example with plugins      |
 
 ## Development
 

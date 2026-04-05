@@ -649,7 +649,9 @@ export const ToolSelectorModal = memo(function ToolSelectorModal({
       <OAuth2ProviderSelector
         open={isOAuth2SelectorOpen}
         onOpenChange={(open) => {
-          if (!open) handleCloseOAuth2Selector();
+          if (!open) {
+            handleCloseOAuth2Selector();
+          }
         }}
         onCredentialCreated={handleCredentialCreated}
         portalContainer={portalContainer}

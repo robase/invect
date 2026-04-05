@@ -44,12 +44,12 @@ This renders the full Invect UI — flow list, drag-and-drop editor, execution m
 
 ## Props
 
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `apiBaseUrl` | `string` | `http://localhost:3000/invect` | Backend API URL |
-| `basePath` | `string` | `/invect` | Base path for routing |
-| `plugins` | `InvectFrontendPlugin[]` | `[]` | Frontend plugins (RBAC, etc.) |
-| `reactQueryClient` | `QueryClient` | — | Bring your own React Query client |
+| Prop               | Type                     | Default                        | Description                       |
+| ------------------ | ------------------------ | ------------------------------ | --------------------------------- |
+| `apiBaseUrl`       | `string`                 | `http://localhost:3000/invect` | Backend API URL                   |
+| `basePath`         | `string`                 | `/invect`                      | Base path for routing             |
+| `plugins`          | `InvectFrontendPlugin[]` | `[]`                           | Frontend plugins (RBAC, etc.)     |
+| `reactQueryClient` | `QueryClient`            | —                              | Bring your own React Query client |
 
 ## CSS Scoping
 
@@ -65,7 +65,7 @@ import '@invect/ui/styles';
 
 <InvectShell theme="dark">
   <YourCustomUI />
-</InvectShell>
+</InvectShell>;
 ```
 
 ## License

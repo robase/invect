@@ -1,13 +1,21 @@
 #!/usr/bin/env node
 
-import { execFileSync, spawn } from "node:child_process";
-import readline from "node:readline/promises";
-import process from "node:process";
+import { execFileSync, spawn } from 'node:child_process';
+import readline from 'node:readline/promises';
+import process from 'node:process';
 
-const DEFAULT_PLAYWRIGHT_VITE_PORT = Number.parseInt(process.env.PLAYWRIGHT_VITE_PORT ?? "41731", 10);
-const DEFAULT_PLAYWRIGHT_NEXTJS_PORT = Number.parseInt(process.env.PLAYWRIGHT_NEXTJS_PORT ?? "43002", 10);
-const DEFAULT_PLAYWRIGHT_VITE_URL = process.env.PLAYWRIGHT_VITE_URL ?? `http://localhost:${DEFAULT_PLAYWRIGHT_VITE_PORT}`;
-const DEFAULT_PLAYWRIGHT_NEXTJS_URL = process.env.NEXTJS_URL ?? `http://localhost:${DEFAULT_PLAYWRIGHT_NEXTJS_PORT}`;
+const DEFAULT_PLAYWRIGHT_VITE_PORT = Number.parseInt(
+  process.env.PLAYWRIGHT_VITE_PORT ?? '41731',
+  10,
+);
+const DEFAULT_PLAYWRIGHT_NEXTJS_PORT = Number.parseInt(
+  process.env.PLAYWRIGHT_NEXTJS_PORT ?? '43002',
+  10,
+);
+const DEFAULT_PLAYWRIGHT_VITE_URL =
+  process.env.PLAYWRIGHT_VITE_URL ?? `http://localhost:${DEFAULT_PLAYWRIGHT_VITE_PORT}`;
+const DEFAULT_PLAYWRIGHT_NEXTJS_URL =
+  process.env.NEXTJS_URL ?? `http://localhost:${DEFAULT_PLAYWRIGHT_NEXTJS_PORT}`;
 
 const RESERVED_PORTS = [DEFAULT_PLAYWRIGHT_VITE_PORT, DEFAULT_PLAYWRIGHT_NEXTJS_PORT];
 const KILL_WAIT_MS = 2_000;
@@ -18,12 +26,12 @@ function parseCliArgs(argv) {
   let autoForceKill = false;
 
   for (const arg of argv) {
-    if (arg === "--kill-ports") {
+    if (arg === '--kill-ports') {
       autoKill = true;
       continue;
     }
 
-    if (arg === "--force-kill-ports") {
+    if (arg === '--force-kill-ports') {
       autoForceKill = true;
       continue;
     }
@@ -44,15 +52,15 @@ function sleep(ms) {
 
 function getListeningProcesses(port) {
   try {
-    const output = execFileSync("lsof", ["-nP", `-iTCP:${port}`, "-sTCP:LISTEN", "-Fpcn"], {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
+    const output = execFileSync('lsof', ['-nP', `-iTCP:${port}`, '-sTCP:LISTEN', '-Fpcn'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
     });
 
     const processes = [];
     let current = null;
 
-    for (const rawLine of output.split("\n")) {
+    for (const rawLine of output.split('\n')) {
       const line = rawLine.trim();
       if (!line) {
         continue;
@@ -61,11 +69,11 @@ function getListeningProcesses(port) {
       const prefix = line[0];
       const value = line.slice(1);
 
-      if (prefix === "p") {
+      if (prefix === 'p') {
         if (current?.pid) {
           processes.push(current);
         }
-        current = { pid: Number.parseInt(value, 10), command: "unknown", endpoint: "" };
+        current = { pid: Number.parseInt(value, 10), command: 'unknown', endpoint: '' };
         continue;
       }
 
@@ -73,12 +81,12 @@ function getListeningProcesses(port) {
         continue;
       }
 
-      if (prefix === "c") {
+      if (prefix === 'c') {
         current.command = value;
         continue;
       }
 
-      if (prefix === "n") {
+      if (prefix === 'n') {
         current.endpoint = value;
       }
     }
@@ -123,10 +131,10 @@ function dedupeProcesses(conflicts) {
 function printConflicts(conflicts) {
   const uniqueProcesses = dedupeProcesses(conflicts);
 
-  console.error("Playwright preflight found occupied ports:");
+  console.error('Playwright preflight found occupied ports:');
   for (const processInfo of uniqueProcesses) {
-    const ports = [...processInfo.ports].sort((left, right) => left - right).join(", ");
-    const endpoint = processInfo.endpoint ? ` ${processInfo.endpoint}` : "";
+    const ports = [...processInfo.ports].sort((left, right) => left - right).join(', ');
+    const endpoint = processInfo.endpoint ? ` ${processInfo.endpoint}` : '';
     console.error(`  - ports ${ports}: pid ${processInfo.pid} (${processInfo.command})${endpoint}`);
   }
 }
@@ -150,7 +158,7 @@ function sendSignal(processes, signal) {
     try {
       process.kill(processInfo.pid, signal);
     } catch (error) {
-      if (error && typeof error === "object" && "code" in error && error.code === "ESRCH") {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'ESRCH') {
         continue;
       }
       throw error;
@@ -168,54 +176,60 @@ async function clearReservedPorts({ autoKill, autoForceKill }) {
 
   let selectedMode = null;
   if (autoForceKill) {
-    selectedMode = "force";
+    selectedMode = 'force';
   } else if (autoKill) {
-    selectedMode = "kill";
+    selectedMode = 'kill';
   } else if (!process.stdin.isTTY || !process.stdout.isTTY) {
-    console.error("Reserved Playwright ports are busy. Re-run with --kill-ports or --force-kill-ports to clear them automatically.");
+    console.error(
+      'Reserved Playwright ports are busy. Re-run with --kill-ports or --force-kill-ports to clear them automatically.',
+    );
     process.exit(1);
   } else {
     const answer = await promptForAction(
-      "Kill these processes before running Playwright? [k]ill / [f]orce kill / [c]ancel: ",
+      'Kill these processes before running Playwright? [k]ill / [f]orce kill / [c]ancel: ',
     );
-    if (answer === "k" || answer === "kill" || answer === "y" || answer === "yes") {
-      selectedMode = "kill";
-    } else if (answer === "f" || answer === "force" || answer === "force-kill") {
-      selectedMode = "force";
+    if (answer === 'k' || answer === 'kill' || answer === 'y' || answer === 'yes') {
+      selectedMode = 'kill';
+    } else if (answer === 'f' || answer === 'force' || answer === 'force-kill') {
+      selectedMode = 'force';
     } else {
-      console.error("Playwright run cancelled.");
+      console.error('Playwright run cancelled.');
       process.exit(1);
     }
   }
 
   const uniqueProcesses = dedupeProcesses(conflicts);
-  const initialSignal = selectedMode === "force" ? "SIGKILL" : "SIGTERM";
+  const initialSignal = selectedMode === 'force' ? 'SIGKILL' : 'SIGTERM';
   sendSignal(uniqueProcesses, initialSignal);
 
-  if (selectedMode !== "force") {
+  if (selectedMode !== 'force') {
     await sleep(KILL_WAIT_MS);
     conflicts = getPortConflicts();
 
     if (conflicts.length > 0) {
       if (autoKill) {
-        console.error("Some processes ignored SIGTERM. Re-run with --force-kill-ports to send SIGKILL.");
+        console.error(
+          'Some processes ignored SIGTERM. Re-run with --force-kill-ports to send SIGKILL.',
+        );
         process.exit(1);
       }
 
       printConflicts(conflicts);
       if (!process.stdin.isTTY || !process.stdout.isTTY) {
-        console.error("Some processes ignored SIGTERM. Re-run with --force-kill-ports to send SIGKILL.");
+        console.error(
+          'Some processes ignored SIGTERM. Re-run with --force-kill-ports to send SIGKILL.',
+        );
         process.exit(1);
       }
 
       const escalation = await promptForAction(
-        "Some processes ignored SIGTERM. Force kill them with SIGKILL? [f]orce kill / [c]ancel: ",
+        'Some processes ignored SIGTERM. Force kill them with SIGKILL? [f]orce kill / [c]ancel: ',
       );
-      if (escalation === "f" || escalation === "force" || escalation === "force-kill") {
-        sendSignal(dedupeProcesses(conflicts), "SIGKILL");
+      if (escalation === 'f' || escalation === 'force' || escalation === 'force-kill') {
+        sendSignal(dedupeProcesses(conflicts), 'SIGKILL');
         await sleep(500);
       } else {
-        console.error("Playwright run cancelled.");
+        console.error('Playwright run cancelled.');
         process.exit(1);
       }
     }
@@ -226,15 +240,15 @@ async function clearReservedPorts({ autoKill, autoForceKill }) {
   conflicts = getPortConflicts();
   if (conflicts.length > 0) {
     printConflicts(conflicts);
-    console.error("Failed to free required Playwright ports.");
+    console.error('Failed to free required Playwright ports.');
     process.exit(1);
   }
 }
 
 function runPlaywright(args) {
   const child = spawn(
-    "npx",
-    ["playwright", "test", "--config", "playwright/playwright.config.ts", ...args],
+    'npx',
+    ['playwright', 'test', '--config', 'playwright/playwright.config.ts', ...args],
     {
       cwd: process.cwd(),
       env: {
@@ -244,11 +258,11 @@ function runPlaywright(args) {
         PLAYWRIGHT_VITE_URL: DEFAULT_PLAYWRIGHT_VITE_URL,
         NEXTJS_URL: DEFAULT_PLAYWRIGHT_NEXTJS_URL,
       },
-      stdio: "inherit",
+      stdio: 'inherit',
     },
   );
 
-  child.on("exit", (code, signal) => {
+  child.on('exit', (code, signal) => {
     if (signal) {
       process.kill(process.pid, signal);
       return;

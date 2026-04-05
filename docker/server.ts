@@ -20,7 +20,9 @@ const dbConnectionString = process.env.DATABASE_URL || 'file:./data/invect.db';
 // --- Encryption key (required) ---
 const encryptionKey = process.env.INVECT_ENCRYPTION_KEY;
 if (!encryptionKey) {
-  console.error('FATAL: INVECT_ENCRYPTION_KEY is required. Generate one with: npx invect-cli secret');
+  console.error(
+    'FATAL: INVECT_ENCRYPTION_KEY is required. Generate one with: npx invect-cli secret',
+  );
   process.exit(1);
 }
 
@@ -94,7 +96,9 @@ app.get('*', (req, res) => {
 // --- Error handler ---
 const errorHandler: ErrorRequestHandler = (error, _req, res, next) => {
   console.error('Unhandled error:', error);
-  if (res.headersSent) return next(error);
+  if (res.headersSent) {
+    return next(error);
+  }
   res.status(500).json({ error: 'Internal Server Error' });
 };
 app.use(errorHandler);

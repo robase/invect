@@ -82,10 +82,14 @@ const ROLE_BADGE_CLASSES = 'border-imp-border bg-imp-muted/50 text-imp-foregroun
 function getInitials(user: ManagedUser): string {
   if (user.name) {
     const parts = user.name.trim().split(/\s+/);
-    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
     return parts[0][0].toUpperCase();
   }
-  if (user.email) return user.email[0].toUpperCase();
+  if (user.email) {
+    return user.email[0].toUpperCase();
+  }
   return '?';
 }
 

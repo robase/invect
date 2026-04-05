@@ -46,7 +46,9 @@ export const NodeAppendix = memo(function NodeAppendix({
   showPositionToggle = true,
 }: NodeAppendixProps) {
   const handlePositionToggle = () => {
-    if (!onPositionChange) return;
+    if (!onPositionChange) {
+      return;
+    }
     const currentIndex = positionCycle.indexOf(position);
     const nextIndex = (currentIndex + 1) % positionCycle.length;
     onPositionChange(positionCycle[nextIndex]);

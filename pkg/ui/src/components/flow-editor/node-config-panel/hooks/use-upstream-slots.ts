@@ -79,16 +79,22 @@ export function useUpstreamSlots({ nodeId, flowId }: UseUpstreamSlotsOptions) {
 
   // Build slots from incoming edges
   const slots = useMemo<UpstreamSlot[]>(() => {
-    if (!nodeId) return [];
+    if (!nodeId) {
+      return [];
+    }
 
     const incomingEdges = edges.filter((edge) => edge.target === nodeId);
-    if (incomingEdges.length === 0) return [];
+    if (incomingEdges.length === 0) {
+      return [];
+    }
 
     const result: UpstreamSlot[] = [];
 
     for (const edge of incomingEdges) {
       const sourceNode = nodes.find((n) => n.id === edge.source);
-      if (!sourceNode) continue;
+      if (!sourceNode) {
+        continue;
+      }
 
       const sourceData = sourceNode.data as ExtendedNodeData;
       const displayName = sourceData.display_name || sourceNode.id;
@@ -139,7 +145,9 @@ export function useUpstreamSlots({ nodeId, flowId }: UseUpstreamSlotsOptions) {
 
   // Derive the input preview JSON from slots
   const inputPreviewJson = useMemo(() => {
-    if (slots.length === 0) return stringifyJson({});
+    if (slots.length === 0) {
+      return stringifyJson({});
+    }
     const obj: Record<string, unknown> = {};
     for (const slot of slots) {
       obj[slot.key] = slot.status === 'resolved' ? slot.output : null;
@@ -150,7 +158,9 @@ export function useUpstreamSlots({ nodeId, flowId }: UseUpstreamSlotsOptions) {
   // Run a single upstream slot
   const runSlot = useCallback(
     async (slot: UpstreamSlot) => {
-      if (!flowId) return;
+      if (!flowId) {
+        return;
+      }
 
       dispatch({ type: 'SET_LOADING', nodeId: slot.sourceNodeId });
 

@@ -433,7 +433,7 @@ export class GraphService {
 
     // Start from output nodes and work backwards
     const visited = new Set<string>();
-    const queue = [...outputNodes.map((n) => n.id)];
+    const queue = outputNodes.map((n) => n.id);
 
     while (queue.length > 0) {
       const nodeId = queue.shift();

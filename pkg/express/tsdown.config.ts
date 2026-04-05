@@ -1,4 +1,4 @@
-import { defineConfig } from 'tsdown'
+import { defineConfig } from 'tsdown';
 
 export default defineConfig({
   entry: {
@@ -14,16 +14,11 @@ export default defineConfig({
   report: false,
   unbundle: true,
   deps: {
-    neverBundle: [
-      '@invect/core',
-      'express',
-      'cors',
-      'zod',
-    ],
+    neverBundle: ['@invect/core', 'express', 'cors', 'zod'],
   },
   outExtensions({ format }) {
     return {
-      js: format === 'cjs' ? '.cjs' : '.js'
-    }
-  }
-})
+      js: format === 'cjs' ? '.cjs' : '.js',
+    };
+  },
+});

@@ -36,11 +36,7 @@ export const migrateCommand = new Command('migrate')
   .action(migrateAction);
 
 /** @internal — exported for testing */
-async function migrateAction(options: {
-  config?: string;
-  yes?: boolean;
-  push?: boolean;
-}) {
+async function migrateAction(options: { config?: string; yes?: boolean; push?: boolean }) {
   console.log(pc.bold('\n🗄️  Invect Migration\n'));
 
   // ─── Step 1: Find and load config ───────────────────────────────
@@ -74,9 +70,7 @@ async function migrateAction(options: {
     console.error(
       pc.red('✗ No database.type found in your config.') +
         '\n' +
-        pc.dim(
-          '  Expected: database: { type: "sqlite" | "postgresql" | "mysql", ... }',
-        ) +
+        pc.dim('  Expected: database: { type: "sqlite" | "postgresql" | "mysql", ... }') +
         '\n',
     );
     process.exit(1);
@@ -89,7 +83,11 @@ async function migrateAction(options: {
   }
 
   const mode = options.push ? 'push' : 'migrate';
-  console.log(pc.dim(`  Mode: ${mode === 'push' ? 'push (direct schema sync)' : 'migrate (SQL migration files)'}`));
+  console.log(
+    pc.dim(
+      `  Mode: ${mode === 'push' ? 'push (direct schema sync)' : 'migrate (SQL migration files)'}`,
+    ),
+  );
 
   // ─── Step 2: Confirm ───────────────────────────────────────────
   if (!options.yes) {
@@ -98,12 +96,15 @@ async function migrateAction(options: {
         ? `Push schema directly to your ${dbType} database?`
         : `Apply pending migrations to your ${dbType} database?`;
 
-    const response = await prompts({
-      type: 'confirm',
-      name: 'proceed',
-      message,
-      initial: true,
-    }, { onCancel });
+    const response = await prompts(
+      {
+        type: 'confirm',
+        name: 'proceed',
+        message,
+        initial: true,
+      },
+      { onCancel },
+    );
 
     if (!response.proceed) {
       console.log(pc.dim('\n  Cancelled.\n'));
@@ -146,9 +147,7 @@ async function migrateAction(options: {
       );
     } else {
       console.error(
-        pc.dim('  You can retry manually: ') +
-          pc.cyan(`npx drizzle-kit ${mode}`) +
-          '\n',
+        pc.dim('  You can retry manually: ') + pc.cyan(`npx drizzle-kit ${mode}`) + '\n',
       );
     }
 
@@ -177,10 +176,20 @@ function drizzleKitEnv(): NodeJS.ProcessEnv {
  * prompt being declined (e.g. drizzle-kit "No, abort").
  */
 function wasAbortedByUser(error: unknown): boolean {
-  const e = error as { signal?: string; status?: number | null; stderr?: string; stdout?: string; message?: string };
-  if (e.signal === 'SIGINT' || e.signal === 'SIGTERM') return true;
+  const e = error as {
+    signal?: string;
+    status?: number | null;
+    stderr?: string;
+    stdout?: string;
+    message?: string;
+  };
+  if (e.signal === 'SIGINT' || e.signal === 'SIGTERM') {
+    return true;
+  }
   const combined = [e.stdout || '', e.stderr || '', e.message || ''].join('\n');
-  if (/abort|cancell?ed|user\s+reject/i.test(combined)) return true;
+  if (/abort|cancell?ed|user\s+reject/i.test(combined)) {
+    return true;
+  }
   return false;
 }
 

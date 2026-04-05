@@ -232,7 +232,9 @@ export const useNodeConfigPanelStore = create<NodeConfigPanelStore>((set, get) =
     if (result.traces && Array.isArray(result.traces)) {
       for (const trace of result.traces) {
         const traceNodeId = trace.nodeId;
-        if (!traceNodeId) continue;
+        if (!traceNodeId) {
+          continue;
+        }
 
         const traceInputs = trace.inputs;
         const traceOutput = extractOutputValue(trace.outputs);

@@ -24,7 +24,9 @@ describe('Template Resolution', () => {
 
   function getNodeOutput(result: { outputs?: Record<string, unknown> }, nodeId: string) {
     const node = result.outputs?.[nodeId] as NodeOutput | undefined;
-    if (!node) return undefined;
+    if (!node) {
+      return undefined;
+    }
     const vars = node.data.variables as Record<string, { value?: unknown }>;
     const raw = vars.output?.value;
     if (typeof raw === 'string') {

@@ -16,6 +16,17 @@
  * ```
  */
 
-export { adapters, generateSchema, generateDrizzleSchema, generateAllDrizzleSchemas, generateAppendSchema, generatePrismaSchema } from './generators/index.js';
+export {
+  adapters,
+  generateSchema,
+  generateDrizzleSchema,
+  generateAllDrizzleSchemas,
+  generateAppendSchema,
+  generatePrismaSchema,
+} from './generators/index.js';
 export type { PrismaSchemaGeneratorOptions } from './generators/prisma.js';
-export type { SchemaGenerator, SchemaGeneratorResult, SchemaGeneratorOptions } from './generators/types.js';
+export type {
+  SchemaGenerator,
+  SchemaGeneratorResult,
+  SchemaGeneratorOptions,
+} from './generators/types.js';

@@ -52,9 +52,7 @@ function createMockLogger() {
  * Create a mock SQLite database connection that returns the given
  * tables and columns from introspection queries.
  */
-function createMockSqliteConnection(
-  schema: Record<string, string[]>,
-): DatabaseConnection {
+function createMockSqliteConnection(schema: Record<string, string[]>): DatabaseConnection {
   return {
     type: 'sqlite',
     db: {} as unknown,
@@ -126,10 +124,7 @@ describe('Schema Verification', () => {
       expect(result.missingTables).toEqual([]);
       expect(result.missingColumns).toEqual([]);
       expect(result.verifiedTables.length).toBeGreaterThan(0);
-      expect(logger.info).toHaveBeenCalledWith(
-        'Schema verification passed',
-        expect.any(Object),
-      );
+      expect(logger.info).toHaveBeenCalledWith('Schema verification passed', expect.any(Object));
     });
   });
 
@@ -167,9 +162,7 @@ describe('Schema Verification', () => {
       const logger = createMockLogger();
       const schema = buildCompleteCoreSchema();
       // Remove a column from the flows table
-      schema[TABLE_NAMES.flows] = schema[TABLE_NAMES.flows].filter(
-        (col) => col !== 'description',
-      );
+      schema[TABLE_NAMES.flows] = schema[TABLE_NAMES.flows].filter((col) => col !== 'description');
       const connection = createMockSqliteConnection(schema);
 
       const result = await verifySchema(connection, logger);
@@ -206,9 +199,9 @@ describe('Schema Verification', () => {
       const logger = createMockLogger();
       const connection = createMockSqliteConnection({});
 
-      await expect(
-        verifySchema(connection, logger, { strict: true }),
-      ).rejects.toThrow('Schema verification failed');
+      await expect(verifySchema(connection, logger, { strict: true })).rejects.toThrow(
+        'Schema verification failed',
+      );
     });
 
     it('should not throw in non-strict mode (default)', async () => {

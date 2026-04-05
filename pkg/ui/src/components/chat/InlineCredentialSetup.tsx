@@ -49,7 +49,9 @@ function getDefaultName(provider: LlmProvider): string {
 }
 
 function getBaseUrl(provider: LlmProvider): string | undefined {
-  if (provider === 'openrouter') return 'https://openrouter.ai/api/v1';
+  if (provider === 'openrouter') {
+    return 'https://openrouter.ai/api/v1';
+  }
   return undefined;
 }
 
@@ -161,7 +163,9 @@ function CreateCredentialForm({ onBack }: { onBack?: () => void }) {
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!canSubmit) return;
+      if (!canSubmit) {
+        return;
+      }
 
       setErrorMsg('');
       setFormState('creating');
@@ -246,7 +250,9 @@ function CreateCredentialForm({ onBack }: { onBack?: () => void }) {
           value={provider}
           onValueChange={(v) => {
             setProvider(v as LlmProvider);
-            if (!name.trim()) setName('');
+            if (!name.trim()) {
+              setName('');
+            }
           }}
         >
           <SelectTrigger className="h-8 text-xs">

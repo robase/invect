@@ -81,13 +81,10 @@ describe('JsExpressionService', () => {
     });
 
     it('zip two arrays', () => {
-      const result = service.evaluate(
-        'users.map((u, i) => ({ ...u, score: scores[i] }))',
-        {
-          users: [{ name: 'alice' }, { name: 'bob' }],
-          scores: [95, 87],
-        },
-      );
+      const result = service.evaluate('users.map((u, i) => ({ ...u, score: scores[i] }))', {
+        users: [{ name: 'alice' }, { name: 'bob' }],
+        scores: [95, 87],
+      });
       expect(result).toEqual([
         { name: 'alice', score: 95 },
         { name: 'bob', score: 87 },
@@ -291,10 +288,7 @@ describe('JsExpressionService', () => {
 
     it('auto-return does not trigger on "return" inside a string', () => {
       // The word "return" appears in the string, but not as a keyword
-      const result = service.evaluate(
-        `const msg = "please return the item"; return msg;`,
-        {},
-      );
+      const result = service.evaluate(`const msg = "please return the item"; return msg;`, {});
       expect(result).toBe('please return the item');
     });
 

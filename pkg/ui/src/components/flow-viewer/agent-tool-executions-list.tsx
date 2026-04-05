@@ -14,8 +14,12 @@ interface AgentToolExecutionsListProps {
 }
 
 const formatDuration = (ms?: number) => {
-  if (ms === undefined) return '—';
-  if (ms < 1000) return `${ms}ms`;
+  if (ms === undefined) {
+    return '—';
+  }
+  if (ms < 1000) {
+    return `${ms}ms`;
+  }
   return `${(ms / 1000).toFixed(1)}s`;
 };
 

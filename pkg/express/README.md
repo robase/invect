@@ -37,12 +37,15 @@ import { createInvectRouter } from '@invect/express';
 
 const app = express();
 
-app.use('/invect', createInvectRouter({
-  database: {
-    type: 'sqlite',
-    connectionString: 'file:./dev.db',
-  },
-}));
+app.use(
+  '/invect',
+  createInvectRouter({
+    database: {
+      type: 'sqlite',
+      connectionString: 'file:./dev.db',
+    },
+  }),
+);
 
 app.listen(3000);
 ```
@@ -55,10 +58,13 @@ That's it. The router handles initialization, batch polling, and all API routes.
 import { userAuth } from '@invect/user-auth';
 import { rbacPlugin } from '@invect/rbac';
 
-app.use('/invect', createInvectRouter({
-  database: { type: 'sqlite', connectionString: 'file:./dev.db' },
-  plugins: [userAuth({ auth }), rbacPlugin()],
-}));
+app.use(
+  '/invect',
+  createInvectRouter({
+    database: { type: 'sqlite', connectionString: 'file:./dev.db' },
+    plugins: [userAuth({ auth }), rbacPlugin()],
+  }),
+);
 ```
 
 ## Frontend
@@ -69,7 +75,7 @@ Pair with [`@invect/ui`](../ui) for the visual flow editor:
 import { Invect } from '@invect/ui';
 import '@invect/ui/styles';
 
-<Invect apiBaseUrl="http://localhost:3000/invect" />
+<Invect apiBaseUrl="http://localhost:3000/invect" />;
 ```
 
 ## License

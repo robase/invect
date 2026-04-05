@@ -40,7 +40,7 @@ Add a Gmail node that sends a daily digest to admin@example.com
 
 Connect the HTTP request node to the JQ transformation and then to the output
 
-Set the model on the AI node to claude-3-5-haiku and give it the prompt: 
+Set the model on the AI node to claude-3-5-haiku and give it the prompt:
 "Summarize the following: {{ fetch_article.body }}"
 
 Build a flow that fetches GitHub issues labeled 'urgent' and posts each one to Slack

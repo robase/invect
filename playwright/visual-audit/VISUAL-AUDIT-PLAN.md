@@ -66,6 +66,7 @@ The analysis is **programmatic and batched** — all screenshots go through in a
 ### Two-stage pipeline (capture → analyze)
 
 Separating capture from analysis means you can:
+
 - Re-run analysis with a different prompt without re-capturing
 - Share screenshots with others who don't have API keys
 - Iterate on the analysis prompt quickly
@@ -79,11 +80,11 @@ Separating capture from analysis means you can:
 
 Before capturing, the script seeds the isolated database with:
 
-| Flow | Nodes | Purpose |
-|------|-------|---------|
-| **Data Pipeline** | Input → JQ → Output (3 nodes) | Standard flow, config panels |
-| **AI Assistant** | Input → Model → Agent → Output (4 nodes) | Agent node, tool selector |
-| **Simple Template** | Input → Template String (2 nodes) | Minimal flow |
+| Flow                | Nodes                                    | Purpose                      |
+| ------------------- | ---------------------------------------- | ---------------------------- |
+| **Data Pipeline**   | Input → JQ → Output (3 nodes)            | Standard flow, config panels |
+| **AI Assistant**    | Input → Model → Agent → Output (4 nodes) | Agent node, tool selector    |
+| **Simple Template** | Input → Template String (2 nodes)        | Minimal flow                 |
 
 ### UI States Captured
 
@@ -91,38 +92,38 @@ Each state gets a **full viewport** screenshot (1280×720). Modals and panels al
 
 #### Pages & Navigation
 
-| # | State | Actions | Tags |
-|---|-------|---------|------|
-| 01 | Dashboard — sidebar collapsed | Navigate to `/invect` | `page`, `dashboard`, `navigation` |
-| 02 | Dashboard — sidebar expanded | Click sidebar toggle | `page`, `dashboard`, `navigation` |
-| 03 | Executions page | Navigate via sidebar link | `page`, `executions` |
-| 04 | Credentials page | Navigate via sidebar link | `page`, `credentials` |
+| #   | State                         | Actions                   | Tags                              |
+| --- | ----------------------------- | ------------------------- | --------------------------------- |
+| 01  | Dashboard — sidebar collapsed | Navigate to `/invect`     | `page`, `dashboard`, `navigation` |
+| 02  | Dashboard — sidebar expanded  | Click sidebar toggle      | `page`, `dashboard`, `navigation` |
+| 03  | Executions page               | Navigate via sidebar link | `page`, `executions`              |
+| 04  | Credentials page              | Navigate via sidebar link | `page`, `credentials`             |
 
 #### Modals & Overlays
 
-| # | State | Actions | Tags |
-|---|-------|---------|------|
-| 05 | Add Flow modal | Click "+ New Flow" on dashboard | `modal`, `dashboard`, `flow-creation` |
-| 06 | Add Credential modal | Click "+ Add" on credentials page | `modal`, `credentials` |
+| #   | State                | Actions                           | Tags                                  |
+| --- | -------------------- | --------------------------------- | ------------------------------------- |
+| 05  | Add Flow modal       | Click "+ New Flow" on dashboard   | `modal`, `dashboard`, `flow-creation` |
+| 06  | Add Credential modal | Click "+ Add" on credentials page | `modal`, `credentials`                |
 
 #### Flow Editor
 
-| # | State | Actions | Tags |
-|---|-------|---------|------|
-| 07 | Editor canvas — Data Pipeline flow | Navigate to seeded flow | `editor`, `canvas`, `nodes` |
-| 08 | Node selected | Click on JQ node | `editor`, `node-selection` |
-| 09 | Input node config panel | Double-click Input node | `editor`, `config-panel`, `input-node` |
-| 10 | JQ node config panel | Double-click JQ node | `editor`, `config-panel`, `jq-node` |
-| 11 | Agent node config panel | Double-click Agent node | `editor`, `config-panel`, `agent-node` |
-| 12 | Tool selector modal | Open from agent config panel | `editor`, `modal`, `agent-tools` |
-| 13 | Editor toolbar / header | (same view, crop the header) | `editor`, `toolbar` |
+| #   | State                              | Actions                      | Tags                                   |
+| --- | ---------------------------------- | ---------------------------- | -------------------------------------- |
+| 07  | Editor canvas — Data Pipeline flow | Navigate to seeded flow      | `editor`, `canvas`, `nodes`            |
+| 08  | Node selected                      | Click on JQ node             | `editor`, `node-selection`             |
+| 09  | Input node config panel            | Double-click Input node      | `editor`, `config-panel`, `input-node` |
+| 10  | JQ node config panel               | Double-click JQ node         | `editor`, `config-panel`, `jq-node`    |
+| 11  | Agent node config panel            | Double-click Agent node      | `editor`, `config-panel`, `agent-node` |
+| 12  | Tool selector modal                | Open from agent config panel | `editor`, `modal`, `agent-tools`       |
+| 13  | Editor toolbar / header            | (same view, crop the header) | `editor`, `toolbar`                    |
 
 #### Theme
 
-| # | State | Actions | Tags |
-|---|-------|---------|------|
-| 14 | Dashboard — dark mode | Toggle theme | `dark-mode`, `dashboard` |
-| 15 | Editor canvas — dark mode | Toggle theme on editor | `dark-mode`, `editor` |
+| #   | State                     | Actions                | Tags                     |
+| --- | ------------------------- | ---------------------- | ------------------------ |
+| 14  | Dashboard — dark mode     | Toggle theme           | `dark-mode`, `dashboard` |
+| 15  | Editor canvas — dark mode | Toggle theme on editor | `dark-mode`, `editor`    |
 
 This audit is intentionally desktop-only. Capture targets should reflect the primary product surface: the full desktop workflow editor and supporting admin screens.
 
@@ -232,27 +233,33 @@ Now synthesize:
 
 ```markdown
 # Invect UI Visual Audit Report
+
 > Generated: 2025-03-14T19:00:00Z | Model: claude-sonnet-4-20250514 | Screenshots: 18
 
 ## Summary
+
 [Overall score, key strengths, top 3 issues]
 
 ## Priority Changes
+
 [Ranked top 10 list from synthesis]
 
 ## Per-Screen Analysis
 
 ### 01 — Dashboard (sidebar collapsed)
+
 ![](screenshots/01-dashboard-collapsed.png)
 [AI findings for this screen]
 
 ### 02 — Dashboard (sidebar expanded)
+
 ![](screenshots/02-dashboard-expanded.png)
 [AI findings for this screen]
 
 ... (all 18 screens)
 
 ## Recurring Patterns
+
 [Cross-screen synthesis]
 ```
 

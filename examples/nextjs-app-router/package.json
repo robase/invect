@@ -7,15 +7,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "format": "prettier --write \"**/*.{ts,tsx}\"",
+    "format": "oxfmt",
     "typecheck": "tsc --noEmit",
-    "lint": "pnpm --dir ../.. exec eslint examples/nextjs-app-router/app --config examples/nextjs-app-router/eslint.config.mjs",
+    "lint": "oxlint --fix",
     "test": "echo \"No tests configured\""
   },
   "dependencies": {
     "@invect/core": "workspace:*",
-    "@invect/ui": "workspace:*",
     "@invect/nextjs": "workspace:*",
+    "@invect/ui": "workspace:*",
     "@tailwindcss/postcss": "^4.1.12",
     "autoprefixer": "^10.4.21",
     "next": "^15.4.6",
@@ -27,8 +27,6 @@
     "@types/node": "^20",
     "@types/react": "^18.3.7",
     "@types/react-dom": "^18.3.7",
-    "eslint": "^8",
-    "eslint-config-next": "14.2.5",
     "ignore-loader": "^0.1.2",
     "typescript": "^5"
   }

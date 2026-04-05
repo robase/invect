@@ -133,9 +133,13 @@ export const getNodeIconName = (type: NodeType, icon?: string): string => {
       MessagesSquare: 'MessagesSquare', // Already a Lucide icon
       // Add more mappings as identified from Invect's usage
     };
-    if (langflowIconMap[icon]) return langflowIconMap[icon];
+    if (langflowIconMap[icon]) {
+      return langflowIconMap[icon];
+    }
     // A simple check; ideally, we'd validate against all Lucide names
-    if (icon.match(/^[A-Z][a-zA-Z0-9]+$/)) return icon;
+    if (icon.match(/^[A-Z][a-zA-Z0-9]+$/)) {
+      return icon;
+    }
   }
 
   switch (type) {
@@ -303,7 +307,9 @@ export const getNodeStatusStyles = (status: NodeStatus | undefined, baseBorderCo
 
 // Truncate text with ellipsis
 export const truncateText = (text: string, maxLength: number): string => {
-  if (text.length <= maxLength) return text;
+  if (text.length <= maxLength) {
+    return text;
+  }
   return text.slice(0, maxLength) + '...';
 };
 

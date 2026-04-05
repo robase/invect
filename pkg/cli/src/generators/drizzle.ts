@@ -16,18 +16,10 @@
 import { existsSync, readFileSync } from 'node:fs';
 import type { SchemaGenerator, SchemaGeneratorResult } from './types.js';
 
-export const generateDrizzleSchema: SchemaGenerator = async ({
-  plugins,
-  file,
-  dialect,
-}) => {
+export const generateDrizzleSchema: SchemaGenerator = async ({ plugins, file, dialect }) => {
   // Dynamically import @invect/core to avoid bundling it
-  const {
-    mergeSchemas,
-    generateSqliteSchema,
-    generatePostgresSchema,
-    generateMysqlSchema,
-  } = await import('@invect/core');
+  const { mergeSchemas, generateSqliteSchema, generatePostgresSchema, generateMysqlSchema } =
+    await import('@invect/core');
 
   // Merge core + plugin schemas
   const mergedSchema = mergeSchemas(plugins as any);
@@ -41,9 +33,7 @@ export const generateDrizzleSchema: SchemaGenerator = async ({
 
   const generator = generators[dialect];
   if (!generator) {
-    throw new Error(
-      `Unsupported dialect "${dialect}". Expected one of: sqlite, postgresql, mysql`,
-    );
+    throw new Error(`Unsupported dialect "${dialect}". Expected one of: sqlite, postgresql, mysql`);
   }
 
   const code = generator(mergedSchema);
@@ -81,22 +71,14 @@ export async function generateAllDrizzleSchemas(options: {
     pluginsWithSchema: number;
   };
 }> {
-  const {
-    mergeSchemas,
-    CORE_SCHEMA,
-  } = await import('@invect/core');
+  const { mergeSchemas, CORE_SCHEMA } = await import('@invect/core');
 
   const mergedSchema = mergeSchemas(options.plugins as any);
   const coreTableCount = Object.keys(CORE_SCHEMA).length;
-  const pluginsWithSchema = (options.plugins as any[]).filter(
-    (p: any) => p.schema,
-  ).length;
+  const pluginsWithSchema = (options.plugins as any[]).filter((p: any) => p.schema).length;
 
-  const {
-    generateSqliteSchema,
-    generatePostgresSchema,
-    generateMysqlSchema,
-  } = await import('@invect/core');
+  const { generateSqliteSchema, generatePostgresSchema, generateMysqlSchema } =
+    await import('@invect/core');
 
   const dir = options.outputDir || './db';
 
@@ -176,7 +158,10 @@ export async function generateAppendSchema(options: {
   const mergedSchema = mergeSchemas(options.plugins as any);
   const coreTableCount = Object.keys(CORE_SCHEMA).length;
 
-  const generators: Record<string, (schema: typeof mergedSchema) => { imports: string[]; code: string }> = {
+  const generators: Record<
+    string,
+    (schema: typeof mergedSchema) => { imports: string[]; code: string }
+  > = {
     sqlite: generateSqliteSchemaAppend,
     postgresql: generatePostgresSchemaAppend,
     mysql: generateMysqlSchemaAppend,

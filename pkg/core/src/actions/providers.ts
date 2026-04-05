@@ -172,3 +172,23 @@ export const HUBSPOT_PROVIDER: ProviderDef = {
   description: 'HubSpot CRM — contacts, companies, deals, and tickets',
   docsUrl: 'https://developers.hubspot.com/docs/api/overview',
 };
+
+export const JIRA_PROVIDER: ProviderDef = {
+  id: 'jira',
+  name: 'Jira',
+  icon: 'Bug',
+  category: 'development',
+  nodeCategory: 'Integrations',
+  description: 'Jira issue tracking and project management',
+  docsUrl: 'https://developer.atlassian.com/cloud/jira/platform/rest/v3/intro/',
+};
+
+export const ASANA_PROVIDER: ProviderDef = {
+  id: 'asana',
+  name: 'Asana',
+  icon: 'CheckSquare',
+  category: 'development',
+  nodeCategory: 'Integrations',
+  description: 'Asana task and project management',
+  docsUrl: 'https://developers.asana.com/reference/rest-api-reference',
+};

@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2023",
-    "lib": [
-      "ES2023",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
     "incremental": true,
@@ -24,20 +20,12 @@
     "rootDir": "./src",
     "baseUrl": ".",
     "paths": {
-      "~/*": [
-        "./src/*"
-      ],
+      "~/*": ["./src/*"],
       "@invect/types": ["../types/dist/index.d.ts"]
     }
   },
-  "include": [
-    "src/**/*"
-, "src/.ui-v3"  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "src/ui-v3/**"
-  ],
+  "include": ["src/**/*", "src/.ui-v3"],
+  "exclude": ["node_modules", "dist", "src/ui-v3/**"],
   "watchOptions": {
     "watchFile": "useFsEvents",
     "watchDirectory": "useFsEvents",

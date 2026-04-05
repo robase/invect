@@ -2,58 +2,31 @@
   "name": "@invect/express",
   "version": "0.0.1",
   "description": "Express.js integration package for Invect Core",
-  "main": "dist/index.cjs",
-  "module": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "type": "module",
+  "keywords": [
+    "api",
+    "automation",
+    "express",
+    "invect",
+    "workflow"
+  ],
+  "homepage": "https://invect.dev",
+  "bugs": {
+    "url": "https://github.com/robase/invect/issues"
+  },
+  "license": "MIT",
+  "author": "robase <team@invect.dev>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/robase/invect.git",
+    "directory": "pkg/express"
+  },
   "files": [
     "dist/**/*"
   ],
-  "scripts": {
-    "build": "tsdown",
-    "build:w": "tsdown --watch",
-    "dev": "tsdown --watch",
-    "clean": "rm -rf dist",
-    "format": "prettier --write \"src/**/*.ts\"",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint src",
-    "lint:fix": "eslint src --fix",
-    "test": "echo \"No tests configured\"",
-    "test:watch": "echo \"No tests configured\"",
-    "test:coverage": "echo \"No tests configured\""
-  },
-  "keywords": [
-    "invect",
-    "express",
-    "workflow",
-    "automation",
-    "api"
-  ],
-  "author": "robase <team@invect.dev>",
-  "license": "MIT",
-  "dependencies": {
-    "@invect/core": "workspace:*",
-    "express": "^4.19.2",
-    "cors": "^2.8.5"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.31.0",
-    "@types/express": "^4.17.21",
-    "@types/cors": "^2.8.17",
-    "@types/node": "^20.11.20",
-    "eslint": "^9.31.0",
-    "globals": "^16.3.0",
-    "prettier": "^3.6.2",
-    "tsdown": "^0.21.1",
-    "typescript": "^5.3.3",
-    "typescript-eslint": "^8.36.0",
-    "vitest": "^1.2.2",
-    "supertest": "^6.3.4",
-    "@types/supertest": "^6.0.2"
-  },
-  "peerDependencies": {
-    "express": "^4.18.0"
-  },
+  "type": "module",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -71,16 +44,37 @@
       "require": "./dist/middleware/index.cjs"
     }
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/robase/invect.git",
-    "directory": "pkg/express"
-  },
-  "bugs": {
-    "url": "https://github.com/robase/invect/issues"
-  },
-  "homepage": "https://invect.dev",
   "publishConfig": {
     "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "build:w": "tsdown --watch",
+    "dev": "tsdown --watch",
+    "clean": "rm -rf dist",
+    "format": "oxfmt",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint --fix",
+    "test": "echo \"No tests configured\"",
+    "test:watch": "echo \"No tests configured\"",
+    "test:coverage": "echo \"No tests configured\""
+  },
+  "dependencies": {
+    "@invect/core": "workspace:*",
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.11.20",
+    "@types/supertest": "^6.0.2",
+    "supertest": "^6.3.4",
+    "tsdown": "^0.21.1",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.2"
+  },
+  "peerDependencies": {
+    "express": "^4.18.0"
   }
 }

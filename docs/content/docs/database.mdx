@@ -76,16 +76,16 @@ npx drizzle-kit push      # push schema to the database
 
 ## Schema Overview
 
-| Table | Description |
-|-------|-------------|
-| `flows` | Flow definitions with name, description, and metadata |
-| `flow_versions` | Versioned flow definitions (nodes, edges, parameters) |
+| Table             | Description                                            |
+| ----------------- | ------------------------------------------------------ |
+| `flows`           | Flow definitions with name, description, and metadata  |
+| `flow_versions`   | Versioned flow definitions (nodes, edges, parameters)  |
 | `flow_executions` | Execution records with status, inputs, outputs, timing |
-| `action_traces` | Per-node execution traces with inputs, outputs, errors |
-| `credentials` | Encrypted credential storage (API keys, OAuth2 tokens) |
-| `batch_jobs` | Batch processing job tracking for OpenAI/Anthropic |
-| `flow_triggers` | Webhook and cron trigger configuration |
-| `chat_messages` | Chat message history for conversational flows |
+| `action_traces`   | Per-node execution traces with inputs, outputs, errors |
+| `credentials`     | Encrypted credential storage (API keys, OAuth2 tokens) |
+| `batch_jobs`      | Batch processing job tracking for OpenAI/Anthropic     |
+| `flow_triggers`   | Webhook and cron trigger configuration                 |
+| `chat_messages`   | Chat message history for conversational flows          |
 
 Plugins can add their own tables or extend existing ones. Run `npx invect-cli generate` after adding a plugin to include its tables in the schema.
 
@@ -95,10 +95,13 @@ Invect creates its own tables and doesn't interfere with your existing schema. Y
 
 ```ts
 // Same database as your app
-app.use('/invect', createInvectRouter({
-  database: {
-    type: 'postgresql',
-    connectionString: process.env.DATABASE_URL!, // Your existing DB
-  },
-}));
+app.use(
+  '/invect',
+  createInvectRouter({
+    database: {
+      type: 'postgresql',
+      connectionString: process.env.DATABASE_URL!, // Your existing DB
+    },
+  }),
+);
 ```

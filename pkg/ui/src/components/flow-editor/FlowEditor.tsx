@@ -280,7 +280,9 @@ export function FlowWorkbenchView({
 
   // Transform API response to ToolDefinition format
   const availableTools: ToolDefinition[] = useMemo(() => {
-    if (!agentToolsData) return [];
+    if (!agentToolsData) {
+      return [];
+    }
     return agentToolsData
       .filter((tool) => tool.provider?.id !== 'triggers' && !tool.id.startsWith('trigger.'))
       .map((tool) => ({
@@ -515,20 +517,28 @@ export function FlowWorkbenchView({
   // Reads nodes via getState() at call-time — stable callback, no storeNodes dependency
   const getAddedToolsForNode = useCallback((nodeId: string): AddedToolInstance[] => {
     const node = useFlowEditorStore.getState().nodes.find((n) => n.id === nodeId);
-    if (!node) return [];
+    if (!node) {
+      return [];
+    }
     const params = (node.data as Record<string, unknown>)?.params as Record<string, unknown>;
     return (params?.addedTools as AddedToolInstance[]) || [];
   }, []);
 
   const handleAddToolToNode = useCallback(
     (toolId: string): string => {
-      if (!toolPanelNodeId) return '';
+      if (!toolPanelNodeId) {
+        return '';
+      }
       const node = useFlowEditorStore.getState().nodes.find((n) => n.id === toolPanelNodeId);
-      if (!node) return '';
+      if (!node) {
+        return '';
+      }
 
       // Find the tool definition to get default name/description
       const toolDef = availableTools.find((t) => t.id === toolId);
-      if (!toolDef) return '';
+      if (!toolDef) {
+        return '';
+      }
 
       // Create a new tool instance with unique ID
       const instanceId = nanoid();
@@ -555,9 +565,13 @@ export function FlowWorkbenchView({
 
   const handleRemoveToolFromNode = useCallback(
     (instanceId: string) => {
-      if (!toolPanelNodeId) return;
+      if (!toolPanelNodeId) {
+        return;
+      }
       const node = useFlowEditorStore.getState().nodes.find((n) => n.id === toolPanelNodeId);
-      if (!node) return;
+      if (!node) {
+        return;
+      }
 
       const currentTools = getAddedToolsForNode(toolPanelNodeId);
       updateNodeData(toolPanelNodeId, {
@@ -577,9 +591,13 @@ export function FlowWorkbenchView({
 
   const handleUpdateToolInNode = useCallback(
     (instanceId: string, updates: Partial<Omit<AddedToolInstance, 'instanceId' | 'toolId'>>) => {
-      if (!toolPanelNodeId) return;
+      if (!toolPanelNodeId) {
+        return;
+      }
       const node = useFlowEditorStore.getState().nodes.find((n) => n.id === toolPanelNodeId);
-      if (!node) return;
+      if (!node) {
+        return;
+      }
 
       const currentTools = getAddedToolsForNode(toolPanelNodeId);
       updateNodeData(toolPanelNodeId, {
@@ -598,13 +616,15 @@ export function FlowWorkbenchView({
   const handleRemoveToolFromSpecificNode = useCallback(
     (nodeId: string, instanceId: string) => {
       const node = useFlowEditorStore.getState().nodes.find((n) => n.id === nodeId);
-      if (!node) return;
+      if (!node) {
+        return;
+      }
 
       const params = (node.data as Record<string, unknown>)?.params as Record<string, unknown>;
       const currentTools = (params?.addedTools as AddedToolInstance[]) || [];
       updateNodeData(nodeId, {
         params: {
-          ...(params || {}),
+          ...params,
           addedTools: currentTools.filter((t) => t.instanceId !== instanceId),
         },
       });
@@ -675,7 +695,7 @@ export function FlowWorkbenchView({
       );
 
       const defaultParams = {
-        ...(definition?.defaultParams || {}),
+        ...definition?.defaultParams,
         ...fieldDefaults,
       };
 
@@ -740,7 +760,9 @@ export function FlowWorkbenchView({
   // IMPORTANT: useMemo to avoid creating a new [] reference every render,
   // which would cascade into the onSidebarRender effect → setSidebarElement → re-render loop.
   const currentNodeAddedTools = useMemo(() => {
-    if (!toolPanelNodeId) return EMPTY_TOOLS;
+    if (!toolPanelNodeId) {
+      return EMPTY_TOOLS;
+    }
     return getAddedToolsForNode(toolPanelNodeId);
   }, [toolPanelNodeId, getAddedToolsForNode, storeNodes]);
   const selectedToolInstance = selectedToolInstanceId

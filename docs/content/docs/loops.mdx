@@ -51,13 +51,13 @@ The default item variable name is `item` if `itemAs` is not set.
 
 Each iteration also exposes a `_loop` context object in templates:
 
-| Variable | Description |
-|----------|-------------|
-| `_loop.index` | 0-based index |
-| `_loop.iteration` | 1-based iteration number |
-| `_loop.first` | `true` on the first iteration |
-| `_loop.last` | `true` on the last iteration |
-| `_loop.total` | Total number of items |
+| Variable          | Description                   |
+| ----------------- | ----------------------------- |
+| `_loop.index`     | 0-based index                 |
+| `_loop.iteration` | 1-based iteration number      |
+| `_loop.first`     | `true` on the first iteration |
+| `_loop.last`      | `true` on the last iteration  |
+| `_loop.total`     | Total number of items         |
 
 ```
 Processing {{ _loop.iteration }} of {{ _loop.total }}: {{ user.name }}
@@ -67,12 +67,12 @@ Processing {{ _loop.iteration }} of {{ _loop.total }}: {{ user.name }}
 
 Control how the results from all iterations are packaged:
 
-| Mode | Output |
-|------|--------|
-| `array` | Array of each iteration's output (default) |
-| `first` | Only the first iteration's output |
-| `last` | Only the last iteration's output |
-| `concat` | Concatenate string outputs into a single string |
+| Mode     | Output                                               |
+| -------- | ---------------------------------------------------- |
+| `array`  | Array of each iteration's output (default)           |
+| `first`  | Only the first iteration's output                    |
+| `last`   | Only the last iteration's output                     |
+| `concat` | Concatenate string outputs into a single string      |
 | `object` | Object keyed by a field from each iteration's output |
 
 ### `object` mode
@@ -107,10 +107,10 @@ Maximum concurrency is 50. Use parallel execution carefully with external APIs t
 
 Control what happens when `loopOver` resolves to an empty array or a non-array value:
 
-| Setting | Behaviour |
-|---------|-----------|
-| `error` | Fail the node with an error (default) |
-| `skip` | Skip execution, output empty array |
+| Setting  | Behaviour                                      |
+| -------- | ---------------------------------------------- |
+| `error`  | Fail the node with an error (default)          |
+| `skip`   | Skip execution, output empty array             |
 | `single` | Treat a non-array value as a single-item array |
 
 ## Example

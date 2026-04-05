@@ -31,7 +31,11 @@ export function Mermaid({ chart }: MermaidProps) {
       } catch (renderError) {
         if (!cancelled) {
           setSvg('');
-          setError(renderError instanceof Error ? renderError.message : 'Failed to render Mermaid diagram.');
+          setError(
+            renderError instanceof Error
+              ? renderError.message
+              : 'Failed to render Mermaid diagram.',
+          );
         }
       }
     }

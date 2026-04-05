@@ -9,180 +9,272 @@ export default function LandingPage() {
 
   useEffect(() => {
     let cleanup: (() => void) | undefined;
-    import('three').then((THREE) => {
-      const canvas = canvasRef.current;
-      const wrap = wrapRef.current;
-      if (!canvas || !wrap) return;
-
-      const scene = new THREE.Scene();
-      const frustum = 7;
-      let W = wrap.clientWidth;
-      let H = wrap.clientHeight;
-      let aspect = W / H;
-
-      const camera = new THREE.OrthographicCamera(
-        -frustum * aspect, frustum * aspect, frustum, -frustum, 0.1, 100
-      );
-
-      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-      renderer.setSize(W, H);
-      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-      renderer.setClearColor(0x000000, 0);
-      renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.2;
-
-      // Theme detection
-      const isDark = () => document.documentElement.classList.contains('dark');
-      let dark = isDark();
-
-      // Invect palette colours
-      const LIGHT_PRIMARY = 0x5b5bd6;  // #5b5bd6
-      const DARK_PRIMARY  = 0x7b7bde;  // #7b7bde
-      const LIGHT_ACCENT  = 0x8b8be8;  // lighter indigo for fill light
-      const DARK_ACCENT   = 0x9b9bf0;  // brighter indigo for fill in dark
-
-      // Dramatic lighting — strong coloured keys, faint ambient
-      const light1 = new THREE.PointLight(dark ? DARK_PRIMARY : LIGHT_PRIMARY, 160, 40, 2);
-      const light2 = new THREE.PointLight(dark ? DARK_ACCENT : LIGHT_ACCENT, 90, 40, 2);
-      const rimLight = new THREE.PointLight(dark ? 0xc4b5fd : 0x8b8be8, 60, 40, 2);
-      const topLight = new THREE.PointLight(dark ? DARK_ACCENT : LIGHT_ACCENT, 50, 30, 2);
-      topLight.position.set(0, 12, 0);
-      const ambient = new THREE.AmbientLight(dark ? 0x2a2a4a : 0xddddf0, dark ? 0.08 : 0.18);
-      const lightRadius = 8;
-      let lightAngle = 0;
-      const lightY = 6;
-      scene.add(light1, light2, rimLight, topLight, ambient);
-
-      // Watch for theme changes
-      const themeObserver = new MutationObserver(() => {
-        const nowDark = isDark();
-        if (nowDark === dark) return;
-        dark = nowDark;
-        light1.color.setHex(dark ? DARK_PRIMARY : LIGHT_PRIMARY);
-        light2.color.setHex(dark ? DARK_ACCENT : LIGHT_ACCENT);
-        rimLight.color.setHex(dark ? 0xc4b5fd : 0x8b8be8);
-        topLight.color.setHex(dark ? DARK_ACCENT : LIGHT_ACCENT);
-        ambient.color.setHex(dark ? 0x2a2a4a : 0xddddf0);
-        ambient.intensity = dark ? 0.08 : 0.18;
-        mat.color.setHex(dark ? 0xe8e8f8 : 0xffffff);
-        mat.roughness = dark ? 0.25 : 0.3;
-        mat.metalness = dark ? 0.1 : 0.05;
-      });
-      themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-
-      const s = 1.5, h = 6;
-      const twistAngle = -Math.PI / 4;
-
-      const bottomVertsBase: number[][] = [[-s,-h,s],[s,-h,s],[s,-h,-s],[-s,-h,-s]];
-      const topVertsBase: number[][] = [[-s,h,s],[s,h,s],[s,h,-s],[-s,h,-s]];
-
-      const topVerts = topVertsBase.map(([x,y,z]) => [
-        Math.cos(twistAngle)*x - Math.sin(twistAngle)*z, y,
-        Math.sin(twistAngle)*x + Math.cos(twistAngle)*z
-      ]);
-      const bottomVerts = bottomVertsBase.map(([x,y,z]) => [
-        Math.cos(-twistAngle)*x - Math.sin(-twistAngle)*z, y,
-        Math.sin(-twistAngle)*x + Math.cos(-twistAngle)*z
-      ]);
-
-      function buildGeometry(bv: number[][], tv: number[][], positive: boolean) {
-        const all = [...bv.map(v => new THREE.Vector3(...(v as [number,number,number]))), ...tv.map(v => new THREE.Vector3(...(v as [number,number,number])))];
-        const faces: number[][] = [[0,2,1],[0,3,2],[4,5,6],[4,6,7]];
-        const sides = [[0,1,5,4],[2,3,7,6],[1,2,6,5],[3,0,4,7]];
-        for (const [a,b,c,d] of sides) {
-          if (positive) { faces.push([a,b,d],[b,c,d]); }
-          else { faces.push([a,b,c],[a,c,d]); }
+    import('three')
+      .then((THREE) => {
+        const canvas = canvasRef.current;
+        const wrap = wrapRef.current;
+        if (!canvas || !wrap) {
+          return;
         }
-        const positions: number[] = [];
-        for (const tri of faces) { for (const idx of tri) { positions.push(all[idx].x, all[idx].y, all[idx].z); } }
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-        geo.computeVertexNormals();
-        return geo;
-      }
 
-      const mat = new THREE.MeshStandardMaterial({
-        color: dark ? 0xe8e8f8 : 0xffffff,
-        roughness: dark ? 0.25 : 0.3,
-        metalness: dark ? 0.1 : 0.05,
-        side: THREE.FrontSide,
-      });
+        const scene = new THREE.Scene();
+        const frustum = 7;
+        let W = wrap.clientWidth;
+        let H = wrap.clientHeight;
+        let aspect = W / H;
 
-      const mesh = new THREE.Mesh(buildGeometry(bottomVerts, topVerts, twistAngle >= 0), mat);
-      scene.add(mesh);
-
-      const baseDist = 12, baseRotX = Math.PI / 12, baseRotY = Math.PI / 2;
-      let mouseX = 0, mouseY = 0, scrollYVal = 0;
-      let tiltX = 0, tiltY = 0;
-      let smoothMX = 0, smoothMY = 0, smoothTX = 0, smoothTY = 0;
-      const isMobile = /Mobi|Android/i.test(navigator.userAgent);
-
-      const onMouse = (e: MouseEvent) => { mouseX = (e.clientX / window.innerWidth) * 2 - 1; mouseY = (e.clientY / window.innerHeight) * 2 - 1; };
-      const onScroll = () => { scrollYVal = window.pageYOffset || document.documentElement.scrollTop; };
-      const onOrientation = (e: DeviceOrientationEvent) => {
-        if (e.gamma !== null) tiltX = Math.max(-1, Math.min(1, e.gamma / 30));
-        if (e.beta !== null) tiltY = Math.max(-1, Math.min(1, (e.beta - 45) / 30));
-      };
-
-      if (!isMobile) window.addEventListener('mousemove', onMouse);
-      window.addEventListener('scroll', onScroll);
-      if (isMobile && window.DeviceOrientationEvent) window.addEventListener('deviceorientation', onOrientation);
-
-      function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
-
-      let rafId: number;
-      function animate(time: number) {
-        rafId = requestAnimationFrame(animate);
-        const t = time * 0.001;
-        const lerpSpeed = 0.04;
-        if (isMobile) { smoothTX = lerp(smoothTX, tiltX, lerpSpeed); smoothTY = lerp(smoothTY, tiltY, lerpSpeed); }
-        else { smoothMX = lerp(smoothMX, mouseX, lerpSpeed); smoothMY = lerp(smoothMY, mouseY, lerpSpeed); }
-
-        const idleDriftX = Math.sin(t * 0.3) * 0.04;
-        const idleDriftY = Math.cos(t * 0.2) * 0.06;
-        const inputX = isMobile ? smoothTX : smoothMX;
-        const inputY = isMobile ? smoothTY : smoothMY;
-        const scrollOffset = scrollYVal * 0.0003;
-
-        const rotX = baseRotX + inputY * 0.15 + idleDriftX + scrollOffset;
-        const rotY = baseRotY + inputX * 0.2 + idleDriftY;
-
-        camera.position.set(
-          baseDist * Math.cos(rotX) * Math.sin(rotY),
-          baseDist * Math.sin(rotX),
-          baseDist * Math.cos(rotX) * Math.cos(rotY),
+        const camera = new THREE.OrthographicCamera(
+          -frustum * aspect,
+          frustum * aspect,
+          frustum,
+          -frustum,
+          0.1,
+          100,
         );
-        camera.lookAt(0, 0, 0);
-        camera.updateMatrixWorld();
 
-        lightAngle += 0.003;
-        light1.position.set(lightRadius * Math.cos(lightAngle), lightY, lightRadius * Math.sin(lightAngle));
-        light2.position.set(lightRadius * Math.cos(lightAngle + Math.PI), lightY * 0.8, lightRadius * Math.sin(lightAngle + Math.PI));
-        rimLight.position.set(lightRadius * Math.sin(lightAngle * 0.7), -lightY * 0.6, lightRadius * Math.cos(lightAngle * 0.7));
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+        renderer.setSize(W, H);
+        renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+        renderer.setClearColor(0x000000, 0);
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
 
-        mesh.rotation.y = Math.sin(t * 0.5) * 0.2;
-        renderer.render(scene, camera);
-      }
-      animate(0);
+        // Theme detection
+        const isDark = () => document.documentElement.classList.contains('dark');
+        let dark = isDark();
 
-      const ro = new ResizeObserver(() => {
-        W = wrap.clientWidth; H = wrap.clientHeight; aspect = W / H;
-        camera.left = -frustum * aspect; camera.right = frustum * aspect;
-        camera.top = frustum; camera.bottom = -frustum;
-        camera.updateProjectionMatrix(); renderer.setSize(W, H);
-      });
-      ro.observe(wrap);
+        // Invect palette colours
+        const LIGHT_PRIMARY = 0x5b5bd6; // #5b5bd6
+        const DARK_PRIMARY = 0x7b7bde; // #7b7bde
+        const LIGHT_ACCENT = 0x8b8be8; // lighter indigo for fill light
+        const DARK_ACCENT = 0x9b9bf0; // brighter indigo for fill in dark
 
-      cleanup = () => {
-        cancelAnimationFrame(rafId);
-        ro.disconnect();
-        themeObserver.disconnect();
-        window.removeEventListener('mousemove', onMouse);
-        window.removeEventListener('scroll', onScroll);
-        window.removeEventListener('deviceorientation', onOrientation);
-        renderer.dispose();
-      };
-    }).catch(() => {});
+        // Dramatic lighting — strong coloured keys, faint ambient
+        const light1 = new THREE.PointLight(dark ? DARK_PRIMARY : LIGHT_PRIMARY, 160, 40, 2);
+        const light2 = new THREE.PointLight(dark ? DARK_ACCENT : LIGHT_ACCENT, 90, 40, 2);
+        const rimLight = new THREE.PointLight(dark ? 0xc4b5fd : 0x8b8be8, 60, 40, 2);
+        const topLight = new THREE.PointLight(dark ? DARK_ACCENT : LIGHT_ACCENT, 50, 30, 2);
+        topLight.position.set(0, 12, 0);
+        const ambient = new THREE.AmbientLight(dark ? 0x2a2a4a : 0xddddf0, dark ? 0.08 : 0.18);
+        const lightRadius = 8;
+        let lightAngle = 0;
+        const lightY = 6;
+        scene.add(light1, light2, rimLight, topLight, ambient);
+
+        // Watch for theme changes
+        const themeObserver = new MutationObserver(() => {
+          const nowDark = isDark();
+          if (nowDark === dark) {
+            return;
+          }
+          dark = nowDark;
+          light1.color.setHex(dark ? DARK_PRIMARY : LIGHT_PRIMARY);
+          light2.color.setHex(dark ? DARK_ACCENT : LIGHT_ACCENT);
+          rimLight.color.setHex(dark ? 0xc4b5fd : 0x8b8be8);
+          topLight.color.setHex(dark ? DARK_ACCENT : LIGHT_ACCENT);
+          ambient.color.setHex(dark ? 0x2a2a4a : 0xddddf0);
+          ambient.intensity = dark ? 0.08 : 0.18;
+          mat.color.setHex(dark ? 0xe8e8f8 : 0xffffff);
+          mat.roughness = dark ? 0.25 : 0.3;
+          mat.metalness = dark ? 0.1 : 0.05;
+        });
+        themeObserver.observe(document.documentElement, {
+          attributes: true,
+          attributeFilter: ['class'],
+        });
+
+        const s = 1.5,
+          h = 6;
+        const twistAngle = -Math.PI / 4;
+
+        const bottomVertsBase: number[][] = [
+          [-s, -h, s],
+          [s, -h, s],
+          [s, -h, -s],
+          [-s, -h, -s],
+        ];
+        const topVertsBase: number[][] = [
+          [-s, h, s],
+          [s, h, s],
+          [s, h, -s],
+          [-s, h, -s],
+        ];
+
+        const topVerts = topVertsBase.map(([x, y, z]) => [
+          Math.cos(twistAngle) * x - Math.sin(twistAngle) * z,
+          y,
+          Math.sin(twistAngle) * x + Math.cos(twistAngle) * z,
+        ]);
+        const bottomVerts = bottomVertsBase.map(([x, y, z]) => [
+          Math.cos(-twistAngle) * x - Math.sin(-twistAngle) * z,
+          y,
+          Math.sin(-twistAngle) * x + Math.cos(-twistAngle) * z,
+        ]);
+
+        function buildGeometry(bv: number[][], tv: number[][], positive: boolean) {
+          const all = [
+            ...bv.map((v) => new THREE.Vector3(...(v as [number, number, number]))),
+            ...tv.map((v) => new THREE.Vector3(...(v as [number, number, number]))),
+          ];
+          const faces: number[][] = [
+            [0, 2, 1],
+            [0, 3, 2],
+            [4, 5, 6],
+            [4, 6, 7],
+          ];
+          const sides = [
+            [0, 1, 5, 4],
+            [2, 3, 7, 6],
+            [1, 2, 6, 5],
+            [3, 0, 4, 7],
+          ];
+          for (const [a, b, c, d] of sides) {
+            if (positive) {
+              faces.push([a, b, d], [b, c, d]);
+            } else {
+              faces.push([a, b, c], [a, c, d]);
+            }
+          }
+          const positions: number[] = [];
+          for (const tri of faces) {
+            for (const idx of tri) {
+              positions.push(all[idx].x, all[idx].y, all[idx].z);
+            }
+          }
+          const geo = new THREE.BufferGeometry();
+          geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+          geo.computeVertexNormals();
+          return geo;
+        }
+
+        const mat = new THREE.MeshStandardMaterial({
+          color: dark ? 0xe8e8f8 : 0xffffff,
+          roughness: dark ? 0.25 : 0.3,
+          metalness: dark ? 0.1 : 0.05,
+          side: THREE.FrontSide,
+        });
+
+        const mesh = new THREE.Mesh(buildGeometry(bottomVerts, topVerts, twistAngle >= 0), mat);
+        scene.add(mesh);
+
+        const baseDist = 12,
+          baseRotX = Math.PI / 12,
+          baseRotY = Math.PI / 2;
+        let mouseX = 0,
+          mouseY = 0,
+          scrollYVal = 0;
+        let tiltX = 0,
+          tiltY = 0;
+        let smoothMX = 0,
+          smoothMY = 0,
+          smoothTX = 0,
+          smoothTY = 0;
+        const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+
+        const onMouse = (e: MouseEvent) => {
+          mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+          mouseY = (e.clientY / window.innerHeight) * 2 - 1;
+        };
+        const onScroll = () => {
+          scrollYVal = window.pageYOffset || document.documentElement.scrollTop;
+        };
+        const onOrientation = (e: DeviceOrientationEvent) => {
+          if (e.gamma !== null) {
+            tiltX = Math.max(-1, Math.min(1, e.gamma / 30));
+          }
+          if (e.beta !== null) {
+            tiltY = Math.max(-1, Math.min(1, (e.beta - 45) / 30));
+          }
+        };
+
+        if (!isMobile) {
+          window.addEventListener('mousemove', onMouse);
+        }
+        window.addEventListener('scroll', onScroll);
+        if (isMobile && window.DeviceOrientationEvent) {
+          window.addEventListener('deviceorientation', onOrientation);
+        }
+
+        function lerp(a: number, b: number, t: number) {
+          return a + (b - a) * t;
+        }
+
+        let rafId: number;
+        function animate(time: number) {
+          rafId = requestAnimationFrame(animate);
+          const t = time * 0.001;
+          const lerpSpeed = 0.04;
+          if (isMobile) {
+            smoothTX = lerp(smoothTX, tiltX, lerpSpeed);
+            smoothTY = lerp(smoothTY, tiltY, lerpSpeed);
+          } else {
+            smoothMX = lerp(smoothMX, mouseX, lerpSpeed);
+            smoothMY = lerp(smoothMY, mouseY, lerpSpeed);
+          }
+
+          const idleDriftX = Math.sin(t * 0.3) * 0.04;
+          const idleDriftY = Math.cos(t * 0.2) * 0.06;
+          const inputX = isMobile ? smoothTX : smoothMX;
+          const inputY = isMobile ? smoothTY : smoothMY;
+          const scrollOffset = scrollYVal * 0.0003;
+
+          const rotX = baseRotX + inputY * 0.15 + idleDriftX + scrollOffset;
+          const rotY = baseRotY + inputX * 0.2 + idleDriftY;
+
+          camera.position.set(
+            baseDist * Math.cos(rotX) * Math.sin(rotY),
+            baseDist * Math.sin(rotX),
+            baseDist * Math.cos(rotX) * Math.cos(rotY),
+          );
+          camera.lookAt(0, 0, 0);
+          camera.updateMatrixWorld();
+
+          lightAngle += 0.003;
+          light1.position.set(
+            lightRadius * Math.cos(lightAngle),
+            lightY,
+            lightRadius * Math.sin(lightAngle),
+          );
+          light2.position.set(
+            lightRadius * Math.cos(lightAngle + Math.PI),
+            lightY * 0.8,
+            lightRadius * Math.sin(lightAngle + Math.PI),
+          );
+          rimLight.position.set(
+            lightRadius * Math.sin(lightAngle * 0.7),
+            -lightY * 0.6,
+            lightRadius * Math.cos(lightAngle * 0.7),
+          );
+
+          mesh.rotation.y = Math.sin(t * 0.5) * 0.2;
+          renderer.render(scene, camera);
+        }
+        animate(0);
+
+        const ro = new ResizeObserver(() => {
+          W = wrap.clientWidth;
+          H = wrap.clientHeight;
+          aspect = W / H;
+          camera.left = -frustum * aspect;
+          camera.right = frustum * aspect;
+          camera.top = frustum;
+          camera.bottom = -frustum;
+          camera.updateProjectionMatrix();
+          renderer.setSize(W, H);
+        });
+        ro.observe(wrap);
+
+        cleanup = () => {
+          cancelAnimationFrame(rafId);
+          ro.disconnect();
+          themeObserver.disconnect();
+          window.removeEventListener('mousemove', onMouse);
+          window.removeEventListener('scroll', onScroll);
+          window.removeEventListener('deviceorientation', onOrientation);
+          renderer.dispose();
+        };
+      })
+      .catch(() => {});
 
     return () => cleanup?.();
   }, []);
@@ -194,12 +286,24 @@ export default function LandingPage() {
         {/* Nav */}
         <nav>
           <div className="container">
-            <a href="#" className="logo">invect<span>.</span></a>
+            <a href="#" className="logo">
+              invect<span>.</span>
+            </a>
             <ul className="nav-links">
-              <li><a href="#features">Features</a></li>
-              <li><a href="#quickstart">Quickstart</a></li>
-              <li><Link href="/docs">Docs</Link></li>
-              <li><a href="https://github.com/robase/invect" className="btn-nav">GitHub →</a></li>
+              <li>
+                <a href="#features">Features</a>
+              </li>
+              <li>
+                <a href="#quickstart">Quickstart</a>
+              </li>
+              <li>
+                <Link href="/docs">Docs</Link>
+              </li>
+              <li>
+                <a href="https://github.com/robase/invect" className="btn-nav">
+                  GitHub →
+                </a>
+              </li>
             </ul>
           </div>
         </nav>
@@ -217,34 +321,54 @@ export default function LandingPage() {
                 Open Source · MIT Licensed
               </div>
               <h1>
-                Drop-in AI workflows<br />for your{' '}
+                Drop-in AI workflows
+                <br />
+                for your{' '}
                 <span className="hero-scroller">
                   <span className="hero-scroller-inner">
-                    <span>Node</span><span>Next</span><span>Bun</span><span>Deno</span><span>Nest</span><span>Node</span>
+                    <span>Node</span>
+                    <span>Next</span>
+                    <span>Bun</span>
+                    <span>Deno</span>
+                    <span>Nest</span>
+                    <span>Node</span>
                   </span>
                 </span>{' '}
                 app
               </h1>
               <p>
-                Visual flow editor, AI agent nodes, native batch processing via OpenAI &amp; Anthropic —
-                drop it into your app in&nbsp;minutes.
+                Visual flow editor, AI agent nodes, native batch processing via OpenAI &amp;
+                Anthropic — drop it into your app in&nbsp;minutes.
               </p>
               <div className="hero-actions">
                 <Link href="/docs/quick-start" className="btn-primary">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
                     <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
                   </svg>
                   Get Started
                 </Link>
-                <a href="https://github.com/robase/invect" className="btn-secondary">View on GitHub</a>
+                <a href="https://github.com/robase/invect" className="btn-secondary">
+                  View on GitHub
+                </a>
               </div>
               <div
                 className="install-bar"
                 onClick={(e) => {
                   navigator.clipboard.writeText('npx invect-cli init');
                   const el = (e.currentTarget as HTMLElement).querySelector('.copy-label');
-                  if (el) el.textContent = 'Copied!';
+                  if (el) {
+                    el.textContent = 'Copied!';
+                  }
                 }}
               >
                 <code>npx invect-cli init</code>
@@ -260,7 +384,8 @@ export default function LandingPage() {
             <p className="section-label">Features</p>
             <h2 className="section-title">Everything you need to orchestrate</h2>
             <p className="section-desc">
-              Build, run, and monitor workflows — from simple automations to AI agent&nbsp;pipelines.
+              Build, run, and monitor workflows — from simple automations to AI
+              agent&nbsp;pipelines.
             </p>
             <div className="features-grid">
               <Link href="/docs/concepts" className="feature-card">
@@ -271,17 +396,26 @@ export default function LandingPage() {
               <Link href="/docs/agents" className="feature-card">
                 <div className="feature-icon green">🤖</div>
                 <h3>AI Agent Nodes</h3>
-                <p>Built-in AI agents with iterative tool-calling loops using OpenAI and Anthropic&nbsp;APIs.</p>
+                <p>
+                  Built-in AI agents with iterative tool-calling loops using OpenAI and
+                  Anthropic&nbsp;APIs.
+                </p>
               </Link>
               <Link href="/docs/actions" className="feature-card">
                 <div className="feature-icon orange">🔌</div>
                 <h3>50+ Built-in Actions</h3>
-                <p>Gmail, Slack, GitHub, Google Drive, Linear, Postgres, and more — ready to&nbsp;use.</p>
+                <p>
+                  Gmail, Slack, GitHub, Google Drive, Linear, Postgres, and more — ready
+                  to&nbsp;use.
+                </p>
               </Link>
               <Link href="/docs/concepts" className="feature-card">
                 <div className="feature-icon pink">🔨</div>
                 <h3>AI-Assisted Flow Builder</h3>
-                <p>Describe what you need in plain language — the chat assistant wires up nodes, configs, and&nbsp;connections.</p>
+                <p>
+                  Describe what you need in plain language — the chat assistant wires up nodes,
+                  configs, and&nbsp;connections.
+                </p>
               </Link>
               <Link href="/docs/concepts" className="feature-card">
                 <div className="feature-icon blue">📦</div>
@@ -291,7 +425,10 @@ export default function LandingPage() {
               <Link href="/docs/database" className="feature-card">
                 <div className="feature-icon yellow">🗃️</div>
                 <h3>Multi-Database</h3>
-                <p>Works out of the box with SQLite, PostgreSQL, and MySQL. Bring your own&nbsp;database.</p>
+                <p>
+                  Works out of the box with SQLite, PostgreSQL, and MySQL. Bring your
+                  own&nbsp;database.
+                </p>
               </Link>
             </div>
           </div>
@@ -308,20 +445,28 @@ export default function LandingPage() {
                 your workflows run everywhere.
               </p>
               <p className="section-desc" style={{ marginTop: '-32px' }}>
-                The React frontend mounts as a single component — drop it in and get a full flow editor,
-                execution viewer, and credential&nbsp;manager.
+                The React frontend mounts as a single component — drop it in and get a full flow
+                editor, execution viewer, and credential&nbsp;manager.
               </p>
-              <Link href="/docs/quick-start" className="btn-secondary" style={{ marginTop: '8px', display: 'inline-block' }}>
+              <Link
+                href="/docs/quick-start"
+                className="btn-secondary"
+                style={{ marginTop: '8px', display: 'inline-block' }}
+              >
                 Read the full guide →
               </Link>
             </div>
             <div>
               <div className="code-block">
                 <div className="code-header">
-                  <span className="code-dot red" /><span className="code-dot yellow" /><span className="code-dot green" />
+                  <span className="code-dot red" />
+                  <span className="code-dot yellow" />
+                  <span className="code-dot green" />
                   <span>server.ts</span>
                 </div>
-                <pre dangerouslySetInnerHTML={{ __html: `<span class="keyword">import</span> express <span class="keyword">from</span> <span class="string">'express'</span>;
+                <pre
+                  dangerouslySetInnerHTML={{
+                    __html: `<span class="keyword">import</span> express <span class="keyword">from</span> <span class="string">'express'</span>;
 <span class="keyword">import</span> { <span class="type">createInvectRouter</span> } <span class="keyword">from</span> <span class="string">'@invect/express'</span>;
 
 <span class="keyword">const</span> app = <span class="func">express</span>();
@@ -333,19 +478,27 @@ app.<span class="func">use</span>(<span class="string">'/invect'</span>, <span c
   },
 }));
 
-app.<span class="func">listen</span>(<span class="string">3000</span>);` }} />
+app.<span class="func">listen</span>(<span class="string">3000</span>);`,
+                  }}
+                />
               </div>
               <div className="code-block" style={{ marginTop: '16px' }}>
                 <div className="code-header">
-                  <span className="code-dot red" /><span className="code-dot yellow" /><span className="code-dot green" />
+                  <span className="code-dot red" />
+                  <span className="code-dot yellow" />
+                  <span className="code-dot green" />
                   <span>App.tsx</span>
                 </div>
-                <pre dangerouslySetInnerHTML={{ __html: `<span class="keyword">import</span> { <span class="type">Invect</span> } <span class="keyword">from</span> <span class="string">'@invect/ui'</span>;
+                <pre
+                  dangerouslySetInnerHTML={{
+                    __html: `<span class="keyword">import</span> { <span class="type">Invect</span> } <span class="keyword">from</span> <span class="string">'@invect/ui'</span>;
 <span class="keyword">import</span> <span class="string">'@invect/ui/styles'</span>;
 
 <span class="keyword">export default</span> () =&gt; (
   &lt;<span class="type">Invect</span> <span class="func">apiBaseUrl</span>=<span class="string">"http://localhost:3000/invect"</span> /&gt;
-);` }} />
+);`,
+                  }}
+                />
               </div>
             </div>
           </div>
@@ -363,17 +516,29 @@ app.<span class="func">listen</span>(<span class="string">3000</span>);` }} />
               <div className="why-item">
                 <div className="why-item-text">
                   <h3>A real execution engine</h3>
-                  <p>Each node receives the merged output of every upstream node — no rigid &quot;input→output&quot;&nbsp;chains.</p>
+                  <p>
+                    Each node receives the merged output of every upstream node — no rigid
+                    &quot;input→output&quot;&nbsp;chains.
+                  </p>
                   <ul>
                     <li>Reference any upstream node by name in templates</li>
                     <li>Conditional branching, loops, and parallel paths are first-class</li>
                     <li>Pause mid-flow for batch API results, then resume automatically</li>
                   </ul>
-                  <Link href="/docs/concepts" className="why-link">Learn about the execution model →</Link>
+                  <Link href="/docs/concepts" className="why-link">
+                    Learn about the execution model →
+                  </Link>
                 </div>
                 <div className="why-code">
-                  <div className="code-header"><span className="code-dot red" /><span className="code-dot yellow" /><span className="code-dot green" /><span>node config</span></div>
-                  <pre dangerouslySetInnerHTML={{ __html: `<span class="comment">// Every node sees all upstream outputs</span>
+                  <div className="code-header">
+                    <span className="code-dot red" />
+                    <span className="code-dot yellow" />
+                    <span className="code-dot green" />
+                    <span>node config</span>
+                  </div>
+                  <pre
+                    dangerouslySetInnerHTML={{
+                      __html: `<span class="comment">// Every node sees all upstream outputs</span>
 <span class="comment">// as a single merged object:</span>
 {
   <span class="string">"fetch_users"</span>:  [{ <span class="string">"id"</span>: 1, ... }],
@@ -383,24 +548,47 @@ app.<span class="func">listen</span>(<span class="string">3000</span>);` }} />
 
 <span class="comment">// Use any upstream value in templates:</span>
 <span class="string">"Process {{ fetch_users.length }} users</span>
-<span class="string"> in {{ get_config.env }}"</span>` }} />
+<span class="string"> in {{ get_config.env }}"</span>`,
+                    }}
+                  />
                 </div>
               </div>
 
               <div className="why-item">
                 <div className="why-item-text">
                   <h3>Embed it, don&apos;t replace anything</h3>
-                  <p>Invect isn&apos;t a standalone platform you deploy separately. It&apos;s a library you mount into your existing app — your admin panel, your backoffice, your internal tool.</p>
+                  <p>
+                    Invect isn&apos;t a standalone platform you deploy separately. It&apos;s a
+                    library you mount into your existing app — your admin panel, your backoffice,
+                    your internal tool.
+                  </p>
                   <ul>
-                    <li>Mount the Express router, NestJS module, or Next.js actions into your existing app</li>
-                    <li>The React frontend is a single <code>&lt;Invect /&gt;</code> component — drop it into any page</li>
-                    <li>Uses your existing database (SQLite, Postgres, MySQL) — no separate infra</li>
+                    <li>
+                      Mount the Express router, NestJS module, or Next.js actions into your existing
+                      app
+                    </li>
+                    <li>
+                      The React frontend is a single <code>&lt;Invect /&gt;</code> component — drop
+                      it into any page
+                    </li>
+                    <li>
+                      Uses your existing database (SQLite, Postgres, MySQL) — no separate infra
+                    </li>
                   </ul>
-                  <Link href="/docs/integrations/express" className="why-link">See integration guides →</Link>
+                  <Link href="/docs/integrations/express" className="why-link">
+                    See integration guides →
+                  </Link>
                 </div>
                 <div className="why-code">
-                  <div className="code-header"><span className="code-dot red" /><span className="code-dot yellow" /><span className="code-dot green" /><span>your-app.ts</span></div>
-                  <pre dangerouslySetInnerHTML={{ __html: `<span class="comment">// Your existing Express app</span>
+                  <div className="code-header">
+                    <span className="code-dot red" />
+                    <span className="code-dot yellow" />
+                    <span className="code-dot green" />
+                    <span>your-app.ts</span>
+                  </div>
+                  <pre
+                    dangerouslySetInnerHTML={{
+                      __html: `<span class="comment">// Your existing Express app</span>
 <span class="keyword">import</span> { <span class="type">createInvectRouter</span> } <span class="keyword">from</span> <span class="string">'@invect/express'</span>;
 
 <span class="comment">// Mount alongside your existing routes</span>
@@ -413,24 +601,40 @@ app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <spa
 }));
 
 <span class="comment">// That's it. Same server, same database,</span>
-<span class="comment">// same deployment.</span>` }} />
+<span class="comment">// same deployment.</span>`,
+                    }}
+                  />
                 </div>
               </div>
 
               <div className="why-item">
                 <div className="why-item-text">
                   <h3>Execute flows directly in code</h3>
-                  <p>The visual editor is optional. Every operation is a typed method — build flows in the UI, trigger them from your backend&nbsp;code.</p>
+                  <p>
+                    The visual editor is optional. Every operation is a typed method — build flows
+                    in the UI, trigger them from your backend&nbsp;code.
+                  </p>
                   <ul>
-                    <li>Call <code>core.startFlowRun(flowId, inputs)</code> from any server-side code</li>
+                    <li>
+                      Call <code>core.startFlowRun(flowId, inputs)</code> from any server-side code
+                    </li>
                     <li>Trigger from webhooks, cron, or queue workers</li>
                     <li>Full TypeScript types for inputs, outputs, and flow definitions</li>
                   </ul>
-                  <Link href="/docs/programmatic-usage" className="why-link">See the programmatic API →</Link>
+                  <Link href="/docs/programmatic-usage" className="why-link">
+                    See the programmatic API →
+                  </Link>
                 </div>
                 <div className="why-code">
-                  <div className="code-header"><span className="code-dot red" /><span className="code-dot yellow" /><span className="code-dot green" /><span>worker.ts</span></div>
-                  <pre dangerouslySetInnerHTML={{ __html: `<span class="keyword">import</span> { <span class="type">Invect</span> } <span class="keyword">from</span> <span class="string">'@invect/core'</span>;
+                  <div className="code-header">
+                    <span className="code-dot red" />
+                    <span className="code-dot yellow" />
+                    <span className="code-dot green" />
+                    <span>worker.ts</span>
+                  </div>
+                  <pre
+                    dangerouslySetInnerHTML={{
+                      __html: `<span class="keyword">import</span> { <span class="type">Invect</span> } <span class="keyword">from</span> <span class="string">'@invect/core'</span>;
 
 <span class="keyword">const</span> core = <span class="keyword">new</span> <span class="type">Invect</span>({
   <span class="type">database</span>: {
@@ -447,7 +651,9 @@ app.<span class="func">post</span>(<span class="string">'/webhooks/new-order'</s
     { order: req.body }
   );
   res.<span class="func">json</span>({ runId: result.flowRunId });
-});` }} />
+});`,
+                    }}
+                  />
                 </div>
               </div>
             </div>
@@ -462,31 +668,72 @@ app.<span class="func">post</span>(<span class="string">'/webhooks/new-order'</s
             <div className="framework-logos">
               <Link href="/docs/integrations/express" className="framework-item">
                 <div className="framework-icon">
-                  <svg width="24" height="24" viewBox="0 0 128 128" fill="none"><path d="M126.67 98.44c-4.56 1.16-7.38.05-9.91-3.75-5.68-8.51-11.95-16.63-18-24.9-.78-1.07-1.59-2.12-2.6-3.45C89 76 81.85 85.2 75.14 94.77c-2.4 3.42-4.92 4.91-9.22 3.71l26.5-37.1-24.8-33.41c4.14-.63 7.17-.2 9.65 3.54 5.87 8.86 12.16 17.43 18.59 26.5 6.56-9.15 12.8-17.73 18.7-26.55 2.38-3.56 5.05-4.36 9.19-3.56L98.36 61.2l27.04 37.23h1.27zM1.33 61.74c.72-3.61 1.2-7.29 2.2-10.83 6-21.43 30.6-30.34 47.5-17.06C60.93 41.64 63.39 52.62 62.9 65H7.1c-.84 22.21 15.15 35.62 35.53 28.78 7.15-2.4 11.36-8 13.47-15 1.07-3.51 2.84-4.06 6.14-3.06-1.69 8.76-5.52 16.08-13.52 20.66-12 6.86-29.13 5.04-38.28-4.1C3.32 85.36.63 77.15.07 67.97c-.04-.72-.05-1.45-.07-2.18 0-1.35 0-2.71 0-4.05h1.33zm5.77-3.91h50.49C56.98 40.18 43.87 30.05 30.2 32.3c-12.72 2.1-21.3 12.58-23.1 25.53z" fill="#a1a1aa" /></svg>
+                  <svg width="24" height="24" viewBox="0 0 128 128" fill="none">
+                    <path
+                      d="M126.67 98.44c-4.56 1.16-7.38.05-9.91-3.75-5.68-8.51-11.95-16.63-18-24.9-.78-1.07-1.59-2.12-2.6-3.45C89 76 81.85 85.2 75.14 94.77c-2.4 3.42-4.92 4.91-9.22 3.71l26.5-37.1-24.8-33.41c4.14-.63 7.17-.2 9.65 3.54 5.87 8.86 12.16 17.43 18.59 26.5 6.56-9.15 12.8-17.73 18.7-26.55 2.38-3.56 5.05-4.36 9.19-3.56L98.36 61.2l27.04 37.23h1.27zM1.33 61.74c.72-3.61 1.2-7.29 2.2-10.83 6-21.43 30.6-30.34 47.5-17.06C60.93 41.64 63.39 52.62 62.9 65H7.1c-.84 22.21 15.15 35.62 35.53 28.78 7.15-2.4 11.36-8 13.47-15 1.07-3.51 2.84-4.06 6.14-3.06-1.69 8.76-5.52 16.08-13.52 20.66-12 6.86-29.13 5.04-38.28-4.1C3.32 85.36.63 77.15.07 67.97c-.04-.72-.05-1.45-.07-2.18 0-1.35 0-2.71 0-4.05h1.33zm5.77-3.91h50.49C56.98 40.18 43.87 30.05 30.2 32.3c-12.72 2.1-21.3 12.58-23.1 25.53z"
+                      fill="#a1a1aa"
+                    />
+                  </svg>
                 </div>
                 Express
               </Link>
               <Link href="/docs/integrations/nestjs" className="framework-item">
                 <div className="framework-icon">
-                  <svg width="24" height="24" viewBox="0 0 128 128" fill="none"><path d="M64 0C28.65 0 0 28.65 0 64s28.65 64 64 64 64-28.65 64-64S99.35 0 64 0zm0 119c-7.85 0-14.85-3.69-19.34-9.43l19.34-46.01 19.34 46.01C78.85 115.31 71.85 119 64 119zm23.24-14.01L64 50.51l-23.24 54.48C30.28 97.75 23 82.2 23 64c0-22.63 18.37-41 41-41s41 18.37 41 41c0 18.2-7.28 33.75-17.76 40.99z" fill="#a1a1aa" /></svg>
+                  <svg width="24" height="24" viewBox="0 0 128 128" fill="none">
+                    <path
+                      d="M64 0C28.65 0 0 28.65 0 64s28.65 64 64 64 64-28.65 64-64S99.35 0 64 0zm0 119c-7.85 0-14.85-3.69-19.34-9.43l19.34-46.01 19.34 46.01C78.85 115.31 71.85 119 64 119zm23.24-14.01L64 50.51l-23.24 54.48C30.28 97.75 23 82.2 23 64c0-22.63 18.37-41 41-41s41 18.37 41 41c0 18.2-7.28 33.75-17.76 40.99z"
+                      fill="#a1a1aa"
+                    />
+                  </svg>
                 </div>
                 NestJS
               </Link>
               <Link href="/docs/integrations/nextjs" className="framework-item">
                 <div className="framework-icon">
-                  <svg width="24" height="24" viewBox="0 0 128 128" fill="none"><path d="M64 0C28.7 0 0 28.7 0 64s28.7 64 64 64c11.2 0 21.7-2.9 30.8-7.9L48.4 55.3v36.6h-6.8V41.8h6.8l50.5 75.8C116.4 106.2 128 86.5 128 64c0-35.3-28.7-64-64-64zm22.1 84.6l-7.5-11.3V41.8h7.5v42.8z" fill="#a1a1aa" /></svg>
+                  <svg width="24" height="24" viewBox="0 0 128 128" fill="none">
+                    <path
+                      d="M64 0C28.7 0 0 28.7 0 64s28.7 64 64 64c11.2 0 21.7-2.9 30.8-7.9L48.4 55.3v36.6h-6.8V41.8h6.8l50.5 75.8C116.4 106.2 128 86.5 128 64c0-35.3-28.7-64-64-64zm22.1 84.6l-7.5-11.3V41.8h7.5v42.8z"
+                      fill="#a1a1aa"
+                    />
+                  </svg>
                 </div>
                 Next.js
               </Link>
               <div className="framework-item">
                 <div className="framework-icon">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#a1a1aa"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="2" y1="12" x2="22" y2="12" />
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                  </svg>
                 </div>
                 React
               </div>
               <Link href="/docs/database" className="framework-item">
                 <div className="framework-icon">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3" /><path d="M3 5V19A9 3 0 0 0 21 19V5" /><path d="M3 12A9 3 0 0 0 21 12" /></svg>
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#a1a1aa"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <ellipse cx="12" cy="5" rx="9" ry="3" />
+                    <path d="M3 5V19A9 3 0 0 0 21 19V5" />
+                    <path d="M3 12A9 3 0 0 0 21 12" />
+                  </svg>
                 </div>
                 SQLite / PG / MySQL
               </Link>
@@ -499,17 +746,38 @@ app.<span class="func">post</span>(<span class="string">'/webhooks/new-order'</s
           <div className="container">
             <div className="cta-box">
               <h2>Start building workflows today</h2>
-              <p>Invect is free, open-source, and ready for production. Add it to your project in&nbsp;minutes.</p>
+              <p>
+                Invect is free, open-source, and ready for production. Add it to your project
+                in&nbsp;minutes.
+              </p>
               <div className="cta-buttons">
                 <Link href="/docs/quick-start" className="btn-primary">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
                     <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
                   </svg>
                   Read the Docs
                 </Link>
                 <a href="https://github.com/robase/invect" className="btn-secondary">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
                   </svg>
                   Star on GitHub
@@ -524,9 +792,15 @@ app.<span class="func">post</span>(<span class="string">'/webhooks/new-order'</s
           <div className="container">
             <p>© 2026 Invect · MIT License</p>
             <ul className="footer-links">
-              <li><Link href="/docs">Documentation</Link></li>
-              <li><a href="https://github.com/robase/invect">GitHub</a></li>
-              <li><a href="https://www.npmjs.com/search?q=%40invect">npm</a></li>
+              <li>
+                <Link href="/docs">Documentation</Link>
+              </li>
+              <li>
+                <a href="https://github.com/robase/invect">GitHub</a>
+              </li>
+              <li>
+                <a href="https://www.npmjs.com/search?q=%40invect">npm</a>
+              </li>
             </ul>
           </div>
         </footer>

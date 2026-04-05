@@ -35,19 +35,24 @@ const auth = betterAuth({
   emailAndPassword: { enabled: true },
 });
 
-app.use('/invect', createInvectRouter({
-  database: { type: 'sqlite', connectionString: 'file:./dev.db' },
-  plugins: [
-    userAuth({
-      auth,
-      globalAdmins: [{
-        email: process.env.INVECT_ADMIN_EMAIL,
-        pw: process.env.INVECT_ADMIN_PASSWORD,
-        name: 'Admin',
-      }],
-    }),
-  ],
-}));
+app.use(
+  '/invect',
+  createInvectRouter({
+    database: { type: 'sqlite', connectionString: 'file:./dev.db' },
+    plugins: [
+      userAuth({
+        auth,
+        globalAdmins: [
+          {
+            email: process.env.INVECT_ADMIN_EMAIL,
+            pw: process.env.INVECT_ADMIN_PASSWORD,
+            name: 'Admin',
+          },
+        ],
+      }),
+    ],
+  }),
+);
 ```
 
 Sign-up is disabled in the UI. The initial admin is seeded from `globalAdmins`. Subsequent users are created by admins through the user management UI or API.
@@ -65,7 +70,7 @@ import '@invect/ui/styles';
   InvectComponent={Invect}
   ShellComponent={InvectShell}
   theme="light"
-/>
+/>;
 ```
 
 Or compose manually:
@@ -77,16 +82,16 @@ import { AuthProvider, AuthGate, SignInPage, UserButton } from '@invect/user-aut
   <AuthGate fallback={<SignInPage />}>
     <Invect apiBaseUrl="http://localhost:3000/invect" />
   </AuthGate>
-</AuthProvider>
+</AuthProvider>;
 ```
 
 ## Exports
 
-| Entry Point | Content |
-|---|---|
-| `@invect/user-auth` | Backend plugin (Node.js) |
-| `@invect/user-auth/ui` | Frontend components — `AuthProvider`, `AuthGate`, `SignInForm`, `UserButton`, `AuthenticatedInvect` |
-| `@invect/user-auth/types` | Shared types |
+| Entry Point               | Content                                                                                             |
+| ------------------------- | --------------------------------------------------------------------------------------------------- |
+| `@invect/user-auth`       | Backend plugin (Node.js)                                                                            |
+| `@invect/user-auth/ui`    | Frontend components — `AuthProvider`, `AuthGate`, `SignInForm`, `UserButton`, `AuthenticatedInvect` |
+| `@invect/user-auth/types` | Shared types                                                                                        |
 
 ## What It Does
 

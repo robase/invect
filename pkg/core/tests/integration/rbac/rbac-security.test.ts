@@ -176,11 +176,15 @@ let flowId3: string; // scoped to team-b (child of team-a)
 function findEndpoint(method: string, path: string): InvectPluginEndpoint {
   const endpoints = plugin.endpoints!;
   const ep = endpoints.find((e) => {
-    if (e.method !== method) return false;
+    if (e.method !== method) {
+      return false;
+    }
     const pattern = e.path.replace(/\*/g, '(.*)').replace(/:([^/]+)/g, '([^/]+)');
     return new RegExp(`^${pattern}$`).test(path);
   });
-  if (!ep) throw new Error(`Endpoint not found: ${method} ${path}`);
+  if (!ep) {
+    throw new Error(`Endpoint not found: ${method} ${path}`);
+  }
   return ep;
 }
 
@@ -237,7 +241,12 @@ async function call(
 ): Promise<{ status: number; body: Record<string, unknown> }> {
   const endpoint = findEndpoint(method, path);
   const params = extractParams(endpoint.path, path);
-  const ctx = createContext({ identity: opts.identity, body: opts.body, params, query: opts.query });
+  const ctx = createContext({
+    identity: opts.identity,
+    body: opts.body,
+    params,
+    query: opts.query,
+  });
   const result = await endpoint.handler(ctx);
   if (result instanceof Response) {
     const text = await result.text();
@@ -714,7 +723,9 @@ describe('RBAC Plugin — Security Red Team', () => {
       const directRecords = records.filter((rec) => rec.source === 'direct');
       for (const rec of directRecords) {
         if ((rec as Record<string, unknown>).permission === 'viewer') {
-          rawDb.prepare('DELETE FROM flow_access WHERE id = ?').run((rec as Record<string, unknown>).id as string);
+          rawDb
+            .prepare('DELETE FROM flow_access WHERE id = ?')
+            .run((rec as Record<string, unknown>).id as string);
         }
       }
     });
@@ -732,7 +743,15 @@ describe('RBAC Plugin — Security Red Team', () => {
         .prepare(
           'INSERT INTO flow_access (id, flow_id, user_id, permission, granted_by, granted_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
         )
-        .run(expiredId, flowId1, OUTSIDER.id, 'owner', ADMIN.id, new Date().toISOString(), '2020-01-01T00:00:00Z');
+        .run(
+          expiredId,
+          flowId1,
+          OUTSIDER.id,
+          'owner',
+          ADMIN.id,
+          new Date().toISOString(),
+          '2020-01-01T00:00:00Z',
+        );
 
       // OUTSIDER should still be denied — the record is expired
       const r = await call('GET', `/rbac/flows/${flowId1}/access`, { identity: OUTSIDER });
@@ -749,7 +768,15 @@ describe('RBAC Plugin — Security Red Team', () => {
         .prepare(
           'INSERT INTO flow_access (id, flow_id, user_id, permission, granted_by, granted_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
         )
-        .run(futureId, flowId1, OUTSIDER.id, 'viewer', ADMIN.id, new Date().toISOString(), '2099-12-31T23:59:59Z');
+        .run(
+          futureId,
+          flowId1,
+          OUTSIDER.id,
+          'viewer',
+          ADMIN.id,
+          new Date().toISOString(),
+          '2099-12-31T23:59:59Z',
+        );
 
       // OUTSIDER should now have access
       const r = await call('GET', `/rbac/flows/${flowId1}/access`, { identity: OUTSIDER });
@@ -1101,8 +1128,9 @@ describe('RBAC Plugin — Security Red Team', () => {
         identity: VIEWER,
       });
       expect(r.status).toBe(200);
-      const records = (r.body as { records: Array<{ userId: string | null; teamId: string | null }> })
-        .records;
+      const records = (
+        r.body as { records: Array<{ userId: string | null; teamId: string | null }> }
+      ).records;
       // At minimum, VIEWER's user-level scope access should be inherited
       const viewerRecords = records.filter((rec) => rec.userId === VIEWER.id);
       expect(viewerRecords.length).toBeGreaterThan(0);
@@ -1164,9 +1192,9 @@ describe('RBAC Plugin — Security Red Team', () => {
       expect(delRes.status).toBe(204);
 
       // Flow should now be re-parented to team-a (parent of deleted team)
-      const rows = rawDb
-        .prepare('SELECT scope_id FROM flows WHERE id = ?')
-        .all(flow.id) as Array<{ scope_id: string | null }>;
+      const rows = rawDb.prepare('SELECT scope_id FROM flows WHERE id = ?').all(flow.id) as Array<{
+        scope_id: string | null;
+      }>;
       expect(rows[0]?.scope_id).toBe('team-a');
 
       // Clean up
@@ -1342,7 +1370,11 @@ describe('RBAC Plugin — Security Red Team', () => {
       const context = {
         path: '/test',
         method: 'GET',
-        identity: { id: TEAM_MEMBER.id, role: 'viewer' as const, teamIds: [] } as InvectIdentity | null,
+        identity: {
+          id: TEAM_MEMBER.id,
+          role: 'viewer' as const,
+          teamIds: [],
+        } as InvectIdentity | null,
       };
       await plugin.hooks!.onRequest!(new Request('http://localhost/test'), context);
       expect(context.identity!.teamIds).toContain('team-a');

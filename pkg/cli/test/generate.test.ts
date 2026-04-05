@@ -66,13 +66,15 @@ describe('generate core-only schema (no plugins)', () => {
 
   it('should generate valid SQLite schema', () => {
     expect(sqlite).toContain("from 'drizzle-orm/sqlite-core'");
-    expect(sqlite).toContain("import { BatchStatus, FlowRunStatus, NodeExecutionStatus } from '@invect/core';");
+    expect(sqlite).toContain(
+      "import { BatchStatus, FlowRunStatus, NodeExecutionStatus } from '@invect/core';",
+    );
     expect(sqlite).toContain("sqliteTable('flows'");
     expect(sqlite).toContain("sqliteTable('flow_versions'");
     expect(sqlite).toContain("sqliteTable('flow_executions'");
     expect(sqlite).toContain("sqliteTable('credentials'");
-    expect(sqlite).toContain("default(FlowRunStatus.PENDING)");
-    expect(sqlite).toContain("default(NodeExecutionStatus.PENDING)");
+    expect(sqlite).toContain('default(FlowRunStatus.PENDING)');
+    expect(sqlite).toContain('default(NodeExecutionStatus.PENDING)');
     // SQLite uses text for dates
     expect(sqlite).toContain("text('created_at')");
     // SQLite uses integer for booleans
@@ -290,7 +292,7 @@ describe('generate with e-commerce plugin', () => {
 
   it('should generate unique constraint on product SKU', () => {
     for (const dialect of [sqlite, postgres, mysql]) {
-      expect(dialect).toContain("sku");
+      expect(dialect).toContain('sku');
       expect(dialect).toContain('.unique()');
     }
   });
@@ -412,12 +414,7 @@ describe('generate with analytics plugin (bigint)', () => {
 // =============================================================================
 
 describe('generate with multiple plugins', () => {
-  const plugins = [
-    multiTenantPlugin,
-    auditLogPlugin,
-    ecommercePlugin,
-    minimalPlugin,
-  ];
+  const plugins = [multiTenantPlugin, auditLogPlugin, ecommercePlugin, minimalPlugin];
   const { merged, sqlite, postgres, mysql } = generateAll(plugins);
 
   it('should include all plugin tables', () => {
@@ -459,14 +456,10 @@ describe('generate with multiple plugins', () => {
   });
 
   it('should track provenance correctly', () => {
-    const tenantProv = merged.provenance.find(
-      (p) => p.table === 'tenants' && p.field === null,
-    );
+    const tenantProv = merged.provenance.find((p) => p.table === 'tenants' && p.field === null);
     expect(tenantProv?.source).toBe('multi-tenant');
 
-    const auditProv = merged.provenance.find(
-      (p) => p.table === 'auditLogs' && p.field === null,
-    );
+    const auditProv = merged.provenance.find((p) => p.table === 'auditLogs' && p.field === null);
     expect(auditProv?.source).toBe('audit-log');
 
     const flowTenantIdProv = merged.provenance.find(
@@ -490,14 +483,10 @@ describe('two plugins extending same core table (non-conflicting)', () => {
   });
 
   it('should track provenance per plugin', () => {
-    const provA = merged.provenance.find(
-      (p) => p.table === 'flows' && p.field === 'pluginAField',
-    );
+    const provA = merged.provenance.find((p) => p.table === 'flows' && p.field === 'pluginAField');
     expect(provA?.source).toBe('plugin-a');
 
-    const provB = merged.provenance.find(
-      (p) => p.table === 'flows' && p.field === 'pluginBField',
-    );
+    const provB = merged.provenance.find((p) => p.table === 'flows' && p.field === 'pluginBField');
     expect(provB?.source).toBe('plugin-b');
   });
 });
@@ -508,9 +497,7 @@ describe('two plugins extending same core table (non-conflicting)', () => {
 
 describe('conflicting plugin — redefines core field', () => {
   it('should throw when a plugin redefines a core field', () => {
-    expect(() => mergeSchemas([conflictingPlugin])).toThrow(
-      /Schema merge errors/,
-    );
+    expect(() => mergeSchemas([conflictingPlugin])).toThrow(/Schema merge errors/);
     expect(() => mergeSchemas([conflictingPlugin])).toThrow(
       /Field "name" on table "flows" already defined by "core"/,
     );
@@ -523,12 +510,8 @@ describe('conflicting plugin — redefines core field', () => {
 
 describe('two plugins conflicting on same new field', () => {
   it('should throw when two plugins define the same field on the same table', () => {
-    expect(() => mergeSchemas([conflictPluginA, conflictPluginB])).toThrow(
-      /Schema merge errors/,
-    );
-    expect(() => mergeSchemas([conflictPluginA, conflictPluginB])).toThrow(
-      /sharedField/,
-    );
+    expect(() => mergeSchemas([conflictPluginA, conflictPluginB])).toThrow(/Schema merge errors/);
+    expect(() => mergeSchemas([conflictPluginA, conflictPluginB])).toThrow(/sharedField/);
   });
 });
 
@@ -803,7 +786,9 @@ describe('append-mode schema generators', () => {
   it('should generate SQLite append-mode schema with imports and code', () => {
     const result = generateSqliteSchemaAppend(merged);
     expect(result.imports[0]).toContain('drizzle-orm/sqlite-core');
-    expect(result.imports).toContainEqual(expect.stringContaining("BatchStatus, FlowRunStatus, NodeExecutionStatus"));
+    expect(result.imports).toContainEqual(
+      expect.stringContaining('BatchStatus, FlowRunStatus, NodeExecutionStatus'),
+    );
     expect(result.imports).toContainEqual(expect.stringContaining("from '@invect/core/types'"));
     expect(result.code).toContain('Invect tables — AUTO-GENERATED');
     expect(result.code).toContain('sqliteTable');

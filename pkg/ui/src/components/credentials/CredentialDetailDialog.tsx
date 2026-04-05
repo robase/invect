@@ -87,7 +87,9 @@ export function CredentialDetailDialog({
 
   const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!credential) return;
+    if (!credential) {
+      return;
+    }
     onUpdate(credential.id, editFormData);
     setDetailSection('details');
   };
@@ -95,14 +97,16 @@ export function CredentialDetailDialog({
   const updateConfig = (key: string, value: string) => {
     setEditFormData((prev) => ({
       ...prev,
-      config: { ...(prev.config || {}), [key]: value },
+      config: { ...prev.config, [key]: value },
     }));
   };
 
   // Fetch the full credential with decrypted config (list endpoint strips config)
   const { data: fullCredential } = useCredential(credential?.id ?? '');
 
-  if (!credential) return null;
+  if (!credential) {
+    return null;
+  }
 
   const iconInfo = getCredentialBranding(credential);
   const authConfig = AUTH_TYPE_CONFIG[credential.authType];
@@ -732,11 +736,17 @@ function OAuth2ConnectSection({
   // Listen for OAuth callback message from popup
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
+      if (event.origin !== window.location.origin) {
+        return;
+      }
       const { type, code, state, error } = event.data;
-      if (type !== 'oauth2_callback') return;
+      if (type !== 'oauth2_callback') {
+        return;
+      }
 
-      if (popupWindow && !popupWindow.closed) popupWindow.close();
+      if (popupWindow && !popupWindow.closed) {
+        popupWindow.close();
+      }
       setPopupWindow(null);
 
       if (error) {
@@ -772,12 +782,16 @@ function OAuth2ConnectSection({
 
   // Check if popup was closed without completing
   useEffect(() => {
-    if (!popupWindow) return;
+    if (!popupWindow) {
+      return;
+    }
     const check = setInterval(() => {
       if (popupWindow.closed) {
         clearInterval(check);
         setPopupWindow(null);
-        if (status === 'connecting') setStatus('idle');
+        if (status === 'connecting') {
+          setStatus('idle');
+        }
       }
     }, 500);
     return () => clearInterval(check);

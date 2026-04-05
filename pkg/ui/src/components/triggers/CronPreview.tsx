@@ -142,20 +142,36 @@ function describeCron(
 
 function expression(min: string, hr: string, dom: string, mon: string, dow: string): string {
   const parts = [];
-  if (min !== '*') parts.push(`min ${min}`);
-  if (hr !== '*') parts.push(`hour ${hr}`);
-  if (dom !== '*') parts.push(`day ${dom}`);
-  if (mon !== '*') parts.push(`month ${mon}`);
-  if (dow !== '*') parts.push(`weekday ${dow}`);
+  if (min !== '*') {
+    parts.push(`min ${min}`);
+  }
+  if (hr !== '*') {
+    parts.push(`hour ${hr}`);
+  }
+  if (dom !== '*') {
+    parts.push(`day ${dom}`);
+  }
+  if (mon !== '*') {
+    parts.push(`month ${mon}`);
+  }
+  if (dow !== '*') {
+    parts.push(`weekday ${dow}`);
+  }
   return parts.join(', ') || 'Every minute';
 }
 
 function formatTime(hour: string, minute: string): string {
   const h = parseInt(hour, 10);
   const m = minute.padStart(2, '0');
-  if (h === 0) return `12:${m} AM`;
-  if (h < 12) return `${h}:${m} AM`;
-  if (h === 12) return `12:${m} PM`;
+  if (h === 0) {
+    return `12:${m} AM`;
+  }
+  if (h < 12) {
+    return `${h}:${m} AM`;
+  }
+  if (h === 12) {
+    return `12:${m} PM`;
+  }
   return `${h - 12}:${m} PM`;
 }
 
@@ -193,18 +209,24 @@ function approximateNextRun(minute: string, hour: string): string | null {
       const nextMin = Math.ceil((currentMin + 1) / interval) * interval;
       next = new Date(now);
       next.setMinutes(nextMin, 0, 0);
-      if (next <= now) next.setMinutes(next.getMinutes() + interval);
+      if (next <= now) {
+        next.setMinutes(next.getMinutes() + interval);
+      }
     } else if (hour === '*') {
       const min = parseInt(minute, 10);
       next = new Date(now);
       next.setMinutes(min, 0, 0);
-      if (next <= now) next.setHours(next.getHours() + 1);
+      if (next <= now) {
+        next.setHours(next.getHours() + 1);
+      }
     } else {
       const hr = parseInt(hour, 10);
       const min = parseInt(minute, 10);
       next = new Date(now);
       next.setHours(hr, min, 0, 0);
-      if (next <= now) next.setDate(next.getDate() + 1);
+      if (next <= now) {
+        next.setDate(next.getDate() + 1);
+      }
     }
 
     return next.toLocaleString(undefined, {

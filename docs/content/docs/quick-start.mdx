@@ -46,6 +46,7 @@ app.listen(3000, () => {
 ```
 
 That's it for the backend. The router handles all API endpoints — flows, executions, credentials, agent tools, and more.
+
 </Tab>
 <Tab value="NestJS">
 ```ts title="app.module.ts"
@@ -53,17 +54,18 @@ import { Module } from '@nestjs/common';
 import { InvectModule } from '@invect/nestjs';
 
 @Module({
-  imports: [
-    InvectModule.forRoot({
-      database: {
-        type: 'sqlite',
-        connectionString: process.env.DATABASE_URL || 'file:./dev.db',
-      },
-    }),
-  ],
+imports: [
+InvectModule.forRoot({
+database: {
+type: 'sqlite',
+connectionString: process.env.DATABASE_URL || 'file:./dev.db',
+},
+}),
+],
 })
 export class AppModule {}
-```
+
+````
 </Tab>
 <Tab value="Next.js">
 ```ts title="app/api/invect/[...invect]/route.ts"
@@ -77,7 +79,8 @@ const handler = createInvectHandler({
 });
 
 export { handler as GET, handler as POST, handler as PUT, handler as DELETE, handler as PATCH };
-```
+````
+
 </Tab>
 </Tabs>
 
@@ -90,9 +93,7 @@ import { Invect } from '@invect/ui';
 import '@invect/ui/styles';
 
 export default function App() {
-  return (
-    <Invect apiBaseUrl="http://localhost:3000/invect" />
-  );
+  return <Invect apiBaseUrl="http://localhost:3000/invect" />;
 }
 ```
 
@@ -116,7 +117,15 @@ npx invect-cli secret
 ## Next Steps
 
 <Cards>
-  <Card title="Concepts" href="/docs/concepts" description="Understand flows, nodes, and the execution model." />
+  <Card
+    title="Concepts"
+    href="/docs/concepts"
+    description="Understand flows, nodes, and the execution model."
+  />
   <Card title="Actions" href="/docs/actions" description="Browse the 50+ built-in actions." />
-  <Card title="AI Agents" href="/docs/agents" description="Build agent workflows with tool calling." />
+  <Card
+    title="AI Agents"
+    href="/docs/agents"
+    description="Build agent workflows with tool calling."
+  />
 </Cards>

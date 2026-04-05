@@ -441,10 +441,9 @@ async function main() {
   const teamNames = TEAMS.map((t) => t.name);
   const placeholders = teamNames.map(() => '?').join(', ');
   const existingRows = db
-    .prepare<
-      string[],
-      { id: string; name: string }
-    >(`SELECT id, name FROM rbac_teams WHERE name IN (${placeholders})`)
+    .prepare<string[], { id: string; name: string }>(
+      `SELECT id, name FROM rbac_teams WHERE name IN (${placeholders})`,
+    )
     .all(...teamNames);
 
   if (existingRows.length > 0) {

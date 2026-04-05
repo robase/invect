@@ -158,7 +158,9 @@ export const AgentConfigDialog = memo(function AgentConfigDialog({
     const grouped: Record<string, ToolDefinition[]> = {};
     for (const tool of filteredTools) {
       const providerName = tool.provider?.name ?? 'Other';
-      if (!grouped[providerName]) grouped[providerName] = [];
+      if (!grouped[providerName]) {
+        grouped[providerName] = [];
+      }
       grouped[providerName].push(tool);
     }
     return grouped;
@@ -190,7 +192,9 @@ export const AgentConfigDialog = memo(function AgentConfigDialog({
   );
 
   const selectedInstance = useMemo(() => {
-    if (!activeView.startsWith('tool-')) return null;
+    if (!activeView.startsWith('tool-')) {
+      return null;
+    }
     const instanceId = activeView.replace('tool-', '');
     return addedTools.find((t) => t.instanceId === instanceId) ?? null;
   }, [activeView, addedTools]);
@@ -866,22 +870,30 @@ function ToolInstanceView({
     const allFields = nodeDefinition?.paramFields ?? [];
     const visibleFields = allFields.filter((field: NodeParamField) => !field.hidden);
     return visibleFields.sort((a: NodeParamField, b: NodeParamField) => {
-      if (a.type === 'credential' && b.type !== 'credential') return -1;
-      if (a.type !== 'credential' && b.type === 'credential') return 1;
+      if (a.type === 'credential' && b.type !== 'credential') {
+        return -1;
+      }
+      if (a.type !== 'credential' && b.type === 'credential') {
+        return 1;
+      }
       return 0;
     });
   }, [nodeDefinition]);
 
   // Compute effective input schema
   const effectiveInputSchema = useMemo(() => {
-    if (!tool?.inputSchema || !instance) return tool?.inputSchema;
+    if (!tool?.inputSchema || !instance) {
+      return tool?.inputSchema;
+    }
 
     const aiChosenModes = (instance.params._aiChosenModes as Record<string, boolean>) ?? {};
     const schema = tool.inputSchema as {
       properties?: Record<string, unknown>;
       required?: string[];
     };
-    if (!schema.properties) return schema;
+    if (!schema.properties) {
+      return schema;
+    }
 
     const filteredProperties: Record<string, unknown> = {};
     const staticParams: string[] = [];

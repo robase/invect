@@ -33,10 +33,10 @@ The wizard walks through:
 
 **Options:**
 
-| Flag | Description |
-|------|-------------|
-| `--framework <name>` | Skip framework prompt (`express`, `nestjs`, `nextjs`) |
-| `--database <name>` | Skip database prompt (`sqlite`, `postgresql`, `mysql`) |
+| Flag                 | Description                                            |
+| -------------------- | ------------------------------------------------------ |
+| `--framework <name>` | Skip framework prompt (`express`, `nestjs`, `nextjs`)  |
+| `--database <name>`  | Skip database prompt (`sqlite`, `postgresql`, `mysql`) |
 
 ---
 
@@ -54,14 +54,14 @@ Run this whenever you add a plugin that defines new tables or after upgrading In
 
 **Options:**
 
-| Flag | Description | Default |
-|------|-------------|---------|
-| `--config <path>` | Path to config file | Auto-detected |
-| `--output <path>` | Output directory for generated files | `./db` |
-| `--schema <path>` | Append Invect tables to an existing Drizzle schema file | Auto-detected from `drizzle.config.ts` |
-| `--adapter <name>` | Schema adapter (`drizzle`, `prisma`, `sql`) | Auto-detected |
-| `--dialect <name>` | Database dialect (`sqlite`, `postgresql`, `mysql`) | From config |
-| `-y, --yes` | Skip confirmation prompt | `false` |
+| Flag               | Description                                             | Default                                |
+| ------------------ | ------------------------------------------------------- | -------------------------------------- |
+| `--config <path>`  | Path to config file                                     | Auto-detected                          |
+| `--output <path>`  | Output directory for generated files                    | `./db`                                 |
+| `--schema <path>`  | Append Invect tables to an existing Drizzle schema file | Auto-detected from `drizzle.config.ts` |
+| `--adapter <name>` | Schema adapter (`drizzle`, `prisma`, `sql`)             | Auto-detected                          |
+| `--dialect <name>` | Database dialect (`sqlite`, `postgresql`, `mysql`)      | From config                            |
+| `-y, --yes`        | Skip confirmation prompt                                | `false`                                |
 
 **Example with options:**
 
@@ -87,11 +87,11 @@ npx invect-cli migrate --push
 
 **Options:**
 
-| Flag | Description |
-|------|-------------|
-| `--config <path>` | Path to config file |
-| `--push` | Push schema directly without migration files (dev mode) |
-| `-y, --yes` | Skip confirmation prompt |
+| Flag              | Description                                             |
+| ----------------- | ------------------------------------------------------- |
+| `--config <path>` | Path to config file                                     |
+| `--push`          | Push schema directly without migration files (dev mode) |
+| `-y, --yes`       | Skip confirmation prompt                                |
 
 ---
 

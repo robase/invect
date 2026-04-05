@@ -20,7 +20,8 @@ description: Add user authentication to Invect with the User Auth plugin.
 
     invect --> plugin
     plugin --> auth
-  `}
+
+`}
 />
 
 ## Installation
@@ -63,15 +64,16 @@ import { userAuth } from '@invect/user-auth';
 import { auth } from './auth';
 
 app.use('/invect', createInvectRouter({
-  database: {
-    type: 'sqlite',
-    connectionString: 'file:./dev.db',
-  },
-  plugins: [
-    userAuth({ auth }),
-  ],
+database: {
+type: 'sqlite',
+connectionString: 'file:./dev.db',
+},
+plugins: [
+userAuth({ auth }),
+],
 }));
-```
+
+````
 </Tab>
 <Tab value="NestJS">
 ```ts
@@ -93,7 +95,8 @@ import { auth } from './auth';
   ],
 })
 export class AppModule {}
-```
+````
+
 </Tab>
 <Tab value="Next.js">
 ```ts
@@ -122,14 +125,14 @@ Users can now sign up and sign in via Better Auth's routes (proxied through Inve
 
 The plugin proxies all Better Auth endpoints under `/plugins/auth/`. For an Invect instance mounted at `/invect`:
 
-| Route | Description |
-|-------|-------------|
-| `POST /invect/plugins/auth/api/auth/sign-up/email` | Email + password sign-up |
-| `POST /invect/plugins/auth/api/auth/sign-in/email` | Email + password sign-in |
-| `POST /invect/plugins/auth/api/auth/sign-out` | Sign out (invalidate session) |
-| `GET  /invect/plugins/auth/api/auth/get-session` | Get current session |
-| `GET  /invect/plugins/auth/api/auth/sign-in/social` | OAuth sign-in (Google, GitHub, etc.) |
-| `GET  /invect/plugins/auth/api/auth/callback/:provider` | OAuth callback |
+| Route                                                   | Description                          |
+| ------------------------------------------------------- | ------------------------------------ |
+| `POST /invect/plugins/auth/api/auth/sign-up/email`      | Email + password sign-up             |
+| `POST /invect/plugins/auth/api/auth/sign-in/email`      | Email + password sign-in             |
+| `POST /invect/plugins/auth/api/auth/sign-out`           | Sign out (invalidate session)        |
+| `GET  /invect/plugins/auth/api/auth/get-session`        | Get current session                  |
+| `GET  /invect/plugins/auth/api/auth/sign-in/social`     | OAuth sign-in (Google, GitHub, etc.) |
+| `GET  /invect/plugins/auth/api/auth/callback/:provider` | OAuth callback                       |
 
 All standard Better Auth routes are available. See the [Better Auth docs](https://better-auth.com/docs) for the full list.
 
@@ -157,19 +160,19 @@ On every Invect API request:
 
 By default, the plugin maps Better Auth users to Invect identities like this:
 
-| Better Auth field | InvectIdentity field | Notes |
-|-------------------|----------------------|-------|
-| `user.id` | `id` | Always mapped |
-| `user.name` (or `user.email`) | `name` | Falls back to email |
-| `user.role` | `role` | Via role mapping |
+| Better Auth field             | InvectIdentity field | Notes               |
+| ----------------------------- | -------------------- | ------------------- |
+| `user.id`                     | `id`                 | Always mapped       |
+| `user.name` (or `user.email`) | `name`               | Falls back to email |
+| `user.role`                   | `role`               | Via role mapping    |
 
 Default role mapping:
 
-| Better Auth role | Invect role |
-|-----------------|--------------|
-| `'admin'` | `'admin'` |
-| `'viewer'` or `'readonly'` | `'viewer'` |
-| anything else (including `null`) | `'editor'` |
+| Better Auth role                 | Invect role |
+| -------------------------------- | ----------- |
+| `'admin'`                        | `'admin'`   |
+| `'viewer'` or `'readonly'`       | `'viewer'`  |
+| anything else (including `null`) | `'editor'`  |
 
 ## Configuration
 
@@ -222,10 +225,9 @@ userAuth({
       id: user.id,
       name: user.name ?? undefined,
       role: user.role === 'admin' ? 'admin' : 'editor',
-      teamIds: teams.map(t => t.id),
-      permissions: user.role === 'admin'
-        ? ['flow:write', 'flow:delete', 'credential:write']
-        : ['flow:read'],
+      teamIds: teams.map((t) => t.id),
+      permissions:
+        user.role === 'admin' ? ['flow:write', 'flow:delete', 'credential:write'] : ['flow:read'],
       metadata: {
         email: user.email,
         avatarUrl: user.image,
@@ -279,10 +281,7 @@ const auth = betterAuth({
       clientSecret: process.env.GITHUB_CLIENT_SECRET!,
     },
   },
-  plugins: [
-    twoFactor(),
-    organization(),
-  ],
+  plugins: [twoFactor(), organization()],
 });
 ```
 
@@ -331,11 +330,11 @@ function LoginForm() {
 
 The plugin registers these error codes:
 
-| Code | Status | Description |
-|------|--------|-------------|
-| `auth:session_expired` | 401 | Session has expired |
-| `auth:session_not_found` | 401 | No valid session found |
-| `auth:forbidden` | 403 | User lacks required permissions |
+| Code                     | Status | Description                     |
+| ------------------------ | ------ | ------------------------------- |
+| `auth:session_expired`   | 401    | Session has expired             |
+| `auth:session_not_found` | 401    | No valid session found          |
+| `auth:forbidden`         | 403    | User lacks required permissions |
 
 ## Database
 

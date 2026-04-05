@@ -25,11 +25,6 @@
     "watchFile": "useFsEvents",
     "watchDirectory": "useFsEvents",
     "fallbackPolling": "dynamicPriority",
-    "excludeDirectories": [
-      "**/.git",
-      "**/coverage",
-      "**/dist",
-      "**/node_modules"
-    ]
+    "excludeDirectories": ["**/.git", "**/coverage", "**/dist", "**/node_modules"]
   }
 }

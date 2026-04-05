@@ -2,27 +2,24 @@
   "name": "@invect/rbac",
   "version": "0.0.1",
   "description": "RBAC plugin for Invect — adds role-based access control UI, flow sharing, and permission management. Requires @invect/user-auth.",
-  "author": "robase <team@invect.dev>",
+  "homepage": "https://invect.dev",
+  "bugs": {
+    "url": "https://github.com/robase/invect/issues"
+  },
   "license": "MIT",
+  "author": "robase <team@invect.dev>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/robase/invect.git",
+    "directory": "pkg/plugins/rbac"
+  },
+  "files": [
+    "dist/**/*"
+  ],
   "type": "module",
   "main": "dist/backend/index.cjs",
   "module": "dist/backend/index.mjs",
   "types": "dist/backend/index.d.mts",
-  "files": [
-    "dist/**/*"
-  ],
-  "scripts": {
-    "build": "tsdown && tsc --emitDeclarationOnly --outDir dist",
-    "build:w": "tsdown --watch",
-    "dev": "tsdown --watch",
-    "clean": "rm -rf dist",
-    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint src",
-    "lint:fix": "eslint src --fix",
-    "test": "echo \"No tests configured\"",
-    "test:watch": "vitest --watch"
-  },
   "exports": {
     ".": {
       "types": "./dist/backend/index.d.mts",
@@ -40,16 +37,45 @@
       "require": "./dist/shared/types.cjs"
     }
   },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown && tsc --emitDeclarationOnly --outDir dist",
+    "build:w": "tsdown --watch",
+    "dev": "tsdown --watch",
+    "clean": "rm -rf dist",
+    "format": "oxfmt",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint --fix",
+    "test": "echo \"No tests configured\"",
+    "test:watch": "vitest --watch"
+  },
   "dependencies": {
     "@invect/core": "workspace:*"
   },
+  "devDependencies": {
+    "@invect/ui": "workspace:*",
+    "@invect/user-auth": "workspace:*",
+    "@tanstack/react-query": "^5.0.0",
+    "@types/node": "^20.11.20",
+    "@types/react": "18.3.7",
+    "@types/react-dom": "18.3.7",
+    "lucide-react": "^0.475.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tsdown": "^0.21.1",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.2",
+    "zustand": "^4.5.7"
+  },
   "peerDependencies": {
-    "@invect/user-auth": ">=0.1.4",
     "@invect/ui": ">=0.1.4",
-    "react": ">=18.0.0",
-    "react-dom": ">=18.0.0",
+    "@invect/user-auth": ">=0.1.4",
     "@tanstack/react-query": ">=5.0.0",
     "clsx": ">=2.0.0",
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0",
     "tailwind-merge": ">=2.0.0",
     "zustand": ">=4.0.0"
   },
@@ -75,33 +101,5 @@
     "@tanstack/react-query": {
       "optional": true
     }
-  },
-  "devDependencies": {
-    "@invect/ui": "workspace:*",
-    "@invect/user-auth": "workspace:*",
-    "@tanstack/react-query": "^5.0.0",
-    "@types/node": "^20.11.20",
-    "@types/react": "18.3.7",
-    "@types/react-dom": "18.3.7",
-    "lucide-react": "^0.475.0",
-    "prettier": "^3.6.2",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "tsdown": "^0.21.1",
-    "typescript": "^5.3.3",
-    "vitest": "^1.2.2",
-    "zustand": "^4.5.7"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/robase/invect.git",
-    "directory": "pkg/plugins/rbac"
-  },
-  "bugs": {
-    "url": "https://github.com/robase/invect/issues"
-  },
-  "homepage": "https://invect.dev",
-  "publishConfig": {
-    "access": "public"
   }
 }

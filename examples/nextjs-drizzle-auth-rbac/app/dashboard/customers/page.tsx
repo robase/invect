@@ -40,9 +40,7 @@ export default async function CustomersPage() {
                     {customer.plan}
                   </span>
                 </td>
-                <td className="px-4 py-3 font-mono text-sm">
-                  ${customer.mrr.toFixed(0)}
-                </td>
+                <td className="px-4 py-3 font-mono text-sm">${customer.mrr.toFixed(0)}</td>
                 <td className="px-4 py-3">
                   <span
                     className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${

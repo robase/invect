@@ -13,21 +13,23 @@
  * Prints the assigned port to stdout as "LISTENING:<port>" so the
  * fixture can parse it.
  */
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import path from "node:path";
-import http from "node:http";
-import { fileURLToPath } from "node:url";
-import { createInvectHandler } from "../../../pkg/nextjs/dist/index.mjs";
-import { startExternalApiMocks, stopExternalApiMocks } from "../../../examples/express-drizzle/mock-external-apis.ts";
-
+import Database from 'better-sqlite3';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
+import path from 'node:path';
+import http from 'node:http';
+import { fileURLToPath } from 'node:url';
+import { createInvectHandler } from '../../../pkg/nextjs/dist/index.mjs';
+import {
+  startExternalApiMocks,
+  stopExternalApiMocks,
+} from '../../../examples/express-drizzle/mock-external-apis.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const port = parseInt(process.env.PORT || "0", 10);
-const dbPath = process.env.TEST_DB_PATH || ":memory:";
+const port = parseInt(process.env.PORT || '0', 10);
+const dbPath = process.env.TEST_DB_PATH || ':memory:';
 
 startExternalApiMocks();
 
@@ -36,32 +38,29 @@ const sqlite = new Database(dbPath === ':memory:' ? ':memory:' : dbPath);
 sqlite.pragma('journal_mode = WAL');
 const db = drizzle(sqlite);
 
-const migrationsFolder = path.resolve(
-  __dirname,
-  "../../../pkg/core/drizzle/sqlite",
-);
+const migrationsFolder = path.resolve(__dirname, '../../../pkg/core/drizzle/sqlite');
 await migrate(db, { migrationsFolder });
 sqlite.close();
 
 // ── 2. Create the Next.js adapter handler ─────────────────────────────
 const handler = createInvectHandler({
   database: {
-    type: "sqlite",
+    type: 'sqlite',
     connectionString: `file:${dbPath}`,
   },
-  logging: { level: "warn" },
+  logging: { level: 'warn' },
 });
 
-process.on("unhandledRejection", (err) => {
+process.on('unhandledRejection', (err) => {
   process.stderr.write(`Unhandled rejection: ${err}\n`);
 });
 
-process.on("SIGINT", () => {
+process.on('SIGINT', () => {
   stopExternalApiMocks();
   process.exit(0);
 });
 
-process.on("SIGTERM", () => {
+process.on('SIGTERM', () => {
   stopExternalApiMocks();
   process.exit(0);
 });
@@ -72,83 +71,87 @@ process.on("SIGTERM", () => {
 //   (request: Request, context: { params: Promise<{ invect: string[] }> })
 // We strip the /api/invect/ prefix and pass the remaining path segments.
 
-const API_PREFIX = "/api/invect/";
+const API_PREFIX = '/api/invect/';
 
 const server = http.createServer(async (req, res) => {
   try {
-    const url = new URL(req.url || "/", `http://${req.headers.host}`);
+    const url = new URL(req.url || '/', `http://${req.headers.host}`);
 
     // Health check
-    if (url.pathname === "/health") {
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ status: "ok" }));
+    if (url.pathname === '/health') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'ok' }));
       return;
     }
 
     // Only handle /api/invect/* routes
     if (!url.pathname.startsWith(API_PREFIX)) {
-      res.writeHead(404, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "Not Found" }));
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Not Found' }));
       return;
     }
 
     // Extract path segments after /api/invect/
     const subPath = url.pathname.slice(API_PREFIX.length);
-    const pathSegments = subPath ? subPath.split("/") : [];
+    const pathSegments = subPath ? subPath.split('/') : [];
 
     // Build a Web Request from the node:http request
     const body = await new Promise<Buffer>((resolve) => {
       const chunks: Buffer[] = [];
-      req.on("data", (c: Buffer) => chunks.push(c));
-      req.on("end", () => resolve(Buffer.concat(chunks)));
+      req.on('data', (c: Buffer) => chunks.push(c));
+      req.on('end', () => resolve(Buffer.concat(chunks)));
     });
 
     const headers = new Headers();
     for (const [key, value] of Object.entries(req.headers)) {
-      if (value) headers.set(key, Array.isArray(value) ? value.join(", ") : value);
+      if (value) {
+        headers.set(key, Array.isArray(value) ? value.join(', ') : value);
+      }
     }
 
     const webRequest = new Request(url.toString(), {
       method: req.method,
       headers,
-      body: ["GET", "HEAD"].includes(req.method || "") ? undefined : new Uint8Array(body),
+      body: ['GET', 'HEAD'].includes(req.method || '') ? undefined : new Uint8Array(body),
     });
 
     const context = { params: Promise.resolve({ invect: pathSegments }) };
 
     // Dispatch to the correct HTTP method handler
-    const method = (req.method || "GET").toUpperCase();
+    const method = (req.method || 'GET').toUpperCase();
     let webResponse: Response;
 
-    if (method === "GET" && handler.GET) {
+    if (method === 'GET' && handler.GET) {
       webResponse = await handler.GET(webRequest, context);
-    } else if (method === "POST" && handler.POST) {
+    } else if (method === 'POST' && handler.POST) {
       webResponse = await handler.POST(webRequest, context);
-    } else if (method === "PUT" && handler.PUT) {
+    } else if (method === 'PUT' && handler.PUT) {
       webResponse = await handler.PUT(webRequest, context);
-    } else if (method === "DELETE" && handler.DELETE) {
+    } else if (method === 'DELETE' && handler.DELETE) {
       webResponse = await handler.DELETE(webRequest, context);
     } else {
-      res.writeHead(405, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "Method Not Allowed" }));
+      res.writeHead(405, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Method Not Allowed' }));
       return;
     }
 
     // Convert Web Response back to node:http
     const headerEntries: Record<string, string> = {};
-    webResponse.headers.forEach((value, key) => { headerEntries[key] = value; });
+    webResponse.headers.forEach((value, key) => {
+      headerEntries[key] = value;
+    });
     res.writeHead(webResponse.status, headerEntries);
     const responseBody = await webResponse.arrayBuffer();
     res.end(Buffer.from(responseBody));
   } catch (err) {
     process.stderr.write(`Request error: ${err}\n`);
-    res.writeHead(500, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ error: "Internal Server Error" }));
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Internal Server Error' }));
   }
 });
 
 server.listen(port, () => {
   const addr = server.address();
-  const assignedPort = typeof addr === "object" && addr ? addr.port : port;
+  const assignedPort = typeof addr === 'object' && addr ? addr.port : port;
   process.stdout.write(`LISTENING:${assignedPort}\n`);
 });

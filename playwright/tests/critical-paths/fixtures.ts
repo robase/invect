@@ -24,31 +24,28 @@
  *   });
  */
 
-import {
-  expect,
-  type Page,
-} from "@playwright/test";
-import { fileURLToPath } from "node:url";
-import path from "node:path";
+import { expect, type Page } from '@playwright/test';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 import {
   createSqliteBrowserIsolationTest,
   type BrowserIsolationWorkerFixtures,
-} from "../../test-support/sqlite-isolation";
+} from '../../test-support/sqlite-isolation';
 
 export { expect };
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const VITE_BASE = process.env.PLAYWRIGHT_VITE_URL ?? "http://localhost:41731";
-const rootDir = path.resolve(__dirname, "../../..");
-const serverCwd = path.join(rootDir, "examples/express-drizzle");
-const serverScript = path.join(serverCwd, "playwright-test-server.ts");
+const VITE_BASE = process.env.PLAYWRIGHT_VITE_URL ?? 'http://localhost:41731';
+const rootDir = path.resolve(__dirname, '../../..');
+const serverCwd = path.join(rootDir, 'examples/express-drizzle');
+const serverScript = path.join(serverCwd, 'playwright-test-server.ts');
 const isolatedBrowserBase = createSqliteBrowserIsolationTest({
-  apiPrefix: "/invect",
-  apiRoutePrefix: "/api/invect",
-  dbFilePrefix: "invect-cp",
-  readyPath: "/invect/credentials",
+  apiPrefix: '/invect',
+  apiRoutePrefix: '/api/invect',
+  dbFilePrefix: 'invect-cp',
+  readyPath: '/invect/credentials',
   serverCwd,
   serverScript,
   sharedOrigin: VITE_BASE,
@@ -81,18 +78,17 @@ type WorkerFixtures = {
 // ---------------------------------------------------------------------------
 
 export const test = isolatedBrowserBase.extend<TestFixtures, WorkerFixtures>({
-
   // ── Test fixtures ────────────────────────────────────────────────────────
 
   _authMock: [
     async ({ page }, use) => {
-      await page.route("**/plugins/auth/api/auth/get-session", async (route) => {
+      await page.route('**/plugins/auth/api/auth/get-session', async (route) => {
         await route.fulfill({
           status: 200,
-          contentType: "application/json",
+          contentType: 'application/json',
           body: JSON.stringify({
-            user: { id: "test-user", email: "admin@test.com", name: "Test User", role: "admin" },
-            session: { id: "test-session" },
+            user: { id: 'test-user', email: 'admin@test.com', name: 'Test User', role: 'admin' },
+            session: { id: 'test-session' },
           }),
         });
       });
@@ -104,42 +100,47 @@ export const test = isolatedBrowserBase.extend<TestFixtures, WorkerFixtures>({
   navigateToFlow: async ({ page }, use) => {
     await use(async (flowName: string) => {
       await page.goto(`${VITE_BASE}/invect`);
-      await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({ timeout: 15_000 });
-      await page.getByText("Loading flows").waitFor({ state: "hidden", timeout: 10_000 }).catch(() => {});
-      const card = page.locator(".bg-card").filter({
-        has: page.getByRole("heading", { level: 3, name: flowName, exact: true }),
+      await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({
+        timeout: 15_000,
+      });
+      await page
+        .getByText('Loading flows')
+        .waitFor({ state: 'hidden', timeout: 10_000 })
+        .catch(() => {});
+      const card = page.locator('.bg-card').filter({
+        has: page.getByRole('heading', { level: 3, name: flowName, exact: true }),
       });
       await expect(card).toBeVisible({ timeout: 10_000 });
       await card.click();
-      await expect(page.locator(".react-flow")).toBeVisible({ timeout: 15_000 });
+      await expect(page.locator('.react-flow')).toBeVisible({ timeout: 15_000 });
     });
   },
 
   openNodeConfigPanel: async ({ page }, use) => {
     await use(async (nodeName: string) => {
-      const node = page.locator(".react-flow__node").filter({ hasText: nodeName });
+      const node = page.locator('.react-flow__node').filter({ hasText: nodeName });
       await expect(node).toBeVisible({ timeout: 10_000 });
       await node.dblclick();
-      await expect(page.getByRole("dialog")).toBeVisible({ timeout: 5_000 });
+      await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 });
     });
   },
 
   closeConfigPanel: async ({ page }, use) => {
     await use(async () => {
-      await page.keyboard.press("Escape");
-      await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 5_000 });
     });
   },
 
   getInputPanelText: async ({ page }, use) => {
     await use(async () =>
-      page.getByRole("dialog").locator(".cm-editor").first().locator(".cm-content").innerText()
+      page.getByRole('dialog').locator('.cm-editor').first().locator('.cm-content').innerText(),
     );
   },
 
   getOutputPanelText: async ({ page }, use) => {
     await use(async () =>
-      page.getByRole("dialog").locator(".cm-editor").last().locator(".cm-content").innerText()
+      page.getByRole('dialog').locator('.cm-editor').last().locator('.cm-content').innerText(),
     );
   },
 });

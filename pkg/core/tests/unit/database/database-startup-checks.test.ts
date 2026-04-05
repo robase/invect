@@ -52,7 +52,9 @@ function mockConnectionFactory(opts: {
     driver: {
       type: 'better-sqlite3' as const,
       async queryAll(sql: string) {
-        if (queryError) throw queryError;
+        if (queryError) {
+          throw queryError;
+        }
         if (sql.includes('SELECT 1') || sql.includes('health')) {
           return [{ health: 1 }];
         }
@@ -62,7 +64,9 @@ function mockConnectionFactory(opts: {
         return [];
       },
       async execute() {
-        if (queryError) throw queryError;
+        if (queryError) {
+          throw queryError;
+        }
         return { changes: 0 };
       },
       close() {},
@@ -94,9 +98,7 @@ describe('DatabaseService startup checks', () => {
     it('should throw with helpful message when database has no tables', async () => {
       mockConnectionFactory({ tables: [] });
 
-      const { DatabaseService } = await import(
-        '../../../src/services/database/database.service'
-      );
+      const { DatabaseService } = await import('../../../src/services/database/database.service');
       const logger = createMockLogger();
       const service = new DatabaseService(
         { id: 'test', type: 'sqlite', connectionString: 'file:./test.db', name: 'Test' },
@@ -117,9 +119,7 @@ describe('DatabaseService startup checks', () => {
       const partialTables = EXPECTED_TABLE_NAMES.slice(0, 3);
       mockConnectionFactory({ tables: partialTables });
 
-      const { DatabaseService } = await import(
-        '../../../src/services/database/database.service'
-      );
+      const { DatabaseService } = await import('../../../src/services/database/database.service');
       const logger = createMockLogger();
       const service = new DatabaseService(
         { id: 'test', type: 'sqlite', connectionString: 'file:./test.db', name: 'Test' },
@@ -138,9 +138,7 @@ describe('DatabaseService startup checks', () => {
     it('should succeed when all tables exist', async () => {
       mockConnectionFactory({ tables: EXPECTED_TABLE_NAMES });
 
-      const { DatabaseService } = await import(
-        '../../../src/services/database/database.service'
-      );
+      const { DatabaseService } = await import('../../../src/services/database/database.service');
       const logger = createMockLogger();
       const service = new DatabaseService(
         { id: 'test', type: 'sqlite', connectionString: 'file:./test.db', name: 'Test' },
@@ -160,9 +158,7 @@ describe('DatabaseService startup checks', () => {
         connectError: new Error('SQLITE_CANTOPEN: unable to open database file'),
       });
 
-      const { DatabaseService } = await import(
-        '../../../src/services/database/database.service'
-      );
+      const { DatabaseService } = await import('../../../src/services/database/database.service');
       const logger = createMockLogger();
       const service = new DatabaseService(
         { id: 'test', type: 'sqlite', connectionString: 'file:./bad/path.db', name: 'Test' },
@@ -181,9 +177,7 @@ describe('DatabaseService startup checks', () => {
         connectError: new Error('ECONNREFUSED'),
       });
 
-      const { DatabaseService } = await import(
-        '../../../src/services/database/database.service'
-      );
+      const { DatabaseService } = await import('../../../src/services/database/database.service');
       const logger = createMockLogger();
       const service = new DatabaseService(
         {
@@ -209,9 +203,7 @@ describe('DatabaseService startup checks', () => {
         queryError: new Error('database is locked'),
       });
 
-      const { DatabaseService } = await import(
-        '../../../src/services/database/database.service'
-      );
+      const { DatabaseService } = await import('../../../src/services/database/database.service');
       const logger = createMockLogger();
       const service = new DatabaseService(
         { id: 'test', type: 'sqlite', connectionString: 'file:./test.db', name: 'Test' },
@@ -231,9 +223,7 @@ describe('DatabaseService startup checks', () => {
       // All core tables exist, but plugin tables are missing
       mockConnectionFactory({ tables: EXPECTED_TABLE_NAMES });
 
-      const { DatabaseService } = await import(
-        '../../../src/services/database/database.service'
-      );
+      const { DatabaseService } = await import('../../../src/services/database/database.service');
       const logger = createMockLogger();
       const plugins: InvectPlugin[] = [
         {
@@ -262,9 +252,7 @@ describe('DatabaseService startup checks', () => {
     it('should include custom setup instructions from plugin', async () => {
       mockConnectionFactory({ tables: EXPECTED_TABLE_NAMES });
 
-      const { DatabaseService } = await import(
-        '../../../src/services/database/database.service'
-      );
+      const { DatabaseService } = await import('../../../src/services/database/database.service');
       const logger = createMockLogger();
       const plugins: InvectPlugin[] = [
         {
@@ -291,9 +279,7 @@ describe('DatabaseService startup checks', () => {
       const allTables = [...EXPECTED_TABLE_NAMES, 'user', 'session', 'account', 'verification'];
       mockConnectionFactory({ tables: allTables });
 
-      const { DatabaseService } = await import(
-        '../../../src/services/database/database.service'
-      );
+      const { DatabaseService } = await import('../../../src/services/database/database.service');
       const logger = createMockLogger();
       const plugins: InvectPlugin[] = [
         {
@@ -318,9 +304,7 @@ describe('DatabaseService startup checks', () => {
     it('should report multiple plugins with missing tables', async () => {
       mockConnectionFactory({ tables: EXPECTED_TABLE_NAMES });
 
-      const { DatabaseService } = await import(
-        '../../../src/services/database/database.service'
-      );
+      const { DatabaseService } = await import('../../../src/services/database/database.service');
       const logger = createMockLogger();
       const plugins: InvectPlugin[] = [
         {
@@ -352,9 +336,7 @@ describe('DatabaseService startup checks', () => {
     it('should infer requiredTables from plugin schema if not explicitly set', async () => {
       mockConnectionFactory({ tables: EXPECTED_TABLE_NAMES });
 
-      const { DatabaseService } = await import(
-        '../../../src/services/database/database.service'
-      );
+      const { DatabaseService } = await import('../../../src/services/database/database.service');
       const logger = createMockLogger();
       const plugins: InvectPlugin[] = [
         {
@@ -389,9 +371,7 @@ describe('DatabaseService startup checks', () => {
     it('should skip plugin table check when no plugins declare tables', async () => {
       mockConnectionFactory({ tables: EXPECTED_TABLE_NAMES });
 
-      const { DatabaseService } = await import(
-        '../../../src/services/database/database.service'
-      );
+      const { DatabaseService } = await import('../../../src/services/database/database.service');
       const logger = createMockLogger();
       const plugins: InvectPlugin[] = [
         {
@@ -417,9 +397,7 @@ describe('DatabaseService startup checks', () => {
       const tables = [...EXPECTED_TABLE_NAMES, 'user', 'session'];
       mockConnectionFactory({ tables });
 
-      const { DatabaseService } = await import(
-        '../../../src/services/database/database.service'
-      );
+      const { DatabaseService } = await import('../../../src/services/database/database.service');
       const logger = createMockLogger();
       const plugins: InvectPlugin[] = [
         {
@@ -448,9 +426,7 @@ describe('DatabaseService startup checks', () => {
     it('should extract from requiredTables', async () => {
       // Import directly for static method testing
       mockConnectionFactory({ tables: [] });
-      const { DatabaseService } = await import(
-        '../../../src/services/database/database.service'
-      );
+      const { DatabaseService } = await import('../../../src/services/database/database.service');
 
       const plugins: InvectPlugin[] = [
         {
@@ -470,9 +446,7 @@ describe('DatabaseService startup checks', () => {
 
     it('should infer from schema when no requiredTables', async () => {
       mockConnectionFactory({ tables: [] });
-      const { DatabaseService } = await import(
-        '../../../src/services/database/database.service'
-      );
+      const { DatabaseService } = await import('../../../src/services/database/database.service');
 
       const plugins: InvectPlugin[] = [
         {
@@ -498,9 +472,7 @@ describe('DatabaseService startup checks', () => {
 
     it('should prefer requiredTables over schema', async () => {
       mockConnectionFactory({ tables: [] });
-      const { DatabaseService } = await import(
-        '../../../src/services/database/database.service'
-      );
+      const { DatabaseService } = await import('../../../src/services/database/database.service');
 
       const plugins: InvectPlugin[] = [
         {
@@ -522,9 +494,7 @@ describe('DatabaseService startup checks', () => {
 
     it('should skip plugins with no tables and no schema', async () => {
       mockConnectionFactory({ tables: [] });
-      const { DatabaseService } = await import(
-        '../../../src/services/database/database.service'
-      );
+      const { DatabaseService } = await import('../../../src/services/database/database.service');
 
       const plugins: InvectPlugin[] = [
         { id: 'no-tables' },

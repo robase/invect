@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -23,34 +19,14 @@
       }
     ],
     "paths": {
-      "@/*": [
-        "./*"
-      ],
-      "@/.source": [
-        "./.source"
-      ],
-      "@/.source/*": [
-        "./.source/*"
-      ],
-      "fumadocs-mdx:collections/*": [
-        "./.source/*"
-      ]
+      "@/*": ["./*"],
+      "@/.source": ["./.source"],
+      "@/.source/*": ["./.source/*"],
+      "fumadocs-mdx:collections/*": ["./.source/*"]
     }
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    ".source/**/*.ts",
-    "next-env.d.ts",
-    ".next/types/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    ".next",
-    "dist",
-    "out",
-    "coverage"
-  ],
+  "include": ["**/*.ts", "**/*.tsx", ".source/**/*.ts", "next-env.d.ts", ".next/types/**/*.ts"],
+  "exclude": ["node_modules", ".next", "dist", "out", "coverage"],
   "watchOptions": {
     "watchFile": "useFsEvents",
     "watchDirectory": "useFsEvents",

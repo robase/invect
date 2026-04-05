@@ -28,6 +28,4 @@ export interface SchemaGeneratorResult {
   overwrite?: boolean;
 }
 
-export type SchemaGenerator = (
-  options: SchemaGeneratorOptions,
-) => Promise<SchemaGeneratorResult>;
+export type SchemaGenerator = (options: SchemaGeneratorOptions) => Promise<SchemaGeneratorResult>;

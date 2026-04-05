@@ -9,8 +9,7 @@
 import { defineConfig } from '@invect/core';
 
 const DATABASE_URL =
-  process.env.DATABASE_URL ||
-  'postgresql://invect:invect@localhost:5433/acme_saas';
+  process.env.DATABASE_URL || 'postgresql://invect:invect@localhost:5433/acme_saas';
 
 export const invectConfig = defineConfig({
   database: {

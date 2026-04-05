@@ -19,10 +19,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { DialogHeader, DialogTitle, DialogDescription } from '@invect/ui';
-import {
-  useUpdateWebhookTrigger,
-  useDeleteWebhookTrigger,
-} from '../hooks/useWebhookQueries';
+import { useUpdateWebhookTrigger, useDeleteWebhookTrigger } from '../hooks/useWebhookQueries';
 import { CopyableField } from './CopyableField';
 import type { WebhookTrigger, UpdateWebhookTriggerInput } from '../../shared/types';
 
@@ -61,7 +58,9 @@ function getAuthModeConfig(trigger: WebhookTrigger) {
 }
 
 function formatFullDate(iso?: string): string {
-  if (!iso) return 'Never';
+  if (!iso) {
+    return 'Never';
+  }
   return new Date(iso).toLocaleString(undefined, {
     month: 'short',
     day: 'numeric',
@@ -81,11 +80,7 @@ interface WebhookDetailPanelProps {
   onClose: () => void;
 }
 
-export const WebhookDetailPanel: FC<WebhookDetailPanelProps> = ({
-  trigger,
-  flowName,
-  onClose,
-}) => {
+export const WebhookDetailPanel: FC<WebhookDetailPanelProps> = ({ trigger, flowName, onClose }) => {
   const [section, setSection] = useState<Section>('overview');
   const updateMutation = useUpdateWebhookTrigger();
   const deleteMutation = useDeleteWebhookTrigger();
@@ -132,10 +127,10 @@ export const WebhookDetailPanel: FC<WebhookDetailPanelProps> = ({
 
         {/* Tab nav */}
         <div className="flex gap-1 border-b -mx-6 px-6 mt-4">
-          {([
+          {[
             { key: 'overview' as const, label: 'Overview' },
             { key: 'edit' as const, label: 'Edit' },
-          ]).map(({ key, label }) => (
+          ].map(({ key, label }) => (
             <button
               key={key}
               onClick={() => setSection(key)}
@@ -163,10 +158,7 @@ export const WebhookDetailPanel: FC<WebhookDetailPanelProps> = ({
             isDeleting={deleteMutation.isPending}
           />
         ) : (
-          <EditSection
-            trigger={trigger}
-            onSuccess={() => setSection('overview')}
-          />
+          <EditSection trigger={trigger} onSuccess={() => setSection('overview')} />
         )}
       </div>
     </>
@@ -334,7 +326,9 @@ const EditSection: FC<{
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      return;
+    }
 
     const input: UpdateWebhookTriggerInput & { id: string } = {
       id: trigger.id,
@@ -453,19 +447,19 @@ const EditSection: FC<{
       </div>
 
       <div className="space-y-2">
-          <label className="text-sm font-medium" htmlFor="wh-edit-methods">
-            HTTP Methods
-          </label>
-          <select
-            id="wh-edit-methods"
-            value={methods}
-            onChange={(e) => setMethods(e.target.value)}
-            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/20"
-          >
-            <option value="POST">POST only</option>
-            <option value="POST,PUT">POST + PUT</option>
-            <option value="ANY">Any method</option>
-          </select>
+        <label className="text-sm font-medium" htmlFor="wh-edit-methods">
+          HTTP Methods
+        </label>
+        <select
+          id="wh-edit-methods"
+          value={methods}
+          onChange={(e) => setMethods(e.target.value)}
+          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/20"
+        >
+          <option value="POST">POST only</option>
+          <option value="POST,PUT">POST + PUT</option>
+          <option value="ANY">Any method</option>
+        </select>
       </div>
 
       {updateMutation.isError && (

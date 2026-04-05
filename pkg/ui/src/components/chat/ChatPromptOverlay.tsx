@@ -33,7 +33,9 @@ export function ChatPromptOverlay({ className }: ChatPromptOverlayProps) {
 
   const handleSubmit = useCallback(() => {
     const text = value.trim();
-    if (!text) return;
+    if (!text) {
+      return;
+    }
 
     // Queue the prompt and open the panel — ChatPanel will consume it
     useChatStore.getState().setPendingPrompt(text);
@@ -62,7 +64,9 @@ export function ChatPromptOverlay({ className }: ChatPromptOverlayProps) {
     }
   }, [shouldShow]);
 
-  if (!shouldShow) return null;
+  if (!shouldShow) {
+    return null;
+  }
 
   return (
     <div

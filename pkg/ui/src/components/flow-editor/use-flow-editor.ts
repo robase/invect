@@ -266,7 +266,7 @@ function useNodeOperations() {
       );
 
       const defaultParams = {
-        ...(definition?.defaultParams || {}),
+        ...definition?.defaultParams,
         ...fieldDefaults,
       };
 

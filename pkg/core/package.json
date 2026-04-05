@@ -1,8 +1,30 @@
 {
   "name": "@invect/core",
   "version": "0.0.1",
-  "type": "module",
   "description": "Framework-agnostic core package for Invect workflow execution engine",
+  "keywords": [
+    "automation",
+    "core",
+    "framework-agnostic",
+    "invect",
+    "workflow"
+  ],
+  "homepage": "https://invect.dev",
+  "bugs": {
+    "url": "https://github.com/robase/invect/issues"
+  },
+  "license": "MIT",
+  "author": "robase <team@invect.dev>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/robase/invect.git",
+    "directory": "pkg/core"
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.map"
+  ],
+  "type": "module",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -33,15 +55,17 @@
       "require": "./dist/database/schema-mysql.cjs"
     }
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsdown",
     "build:watch": "tsdown --watch",
     "dev": "tsdown --watch",
     "clean": "rm -rf dist",
-    "format": "prettier --write \"src/**/*.ts\"",
+    "format": "oxfmt",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src tests",
-    "lint:fix": "eslint src tests --fix",
+    "lint": "oxlint --fix",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -62,6 +86,20 @@
     "quickjs-emscripten": "^0.32.0",
     "zod": "^3.25.1"
   },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/json-logic-js": "^2.0.8",
+    "@types/node": "^22.10.2",
+    "@types/pg": "^8.15.4",
+    "@vitest/coverage-v8": "^3.2.4",
+    "tsdown": "^0.21.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  },
+  "peerDependencies": {
+    "typescript": ">=4.9.0"
+  },
   "optionalDependencies": {
     "@libsql/client": "^0.17.2",
     "@neondatabase/serverless": "^1.0.0",
@@ -70,54 +108,8 @@
     "pg": "^8.16.0",
     "postgres": "^3.4.7"
   },
-  "devDependencies": {
-    "@eslint/js": "^9.31.0",
-    "@types/better-sqlite3": "^7.6.13",
-    "@types/json-logic-js": "^2.0.8",
-    "@types/node": "^22.10.2",
-    "@types/pg": "^8.15.4",
-    "@typescript-eslint/eslint-plugin": "^8.36.0",
-    "@typescript-eslint/parser": "^8.36.0",
-    "@vitest/coverage-v8": "^3.2.4",
-    "eslint": "^9.31.0",
-    "globals": "^16.3.0",
-    "prettier": "^3.6.2",
-    "tsdown": "^0.21.1",
-    "tsx": "^4.19.2",
-    "typescript": "^5.8.3",
-    "typescript-eslint": "^8.36.0",
-    "vitest": "^3.2.4"
-  },
   "engines": {
     "node": ">=22.0.0",
     "npm": ">=10.0.0"
-  },
-  "peerDependencies": {
-    "typescript": ">=4.9.0"
-  },
-  "files": [
-    "dist",
-    "!dist/**/*.map"
-  ],
-  "publishConfig": {
-    "access": "public"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/robase/invect.git",
-    "directory": "pkg/core"
-  },
-  "bugs": {
-    "url": "https://github.com/robase/invect/issues"
-  },
-  "homepage": "https://invect.dev",
-  "author": "robase <team@invect.dev>",
-  "keywords": [
-    "workflow",
-    "automation",
-    "invect",
-    "core",
-    "framework-agnostic"
-  ],
-  "license": "MIT"
+  }
 }

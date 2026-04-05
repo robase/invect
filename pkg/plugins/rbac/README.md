@@ -29,13 +29,16 @@ pnpm add @invect/rbac
 import { userAuth } from '@invect/user-auth';
 import { rbacPlugin } from '@invect/rbac';
 
-app.use('/invect', createInvectRouter({
-  database: { type: 'sqlite', connectionString: 'file:./dev.db' },
-  plugins: [
-    userAuth({ auth }),   // Must come first
-    rbacPlugin(),
-  ],
-}));
+app.use(
+  '/invect',
+  createInvectRouter({
+    database: { type: 'sqlite', connectionString: 'file:./dev.db' },
+    plugins: [
+      userAuth({ auth }), // Must come first
+      rbacPlugin(),
+    ],
+  }),
+);
 ```
 
 ## Frontend
@@ -44,21 +47,18 @@ app.use('/invect', createInvectRouter({
 import { Invect } from '@invect/ui';
 import { rbacFrontendPlugin } from '@invect/rbac/ui';
 
-<Invect
-  apiBaseUrl="http://localhost:3000/invect"
-  plugins={[rbacFrontendPlugin]}
-/>
+<Invect apiBaseUrl="http://localhost:3000/invect" plugins={[rbacFrontendPlugin]} />;
 ```
 
 The plugin contributes sidebar items, an access management page, a flow-level access panel tab, and a share button in the flow editor header.
 
 ## Exports
 
-| Entry Point | Content |
-|---|---|
-| `@invect/rbac` | Backend plugin (Node.js) |
-| `@invect/rbac/ui` | Frontend plugin — `rbacFrontendPlugin`, `RbacProvider`, `ShareFlowModal`, `FlowAccessPanel` |
-| `@invect/rbac/types` | Shared types — `FlowAccessRecord`, `FlowAccessPermission`, etc. |
+| Entry Point          | Content                                                                                     |
+| -------------------- | ------------------------------------------------------------------------------------------- |
+| `@invect/rbac`       | Backend plugin (Node.js)                                                                    |
+| `@invect/rbac/ui`    | Frontend plugin — `rbacFrontendPlugin`, `RbacProvider`, `ShareFlowModal`, `FlowAccessPanel` |
+| `@invect/rbac/types` | Shared types — `FlowAccessRecord`, `FlowAccessPermission`, etc.                             |
 
 ## License
 

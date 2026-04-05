@@ -167,7 +167,7 @@ export async function executeActionAsTool(
   //    Static params take precedence (they're user-configured).
   const mergedParams = {
     ...input,
-    ...(toolContext.staticParams ?? {}),
+    ...toolContext.staticParams,
   };
 
   // 2. Validate

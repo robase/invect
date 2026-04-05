@@ -332,7 +332,7 @@ export const addToolToAgentTool: ChatToolDefinition = {
         name: name ?? baseTool.name,
         description: description ?? baseTool.description,
         params: {
-          ...(toolParams ?? {}),
+          ...toolParams,
           ...(Object.keys(aiModes).length > 0 ? { _aiChosenModes: aiModes } : {}),
         },
       };

@@ -1,32 +1,32 @@
 {
   "name": "invect-cli",
   "version": "0.0.1",
-  "type": "module",
   "description": "CLI for managing Invect workflow projects. Thin wrapper around @invect/cli.",
+  "keywords": [
+    "automation",
+    "cli",
+    "invect",
+    "workflow"
+  ],
+  "homepage": "https://invect.dev",
+  "bugs": {
+    "url": "https://github.com/robase/invect/issues"
+  },
+  "license": "MIT",
+  "author": "robase <team@invect.dev>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/robase/invect.git",
+    "directory": "pkg/invect"
+  },
   "bin": {
     "invect-cli": "./bin.js"
   },
   "files": [
     "bin.js"
   ],
+  "type": "module",
   "dependencies": {
     "@invect/cli": "workspace:*"
-  },
-  "keywords": [
-    "invect",
-    "cli",
-    "workflow",
-    "automation"
-  ],
-  "author": "robase <team@invect.dev>",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/robase/invect.git",
-    "directory": "pkg/invect"
-  },
-  "bugs": {
-    "url": "https://github.com/robase/invect/issues"
-  },
-  "homepage": "https://invect.dev"
+  }
 }

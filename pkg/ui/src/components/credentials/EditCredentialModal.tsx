@@ -78,11 +78,13 @@ export const EditCredentialModal: React.FC<EditCredentialModalProps> = ({
   const updateConfig = (key: string, value: string) => {
     setFormData((prev) => ({
       ...prev,
-      config: { ...(prev.config || {}), [key]: value },
+      config: { ...prev.config, [key]: value },
     }));
   };
 
-  if (!open) return null;
+  if (!open) {
+    return null;
+  }
 
   return (
     <div className="fixed inset-0 z-50">

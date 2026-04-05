@@ -6,7 +6,8 @@ description: Flow-level access control with roles and per-user permissions.
 `@invect/rbac` adds role-based access control on top of `@invect/user-auth`. It lets you restrict which users can view, edit, or own individual flows — and contributes a Share button and Access Control page to the frontend.
 
 <Callout type="info">
-  The RBAC plugin requires `@invect/user-auth` to be configured first. It handles the *authorization* layer on top of the authentication that the User Auth plugin provides.
+  The RBAC plugin requires `@invect/user-auth` to be configured first. It handles the
+  *authorization* layer on top of the authentication that the User Auth plugin provides.
 </Callout>
 
 ## Installation
@@ -28,16 +29,17 @@ import { rbacPlugin } from '@invect/rbac';
 import { auth } from './auth';
 
 app.use('/invect', createInvectRouter({
-  database: {
-    type: 'sqlite',
-    connectionString: process.env.DATABASE_URL || 'file:./dev.db',
-  },
-  plugins: [
-    userAuth({ auth }),
-    rbacPlugin(),
-  ],
+database: {
+type: 'sqlite',
+connectionString: process.env.DATABASE_URL || 'file:./dev.db',
+},
+plugins: [
+userAuth({ auth }),
+rbacPlugin(),
+],
 }));
-```
+
+````
 </Tab>
 <Tab value="NestJS">
 ```ts
@@ -51,7 +53,8 @@ InvectModule.forRoot({
     rbacPlugin(),
   ],
 })
-```
+````
+
 </Tab>
 <Tab value="Next.js">
 ```ts
@@ -79,10 +82,7 @@ createInvectRouter({
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL || 'file:./dev.db',
   },
-  plugins: [
-    userAuth({ auth }),
-    rbacPlugin(),
-  ],
+  plugins: [userAuth({ auth }), rbacPlugin()],
 });
 ```
 
@@ -105,12 +105,7 @@ import { rbacFrontendPlugin } from '@invect/rbac/ui';
 import '@invect/ui/styles';
 
 export default function App() {
-  return (
-    <Invect
-      apiBaseUrl="/invect"
-      plugins={[rbacFrontendPlugin]}
-    />
-  );
+  return <Invect apiBaseUrl="/invect" plugins={[rbacFrontendPlugin]} />;
 }
 ```
 
@@ -120,11 +115,11 @@ This adds the **Share** button to the flow editor header, an **Access** tab in t
 
 Each flow access record grants one of three permission levels:
 
-| Level | Can view | Can edit | Can delete | Can manage access |
-|-------|----------|----------|------------|-------------------|
-| `viewer` | ✓ | — | — | — |
-| `editor` | ✓ | ✓ | — | — |
-| `owner` | ✓ | ✓ | ✓ | ✓ |
+| Level    | Can view | Can edit | Can delete | Can manage access |
+| -------- | -------- | -------- | ---------- | ----------------- |
+| `viewer` | ✓        | —        | —          | —                 |
+| `editor` | ✓        | ✓        | —          | —                 |
+| `owner`  | ✓        | ✓        | ✓          | ✓                 |
 
 When a user creates a flow, they are automatically granted `owner` access.
 
@@ -132,14 +127,14 @@ When a user creates a flow, they are automatically granted `owner` access.
 
 All endpoints are mounted under `/plugins/rbac/` (or the equivalent path for your framework).
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/rbac/me` | Current user identity, role, and resolved permissions |
-| `GET` | `/rbac/roles` | List available roles |
-| `GET` | `/rbac/flows/:flowId/access` | List access records for a flow |
-| `POST` | `/rbac/flows/:flowId/access` | Grant access to a user or team |
-| `DELETE` | `/rbac/flows/:flowId/access/:accessId` | Revoke an access record |
-| `GET` | `/rbac/flows/accessible` | List flow IDs the current user can access |
+| Method   | Path                                   | Description                                           |
+| -------- | -------------------------------------- | ----------------------------------------------------- |
+| `GET`    | `/rbac/me`                             | Current user identity, role, and resolved permissions |
+| `GET`    | `/rbac/roles`                          | List available roles                                  |
+| `GET`    | `/rbac/flows/:flowId/access`           | List access records for a flow                        |
+| `POST`   | `/rbac/flows/:flowId/access`           | Grant access to a user or team                        |
+| `DELETE` | `/rbac/flows/:flowId/access/:accessId` | Revoke an access record                               |
+| `GET`    | `/rbac/flows/accessible`               | List flow IDs the current user can access             |
 
 ### Granting access
 
@@ -158,5 +153,5 @@ All endpoints are mounted under `/plugins/rbac/` (or the equivalent path for you
 rbacPlugin({
   // Permission required to view the Access Control admin page (default: 'admin:*')
   adminPermission: 'admin:*',
-})
+});
 ```

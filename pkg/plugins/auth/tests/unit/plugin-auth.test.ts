@@ -73,9 +73,7 @@ describe('userAuth', () => {
 
       expect(plugin.endpoints).toBeDefined();
       const methods = plugin.endpoints!.map((e) => e.method);
-      expect(methods).toEqual(
-        expect.arrayContaining(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
-      );
+      expect(methods).toEqual(expect.arrayContaining(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']));
     });
 
     it('marks proxy catch-all endpoints as public', () => {
@@ -274,10 +272,7 @@ describe('userAuth', () => {
   });
 
   describe('default role mapping (via onRequest hook)', () => {
-    async function resolveIdentityViaHook(
-      auth: BetterAuthInstance,
-      cookie = 'session=tok',
-    ) {
+    async function resolveIdentityViaHook(auth: BetterAuthInstance, cookie = 'session=tok') {
       const plugin = userAuth({ auth });
       const request = new Request('http://localhost/flows', {
         headers: { cookie },
@@ -414,10 +409,12 @@ describe('userAuth', () => {
       });
       const plugin = userAuth({
         auth,
-        globalAdmins: [{
-          email: 'admin@example.com',
-          pw: 'password123',
-        }],
+        globalAdmins: [
+          {
+            email: 'admin@example.com',
+            pw: 'password123',
+          },
+        ],
       });
 
       const logger = {
@@ -491,13 +488,17 @@ describe('session resolution via onRequest hook', () => {
 
   it('uses custom mapUser', async () => {
     const auth = createMockAuth({ user: TEST_USER, session: TEST_SESSION });
-    const identity = await resolveIdentity(auth, { cookie: 'session=tok' }, {
-      mapUser: (user) => ({
-        id: user.id,
-        name: `Resolved: ${user.name}`,
-        role: 'viewer',
-      }),
-    });
+    const identity = await resolveIdentity(
+      auth,
+      { cookie: 'session=tok' },
+      {
+        mapUser: (user) => ({
+          id: user.id,
+          name: `Resolved: ${user.name}`,
+          role: 'viewer',
+        }),
+      },
+    );
 
     expect(identity).toEqual({
       id: 'user-123',
@@ -512,9 +513,13 @@ describe('session resolution via onRequest hook', () => {
       session: TEST_SESSION,
     };
     const auth = createMockAuth(authData);
-    const identity = await resolveIdentity(auth, { cookie: 'session=tok' }, {
-      mapRole: () => 'admin',
-    });
+    const identity = await resolveIdentity(
+      auth,
+      { cookie: 'session=tok' },
+      {
+        mapRole: () => 'admin',
+      },
+    );
 
     expect(identity?.role).toBe('admin');
   });
@@ -525,9 +530,13 @@ describe('session resolution via onRequest hook', () => {
       new Error('Connection refused'),
     );
     // Use onSessionError: 'continue' so the hook doesn't return 401
-    const identity = await resolveIdentity(auth, { cookie: 'session=tok' }, {
-      onSessionError: 'continue',
-    });
+    const identity = await resolveIdentity(
+      auth,
+      { cookie: 'session=tok' },
+      {
+        onSessionError: 'continue',
+      },
+    );
 
     expect(identity).toBeNull();
   });

@@ -39,7 +39,9 @@ export const NODE_COMPONENTS = BASE_COMPONENTS;
  * or UniversalNode as the default for everything else.
  */
 export function getNodeComponent(nodeType: string): React.ComponentType<any> {
-  if (nodeType === AGENT_TYPE) return AgentNode;
+  if (nodeType === AGENT_TYPE) {
+    return AgentNode;
+  }
   return BASE_COMPONENTS[nodeType] ?? UniversalNode;
 }
 

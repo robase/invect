@@ -146,7 +146,9 @@ export function OAuth2ConnectButton({
 
   // Check if popup was closed without completing
   useEffect(() => {
-    if (!popupWindow) return;
+    if (!popupWindow) {
+      return;
+    }
 
     const checkClosed = setInterval(() => {
       if (popupWindow.closed) {

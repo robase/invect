@@ -162,10 +162,18 @@ function printInfo(info: Record<string, unknown>): void {
 
 function detectPackageManager(): string {
   const cwd = process.cwd();
-  if (fs.existsSync(path.join(cwd, 'pnpm-lock.yaml'))) return 'pnpm';
-  if (fs.existsSync(path.join(cwd, 'bun.lockb')) || fs.existsSync(path.join(cwd, 'bun.lock'))) return 'bun';
-  if (fs.existsSync(path.join(cwd, 'yarn.lock'))) return 'yarn';
-  if (fs.existsSync(path.join(cwd, 'package-lock.json'))) return 'npm';
+  if (fs.existsSync(path.join(cwd, 'pnpm-lock.yaml'))) {
+    return 'pnpm';
+  }
+  if (fs.existsSync(path.join(cwd, 'bun.lockb')) || fs.existsSync(path.join(cwd, 'bun.lock'))) {
+    return 'bun';
+  }
+  if (fs.existsSync(path.join(cwd, 'yarn.lock'))) {
+    return 'yarn';
+  }
+  if (fs.existsSync(path.join(cwd, 'package-lock.json'))) {
+    return 'npm';
+  }
   return 'unknown';
 }
 
@@ -186,7 +194,9 @@ function detectFrameworks(): string[] {
   const frameworks: string[] = [];
   const pkgPath = path.join(process.cwd(), 'package.json');
 
-  if (!fs.existsSync(pkgPath)) return frameworks;
+  if (!fs.existsSync(pkgPath)) {
+    return frameworks;
+  }
 
   try {
     const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
@@ -195,14 +205,30 @@ function detectFrameworks(): string[] {
       ...pkg.devDependencies,
     };
 
-    if (allDeps['next']) frameworks.push(`Next.js (${allDeps['next']})`);
-    if (allDeps['@nestjs/core']) frameworks.push(`NestJS (${allDeps['@nestjs/core']})`);
-    if (allDeps['express']) frameworks.push(`Express (${allDeps['express']})`);
-    if (allDeps['react']) frameworks.push(`React (${allDeps['react']})`);
-    if (allDeps['vue']) frameworks.push(`Vue (${allDeps['vue']})`);
-    if (allDeps['svelte']) frameworks.push(`Svelte (${allDeps['svelte']})`);
-    if (allDeps['hono']) frameworks.push(`Hono (${allDeps['hono']})`);
-    if (allDeps['fastify']) frameworks.push(`Fastify (${allDeps['fastify']})`);
+    if (allDeps['next']) {
+      frameworks.push(`Next.js (${allDeps['next']})`);
+    }
+    if (allDeps['@nestjs/core']) {
+      frameworks.push(`NestJS (${allDeps['@nestjs/core']})`);
+    }
+    if (allDeps['express']) {
+      frameworks.push(`Express (${allDeps['express']})`);
+    }
+    if (allDeps['react']) {
+      frameworks.push(`React (${allDeps['react']})`);
+    }
+    if (allDeps['vue']) {
+      frameworks.push(`Vue (${allDeps['vue']})`);
+    }
+    if (allDeps['svelte']) {
+      frameworks.push(`Svelte (${allDeps['svelte']})`);
+    }
+    if (allDeps['hono']) {
+      frameworks.push(`Hono (${allDeps['hono']})`);
+    }
+    if (allDeps['fastify']) {
+      frameworks.push(`Fastify (${allDeps['fastify']})`);
+    }
   } catch {
     // ignore
   }
@@ -214,7 +240,9 @@ function detectDatabaseTools(): string[] {
   const tools: string[] = [];
   const pkgPath = path.join(process.cwd(), 'package.json');
 
-  if (!fs.existsSync(pkgPath)) return tools;
+  if (!fs.existsSync(pkgPath)) {
+    return tools;
+  }
 
   try {
     const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
@@ -223,12 +251,24 @@ function detectDatabaseTools(): string[] {
       ...pkg.devDependencies,
     };
 
-    if (allDeps['drizzle-orm']) tools.push(`Drizzle ORM (${allDeps['drizzle-orm']})`);
-    if (allDeps['drizzle-kit']) tools.push(`Drizzle Kit (${allDeps['drizzle-kit']})`);
-    if (allDeps['prisma'] || allDeps['@prisma/client']) tools.push('Prisma');
-    if (allDeps['better-sqlite3'] || allDeps['@libsql/client']) tools.push('SQLite');
-    if (allDeps['pg'] || allDeps['postgres']) tools.push('PostgreSQL');
-    if (allDeps['mysql2']) tools.push('MySQL');
+    if (allDeps['drizzle-orm']) {
+      tools.push(`Drizzle ORM (${allDeps['drizzle-orm']})`);
+    }
+    if (allDeps['drizzle-kit']) {
+      tools.push(`Drizzle Kit (${allDeps['drizzle-kit']})`);
+    }
+    if (allDeps['prisma'] || allDeps['@prisma/client']) {
+      tools.push('Prisma');
+    }
+    if (allDeps['better-sqlite3'] || allDeps['@libsql/client']) {
+      tools.push('SQLite');
+    }
+    if (allDeps['pg'] || allDeps['postgres']) {
+      tools.push('PostgreSQL');
+    }
+    if (allDeps['mysql2']) {
+      tools.push('MySQL');
+    }
   } catch {
     // ignore
   }

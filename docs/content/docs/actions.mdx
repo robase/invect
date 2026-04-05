@@ -44,9 +44,7 @@ export const myAction = defineAction({
     schema: z.object({
       input: z.string().describe('The input to process'),
     }),
-    fields: [
-      { name: 'input', label: 'Input', type: 'text', required: true },
-    ],
+    fields: [{ name: 'input', label: 'Input', type: 'text', required: true }],
   },
   async execute(params, context) {
     // Your custom logic here
@@ -78,14 +76,14 @@ Custom actions appear in the node palette under your chosen provider and are aut
 
 The `context` object passed to `execute` provides:
 
-| Property | Description |
-|----------|-------------|
-| `context.incomingData` | Output from upstream nodes (keyed by node slug) |
-| `context.flowInputs` | The original inputs passed to the flow run |
-| `context.credential` | The resolved credential (if `credential.required` is set) |
-| `context.logger` | Structured logger scoped to this execution |
-| `context.functions.submitPrompt` | Send a prompt to an LLM (with batch support) |
-| `context.functions.getCredential` | Fetch a credential by ID at runtime |
+| Property                          | Description                                               |
+| --------------------------------- | --------------------------------------------------------- |
+| `context.incomingData`            | Output from upstream nodes (keyed by node slug)           |
+| `context.flowInputs`              | The original inputs passed to the flow run                |
+| `context.credential`              | The resolved credential (if `credential.required` is set) |
+| `context.logger`                  | Structured logger scoped to this execution                |
+| `context.functions.submitPrompt`  | Send a prompt to an LLM (with batch support)              |
+| `context.functions.getCredential` | Fetch a credential by ID at runtime                       |
 
 ### Accessing Upstream Data
 

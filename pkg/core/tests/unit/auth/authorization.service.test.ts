@@ -7,10 +7,7 @@ import {
   AuthorizationService,
   createAuthorizationService,
 } from '../../../src/services/auth/authorization.service';
-import {
-  InvectIdentity,
-  InvectPermission,
-} from '../../../src/types/auth.types';
+import { InvectIdentity, InvectPermission } from '../../../src/types/auth.types';
 
 describe('AuthorizationService', () => {
   let authService: AuthorizationService;
@@ -166,8 +163,8 @@ describe('AuthorizationService', () => {
       const service = createAuthorizationService({
         config: {
           roleMapper: {
-            'super_admin': 'admin',
-            'content_manager': 'editor',
+            super_admin: 'admin',
+            content_manager: 'editor',
           },
         },
       });
@@ -220,7 +217,7 @@ describe('AuthorizationService', () => {
         config: {
           enabled: true,
           customRoles: {
-            'qa_tester': ['flow:read', 'flow-run:create', 'flow-run:read'],
+            qa_tester: ['flow:read', 'flow-run:create', 'flow-run:read'],
           },
         },
       });
@@ -232,10 +229,10 @@ describe('AuthorizationService', () => {
 
       // Can read flows
       expect((await service.authorize({ identity, action: 'flow:read' })).allowed).toBe(true);
-      
+
       // Can create runs
       expect((await service.authorize({ identity, action: 'flow-run:create' })).allowed).toBe(true);
-      
+
       // Cannot create flows
       expect((await service.authorize({ identity, action: 'flow:create' })).allowed).toBe(false);
     });
@@ -357,7 +354,7 @@ describe('AuthorizationService', () => {
   describe('Custom Authorization Callback', () => {
     it('should use customAuthorize to allow action', async () => {
       const customAuthorize = vi.fn().mockResolvedValue(true);
-      
+
       const service = createAuthorizationService({
         config: { enabled: true, customAuthorize },
       });
@@ -378,7 +375,7 @@ describe('AuthorizationService', () => {
 
     it('should use customAuthorize to deny action', async () => {
       const customAuthorize = vi.fn().mockResolvedValue(false);
-      
+
       const service = createAuthorizationService({
         config: { enabled: true, customAuthorize },
       });
@@ -401,7 +398,7 @@ describe('AuthorizationService', () => {
 
     it('should fall through when customAuthorize returns undefined', async () => {
       const customAuthorize = vi.fn().mockResolvedValue(undefined);
-      
+
       const service = createAuthorizationService({
         config: { enabled: true, customAuthorize },
       });
@@ -457,7 +454,7 @@ describe('AuthorizationService', () => {
           identity,
           action: 'flow:create',
           allowed: true,
-        })
+        }),
       );
     });
 
@@ -481,7 +478,7 @@ describe('AuthorizationService', () => {
           identity,
           action: 'flow:delete',
           allowed: false,
-        })
+        }),
       );
     });
 
@@ -498,7 +495,7 @@ describe('AuthorizationService', () => {
         expect.objectContaining({
           type: 'auth:unauthenticated',
           action: 'flow:read',
-        })
+        }),
       );
     });
   });
@@ -512,7 +509,7 @@ describe('AuthorizationService', () => {
       };
 
       const permissions = authService.getPermissions(identity);
-      
+
       // Should have admin:* due to override
       expect(permissions).toContain('admin:*');
     });
@@ -537,13 +534,13 @@ describe('AuthorizationService', () => {
       const service = createAuthorizationService({
         config: {
           customRoles: {
-            'tester': ['flow:read'],
+            tester: ['flow:read'],
           },
         },
       });
 
       const roles = service.getAvailableRoles();
-      
+
       expect(roles).toContainEqual({ role: 'admin', permissions: expect.any(Array) });
       expect(roles).toContainEqual({ role: 'editor', permissions: expect.any(Array) });
       expect(roles).toContainEqual({ role: 'viewer', permissions: expect.any(Array) });

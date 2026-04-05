@@ -119,7 +119,9 @@ const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
             if (walkTreeItems(items[i], targetId) && !expandAll) {
               return true;
             }
-            if (!expandAll) ids.pop();
+            if (!expandAll) {
+              ids.pop();
+            }
           }
         } else if (!expandAll && items.id === targetId) {
           return true;
@@ -423,7 +425,9 @@ const TreeLeaf = React.forwardRef<
     };
 
     const onDrop = (e: React.DragEvent) => {
-      if (item.disabled) return;
+      if (item.disabled) {
+        return;
+      }
       e.preventDefault();
       setIsDragOver(false);
       handleDrop?.(item);
@@ -443,7 +447,9 @@ const TreeLeaf = React.forwardRef<
         )}
         style={getTreeItemStyle(isSelected, isDragOver)}
         onClick={() => {
-          if (item.disabled) return;
+          if (item.disabled) {
+            return;
+          }
           handleSelectChange(item);
           item.onClick?.();
         }}

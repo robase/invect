@@ -1,5 +1,5 @@
-import type { FlowRunResult } from "../../src";
-import type { InvectInstance } from "../../src/api/types";
+import type { FlowRunResult } from '../../src';
+import type { InvectInstance } from '../../src/api/types';
 
 export interface StructuredNodeOutput {
   data?: {
@@ -21,7 +21,7 @@ export interface AgentOutputLike {
   toolResults?: AgentToolResultLike[];
 }
 
-export function getOutputVariable(output: unknown, variableName = "output"): unknown {
+export function getOutputVariable(output: unknown, variableName = 'output'): unknown {
   const structuredOutput = output as StructuredNodeOutput | undefined;
   return structuredOutput?.data?.variables?.[variableName]?.value;
 }

@@ -25,16 +25,8 @@
       "@invect/types/*": ["../types/dist/*"]
     }
   },
-  "include": [
-    "src/**/*"
-, "../types/src/schemas"  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "**/*.test.ts",
-    "**/*.spec.ts",
-    "../types"
-  ],
+  "include": ["src/**/*", "../types/src/schemas"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts", "../types"],
   "watchOptions": {
     "watchFile": "useFsEvents",
     "watchDirectory": "useFsEvents",

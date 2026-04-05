@@ -43,11 +43,7 @@ interface ResolvedConfig {
   configPath: string;
 }
 
-const CONFIG_FILENAMES = [
-  'invect.config.ts',
-  'invect.config.js',
-  'invect.config.mjs',
-];
+const CONFIG_FILENAMES = ['invect.config.ts', 'invect.config.js', 'invect.config.mjs'];
 
 const CONFIG_DIRECTORIES = ['.', 'src', 'lib', 'config', 'utils'];
 
@@ -85,9 +81,7 @@ export function findConfigPath(explicitPath?: string): string | null {
  */
 function stripJsonComments(jsonString: string): string {
   return jsonString
-    .replace(/\\"|"(?:\\"|[^"])*"|(\/\/.*|\/\*[\s\S]*?\*\/)/g, (m, g) =>
-      g ? '' : m,
-    )
+    .replace(/\\"|"(?:\\"|[^"])*"|(\/\/.*|\/\*[\s\S]*?\*\/)/g, (m, g) => (g ? '' : m))
     .replace(/,(?=\s*[}\]])/g, '');
 }
 
@@ -112,15 +106,16 @@ function getPathAliases(cwd: string): Record<string, string> | null {
   }
 }
 
-function getPathAliasesRecursive(
-  configPath: string,
-  visited: Set<string>,
-): Record<string, string> {
+function getPathAliasesRecursive(configPath: string, visited: Set<string>): Record<string, string> {
   const resolvedPath = path.resolve(configPath);
-  if (visited.has(resolvedPath)) return {};
+  if (visited.has(resolvedPath)) {
+    return {};
+  }
   visited.add(resolvedPath);
 
-  if (!fs.existsSync(resolvedPath)) return {};
+  if (!fs.existsSync(resolvedPath)) {
+    return {};
+  }
 
   let tsConfig: Record<string, unknown>;
   try {
@@ -223,9 +218,7 @@ export async function loadConfig(configPath: string): Promise<ResolvedConfig> {
   for (let i = 0; i < plugins.length; i++) {
     const plugin = plugins[i];
     if (!plugin || typeof plugin !== 'object' || !('id' in plugin)) {
-      console.warn(
-        pc.yellow(`⚠ Plugin at index ${i} does not have an 'id' property — skipping`),
-      );
+      console.warn(pc.yellow(`⚠ Plugin at index ${i} does not have an 'id' property — skipping`));
     }
   }
 
@@ -246,7 +239,9 @@ export async function loadConfig(configPath: string): Promise<ResolvedConfig> {
  * Resolve the actual config object from various export patterns.
  */
 function resolveConfigExport(module: unknown): unknown {
-  if (!module || typeof module !== 'object') return module;
+  if (!module || typeof module !== 'object') {
+    return module;
+  }
 
   const mod = module as Record<string, unknown>;
 
@@ -261,13 +256,19 @@ function resolveConfigExport(module: unknown): unknown {
   }
 
   // Handle: export const config = ...
-  if ('config' in mod) return mod.config;
+  if ('config' in mod) {
+    return mod.config;
+  }
 
   // Handle: export const invectConfig = ...
-  if ('invectConfig' in mod) return mod.invectConfig;
+  if ('invectConfig' in mod) {
+    return mod.invectConfig;
+  }
 
   // Handle: module itself is the config (has database)
-  if ('database' in mod || 'plugins' in mod) return mod;
+  if ('database' in mod || 'plugins' in mod) {
+    return mod;
+  }
 
   return mod;
 }

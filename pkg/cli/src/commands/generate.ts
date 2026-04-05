@@ -79,7 +79,11 @@ function isDebug(): boolean {
 
 function debug(...args: unknown[]) {
   if (isDebug()) {
-    console.log(pc.dim(`  [debug] ${args.map(a => typeof a === 'string' ? a : JSON.stringify(a, null, 2)).join(' ')}`));
+    console.log(
+      pc.dim(
+        `  [debug] ${args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a, null, 2))).join(' ')}`,
+      ),
+    );
   }
 }
 
@@ -89,7 +93,15 @@ function debugError(label: string, error: unknown) {
     if (error instanceof Error) {
       console.error(pc.dim(`    ${error.message}`));
       if (error.stack) {
-        console.error(pc.dim(error.stack.split('\n').slice(1).map(l => `    ${l.trim()}`).join('\n')));
+        console.error(
+          pc.dim(
+            error.stack
+              .split('\n')
+              .slice(1)
+              .map((l) => `    ${l.trim()}`)
+              .join('\n'),
+          ),
+        );
       }
     } else {
       console.error(pc.dim(`    ${String(error)}`));
@@ -99,10 +111,7 @@ function debugError(label: string, error: unknown) {
 
 export const generateCommand = new Command('generate')
   .description('Generate Drizzle or Prisma schema files from core + plugin schemas')
-  .option(
-    '--config <path>',
-    'Path to your Invect config file. Defaults to the first config found.',
-  )
+  .option('--config <path>', 'Path to your Invect config file. Defaults to the first config found.')
   .option(
     '--output <path>',
     'Output directory for generated schema files (used when --schema is not set)',
@@ -113,10 +122,7 @@ export const generateCommand = new Command('generate')
     'Path to your existing Drizzle schema file. Invect tables will be appended to this file. ' +
       'If not provided, auto-detected from drizzle.config.ts.',
   )
-  .option(
-    '--adapter <adapter>',
-    'Schema adapter to use: "drizzle" (default) or "prisma"',
-  )
+  .option('--adapter <adapter>', 'Schema adapter to use: "drizzle" (default) or "prisma"')
   .option(
     '--dialect <dialect>',
     'Database dialect (sqlite, postgresql, mysql). Required when using --schema. Auto-detected from drizzle.config.ts when possible.',
@@ -202,9 +208,7 @@ export async function generateAction(options: {
   // ─── Step 2a: Drizzle — Determine mode (append vs separate files) ─────────
   // If --schema is given, use append mode directly.
   // Otherwise, try to auto-detect the schema path from drizzle.config.ts.
-  let schemaFile = options.schema
-    ? path.resolve(process.cwd(), options.schema)
-    : undefined;
+  let schemaFile = options.schema ? path.resolve(process.cwd(), options.schema) : undefined;
   let dialect = normalizeDialect(options.dialect);
 
   // Try to resolve dialect from invect.config.ts database settings
@@ -317,14 +321,15 @@ async function runPrismaMode(
   // Confirm
   if (!options.yes) {
     console.log('');
-    const response = await prompts({
-      type: 'confirm',
-      name: 'proceed',
-      message: result.overwrite
-        ? `Update ${pc.cyan(rel)}?`
-        : `Create ${pc.cyan(rel)}?`,
-      initial: true,
-    }, { onCancel });
+    const response = await prompts(
+      {
+        type: 'confirm',
+        name: 'proceed',
+        message: result.overwrite ? `Update ${pc.cyan(rel)}?` : `Create ${pc.cyan(rel)}?`,
+        initial: true,
+      },
+      { onCancel },
+    );
 
     if (!response.proceed) {
       console.log(pc.dim('\n  Cancelled.\n'));
@@ -344,9 +349,7 @@ async function runPrismaMode(
   // Next steps for Prisma
   console.log(pc.dim('  Next steps:'));
   console.log(
-    pc.dim('    1. Run ') +
-      pc.cyan('npx prisma db push') +
-      pc.dim(' to apply schema changes'),
+    pc.dim('    1. Run ') + pc.cyan('npx prisma db push') + pc.dim(' to apply schema changes'),
   );
   console.log(
     pc.dim('    2. Run ') +
@@ -359,11 +362,19 @@ async function runPrismaMode(
 function normalizePrismaProvider(
   dialect: string | undefined,
 ): 'postgresql' | 'mysql' | 'sqlite' | undefined {
-  if (!dialect) return undefined;
+  if (!dialect) {
+    return undefined;
+  }
   const d = dialect.toLowerCase();
-  if (d === 'sqlite') return 'sqlite';
-  if (d === 'postgresql' || d === 'pg' || d === 'postgres') return 'postgresql';
-  if (d === 'mysql') return 'mysql';
+  if (d === 'sqlite') {
+    return 'sqlite';
+  }
+  if (d === 'postgresql' || d === 'pg' || d === 'postgres') {
+    return 'postgresql';
+  }
+  if (d === 'mysql') {
+    return 'mysql';
+  }
   return undefined;
 }
 
@@ -403,7 +414,8 @@ async function runAppendMode(
   const markerIndex = existingContent.indexOf(marker);
   if (markerIndex !== -1) {
     // Find the start of the section marker block (includes the === line above)
-    const sectionDivider = '// =============================================================================';
+    const sectionDivider =
+      '// =============================================================================';
     const dividerIndex = existingContent.lastIndexOf(sectionDivider, markerIndex);
     const stripFrom = dividerIndex !== -1 ? dividerIndex : markerIndex;
     existingContent = existingContent.substring(0, stripFrom).trimEnd();
@@ -428,7 +440,7 @@ async function runAppendMode(
     // Use [^}]* instead of [\s\S]*? to prevent matching across multiple imports.
     const importKeyword = isTypeImport ? 'import\\s+type\\s*' : 'import\\s*';
     const moduleImportRegex = new RegExp(
-      `${importKeyword}\\{([^}]*)\\}\\s*from\\s*['\"]${modulePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['\"];?`,
+      `${importKeyword}\\{([^}]*)\\}\\s*from\\s*['"]${modulePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"];?`,
       'm',
     );
 
@@ -511,14 +523,17 @@ async function runAppendMode(
   // Confirm
   if (!options.yes) {
     console.log('');
-    const response = await prompts({
-      type: 'confirm',
-      name: 'proceed',
-      message: fileExists
-        ? `Append Invect tables to ${pc.cyan(rel)}?`
-        : `Create ${pc.cyan(rel)} with Invect tables?`,
-      initial: true,
-    }, { onCancel });
+    const response = await prompts(
+      {
+        type: 'confirm',
+        name: 'proceed',
+        message: fileExists
+          ? `Append Invect tables to ${pc.cyan(rel)}?`
+          : `Create ${pc.cyan(rel)} with Invect tables?`,
+        initial: true,
+      },
+      { onCancel },
+    );
 
     if (!response.proceed) {
       console.log(pc.dim('\n  Cancelled.\n'));
@@ -537,9 +552,7 @@ async function runAppendMode(
 
   console.log(
     pc.bold(
-      pc.green(
-        `\n✓ Invect tables ${markerIndex !== -1 ? 'updated' : 'appended'} in ${rel}\n`,
-      ),
+      pc.green(`\n✓ Invect tables ${markerIndex !== -1 ? 'updated' : 'appended'} in ${rel}\n`),
     ),
   );
 
@@ -555,12 +568,15 @@ async function runAppendMode(
   } else {
     let runMigrate = true;
     if (!options.yes) {
-      const response = await prompts({
-        type: 'confirm',
-        name: 'runMigrate',
-        message: `Run ${pc.cyan('drizzle-kit generate')} + ${pc.cyan('drizzle-kit migrate')} to apply schema changes?`,
-        initial: true,
-      }, { onCancel });
+      const response = await prompts(
+        {
+          type: 'confirm',
+          name: 'runMigrate',
+          message: `Run ${pc.cyan('drizzle-kit generate')} + ${pc.cyan('drizzle-kit migrate')} to apply schema changes?`,
+          initial: true,
+        },
+        { onCancel },
+      );
       runMigrate = response.runMigrate;
     }
 
@@ -570,8 +586,12 @@ async function runAppendMode(
     } else {
       console.log(
         pc.dim('\n  Next steps:') +
-          pc.dim('\n    1. Run ') + pc.cyan('npx drizzle-kit generate') + pc.dim(' to create migration files') +
-          pc.dim('\n    2. Run ') + pc.cyan('npx drizzle-kit migrate') + pc.dim(' to apply them\n'),
+          pc.dim('\n    1. Run ') +
+          pc.cyan('npx drizzle-kit generate') +
+          pc.dim(' to create migration files') +
+          pc.dim('\n    2. Run ') +
+          pc.cyan('npx drizzle-kit migrate') +
+          pc.dim(' to apply them\n'),
       );
     }
   }
@@ -639,12 +659,15 @@ async function runSeparateFilesMode(
   // Confirm
   if (!options.yes) {
     console.log('');
-    const response = await prompts({
-      type: 'confirm',
-      name: 'proceed',
-      message: 'Generate schema files?',
-      initial: true,
-    }, { onCancel });
+    const response = await prompts(
+      {
+        type: 'confirm',
+        name: 'proceed',
+        message: 'Generate schema files?',
+        initial: true,
+      },
+      { onCancel },
+    );
 
     if (!response.proceed) {
       console.log(pc.dim('\n  Cancelled.\n'));
@@ -655,7 +678,9 @@ async function runSeparateFilesMode(
   // Write files
   let writtenCount = 0;
   for (const result of results) {
-    if (result.code === undefined) continue;
+    if (result.code === undefined) {
+      continue;
+    }
 
     const dir = path.dirname(result.fileName);
     fs.mkdirSync(dir, { recursive: true });
@@ -672,12 +697,15 @@ async function runSeparateFilesMode(
   // Optionally run drizzle-kit generate
   let runDrizzleKit = true;
   if (!options.yes) {
-    const response = await prompts({
-      type: 'confirm',
-      name: 'runDrizzleKit',
-      message: `Run ${pc.cyan('drizzle-kit generate')} to create SQL migrations?`,
-      initial: true,
-    }, { onCancel });
+    const response = await prompts(
+      {
+        type: 'confirm',
+        name: 'runDrizzleKit',
+        message: `Run ${pc.cyan('drizzle-kit generate')} to create SQL migrations?`,
+        initial: true,
+      },
+      { onCancel },
+    );
     runDrizzleKit = response.runDrizzleKit;
   }
 
@@ -702,7 +730,8 @@ async function printSummary(
 ) {
   const pluginsWithSchema = config.plugins.filter((p) => p.schema);
   const pluginsWithRequiredTablesOnly = config.plugins.filter(
-    (p) => !p.schema && Array.isArray(p.requiredTables) && (p.requiredTables as string[]).length > 0,
+    (p) =>
+      !p.schema && Array.isArray(p.requiredTables) && (p.requiredTables as string[]).length > 0,
   );
 
   console.log(
@@ -718,9 +747,7 @@ async function printSummary(
     pc.dim(
       `  Tables:  ${pc.white(String(stats.totalTables))} total` +
         ` (${stats.coreTableCount} core` +
-        (stats.pluginTableCount > 0
-          ? ` + ${pc.cyan(String(stats.pluginTableCount))} plugin`
-          : '') +
+        (stats.pluginTableCount > 0 ? ` + ${pc.cyan(String(stats.pluginTableCount))} plugin` : '') +
         ')',
     ),
   );
@@ -773,16 +800,14 @@ async function printSummary(
     );
     for (const plugin of pluginsWithRequiredTablesOnly) {
       const tables = (plugin.requiredTables as string[]).join(', ');
-      console.log(
-        pc.dim(`    ${pc.yellow(plugin.id)}: requires `) + pc.white(tables),
-      );
+      console.log(pc.dim(`    ${pc.yellow(plugin.id)}: requires `) + pc.white(tables));
       if (plugin.setupInstructions) {
         console.log(pc.dim(`      → ${plugin.setupInstructions}`));
       }
     }
     console.log(
       pc.dim(
-        '\n  These tables must be added to your schema manually (or via the plugin\'s own tooling).\n' +
+        "\n  These tables must be added to your schema manually (or via the plugin's own tooling).\n" +
           '  The generated schema files will NOT include them automatically.\n',
       ),
     );
@@ -803,7 +828,9 @@ function detectDrizzleSchema(): {
   configFile: string;
 } | null {
   const configFile = findDrizzleConfig();
-  if (!configFile) return null;
+  if (!configFile) {
+    return null;
+  }
 
   const configPath = path.resolve(process.cwd(), configFile);
   let content: string;
@@ -815,7 +842,9 @@ function detectDrizzleSchema(): {
 
   // Extract schema path: schema: './db/schema.ts' or schema: "./db/schema"
   const schemaMatch = content.match(/schema\s*:\s*['"]([^'"]+)['"]/);
-  if (!schemaMatch) return null;
+  if (!schemaMatch) {
+    return null;
+  }
 
   let schemaPath = schemaMatch[1];
   // Ensure .ts extension
@@ -829,9 +858,13 @@ function detectDrizzleSchema(): {
   const dialectMatch = content.match(/dialect\s*:\s*['"]([^'"]+)['"]/);
   if (dialectMatch) {
     const d = dialectMatch[1].toLowerCase();
-    if (d === 'sqlite') dialect = 'sqlite';
-    else if (d === 'postgresql' || d === 'pg' || d === 'postgres') dialect = 'postgresql';
-    else if (d === 'mysql') dialect = 'mysql';
+    if (d === 'sqlite') {
+      dialect = 'sqlite';
+    } else if (d === 'postgresql' || d === 'pg' || d === 'postgres') {
+      dialect = 'postgresql';
+    } else if (d === 'mysql') {
+      dialect = 'mysql';
+    }
   }
 
   return { schemaPath, dialect, configFile };
@@ -840,11 +873,19 @@ function detectDrizzleSchema(): {
 function normalizeDialect(
   dialect: string | undefined,
 ): 'sqlite' | 'postgresql' | 'mysql' | undefined {
-  if (!dialect) return undefined;
+  if (!dialect) {
+    return undefined;
+  }
   const d = dialect.toLowerCase();
-  if (d === 'sqlite') return 'sqlite';
-  if (d === 'postgresql' || d === 'pg' || d === 'postgres') return 'postgresql';
-  if (d === 'mysql') return 'mysql';
+  if (d === 'sqlite') {
+    return 'sqlite';
+  }
+  if (d === 'postgresql' || d === 'pg' || d === 'postgres') {
+    return 'postgresql';
+  }
+  if (d === 'mysql') {
+    return 'mysql';
+  }
   return undefined;
 }
 
@@ -874,16 +915,26 @@ function drizzleKitEnv(): NodeJS.ProcessEnv {
  * error — we should not scare the user with "make sure X is installed".
  */
 function wasAbortedByUser(error: unknown): boolean {
-  const e = error as { signal?: string; status?: number | null; stderr?: string; stdout?: string; message?: string };
+  const e = error as {
+    signal?: string;
+    status?: number | null;
+    stderr?: string;
+    stdout?: string;
+    message?: string;
+  };
 
   // Child killed by a signal (Ctrl-C, SIGTERM, etc.)
-  if (e.signal === 'SIGINT' || e.signal === 'SIGTERM') return true;
+  if (e.signal === 'SIGINT' || e.signal === 'SIGTERM') {
+    return true;
+  }
 
   // drizzle-kit exits with status 0 when the user selects "No, abort"
   // in its interactive prompts, but some versions use status 1.
   // Check combined output for common abort phrases.
   const combined = [e.stdout || '', e.stderr || '', e.message || ''].join('\n').toLowerCase();
-  if (/abort|cancell?ed|user\s+reject/i.test(combined)) return true;
+  if (/abort|cancell?ed|user\s+reject/i.test(combined)) {
+    return true;
+  }
 
   return false;
 }
@@ -897,7 +948,12 @@ async function runDrizzleKitGenerate(): Promise<void> {
       ? `npx drizzle-kit generate --config ${configFile}`
       : 'npx drizzle-kit generate';
 
-    execSync(cmd, { stdio: ['pipe', 'inherit', 'inherit'], cwd: process.cwd(), env: drizzleKitEnv(), timeout: 30_000 });
+    execSync(cmd, {
+      stdio: ['pipe', 'inherit', 'inherit'],
+      cwd: process.cwd(),
+      env: drizzleKitEnv(),
+      timeout: 30_000,
+    });
 
     console.log(
       pc.bold(pc.green('\n✓ SQL migrations generated.\n')) +
@@ -926,9 +982,7 @@ async function runDrizzleKitPush(): Promise<void> {
 
   try {
     const configFile = findDrizzleConfig();
-    const cmd = configFile
-      ? `npx drizzle-kit push --config ${configFile}`
-      : 'npx drizzle-kit push';
+    const cmd = configFile ? `npx drizzle-kit push --config ${configFile}` : 'npx drizzle-kit push';
 
     // Use stdio: 'inherit' so drizzle-kit can display interactive prompts
     // (data-loss confirmations, etc.) and the user can respond to them.
@@ -938,9 +992,7 @@ async function runDrizzleKitPush(): Promise<void> {
       env: drizzleKitEnv(),
     });
 
-    console.log(
-      pc.bold(pc.green('\n✓ Schema pushed to database.\n')),
-    );
+    console.log(pc.bold(pc.green('\n✓ Schema pushed to database.\n')));
   } catch (error: unknown) {
     if (wasAbortedByUser(error)) {
       console.log(pc.dim('\n  drizzle-kit push was cancelled.\n'));
@@ -973,9 +1025,7 @@ async function runDrizzleKitMigrate(): Promise<void> {
       env: drizzleKitEnv(),
     });
 
-    console.log(
-      pc.bold(pc.green('\n✓ Migrations applied.\n')),
-    );
+    console.log(pc.bold(pc.green('\n✓ Migrations applied.\n')));
   } catch (error: unknown) {
     if (wasAbortedByUser(error)) {
       console.log(pc.dim('\n  drizzle-kit migrate was cancelled.\n'));
@@ -1016,11 +1066,7 @@ function printNextSteps(): void {
       pc.cyan('npx drizzle-kit generate') +
       pc.dim(' to create SQL migrations'),
   );
-  console.log(
-    pc.dim('    3. Run ') +
-      pc.cyan('npx invect-cli migrate') +
-      pc.dim(' to apply them'),
-  );
+  console.log(pc.dim('    3. Run ') + pc.cyan('npx invect-cli migrate') + pc.dim(' to apply them'));
   console.log('');
 }
 
@@ -1063,7 +1109,11 @@ async function runSqlMode(
   const { result, stats } = sqlResult;
 
   console.log(pc.dim(`  Plugins: ${config.plugins.length} loaded`));
-  console.log(pc.dim(`  Tables:  ${stats.totalTables} total (${stats.coreTableCount} core${stats.pluginTableCount > 0 ? `, ${stats.pluginTableCount} plugin` : ''})`));
+  console.log(
+    pc.dim(
+      `  Tables:  ${stats.totalTables} total (${stats.coreTableCount} core${stats.pluginTableCount > 0 ? `, ${stats.pluginTableCount} plugin` : ''})`,
+    ),
+  );
 
   if (result.code === undefined) {
     console.log(pc.bold(pc.green('\n✓ SQL migration file is already up to date.\n')));
@@ -1082,14 +1132,15 @@ async function runSqlMode(
   // Confirm
   if (!options.yes) {
     console.log('');
-    const response = await prompts({
-      type: 'confirm',
-      name: 'proceed',
-      message: result.overwrite
-        ? `Update ${pc.cyan(rel)}?`
-        : `Create ${pc.cyan(rel)}?`,
-      initial: true,
-    }, { onCancel });
+    const response = await prompts(
+      {
+        type: 'confirm',
+        name: 'proceed',
+        message: result.overwrite ? `Update ${pc.cyan(rel)}?` : `Create ${pc.cyan(rel)}?`,
+        initial: true,
+      },
+      { onCancel },
+    );
 
     if (!response.proceed) {
       console.log(pc.dim('\n  Cancelled.\n'));
@@ -1103,15 +1154,13 @@ async function runSqlMode(
   fs.writeFileSync(result.fileName, result.code, 'utf-8');
 
   console.log(
-    pc.bold(pc.green(`\n✓ SQL migration file ${result.overwrite ? 'updated' : 'created'}: ${rel}\n`)),
+    pc.bold(
+      pc.green(`\n✓ SQL migration file ${result.overwrite ? 'updated' : 'created'}: ${rel}\n`),
+    ),
   );
 
   console.log(pc.dim('  Next steps:'));
-  console.log(
-    pc.dim('    1. Review the generated SQL file'),
-  );
-  console.log(
-    pc.dim('    2. Run it against your database using your preferred tool'),
-  );
+  console.log(pc.dim('    1. Review the generated SQL file'));
+  console.log(pc.dim('    2. Run it against your database using your preferred tool'));
   console.log('');
 }

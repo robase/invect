@@ -34,11 +34,15 @@ export class WebhookDedupService {
   }
 
   check(webhookPath: string, deliveryId: string | undefined): DedupEntry | null {
-    if (!deliveryId) {return null;}
+    if (!deliveryId) {
+      return null;
+    }
 
     const k = this.key(webhookPath, deliveryId);
     const existing = this.entries.get(k);
-    if (!existing) {return null;}
+    if (!existing) {
+      return null;
+    }
 
     if (Date.now() - existing.createdAt > this.ttlMs) {
       this.entries.delete(k);
@@ -49,13 +53,17 @@ export class WebhookDedupService {
   }
 
   record(webhookPath: string, deliveryId: string | undefined, flowRunIds: string[]): void {
-    if (!deliveryId) {return;}
+    if (!deliveryId) {
+      return;
+    }
 
     const k = this.key(webhookPath, deliveryId);
 
     if (this.entries.size >= this.maxEntries) {
       const firstKey = this.entries.keys().next().value;
-      if (firstKey) {this.entries.delete(firstKey);}
+      if (firstKey) {
+        this.entries.delete(firstKey);
+      }
     }
 
     this.entries.set(k, { createdAt: Date.now(), flowRunIds });
@@ -64,7 +72,9 @@ export class WebhookDedupService {
   private cleanup(): void {
     const cutoff = Date.now() - this.ttlMs;
     for (const [key, entry] of this.entries) {
-      if (entry.createdAt < cutoff) {this.entries.delete(key);}
+      if (entry.createdAt < cutoff) {
+        this.entries.delete(key);
+      }
     }
   }
 

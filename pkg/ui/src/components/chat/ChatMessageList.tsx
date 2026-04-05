@@ -64,7 +64,9 @@ export function ChatMessageList({
 
   // Capture ref to the ScrollArea viewport for scroll tracking
   const scrollAreaRef = useCallback((node: HTMLDivElement | null) => {
-    if (!node) return;
+    if (!node) {
+      return;
+    }
     const viewport = node.querySelector(
       '[data-radix-scroll-area-viewport]',
     ) as HTMLDivElement | null;
@@ -75,7 +77,9 @@ export function ChatMessageList({
 
   const handleScroll = useCallback(() => {
     const el = viewportRef.current;
-    if (!el) return;
+    if (!el) {
+      return;
+    }
     const threshold = 80;
     isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
   }, []);
@@ -180,7 +184,9 @@ function SuggestionChips({
   isStreaming: boolean;
 }) {
   const suggestions = useChatStore((s) => s.suggestions);
-  if (suggestions.length === 0 || isStreaming) return null;
+  if (suggestions.length === 0 || isStreaming) {
+    return null;
+  }
 
   return (
     <div className="flex flex-wrap gap-1.5 mt-2 ml-7">

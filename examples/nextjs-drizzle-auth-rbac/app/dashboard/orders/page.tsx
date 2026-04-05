@@ -59,9 +59,7 @@ export default async function OrdersPage() {
                     {order.status}
                   </span>
                 </td>
-                <td className="px-4 py-3 font-mono">
-                  ${(order.totalInCents / 100).toFixed(2)}
-                </td>
+                <td className="px-4 py-3 font-mono">${(order.totalInCents / 100).toFixed(2)}</td>
               </tr>
             ))}
           </tbody>

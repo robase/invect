@@ -63,8 +63,7 @@ export function useWebhookTriggerInfo(id: string | undefined) {
   const baseUrl = useApiBaseURL();
   return useQuery({
     queryKey: keys.info(id ?? ''),
-    queryFn: () =>
-      apiFetch<WebhookTriggerInfo>(baseUrl, `/plugins/webhooks/triggers/${id}/info`),
+    queryFn: () => apiFetch<WebhookTriggerInfo>(baseUrl, `/plugins/webhooks/triggers/${id}/info`),
     enabled: !!id,
   });
 }

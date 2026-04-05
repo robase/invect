@@ -12,7 +12,8 @@ import { defineConfig } from '@invect/core';
 
 export const invectConfig = defineConfig({
   database: {
-    connectionString: process.env.DATABASE_URL ?? 'postgresql://acme:acme@localhost:5432/acme_dashboard',
+    connectionString:
+      process.env.DATABASE_URL ?? 'postgresql://acme:acme@localhost:5432/acme_dashboard',
     type: 'postgresql',
     name: 'Acme Dashboard DB',
   },
@@ -21,30 +22,34 @@ export const invectConfig = defineConfig({
   },
   defaultCredentials: [
     ...(process.env.SEED_ANTHROPIC_API_KEY
-      ? [{
-          name: 'Anthropic API Key',
-          type: 'llm',
-          authType: 'apiKey',
-          config: { apiKey: process.env.SEED_ANTHROPIC_API_KEY },
-          description: 'Anthropic Claude API credential for AI model nodes',
-          isShared: true,
-          metadata: { provider: 'anthropic' },
-        }]
+      ? [
+          {
+            name: 'Anthropic API Key',
+            type: 'llm',
+            authType: 'apiKey',
+            config: { apiKey: process.env.SEED_ANTHROPIC_API_KEY },
+            description: 'Anthropic Claude API credential for AI model nodes',
+            isShared: true,
+            metadata: { provider: 'anthropic' },
+          },
+        ]
       : []),
     ...(process.env.SEED_LINEAR_CLIENT_ID && process.env.SEED_LINEAR_CLIENT_SECRET
-      ? [{
-          name: 'Linear OAuth2',
-          type: 'http-api',
-          authType: 'oauth2',
-          config: {
-            clientId: process.env.SEED_LINEAR_CLIENT_ID,
-            clientSecret: process.env.SEED_LINEAR_CLIENT_SECRET,
-            oauth2Provider: 'linear',
+      ? [
+          {
+            name: 'Linear OAuth2',
+            type: 'http-api',
+            authType: 'oauth2',
+            config: {
+              clientId: process.env.SEED_LINEAR_CLIENT_ID,
+              clientSecret: process.env.SEED_LINEAR_CLIENT_SECRET,
+              oauth2Provider: 'linear',
+            },
+            description: 'Linear OAuth2 credential for issue tracking',
+            isShared: true,
+            metadata: { provider: 'linear' },
           },
-          description: 'Linear OAuth2 credential for issue tracking',
-          isShared: true,
-          metadata: { provider: 'linear' },
-        }]
+        ]
       : []),
   ],
   plugins: [

@@ -26,7 +26,9 @@ function isDebug(): boolean {
 
 function debug(...args: unknown[]) {
   if (isDebug()) {
-    console.log(`  [debug] ${args.map(a => typeof a === 'string' ? a : JSON.stringify(a, null, 2)).join(' ')}`);
+    console.log(
+      `  [debug] ${args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a, null, 2))).join(' ')}`,
+    );
   }
 }
 
@@ -43,14 +45,18 @@ function debug(...args: unknown[]) {
 function getPrismaVersion(cwd?: string): number | null {
   try {
     const pkgPath = path.join(cwd || process.cwd(), 'package.json');
-    if (!existsSync(pkgPath)) return null;
+    if (!existsSync(pkgPath)) {
+      return null;
+    }
     const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
     const version =
       pkg.dependencies?.prisma ||
       pkg.devDependencies?.prisma ||
       pkg.dependencies?.['@prisma/client'] ||
       pkg.devDependencies?.['@prisma/client'];
-    if (!version) return null;
+    if (!version) {
+      return null;
+    }
     // Extract major version from strings like "^7.0.0", "~5.1.0", "7.0.0"
     const match = version.match(/(\d+)/);
     return match ? parseInt(match[1], 10) : null;
@@ -92,9 +98,7 @@ export async function generatePrismaSchema(
   options: PrismaSchemaGeneratorOptions,
 ): Promise<SchemaGeneratorResult> {
   // Dynamically import @invect/core to avoid bundling it
-  const {
-    mergeSchemas,
-  } = await import('@invect/core');
+  const { mergeSchemas } = await import('@invect/core');
 
   // Merge core + plugin schemas
   const mergedSchema = mergeSchemas(options.plugins as any);
@@ -212,7 +216,7 @@ function mergeIntoExistingSchema(
   mergedSchema: any, // MergedSchema from core
   provider: PrismaProvider,
 ): string {
-    // Migrate existing schemas for Prisma v7+
+  // Migrate existing schemas for Prisma v7+
   const prismaVersion = getPrismaVersion();
   const isV7 = prismaVersion !== null && prismaVersion >= 7;
   let contentToMerge = existingContent;
@@ -264,12 +268,7 @@ function mergeIntoExistingSchema(
 // Model Creation (for new models)
 // =============================================================================
 
-function createPrismaModel(
-  builder: any,
-  table: any,
-  schema: any,
-  provider: PrismaProvider,
-): void {
+function createPrismaModel(builder: any, table: any, schema: any, provider: PrismaProvider): void {
   const modelName = capitalize(table.name);
   const { definition } = table;
 
@@ -320,7 +319,9 @@ function createPrismaModel(
   // Add relation fields AFTER all regular fields
   // One-side: this table has FK fields
   for (const [fieldName, field] of Object.entries(definition.fields) as [string, any][]) {
-    if (!field.references) continue;
+    if (!field.references) {
+      continue;
+    }
 
     const refLogical = findLogicalName(schema, field.references.table);
     const refModel = capitalize(refLogical);
@@ -337,10 +338,14 @@ function createPrismaModel(
 
   // Many-side: other tables have FKs pointing to this table
   for (const otherTable of schema.tables) {
-    if (otherTable.name === table.name) continue;
+    if (otherTable.name === table.name) {
+      continue;
+    }
 
     for (const [_, field] of Object.entries(otherTable.definition.fields) as [string, any][]) {
-      if (!field.references) continue;
+      if (!field.references) {
+        continue;
+      }
 
       const refsThisTable =
         field.references.table === table.name ||
@@ -350,10 +355,9 @@ function createPrismaModel(
         const otherModelName = capitalize(otherTable.name);
         // Unique FK = one-to-one (singular optional), otherwise one-to-many (array)
         const isUnique = field.unique === true;
-        builder.model(modelName).field(
-          otherTable.name,
-          `${otherModelName}${isUnique ? '?' : '[]'}`,
-        );
+        builder
+          .model(modelName)
+          .field(otherTable.name, `${otherModelName}${isUnique ? '?' : '[]'}`);
       }
     }
   }
@@ -371,9 +375,7 @@ function createPrismaModel(
   }
 
   if (definition.compositePrimaryKey?.length) {
-    builder
-      .model(modelName)
-      .blockAttribute(`id([${definition.compositePrimaryKey.join(', ')}])`);
+    builder.model(modelName).blockAttribute(`id([${definition.compositePrimaryKey.join(', ')}])`);
   }
 
   const dbTableName = definition.tableName || toSnakeCase(table.name);
@@ -403,7 +405,9 @@ function addMissingFields(
       name: fieldName,
       within: existingModel.properties,
     });
-    if (isAlreadyExist) continue;
+    if (isAlreadyExist) {
+      continue;
+    }
 
     const prismaType = getPrismaType(field, provider);
     const fieldBuilder = builder.model(modelName).field(fieldName, prismaType);
@@ -438,14 +442,18 @@ function addMissingFields(
 
   // Add relation fields after all regular fields
   for (const [fieldName, field] of Object.entries(definition.fields) as [string, any][]) {
-    if (!field.references) continue;
+    if (!field.references) {
+      continue;
+    }
 
     const isFieldAlreadyExist = builder.findByType('field', {
       name: fieldName,
       within: existingModel.properties,
     });
     // Only add relation if the FK field was newly added
-    if (isFieldAlreadyExist) continue;
+    if (isFieldAlreadyExist) {
+      continue;
+    }
 
     const refLogical = findLogicalName(schema, field.references.table);
     const refModel = capitalize(refLogical);
@@ -492,14 +500,11 @@ function addMissingFields(
 // Table Mapping
 // =============================================================================
 
-function addTableMapping(
-  builder: any,
-  table: any,
-  modelName: string,
-  existingModel: any,
-): void {
+function addTableMapping(builder: any, table: any, modelName: string, existingModel: any): void {
   const dbTableName = table.definition.tableName || toSnakeCase(table.name);
-  if (dbTableName === table.name) return;
+  if (dbTableName === table.name) {
+    return;
+  }
 
   // Check if @@map already exists
   if (existingModel) {
@@ -507,7 +512,9 @@ function addTableMapping(
       name: 'map',
       within: existingModel.properties,
     });
-    if (hasMap) return;
+    if (hasMap) {
+      return;
+    }
   }
 
   builder.model(modelName).blockAttribute('map', dbTableName);
@@ -539,7 +546,9 @@ function getPrismaType(field: any, provider: PrismaProvider): string {
     case 'date':
       return `DateTime${optional}`;
     case 'json':
-      if (provider === 'sqlite') return `String${optional}`;
+      if (provider === 'sqlite') {
+        return `String${optional}`;
+      }
       return `Json${optional}`;
     default:
       return `String${optional}`;
@@ -556,7 +565,9 @@ function addDefaultAttribute(
   fieldName: string,
   _provider: PrismaProvider,
 ): void {
-  if (field.defaultValue === undefined) return;
+  if (field.defaultValue === undefined) {
+    return;
+  }
 
   if (field.defaultValue === 'uuid()') {
     fieldBuilder.attribute('default(uuid())');
@@ -580,11 +591,16 @@ function addDefaultAttribute(
 
 function mapOnDelete(onDelete?: string): string {
   switch (onDelete) {
-    case 'cascade': return 'Cascade';
-    case 'set null': return 'SetNull';
-    case 'restrict': return 'Restrict';
-    case 'no action': return 'NoAction';
-    default: return 'NoAction';
+    case 'cascade':
+      return 'Cascade';
+    case 'set null':
+      return 'SetNull';
+    case 'restrict':
+      return 'Restrict';
+    case 'no action':
+      return 'NoAction';
+    default:
+      return 'NoAction';
   }
 }
 
@@ -601,14 +617,16 @@ function capitalize(str: string): string {
  */
 function findLogicalName(schema: any, tableRef: string): string {
   const exact = schema.tables.find((t: any) => t.name === tableRef);
-  if (exact) return exact.name;
+  if (exact) {
+    return exact.name;
+  }
 
   const byDbName = schema.tables.find(
-    (t: any) =>
-      t.definition.tableName === tableRef ||
-      toSnakeCase(t.name) === tableRef,
+    (t: any) => t.definition.tableName === tableRef || toSnakeCase(t.name) === tableRef,
   );
-  if (byDbName) return byDbName.name;
+  if (byDbName) {
+    return byDbName.name;
+  }
 
   if (tableRef.includes('_')) {
     return tableRef.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());

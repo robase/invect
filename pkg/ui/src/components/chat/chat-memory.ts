@@ -15,7 +15,9 @@ const MAX_NOTES = 50;
 
 function getKey(scope: 'flow' | 'workspace', flowId?: string): string {
   if (scope === 'flow') {
-    if (!flowId) throw new Error('flowId required for flow-scoped memory');
+    if (!flowId) {
+      throw new Error('flowId required for flow-scoped memory');
+    }
     return `${FLOW_KEY_PREFIX}${flowId}`;
   }
   return WORKSPACE_KEY;
@@ -24,7 +26,9 @@ function getKey(scope: 'flow' | 'workspace', flowId?: string): string {
 function readNotes(key: string): string[] {
   try {
     const raw = localStorage.getItem(key);
-    if (!raw) return [];
+    if (!raw) {
+      return [];
+    }
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed.filter((n): n is string => typeof n === 'string') : [];
   } catch {

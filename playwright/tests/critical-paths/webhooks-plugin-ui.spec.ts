@@ -94,7 +94,9 @@ async function goToWebhooksPage(page: Page) {
   await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15_000 });
 
   await page.locator('.imp-sidebar-shell').getByRole('link', { name: 'Webhooks' }).click();
-  await expect(page.getByRole('heading', { name: 'Webhooks', exact: true })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole('heading', { name: 'Webhooks', exact: true })).toBeVisible({
+    timeout: 15_000,
+  });
 }
 
 test.describe('Webhooks Plugin UI', () => {
@@ -110,7 +112,9 @@ test.describe('Webhooks Plugin UI', () => {
 
     await page.getByRole('button', { name: 'New Webhook' }).click();
     const dialog = page.getByRole('dialog');
-    await expect(dialog.getByRole('heading', { name: 'Create Webhook' })).toBeVisible({ timeout: 5_000 });
+    await expect(dialog.getByRole('heading', { name: 'Create Webhook' })).toBeVisible({
+      timeout: 5_000,
+    });
 
     await expect(dialog.getByRole('button', { name: 'Create Webhook' })).toBeDisabled();
 
@@ -121,13 +125,17 @@ test.describe('Webhooks Plugin UI', () => {
     await dialog.getByRole('button', { name: 'Create Webhook' }).click();
 
     await expect(dialog.getByText('Webhook Created')).toBeVisible({ timeout: 10_000 });
-    await expect(dialog.getByText(/\/plugins\/webhooks\/receive\//)).toBeVisible({ timeout: 10_000 });
+    await expect(dialog.getByText(/\/plugins\/webhooks\/receive\//)).toBeVisible({
+      timeout: 10_000,
+    });
     await expect(dialog.getByRole('button', { name: 'Done' })).toBeVisible();
 
     await dialog.getByRole('button', { name: 'Done' }).click();
     await expect(dialog).not.toBeVisible({ timeout: 5_000 });
 
-    await expect(page.getByRole('button').filter({ hasText: webhookName })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole('button').filter({ hasText: webhookName })).toBeVisible({
+      timeout: 10_000,
+    });
   });
 
   test('supports search, status filters, detail view, and linked flow navigation', async ({
@@ -167,17 +175,27 @@ test.describe('Webhooks Plugin UI', () => {
 
     const searchInput = page.getByPlaceholder('Search webhooks…');
     await searchInput.fill(linkedFlowName);
-    await expect(page.getByRole('button').filter({ hasText: linkedWebhookName })).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByRole('button').filter({ hasText: disabledWebhookName })).not.toBeVisible();
+    await expect(page.getByRole('button').filter({ hasText: linkedWebhookName })).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(
+      page.getByRole('button').filter({ hasText: disabledWebhookName }),
+    ).not.toBeVisible();
 
     await searchInput.clear();
 
     await page.getByRole('button', { name: /Enabled \(/ }).click();
-    await expect(page.getByRole('button').filter({ hasText: linkedWebhookName })).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByRole('button').filter({ hasText: disabledWebhookName })).not.toBeVisible();
+    await expect(page.getByRole('button').filter({ hasText: linkedWebhookName })).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(
+      page.getByRole('button').filter({ hasText: disabledWebhookName }),
+    ).not.toBeVisible();
 
     await page.getByRole('button', { name: /Disabled \(/ }).click();
-    await expect(page.getByRole('button').filter({ hasText: disabledWebhookName })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole('button').filter({ hasText: disabledWebhookName })).toBeVisible({
+      timeout: 10_000,
+    });
     await expect(page.getByRole('button').filter({ hasText: linkedWebhookName })).not.toBeVisible();
 
     await page.getByRole('button', { name: /All \(/ }).click();
@@ -198,7 +216,9 @@ test.describe('Webhooks Plugin UI', () => {
 
     await expect(page).toHaveURL(new RegExp(`/invect/flow/${flowId}$`), { timeout: 10_000 });
 
-    const triggerStillExists = await request.get(`${apiBase}/plugins/webhooks/triggers/${linkedTrigger.id}`);
+    const triggerStillExists = await request.get(
+      `${apiBase}/plugins/webhooks/triggers/${linkedTrigger.id}`,
+    );
     expect(triggerStillExists.ok()).toBeTruthy();
   });
 });

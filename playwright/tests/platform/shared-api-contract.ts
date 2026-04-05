@@ -5,17 +5,14 @@
  * Invect core, so their REST API surface must be identical. These helpers
  * define the contract that each adapter is validated against.
  */
-import { expect, type APIRequestContext } from "@playwright/test";
+import { expect, type APIRequestContext } from '@playwright/test';
 
 /**
  * Run the full Invect API contract against the given base URL.
  * The caller is responsible for providing a `request` fixture and the
  * correct `apiBase` (e.g. "http://localhost:3000/invect").
  */
-export async function runApiContract(
-  request: APIRequestContext,
-  apiBase: string,
-) {
+export async function runApiContract(request: APIRequestContext, apiBase: string) {
   // -------------------------------------------------------------------
   // 1. Flow CRUD
   // -------------------------------------------------------------------
@@ -25,20 +22,20 @@ export async function runApiContract(
   expect(listFlowsRes.ok()).toBeTruthy();
   const flowsResponse = await listFlowsRes.json();
   // listFlows returns PaginatedResponse<Flow> = { data: Flow[], total, page, limit }
-  expect(flowsResponse).toHaveProperty("data");
+  expect(flowsResponse).toHaveProperty('data');
   expect(Array.isArray(flowsResponse.data)).toBeTruthy();
 
   // 1b. Create a flow — POST /flows
   const createFlowRes = await request.post(`${apiBase}/flows`, {
     data: {
-      name: "Platform Parity Test Flow",
-      description: "Auto-created by cross-platform E2E test",
+      name: 'Platform Parity Test Flow',
+      description: 'Auto-created by cross-platform E2E test',
     },
   });
   expect(createFlowRes.ok()).toBeTruthy();
   const createdFlow = await createFlowRes.json();
-  expect(createdFlow).toHaveProperty("id");
-  expect(createdFlow.name).toContain("Platform Parity Test Flow");
+  expect(createdFlow).toHaveProperty('id');
+  expect(createdFlow.name).toContain('Platform Parity Test Flow');
   const flowId: string = createdFlow.id;
 
   // 1c. Get flow by ID — GET /flows/:id
@@ -48,21 +45,18 @@ export async function runApiContract(
   expect(fetchedFlow.id).toBe(flowId);
 
   // 1d. Get flow versions — POST /flows/:id/versions/list
-  const listVersionsRes = await request.post(
-    `${apiBase}/flows/${flowId}/versions/list`,
-    { data: {} },
-  );
+  const listVersionsRes = await request.post(`${apiBase}/flows/${flowId}/versions/list`, {
+    data: {},
+  });
   expect(listVersionsRes.ok()).toBeTruthy();
 
   // 1e. Get React Flow representation — GET /flows/:id/react-flow
-  const reactFlowRes = await request.get(
-    `${apiBase}/flows/${flowId}/react-flow`,
-  );
+  const reactFlowRes = await request.get(`${apiBase}/flows/${flowId}/react-flow`);
   expect(reactFlowRes.ok()).toBeTruthy();
   const reactFlowData = await reactFlowRes.json();
   // Should contain nodes and edges arrays
-  expect(reactFlowData).toHaveProperty("nodes");
-  expect(reactFlowData).toHaveProperty("edges");
+  expect(reactFlowData).toHaveProperty('nodes');
+  expect(reactFlowData).toHaveProperty('edges');
 
   // -------------------------------------------------------------------
   // 2. Credential CRUD
@@ -79,17 +73,17 @@ export async function runApiContract(
   // 2b. Create a credential — POST /credentials
   const createCredRes = await request.post(`${apiBase}/credentials`, {
     data: {
-      name: "Platform Test Credential",
-      type: "http-api",
-      authType: "bearer",
-      config: { token: "test-token-for-platform-parity" },
-      description: "Auto-created by cross-platform test",
+      name: 'Platform Test Credential',
+      type: 'http-api',
+      authType: 'bearer',
+      config: { token: 'test-token-for-platform-parity' },
+      description: 'Auto-created by cross-platform test',
     },
   });
   expect(createCredRes.ok()).toBeTruthy();
   const createdCred = await createCredRes.json();
-  expect(createdCred).toHaveProperty("id");
-  expect(createdCred.name).toBe("Platform Test Credential");
+  expect(createdCred).toHaveProperty('id');
+  expect(createdCred.name).toBe('Platform Test Credential');
   const credId: string = createdCred.id;
 
   // 2c. Get credential by ID — GET /credentials/:id
@@ -97,27 +91,21 @@ export async function runApiContract(
   expect(getCredRes.ok()).toBeTruthy();
   const fetchedCred = await getCredRes.json();
   expect(fetchedCred.id).toBe(credId);
-  expect(fetchedCred.name).toBe("Platform Test Credential");
+  expect(fetchedCred.name).toBe('Platform Test Credential');
 
   // 2d. Test credential — POST /credentials/:id/test
-  const testCredRes = await request.post(
-    `${apiBase}/credentials/${credId}/test`,
-  );
+  const testCredRes = await request.post(`${apiBase}/credentials/${credId}/test`);
   expect(testCredRes.ok()).toBeTruthy();
   const testResult = await testCredRes.json();
   // testCredential returns { success: boolean, error?: string }
-  expect(testResult).toHaveProperty("success");
+  expect(testResult).toHaveProperty('success');
 
   // 2e. Delete credential — DELETE /credentials/:id
-  const deleteCredRes = await request.delete(
-    `${apiBase}/credentials/${credId}`,
-  );
+  const deleteCredRes = await request.delete(`${apiBase}/credentials/${credId}`);
   expect(deleteCredRes.status()).toBeLessThan(300);
 
   // Verify credential is gone
-  const verifyDeletedRes = await request.get(
-    `${apiBase}/credentials/${credId}`,
-  );
+  const verifyDeletedRes = await request.get(`${apiBase}/credentials/${credId}`);
   expect(verifyDeletedRes.ok()).toBeFalsy();
 
   // -------------------------------------------------------------------
@@ -131,8 +119,8 @@ export async function runApiContract(
 
   // Each tool should have the standard shape
   const firstTool = agentTools[0] as Record<string, unknown>;
-  expect(firstTool).toHaveProperty("id");
-  expect(firstTool).toHaveProperty("name");
+  expect(firstTool).toHaveProperty('id');
+  expect(firstTool).toHaveProperty('name');
 
   // -------------------------------------------------------------------
   // 4. Node data — GET /node-data/models
@@ -163,9 +151,7 @@ export async function runApiContract(
   expect(deleteFlowRes.status()).toBeLessThan(300);
 
   // Verify flow is gone
-  const verifyFlowDeletedRes = await request.get(
-    `${apiBase}/flows/${flowId}`,
-  );
+  const verifyFlowDeletedRes = await request.get(`${apiBase}/flows/${flowId}`);
   expect(verifyFlowDeletedRes.ok()).toBeFalsy();
 }
 
@@ -173,10 +159,7 @@ export async function runApiContract(
  * Cleanup helper — remove any leftover test data by name.
  * Safe to call even if no matching data exists.
  */
-export async function cleanupTestData(
-  request: APIRequestContext,
-  apiBase: string,
-) {
+export async function cleanupTestData(request: APIRequestContext, apiBase: string) {
   // Clean up test flows
   try {
     const flowsRes = await request.get(`${apiBase}/flows/list`);
@@ -187,7 +170,7 @@ export async function cleanupTestData(
         ? body
         : (body.data ?? []);
       for (const f of flows) {
-        if (f.name && f.name.includes("Platform Parity Test")) {
+        if (f.name && f.name.includes('Platform Parity Test')) {
           await request.delete(`${apiBase}/flows/${f.id}`);
         }
       }
@@ -205,7 +188,7 @@ export async function cleanupTestData(
         ? body
         : (body.data ?? []);
       for (const c of creds) {
-        if (c.name === "Platform Test Credential") {
+        if (c.name === 'Platform Test Credential') {
           await request.delete(`${apiBase}/credentials/${c.id}`);
         }
       }

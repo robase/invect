@@ -13,23 +13,25 @@
  * Runs Drizzle migrations on the fresh SQLite file before booting
  * Invect so that all tables exist.
  */
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import express from "express";
-import cors from "cors";
-import { createInvectRouter } from "../../../pkg/express/dist/index.js";
-import { webhooksPlugin } from "../../../pkg/plugins/webhooks/src/backend/index.ts";
-import { startExternalApiMocks, stopExternalApiMocks } from "../../../examples/express-drizzle/mock-external-apis.ts";
-
+import Database from 'better-sqlite3';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import express from 'express';
+import cors from 'cors';
+import { createInvectRouter } from '../../../pkg/express/dist/index.js';
+import { webhooksPlugin } from '../../../pkg/plugins/webhooks/src/backend/index.ts';
+import {
+  startExternalApiMocks,
+  stopExternalApiMocks,
+} from '../../../examples/express-drizzle/mock-external-apis.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const port = parseInt(process.env.PORT || "0", 10);
-const dbPath = process.env.TEST_DB_PATH || ":memory:";
+const port = parseInt(process.env.PORT || '0', 10);
+const dbPath = process.env.TEST_DB_PATH || ':memory:';
 
 startExternalApiMocks();
 
@@ -38,10 +40,7 @@ const sqlite = new Database(dbPath === ':memory:' ? ':memory:' : dbPath);
 sqlite.pragma('journal_mode = WAL');
 const db = drizzle(sqlite);
 
-const migrationsFolder = path.resolve(
-  __dirname,
-  "../../../pkg/core/drizzle/sqlite",
-);
+const migrationsFolder = path.resolve(__dirname, '../../../pkg/core/drizzle/sqlite');
 await migrate(db, { migrationsFolder });
 sqlite.exec(`
   CREATE TABLE IF NOT EXISTS webhook_triggers (
@@ -74,39 +73,39 @@ app.use(cors());
 app.use(express.json());
 
 // Log initialization errors to stderr so the fixture can see them
-process.on("unhandledRejection", (err) => {
+process.on('unhandledRejection', (err) => {
   process.stderr.write(`Unhandled rejection: ${err}\n`);
 });
 
 app.use(
-  "/invect",
+  '/invect',
   await createInvectRouter({
     database: {
-      type: "sqlite",
+      type: 'sqlite',
       connectionString: `file:${dbPath}`,
     },
-    logging: { level: "warn" },
+    logging: { level: 'warn' },
     plugins: [webhooksPlugin()],
   }),
 );
 
-app.get("/health", (_req, res) => {
-  res.json({ status: "ok" });
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok' });
 });
 
 const server = app.listen(port, () => {
   const addr = server.address();
-  const assignedPort = typeof addr === "object" && addr ? addr.port : port;
+  const assignedPort = typeof addr === 'object' && addr ? addr.port : port;
   // Signal to parent process that we're ready
   process.stdout.write(`LISTENING:${assignedPort}\n`);
 });
 
-process.on("SIGINT", () => {
+process.on('SIGINT', () => {
   stopExternalApiMocks();
   process.exit(0);
 });
 
-process.on("SIGTERM", () => {
+process.on('SIGTERM', () => {
   stopExternalApiMocks();
   process.exit(0);
 });

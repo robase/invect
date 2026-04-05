@@ -10,19 +10,43 @@
  * Drizzle Kit manages everything together.
  */
 
-import { pgTable, text, integer, boolean, doublePrecision, timestamp, json, primaryKey, pgEnum, uuid, type AnyPgColumn } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  text,
+  integer,
+  boolean,
+  doublePrecision,
+  timestamp,
+  json,
+  primaryKey,
+  pgEnum,
+  uuid,
+  type AnyPgColumn,
+} from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
 // ─── Invect type aliases (used by $type<>() for type-safe queries) ──
 type JSONValue = string | number | boolean | null | JSONValue[] | { [key: string]: JSONValue };
 type CredentialType = 'api_key' | 'oauth2' | 'bearer_token' | 'basic_auth' | 'custom' | 'webhook';
-type CredentialAuthType = 'api_key' | 'oauth2' | 'bearer_token' | 'basic_auth' | 'custom' | 'webhook';
+type CredentialAuthType =
+  | 'api_key'
+  | 'oauth2'
+  | 'bearer_token'
+  | 'basic_auth'
+  | 'custom'
+  | 'webhook';
 type CredentialConfig = Record<string, unknown>;
 type FlowAccessPermission = 'viewer' | 'operator' | 'editor' | 'owner';
 type TriggerType = 'manual' | 'cron' | 'webhook';
 type InvectDefinitionRuntime = Record<string, unknown>;
-type FlowRunStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED' | 'PAUSED_FOR_BATCH';
+type FlowRunStatus =
+  | 'PENDING'
+  | 'RUNNING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'CANCELLED'
+  | 'PAUSED_FOR_BATCH';
 type NodeExecutionStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'SKIPPED';
 type BatchProvider = 'openai' | 'anthropic';
 type BatchStatus = 'SUBMITTED' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED' | 'CANCELLED' | 'EXPIRED';
@@ -111,10 +135,32 @@ export const orderItems = pgTable('order_items', {
 // Do not edit below this line. Run `npx invect-cli generate` to regenerate.
 // =============================================================================
 
-export const flowRunsStatusEnum = pgEnum('flow_runs_status', ['PENDING', 'RUNNING', 'SUCCESS', 'FAILED', 'CANCELLED', 'PAUSED', 'PAUSED_FOR_BATCH']);
-export const nodeExecutionsStatusEnum = pgEnum('node_executions_status', ['PENDING', 'RUNNING', 'SUCCESS', 'FAILED', 'SKIPPED', 'BATCH_SUBMITTED', 'BATCH_PROCESSING']);
+export const flowRunsStatusEnum = pgEnum('flow_runs_status', [
+  'PENDING',
+  'RUNNING',
+  'SUCCESS',
+  'FAILED',
+  'CANCELLED',
+  'PAUSED',
+  'PAUSED_FOR_BATCH',
+]);
+export const nodeExecutionsStatusEnum = pgEnum('node_executions_status', [
+  'PENDING',
+  'RUNNING',
+  'SUCCESS',
+  'FAILED',
+  'SKIPPED',
+  'BATCH_SUBMITTED',
+  'BATCH_PROCESSING',
+]);
 export const batchJobsProviderEnum = pgEnum('batch_jobs_provider', ['OPENAI', 'ANTHROPIC']);
-export const batchJobsStatusEnum = pgEnum('batch_jobs_status', ['SUBMITTED', 'PROCESSING', 'COMPLETED', 'FAILED', 'CANCELLED']);
+export const batchJobsStatusEnum = pgEnum('batch_jobs_status', [
+  'SUBMITTED',
+  'PROCESSING',
+  'COMPLETED',
+  'FAILED',
+  'CANCELLED',
+]);
 
 export const user = pgTable('user', {
   id: text('id').primaryKey().notNull(),
@@ -134,7 +180,9 @@ export const account = pgTable('account', {
   id: text('id').primaryKey().notNull(),
   accountId: text('account_id').notNull(),
   providerId: text('provider_id').notNull(),
-  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
   accessToken: text('access_token'),
   refreshToken: text('refresh_token'),
   idToken: text('id_token'),
@@ -155,7 +203,9 @@ export const session = pgTable('session', {
   ipAddress: text('ip_address'),
   userAgent: text('user_agent'),
   impersonatedBy: text('impersonated_by'),
-  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
 });
 
 export const verification = pgTable('verification', {
@@ -168,7 +218,10 @@ export const verification = pgTable('verification', {
 });
 
 export const credentials = pgTable('credentials', {
-  id: uuid('id').primaryKey().notNull().$default(() => randomUUID()),
+  id: uuid('id')
+    .primaryKey()
+    .notNull()
+    .$default(() => randomUUID()),
   name: text('name').notNull(),
   type: text('type').$type<CredentialType>().notNull(),
   authType: text('auth_type').$type<CredentialAuthType>().notNull(),
@@ -199,8 +252,13 @@ export const flows = pgTable('flows', {
 });
 
 export const flowAccess = pgTable('flow_access', {
-  id: uuid('id').primaryKey().notNull().$default(() => randomUUID()),
-  flowId: text('flow_id').notNull().references(() => flows.id, { onDelete: 'cascade' }),
+  id: uuid('id')
+    .primaryKey()
+    .notNull()
+    .$default(() => randomUUID()),
+  flowId: text('flow_id')
+    .notNull()
+    .references(() => flows.id, { onDelete: 'cascade' }),
   userId: text('user_id'),
   teamId: text('team_id'),
   permission: text('permission').$type<FlowAccessPermission>().notNull().default('viewer'),
@@ -210,8 +268,13 @@ export const flowAccess = pgTable('flow_access', {
 });
 
 export const flowTriggers = pgTable('flow_triggers', {
-  id: uuid('id').primaryKey().notNull().$default(() => randomUUID()),
-  flowId: text('flow_id').notNull().references(() => flows.id, { onDelete: 'cascade' }),
+  id: uuid('id')
+    .primaryKey()
+    .notNull()
+    .$default(() => randomUUID()),
+  flowId: text('flow_id')
+    .notNull()
+    .references(() => flows.id, { onDelete: 'cascade' }),
   nodeId: text('node_id').notNull(),
   type: text('type').$type<TriggerType>().notNull(),
   isEnabled: boolean('is_enabled').notNull().default(true),
@@ -224,17 +287,28 @@ export const flowTriggers = pgTable('flow_triggers', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
-export const flowVersions = pgTable('flow_versions', {
-  flowId: text('flow_id').notNull().references(() => flows.id, { onDelete: 'cascade' }),
-  version: integer('version').notNull(),
-  invectDefinition: json('invect_definition').$type<InvectDefinitionRuntime>().notNull(),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  createdBy: text('created_by'),
-}, (table) => [primaryKey({ columns: [table.version, table.flowId] })]);
+export const flowVersions = pgTable(
+  'flow_versions',
+  {
+    flowId: text('flow_id')
+      .notNull()
+      .references(() => flows.id, { onDelete: 'cascade' }),
+    version: integer('version').notNull(),
+    invectDefinition: json('invect_definition').$type<InvectDefinitionRuntime>().notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    createdBy: text('created_by'),
+  },
+  (table) => [primaryKey({ columns: [table.version, table.flowId] })],
+);
 
 export const chatMessages = pgTable('chat_messages', {
-  id: uuid('id').primaryKey().notNull().$default(() => randomUUID()),
-  flowId: text('flow_id').notNull().references(() => flows.id, { onDelete: 'cascade' }),
+  id: uuid('id')
+    .primaryKey()
+    .notNull()
+    .$default(() => randomUUID()),
+  flowId: text('flow_id')
+    .notNull()
+    .references(() => flows.id, { onDelete: 'cascade' }),
   role: text('role').$type<'user' | 'assistant' | 'system' | 'tool'>().notNull(),
   content: text('content').notNull().default(''),
   toolMeta: json('tool_meta').$type<Record<string, unknown>>(),
@@ -242,8 +316,13 @@ export const chatMessages = pgTable('chat_messages', {
 });
 
 export const flowRuns = pgTable('flow_executions', {
-  id: uuid('id').primaryKey().notNull().$default(() => randomUUID()),
-  flowId: text('flow_id').notNull().references(() => flows.id, { onDelete: 'cascade' }),
+  id: uuid('id')
+    .primaryKey()
+    .notNull()
+    .$default(() => randomUUID()),
+  flowId: text('flow_id')
+    .notNull()
+    .references(() => flows.id, { onDelete: 'cascade' }),
   flowVersion: integer('flow_version').notNull(),
   status: flowRunsStatusEnum('status').$type<FlowRunStatus>().notNull().default('PENDING'),
   inputs: json('inputs').$type<JSONValue>().notNull(),
@@ -261,11 +340,19 @@ export const flowRuns = pgTable('flow_executions', {
 });
 
 export const nodeExecutions = pgTable('execution_traces', {
-  id: uuid('id').primaryKey().notNull().$default(() => randomUUID()),
-  flowRunId: uuid('flow_run_id').notNull().references(() => flowRuns.id, { onDelete: 'cascade' }),
+  id: uuid('id')
+    .primaryKey()
+    .notNull()
+    .$default(() => randomUUID()),
+  flowRunId: uuid('flow_run_id')
+    .notNull()
+    .references(() => flowRuns.id, { onDelete: 'cascade' }),
   nodeId: text('node_id').notNull(),
   nodeType: text('node_type').notNull(),
-  status: nodeExecutionsStatusEnum('status').$type<NodeExecutionStatus>().notNull().default('PENDING'),
+  status: nodeExecutionsStatusEnum('status')
+    .$type<NodeExecutionStatus>()
+    .notNull()
+    .default('PENDING'),
   inputs: json('inputs').$type<JSONValue>().notNull(),
   outputs: json('outputs').$type<JSONValue>(),
   error: text('error'),
@@ -276,8 +363,13 @@ export const nodeExecutions = pgTable('execution_traces', {
 });
 
 export const batchJobs = pgTable('batch_jobs', {
-  id: uuid('id').primaryKey().notNull().$default(() => randomUUID()),
-  flowRunId: uuid('flow_run_id').notNull().references(() => flowRuns.id, { onDelete: 'cascade' }),
+  id: uuid('id')
+    .primaryKey()
+    .notNull()
+    .$default(() => randomUUID()),
+  flowRunId: uuid('flow_run_id')
+    .notNull()
+    .references(() => flowRuns.id, { onDelete: 'cascade' }),
   nodeId: text('node_id').notNull(),
   provider: batchJobsProviderEnum('provider').$type<BatchProvider>().notNull(),
   batchId: text('batch_id'),
@@ -292,9 +384,16 @@ export const batchJobs = pgTable('batch_jobs', {
 });
 
 export const agentToolExecutions = pgTable('agent_tool_executions', {
-  id: uuid('id').primaryKey().notNull().$default(() => randomUUID()),
-  nodeExecutionId: uuid('node_execution_id').notNull().references(() => nodeExecutions.id, { onDelete: 'cascade' }),
-  flowRunId: uuid('flow_run_id').notNull().references(() => flowRuns.id, { onDelete: 'cascade' }),
+  id: uuid('id')
+    .primaryKey()
+    .notNull()
+    .$default(() => randomUUID()),
+  nodeExecutionId: uuid('node_execution_id')
+    .notNull()
+    .references(() => nodeExecutions.id, { onDelete: 'cascade' }),
+  flowRunId: uuid('flow_run_id')
+    .notNull()
+    .references(() => flowRuns.id, { onDelete: 'cascade' }),
   toolId: text('tool_id').notNull(),
   toolName: text('tool_name').notNull(),
   iteration: integer('iteration').notNull(),
@@ -309,7 +408,9 @@ export const agentToolExecutions = pgTable('agent_tool_executions', {
 
 export const rbac_scope_access = pgTable('rbac_scope_access', {
   id: text('id').primaryKey().notNull(),
-  scope_id: text('scope_id').notNull().references(() => rbac_teams.id, { onDelete: 'cascade' }),
+  scope_id: text('scope_id')
+    .notNull()
+    .references(() => rbac_teams.id, { onDelete: 'cascade' }),
   user_id: text('user_id'),
   team_id: text('team_id'),
   permission: text('permission').$type<FlowAccessPermission>().notNull().default('viewer'),
@@ -319,8 +420,12 @@ export const rbac_scope_access = pgTable('rbac_scope_access', {
 
 export const rbac_team_members = pgTable('rbac_team_members', {
   id: text('id').primaryKey().notNull(),
-  team_id: text('team_id').notNull().references(() => rbac_teams.id, { onDelete: 'cascade' }),
-  user_id: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  team_id: text('team_id')
+    .notNull()
+    .references(() => rbac_teams.id, { onDelete: 'cascade' }),
+  user_id: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
   created_at: timestamp('created_at').notNull().defaultNow(),
 });
 
@@ -328,7 +433,9 @@ export const rbac_teams = pgTable('rbac_teams', {
   id: text('id').primaryKey().notNull(),
   name: text('name').notNull(),
   description: text('description'),
-  parent_id: text('parent_id').references((): AnyPgColumn => rbac_teams.id, { onDelete: 'set null' }),
+  parent_id: text('parent_id').references((): AnyPgColumn => rbac_teams.id, {
+    onDelete: 'set null',
+  }),
   created_by: text('created_by').references(() => user.id, { onDelete: 'no action' }),
   created_at: timestamp('created_at').notNull().defaultNow(),
   updated_at: timestamp('updated_at'),
@@ -391,7 +498,10 @@ export const batchJobsRelations = relations(batchJobs, ({ one }) => ({
 }));
 
 export const agentToolExecutionsRelations = relations(agentToolExecutions, ({ one }) => ({
-  nodeExecution: one(nodeExecutions, { fields: [agentToolExecutions.nodeExecutionId], references: [nodeExecutions.id] }),
+  nodeExecution: one(nodeExecutions, {
+    fields: [agentToolExecutions.nodeExecutionId],
+    references: [nodeExecutions.id],
+  }),
   flowRun: one(flowRuns, { fields: [agentToolExecutions.flowRunId], references: [flowRuns.id] }),
 }));
 
@@ -412,7 +522,6 @@ export const rbac_teamsRelations = relations(rbac_teams, ({ one, many }) => ({
   rbac_team_members: many(rbac_team_members),
   rbac_teams: many(rbac_teams),
 }));
-
 
 export type User = typeof user.$inferSelect;
 export type NewUser = typeof user.$inferInsert;

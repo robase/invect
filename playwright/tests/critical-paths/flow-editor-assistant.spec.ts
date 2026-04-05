@@ -17,11 +17,7 @@ async function createCredential(
   return created.id as string;
 }
 
-async function cleanupCredentialByName(
-  apiBase: string,
-  request: APIRequestContext,
-  name: string,
-) {
+async function cleanupCredentialByName(apiBase: string, request: APIRequestContext, name: string) {
   const listResponse = await request.get(`${apiBase}/credentials`);
   if (!listResponse.ok()) {
     return;
@@ -37,7 +33,11 @@ async function cleanupCredentialByName(
   );
 }
 
-async function createFlow(apiBase: string, request: APIRequestContext, name: string): Promise<string> {
+async function createFlow(
+  apiBase: string,
+  request: APIRequestContext,
+  name: string,
+): Promise<string> {
   const response = await request.post(`${apiBase}/flows`, { data: { name } });
   expect(response.ok()).toBeTruthy();
   const created = await response.json();
@@ -170,14 +170,16 @@ test.describe('Flow Editor Assistant And Tooling', () => {
 
     const overlayPrompt = page.getByPlaceholder('Describe what you need done…');
     await overlayPrompt.fill('Build a simple approval flow');
-  await overlayPrompt.locator('xpath=following-sibling::button').click();
+    await overlayPrompt.locator('xpath=following-sibling::button').click();
 
-  await expect(page.getByTitle('Chat settings')).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTitle('Chat settings')).toBeVisible({ timeout: 5_000 });
     await closeChatPanel(page);
 
     await expect(page.getByRole('button', { name: 'Add Node' })).toBeVisible({ timeout: 5_000 });
     await page.getByRole('button', { name: 'Add Node' }).click();
-    await expect(page.getByRole('heading', { name: 'Nodes', level: 2 })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole('heading', { name: 'Nodes', level: 2 })).toBeVisible({
+      timeout: 5_000,
+    });
   });
 
   test('agent actions can be added and configured, and the flow active toggle persists', async ({
@@ -225,20 +227,24 @@ test.describe('Flow Editor Assistant And Tooling', () => {
     await expect(settingsButton).toBeVisible();
 
     await page.getByRole('button', { name: /^Inactive$/ }).click();
-    await expect.poll(async () => {
-      const response = await request.get(`${apiBase}/flows/${flowId}`);
-      const flow = await response.json();
-      return flow.isActive;
-    }).toBe(false);
+    await expect
+      .poll(async () => {
+        const response = await request.get(`${apiBase}/flows/${flowId}`);
+        const flow = await response.json();
+        return flow.isActive;
+      })
+      .toBe(false);
 
     await page.reload();
     await expect(page.locator('.react-flow')).toBeVisible({ timeout: 15_000 });
     await page.getByRole('button', { name: /^Active$/ }).click();
-    await expect.poll(async () => {
-      const response = await request.get(`${apiBase}/flows/${flowId}`);
-      const flow = await response.json();
-      return flow.isActive;
-    }).toBe(true);
+    await expect
+      .poll(async () => {
+        const response = await request.get(`${apiBase}/flows/${flowId}`);
+        const flow = await response.json();
+        return flow.isActive;
+      })
+      .toBe(true);
 
     const addToolsButton = page.getByRole('button', { name: 'Add Tools' });
     await expect(addToolsButton).toBeVisible({ timeout: 10_000 });
@@ -252,7 +258,10 @@ test.describe('Flow Editor Assistant And Tooling', () => {
 
     await expect(page.getByText(/Added \(1\)/)).toBeVisible({ timeout: 10_000 });
 
-    const addedSection = page.locator('h3').filter({ hasText: /Added \(1\)/ }).locator('xpath=following-sibling::div');
+    const addedSection = page
+      .locator('h3')
+      .filter({ hasText: /Added \(1\)/ })
+      .locator('xpath=following-sibling::div');
     await addedSection.getByText('Math Evaluate').click();
 
     const configName = page.locator('#tool-config-name');

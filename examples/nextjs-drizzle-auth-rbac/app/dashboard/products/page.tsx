@@ -26,18 +26,14 @@ export default async function ProductsPage() {
               </div>
               <span
                 className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                  product.isActive
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-gray-100 text-gray-600'
+                  product.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
                 }`}
               >
                 {product.isActive ? 'Active' : 'Inactive'}
               </span>
             </div>
             <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-xl font-bold">
-                ${(product.priceInCents / 100).toFixed(0)}
-              </span>
+              <span className="text-xl font-bold">${(product.priceInCents / 100).toFixed(0)}</span>
               <span className="text-xs text-muted capitalize">{product.category}</span>
             </div>
             {product.description && (

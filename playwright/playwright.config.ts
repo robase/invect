@@ -1,10 +1,10 @@
-import path from "node:path";
+import path from 'node:path';
 
-import { defineConfig, devices } from "@playwright/test";
+import { defineConfig, devices } from '@playwright/test';
 
-const playwrightArtifactsDir = path.resolve(process.cwd(), "playwright");
-const vitePort = Number.parseInt(process.env.PLAYWRIGHT_VITE_PORT ?? "41731", 10);
-const nextjsPort = Number.parseInt(process.env.PLAYWRIGHT_NEXTJS_PORT ?? "43002", 10);
+const playwrightArtifactsDir = path.resolve(process.cwd(), 'playwright');
+const vitePort = Number.parseInt(process.env.PLAYWRIGHT_VITE_PORT ?? '41731', 10);
+const nextjsPort = Number.parseInt(process.env.PLAYWRIGHT_NEXTJS_PORT ?? '43002', 10);
 const viteBaseUrl = process.env.PLAYWRIGHT_VITE_URL ?? `http://localhost:${vitePort}`;
 const nextjsBaseUrl = process.env.NEXTJS_URL ?? `http://localhost:${nextjsPort}`;
 
@@ -20,8 +20,8 @@ const nextjsBaseUrl = process.env.NEXTJS_URL ?? `http://localhost:${nextjsPort}`
  * Run: pnpm test:pw
  */
 export default defineConfig({
-  testDir: "./tests",
-  outputDir: path.join(playwrightArtifactsDir, "test-results"),
+  testDir: './tests',
+  outputDir: path.join(playwrightArtifactsDir, 'test-results'),
 
   /* Timeout per test */
   timeout: 60_000,
@@ -31,9 +31,9 @@ export default defineConfig({
 
   /* Shared settings for all projects */
   use: {
-    trace: "on-first-retry",
-    screenshot: "only-on-failure",
-    video: "on-first-retry",
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+    video: 'on-first-retry',
   },
 
   /* Fail the build on CI if test.only is left in source */
@@ -44,30 +44,41 @@ export default defineConfig({
 
   /* Reporter */
   reporter: process.env.CI
-    ? "github"
+    ? 'github'
     : [
-      ['json', { open: "never", outputFolder: path.join(playwrightArtifactsDir) ,outputFile: 'results.json' }],
-      ["html", { open: "never", outputFolder: path.join(playwrightArtifactsDir, "playwright-report") }]],
+        [
+          'json',
+          {
+            open: 'never',
+            outputFolder: path.join(playwrightArtifactsDir),
+            outputFile: 'results.json',
+          },
+        ],
+        [
+          'html',
+          { open: 'never', outputFolder: path.join(playwrightArtifactsDir, 'playwright-report') },
+        ],
+      ],
 
   projects: [
     /* API tests — fully isolated, each worker spawns its own server */
     {
-      name: "api",
+      name: 'api',
       testMatch: /platform\/(express|nestjs|nextjs)-api\.spec\.ts/,
-      use: { ...devices["Desktop Chrome"] },
+      use: { ...devices['Desktop Chrome'] },
     },
     /* Frontend tests — shared frontend app, isolated backend per worker */
     {
-      name: "frontend",
+      name: 'frontend',
       testMatch: /platform\/(express|nextjs)-frontend\.spec\.ts/,
       use: {
-        ...devices["Desktop Chrome"],
+        ...devices['Desktop Chrome'],
         baseURL: viteBaseUrl,
       },
     },
     /* Other tests (config-panel, credentials, seed, etc.) — shared frontend, isolated backend */
     {
-      name: "e2e",
+      name: 'e2e',
       testIgnore: [
         /platform\//,
         /examples\//,
@@ -76,48 +87,48 @@ export default defineConfig({
         /visual-audit\//,
       ],
       use: {
-        ...devices["Desktop Chrome"],
+        ...devices['Desktop Chrome'],
         baseURL: viteBaseUrl,
       },
     },
     /* Critical-path tests — shared frontend, isolated backend per worker */
     {
-      name: "critical-paths",
+      name: 'critical-paths',
       testMatch: /critical-paths\/.*\.spec\.ts/,
       use: {
-        ...devices["Desktop Chrome"],
+        ...devices['Desktop Chrome'],
         baseURL: viteBaseUrl,
       },
     },
     /* NestJS + Prisma installation test — self-contained (Docker + own server) */
     {
-      name: "nest-prisma",
+      name: 'nest-prisma',
       testMatch: /nest-prisma-installation\.spec\.ts/,
       timeout: 180_000,
-      use: { ...devices["Desktop Chrome"] },
+      use: { ...devices['Desktop Chrome'] },
     },
     /* Next.js + Drizzle + Auth + RBAC example installation flow */
     {
-      name: "nextjs-drizzle-auth-rbac",
+      name: 'nextjs-drizzle-auth-rbac',
       testMatch: /examples\/nextjs-drizzle-auth-rbac-.*\.spec\.ts/,
       timeout: 120_000,
       use: {
-        ...devices["Desktop Chrome"],
-        baseURL: "http://localhost:3003",
+        ...devices['Desktop Chrome'],
+        baseURL: 'http://localhost:3003',
       },
     },
     /* Visual audit — on-demand screenshot capture for UX analysis */
     {
-      name: "visual-audit",
-      testDir: "./visual-audit",
+      name: 'visual-audit',
+      testDir: './visual-audit',
       testMatch: /capture\.ts/,
       timeout: 120_000,
       use: {
-        ...devices["Desktop Chrome"],
+        ...devices['Desktop Chrome'],
         baseURL: viteBaseUrl,
-        screenshot: "off",
-        video: "off",
-        trace: "off",
+        screenshot: 'off',
+        video: 'off',
+        trace: 'off',
       },
     },
   ],
@@ -132,16 +143,16 @@ export default defineConfig({
       url: viteBaseUrl,
       reuseExistingServer: !process.env.CI,
       timeout: 30_000,
-      stdout: "pipe",
-      stderr: "pipe",
+      stdout: 'pipe',
+      stderr: 'pipe',
     },
     {
       command: `pnpm --filter invect-nextjs-example exec next dev --hostname localhost -p ${nextjsPort}`,
       url: nextjsBaseUrl,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
-      stdout: "pipe",
-      stderr: "pipe",
+      stdout: 'pipe',
+      stderr: 'pipe',
     },
   ],
 });

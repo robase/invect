@@ -81,7 +81,7 @@ export const manualTriggerAction = defineAction({
 
   async execute(params, context) {
     // Strip internal trigger keys before processing
-    const flowInputs = { ...(context.flowInputs ?? {}) };
+    const flowInputs = { ...context.flowInputs };
     delete flowInputs.__triggerData;
     delete flowInputs.__triggerNodeId;
 

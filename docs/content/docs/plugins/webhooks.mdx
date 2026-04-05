@@ -20,17 +20,18 @@ import { createInvectRouter } from '@invect/express';
 import { webhooksPlugin } from '@invect/webhooks';
 
 app.use('/invect', createInvectRouter({
-  database: {
-    type: 'sqlite',
-    connectionString: process.env.DATABASE_URL || 'file:./dev.db',
-  },
-  plugins: [
-    webhooksPlugin({
-      webhookBaseUrl: 'https://example.com/invect',
-    }),
-  ],
+database: {
+type: 'sqlite',
+connectionString: process.env.DATABASE_URL || 'file:./dev.db',
+},
+plugins: [
+webhooksPlugin({
+webhookBaseUrl: 'https://example.com/invect',
+}),
+],
 }));
-```
+
+````
 </Tab>
 <Tab value="NestJS">
 ```ts
@@ -41,7 +42,8 @@ InvectModule.forRoot({
   },
   plugins: [webhooksPlugin({ webhookBaseUrl: process.env.INVECT_URL })],
 })
-```
+````
+
 </Tab>
 <Tab value="Next.js">
 ```ts
@@ -80,13 +82,13 @@ Each webhook trigger gets a unique URL path and signing secret generated automat
 
 Invect can verify signatures from these providers automatically:
 
-| Provider | Signature method |
-|----------|-----------------|
-| `github` | `X-Hub-Signature-256` (HMAC-SHA256) |
-| `slack` | `X-Slack-Signature` (HMAC-SHA256) |
-| `stripe` | `Stripe-Signature` (HMAC-SHA256) |
-| `linear` | `X-Linear-Signature` (HMAC-SHA256) |
-| `generic` | No signature verification |
+| Provider  | Signature method                    |
+| --------- | ----------------------------------- |
+| `github`  | `X-Hub-Signature-256` (HMAC-SHA256) |
+| `slack`   | `X-Slack-Signature` (HMAC-SHA256)   |
+| `stripe`  | `Stripe-Signature` (HMAC-SHA256)    |
+| `linear`  | `X-Linear-Signature` (HMAC-SHA256)  |
+| `generic` | No signature verification           |
 
 Set the provider when creating a webhook trigger so that the plugin applies the correct verification logic.
 
@@ -94,16 +96,16 @@ Set the provider when creating a webhook trigger so that the plugin applies the 
 
 Webhook triggers can be created and managed via the REST API:
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/plugins/webhooks/triggers` | List all webhook triggers |
-| `POST` | `/plugins/webhooks/triggers` | Create a webhook trigger |
-| `GET` | `/plugins/webhooks/triggers/:id` | Get a webhook trigger |
-| `PUT` | `/plugins/webhooks/triggers/:id` | Update a webhook trigger |
-| `DELETE` | `/plugins/webhooks/triggers/:id` | Delete a webhook trigger |
-| `GET` | `/plugins/webhooks/triggers/:id/info` | Get the full webhook URL and secret |
-| `POST` | `/plugins/webhooks/triggers/:id/test` | Send a test payload |
-| `POST` | `/plugins/webhooks/receive/:webhookPath` | **Ingestion endpoint** (public) |
+| Method   | Path                                     | Description                         |
+| -------- | ---------------------------------------- | ----------------------------------- |
+| `GET`    | `/plugins/webhooks/triggers`             | List all webhook triggers           |
+| `POST`   | `/plugins/webhooks/triggers`             | Create a webhook trigger            |
+| `GET`    | `/plugins/webhooks/triggers/:id`         | Get a webhook trigger               |
+| `PUT`    | `/plugins/webhooks/triggers/:id`         | Update a webhook trigger            |
+| `DELETE` | `/plugins/webhooks/triggers/:id`         | Delete a webhook trigger            |
+| `GET`    | `/plugins/webhooks/triggers/:id/info`    | Get the full webhook URL and secret |
+| `POST`   | `/plugins/webhooks/triggers/:id/test`    | Send a test payload                 |
+| `POST`   | `/plugins/webhooks/receive/:webhookPath` | **Ingestion endpoint** (public)     |
 
 ### Creating a webhook trigger
 
@@ -128,6 +130,7 @@ POST /invect/plugins/webhooks/receive/:webhookPath
 ```
 
 The plugin will:
+
 1. Check the rate limit
 2. Look up the webhook trigger by path
 3. Verify the signature (if the provider is not `generic`)
@@ -149,5 +152,5 @@ webhooksPlugin({
 
   // Deduplication TTL in milliseconds (default: 86400000 — 24 hours)
   dedupTtlMs: 24 * 60 * 60 * 1000,
-})
+});
 ```

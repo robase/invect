@@ -16,31 +16,37 @@
  * Run: pnpm ux:analyze
  */
 
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Load .env file from visual-audit directory (no dotenv dependency needed)
-const envPath = path.resolve(__dirname, ".env");
+const envPath = path.resolve(__dirname, '.env');
 if (fs.existsSync(envPath)) {
-  for (const line of fs.readFileSync(envPath, "utf-8").split("\n")) {
+  for (const line of fs.readFileSync(envPath, 'utf-8').split('\n')) {
     const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const eqIdx = trimmed.indexOf("=");
-    if (eqIdx === -1) continue;
+    if (!trimmed || trimmed.startsWith('#')) {
+      continue;
+    }
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx === -1) {
+      continue;
+    }
     const key = trimmed.slice(0, eqIdx).trim();
     const val = trimmed.slice(eqIdx + 1).trim();
-    if (!process.env[key]) process.env[key] = val;
+    if (!process.env[key]) {
+      process.env[key] = val;
+    }
   }
 }
 
-const OUTPUT_DIR = path.resolve(__dirname, "output");
-const SCREENSHOTS_DIR = path.join(OUTPUT_DIR, "screenshots");
-const METADATA_PATH = path.join(OUTPUT_DIR, "metadata.json");
-const REPORT_PATH = path.join(OUTPUT_DIR, "REPORT.md");
+const OUTPUT_DIR = path.resolve(__dirname, 'output');
+const SCREENSHOTS_DIR = path.join(OUTPUT_DIR, 'screenshots');
+const METADATA_PATH = path.join(OUTPUT_DIR, 'metadata.json');
+const REPORT_PATH = path.join(OUTPUT_DIR, 'REPORT.md');
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -66,7 +72,7 @@ function perScreenPrompt(meta: ScreenshotMeta): string {
 
 Analyze this screenshot of: ${meta.description}
 Page URL: ${meta.url}
-Context tags: ${meta.tags.join(", ")}
+Context tags: ${meta.tags.join(', ')}
 Viewport: ${meta.viewport.width}×${meta.viewport.height}
 
 Evaluate and provide findings in these categories:
@@ -107,73 +113,80 @@ interface AIProvider {
 }
 
 async function createAnthropicProvider(): Promise<AIProvider> {
-  const { default: Anthropic } = await import("@anthropic-ai/sdk");
+  const { default: Anthropic } = await import('@anthropic-ai/sdk');
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  const model = "claude-opus-4-6";
+  const model = 'claude-opus-4-6';
 
   return {
-    name: "Anthropic",
+    name: 'Anthropic',
     model,
     async analyzeImage(prompt, imageBase64, mimeType) {
       const resp = await client.messages.create({
         model,
         max_tokens: 2000,
-        messages: [{
-          role: "user",
-          content: [
-            { type: "image", source: { type: "base64", media_type: mimeType as "image/png", data: imageBase64 } },
-            { type: "text", text: prompt },
-          ],
-        }],
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'image',
+                source: { type: 'base64', media_type: mimeType as 'image/png', data: imageBase64 },
+              },
+              { type: 'text', text: prompt },
+            ],
+          },
+        ],
       });
       return resp.content
-        .filter((b): b is { type: "text"; text: string } => b.type === "text")
+        .filter((b): b is { type: 'text'; text: string } => b.type === 'text')
         .map((b) => b.text)
-        .join("\n");
+        .join('\n');
     },
     async textCompletion(prompt) {
       const resp = await client.messages.create({
         model,
         max_tokens: 4000,
-        messages: [{ role: "user", content: prompt }],
+        messages: [{ role: 'user', content: prompt }],
       });
       return resp.content
-        .filter((b): b is { type: "text"; text: string } => b.type === "text")
+        .filter((b): b is { type: 'text'; text: string } => b.type === 'text')
         .map((b) => b.text)
-        .join("\n");
+        .join('\n');
     },
   };
 }
 
 async function createOpenAIProvider(): Promise<AIProvider> {
-  const { default: OpenAI } = await import("openai");
+  const { default: OpenAI } = await import('openai');
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const model = "gpt-4o";
+  const model = 'gpt-4o';
 
   return {
-    name: "OpenAI",
+    name: 'OpenAI',
     model,
     async analyzeImage(prompt, imageBase64, mimeType) {
       const resp = await client.chat.completions.create({
         model,
         max_tokens: 2000,
-        messages: [{
-          role: "user",
-          content: [
-            { type: "image_url", image_url: { url: `data:${mimeType};base64,${imageBase64}` } },
-            { type: "text", text: prompt },
-          ],
-        }],
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'image_url', image_url: { url: `data:${mimeType};base64,${imageBase64}` } },
+              { type: 'text', text: prompt },
+            ],
+          },
+        ],
       });
-      return resp.choices[0]?.message?.content ?? "";
+      return resp.choices[0]?.message?.content ?? '';
     },
     async textCompletion(prompt) {
       const resp = await client.chat.completions.create({
         model,
         max_tokens: 4000,
-        messages: [{ role: "user", content: prompt }],
+        messages: [{ role: 'user', content: prompt }],
       });
-      return resp.choices[0]?.message?.content ?? "";
+      return resp.choices[0]?.message?.content ?? '';
     },
   };
 }
@@ -183,7 +196,7 @@ async function createOpenAIProvider(): Promise<AIProvider> {
 async function runWithConcurrency<T, R>(
   items: T[],
   concurrency: number,
-  fn: (item: T, index: number) => Promise<R>
+  fn: (item: T, index: number) => Promise<R>,
 ): Promise<R[]> {
   const results: R[] = new Array(items.length);
   let nextIndex = 0;
@@ -205,47 +218,49 @@ function generateReport(
   analyses: ScreenAnalysis[],
   synthesis: string,
   provider: AIProvider,
-  timestamp: string
+  timestamp: string,
 ): string {
   const lines: string[] = [
-    "# Invect UI Visual Audit Report",
-    "",
+    '# Invect UI Visual Audit Report',
+    '',
     `> Generated: ${timestamp} | Model: ${provider.model} (${provider.name}) | Screenshots: ${analyses.length}`,
-    "",
-    "---",
-    "",
-    "## Summary",
-    "",
+    '',
+    '---',
+    '',
+    '## Summary',
+    '',
     synthesis,
-    "",
-    "---",
-    "",
-    "## Per-Screen Analysis",
-    "",
+    '',
+    '---',
+    '',
+    '## Per-Screen Analysis',
+    '',
   ];
 
   for (const { meta, findings } of analyses) {
-    lines.push(`### ${meta.id.replace(/^\d+-/, (m) => m)} — ${meta.description.split(".")[0]}`);
-    lines.push("");
+    lines.push(`### ${meta.id.replace(/^\d+-/, (m) => m)} — ${meta.description.split('.')[0]}`);
+    lines.push('');
     lines.push(`![${meta.id}](screenshots/${meta.filename})`);
     if (meta.focusCrop) {
-      lines.push("");
+      lines.push('');
       lines.push(`<details><summary>Focused crop</summary>`);
-      lines.push("");
+      lines.push('');
       lines.push(`![${meta.id}-focus](screenshots/${meta.focusCrop})`);
-      lines.push("");
+      lines.push('');
       lines.push(`</details>`);
     }
-    lines.push("");
-    lines.push(`**URL:** \`${meta.url}\` | **Viewport:** ${meta.viewport.width}×${meta.viewport.height} | **Tags:** ${meta.tags.map((t) => `\`${t}\``).join(", ")}`);
-    lines.push("");
+    lines.push('');
+    lines.push(
+      `**URL:** \`${meta.url}\` | **Viewport:** ${meta.viewport.width}×${meta.viewport.height} | **Tags:** ${meta.tags.map((t) => `\`${t}\``).join(', ')}`,
+    );
+    lines.push('');
     lines.push(findings);
-    lines.push("");
-    lines.push("---");
-    lines.push("");
+    lines.push('');
+    lines.push('---');
+    lines.push('');
   }
 
-  return lines.join("\n");
+  return lines.join('\n');
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────
@@ -253,26 +268,26 @@ function generateReport(
 async function main() {
   // Validate inputs
   if (!fs.existsSync(METADATA_PATH)) {
-    console.error("❌ No metadata.json found. Run `pnpm ux:capture` first.");
+    console.error('❌ No metadata.json found. Run `pnpm ux:capture` first.');
     process.exit(1);
   }
 
-  const metadata: ScreenshotMeta[] = JSON.parse(fs.readFileSync(METADATA_PATH, "utf-8"));
+  const metadata: ScreenshotMeta[] = JSON.parse(fs.readFileSync(METADATA_PATH, 'utf-8'));
   if (metadata.length === 0) {
-    console.error("❌ metadata.json is empty — no screenshots to analyze.");
+    console.error('❌ metadata.json is empty — no screenshots to analyze.');
     process.exit(1);
   }
 
   // Select AI provider
   let provider: AIProvider;
   if (process.env.ANTHROPIC_API_KEY) {
-    console.log("🤖 Using Anthropic Claude for analysis...");
+    console.log('🤖 Using Anthropic Claude for analysis...');
     provider = await createAnthropicProvider();
   } else if (process.env.OPENAI_API_KEY) {
-    console.log("🤖 Using OpenAI GPT-4o for analysis...");
+    console.log('🤖 Using OpenAI GPT-4o for analysis...');
     provider = await createOpenAIProvider();
   } else {
-    console.error("❌ No AI API key found. Set ANTHROPIC_API_KEY or OPENAI_API_KEY.");
+    console.error('❌ No AI API key found. Set ANTHROPIC_API_KEY or OPENAI_API_KEY.');
     process.exit(1);
   }
 
@@ -283,27 +298,23 @@ async function main() {
     const imagePath = path.join(SCREENSHOTS_DIR, meta.filename);
     if (!fs.existsSync(imagePath)) {
       console.warn(`⚠️  Skipping ${meta.id} — screenshot not found`);
-      return { meta, findings: "*Screenshot file missing — skipped.*" };
+      return { meta, findings: '*Screenshot file missing — skipped.*' };
     }
 
-    const imageBase64 = fs.readFileSync(imagePath).toString("base64");
+    const imageBase64 = fs.readFileSync(imagePath).toString('base64');
     const prompt = perScreenPrompt(meta);
 
     console.log(`  [${idx + 1}/${metadata.length}] Analyzing: ${meta.id}`);
-    const findings = await provider.analyzeImage(prompt, imageBase64, "image/png");
+    const findings = await provider.analyzeImage(prompt, imageBase64, 'image/png');
     console.log(`  ✓ ${meta.id}`);
 
     return { meta, findings } as ScreenAnalysis;
   });
 
   // Pass 2: Cross-screen synthesis
-  console.log("\n🔍 Synthesizing cross-screen findings...");
-  const allFindings = analyses
-    .map((a) => `### ${a.meta.id}\n${a.findings}`)
-    .join("\n\n");
-  const synthesis = await provider.textCompletion(
-    synthesisPrompt(analyses.length, allFindings)
-  );
+  console.log('\n🔍 Synthesizing cross-screen findings...');
+  const allFindings = analyses.map((a) => `### ${a.meta.id}\n${a.findings}`).join('\n\n');
+  const synthesis = await provider.textCompletion(synthesisPrompt(analyses.length, allFindings));
 
   // Generate report
   const timestamp = new Date().toISOString();
@@ -315,6 +326,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("❌ Analysis failed:", err);
+  console.error('❌ Analysis failed:', err);
   process.exit(1);
 });

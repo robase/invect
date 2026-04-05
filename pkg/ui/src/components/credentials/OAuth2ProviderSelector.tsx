@@ -82,8 +82,12 @@ export function OAuth2ProviderSelector({
 
   // Filter providers by the filterProviders prop first, then by search
   const availableProviders = useMemo(() => {
-    if (!providers) return [];
-    if (!filterProviders || filterProviders.length === 0) return providers;
+    if (!providers) {
+      return [];
+    }
+    if (!filterProviders || filterProviders.length === 0) {
+      return providers;
+    }
     return providers.filter((p) => filterProviders.includes(p.id));
   }, [providers, filterProviders]);
 

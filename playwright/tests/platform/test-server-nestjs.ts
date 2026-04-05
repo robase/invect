@@ -10,22 +10,24 @@
  * Prints the assigned port to stdout as "LISTENING:<port>" so the
  * fixture can parse it.
  */
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { NestFactory } from "@nestjs/core";
-import { Module } from "@nestjs/common";
-import { InvectModule } from "../../../pkg/nestjs/dist/index.js";
-import { startExternalApiMocks, stopExternalApiMocks } from "../../../examples/express-drizzle/mock-external-apis.ts";
-
+import Database from 'better-sqlite3';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { NestFactory } from '@nestjs/core';
+import { Module } from '@nestjs/common';
+import { InvectModule } from '../../../pkg/nestjs/dist/index.js';
+import {
+  startExternalApiMocks,
+  stopExternalApiMocks,
+} from '../../../examples/express-drizzle/mock-external-apis.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const port = parseInt(process.env.PORT || "0", 10);
-const dbPath = process.env.TEST_DB_PATH || ":memory:";
+const port = parseInt(process.env.PORT || '0', 10);
+const dbPath = process.env.TEST_DB_PATH || ':memory:';
 
 startExternalApiMocks();
 
@@ -34,10 +36,7 @@ const sqlite = new Database(dbPath === ':memory:' ? ':memory:' : dbPath);
 sqlite.pragma('journal_mode = WAL');
 const db = drizzle(sqlite);
 
-const migrationsFolder = path.resolve(
-  __dirname,
-  "../../../pkg/core/drizzle/sqlite",
-);
+const migrationsFolder = path.resolve(__dirname, '../../../pkg/core/drizzle/sqlite');
 await migrate(db, { migrationsFolder });
 sqlite.close();
 
@@ -46,7 +45,7 @@ sqlite.close();
   imports: [
     InvectModule.forRoot({
       database: {
-        type: "sqlite",
+        type: 'sqlite',
         connectionString: `file:${dbPath}`,
       },
       execution: {
@@ -57,22 +56,22 @@ sqlite.close();
         heartbeatIntervalMs: 30_000,
         staleRunCheckIntervalMs: 60_000,
       },
-      logging: { level: "warn" },
+      logging: { level: 'warn' },
     }),
   ],
 })
 class TestAppModule {}
 
-process.on("unhandledRejection", (err) => {
+process.on('unhandledRejection', (err) => {
   process.stderr.write(`Unhandled rejection: ${err}\n`);
 });
 
-process.on("SIGINT", () => {
+process.on('SIGINT', () => {
   stopExternalApiMocks();
   process.exit(0);
 });
 
-process.on("SIGTERM", () => {
+process.on('SIGTERM', () => {
   stopExternalApiMocks();
   process.exit(0);
 });
@@ -80,7 +79,7 @@ process.on("SIGTERM", () => {
 async function bootstrap() {
   const app = await NestFactory.create(TestAppModule, { logger: false });
   app.enableCors();
-  app.setGlobalPrefix("invect");
+  app.setGlobalPrefix('invect');
 
   await app.listen(port);
   const url = await app.getUrl();

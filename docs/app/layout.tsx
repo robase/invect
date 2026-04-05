@@ -22,8 +22,7 @@ export const metadata = {
     template: '%s — Invect',
     default: 'Invect Docs',
   },
-  description:
-    'Documentation for Invect — drop-in workflow orchestration for any Node.js app.',
+  description: 'Documentation for Invect — drop-in workflow orchestration for any Node.js app.',
 };
 
 export default function Layout({ children }: { children: ReactNode }) {

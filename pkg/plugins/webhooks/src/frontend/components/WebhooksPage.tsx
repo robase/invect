@@ -6,22 +6,8 @@
  */
 
 import { useState, useRef, type FC } from 'react';
-import {
-  Globe,
-  Plus,
-  Search,
-  Clock,
-  Hash,
-  ChevronRight,
-  Loader2,
-  Workflow,
-} from 'lucide-react';
-import {
-  PageLayout,
-  Dialog,
-  DialogContent,
-  useFlows,
-} from '@invect/ui';
+import { Globe, Plus, Search, Clock, Hash, ChevronRight, Loader2, Workflow } from 'lucide-react';
+import { PageLayout, Dialog, DialogContent, useFlows } from '@invect/ui';
 import { useWebhookTriggers } from '../hooks/useWebhookQueries';
 import { CreateWebhookModal } from './CreateWebhookModal';
 import { WebhookDetailPanel } from './WebhookDetailPanel';
@@ -64,15 +50,25 @@ function getAuthModeConfig(trigger: WebhookTrigger) {
 // ─── Helpers ────────────────────────────────────────────────────────
 
 function formatRelativeTime(iso?: string): string {
-  if (!iso) return 'Never';
+  if (!iso) {
+    return 'Never';
+  }
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) {
+    return 'Just now';
+  }
+  if (mins < 60) {
+    return `${mins}m ago`;
+  }
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) {
+    return `${hours}h ago`;
+  }
   const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
+  if (days < 30) {
+    return `${days}d ago`;
+  }
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
@@ -163,15 +159,21 @@ export const WebhooksPage: FC<{ basePath: string }> = () => {
 
   // Filter
   const filtered = (triggers ?? []).filter((t) => {
-    if (statusFilter === 'enabled' && !t.isEnabled) return false;
-    if (statusFilter === 'disabled' && t.isEnabled) return false;
+    if (statusFilter === 'enabled' && !t.isEnabled) {
+      return false;
+    }
+    if (statusFilter === 'disabled' && t.isEnabled) {
+      return false;
+    }
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const nameMatch = t.name.toLowerCase().includes(q);
       const flowMatch = t.flowId
         ? (flowNameMap.get(t.flowId) ?? '').toLowerCase().includes(q)
         : false;
-      if (!nameMatch && !flowMatch) return false;
+      if (!nameMatch && !flowMatch) {
+        return false;
+      }
     }
     return true;
   });
@@ -181,7 +183,7 @@ export const WebhooksPage: FC<{ basePath: string }> = () => {
 
   // Keep detail dialog in sync with list data
   const liveTrigger = selectedTrigger
-    ? (triggers ?? []).find((t) => t.id === selectedTrigger.id) ?? selectedTrigger
+    ? ((triggers ?? []).find((t) => t.id === selectedTrigger.id) ?? selectedTrigger)
     : null;
 
   return (
@@ -214,11 +216,11 @@ export const WebhooksPage: FC<{ basePath: string }> = () => {
           </div>
 
           <div className="flex items-center gap-1.5 flex-wrap">
-            {([
+            {[
               { key: 'all' as const, label: `All (${triggers?.length ?? 0})` },
               { key: 'enabled' as const, label: `Enabled (${enabledCount})` },
               { key: 'disabled' as const, label: `Disabled (${disabledCount})` },
-            ]).map(({ key, label }) => (
+            ].map(({ key, label }) => (
               <button
                 key={key}
                 onClick={() => setStatusFilter(key)}
@@ -287,7 +289,9 @@ export const WebhooksPage: FC<{ basePath: string }> = () => {
       <Dialog
         open={!!selectedTrigger}
         onOpenChange={(open) => {
-          if (!open) setSelectedTrigger(null);
+          if (!open) {
+            setSelectedTrigger(null);
+          }
         }}
       >
         <DialogContent
@@ -298,9 +302,7 @@ export const WebhooksPage: FC<{ basePath: string }> = () => {
           {liveTrigger && (
             <WebhookDetailPanel
               trigger={liveTrigger}
-              flowName={
-                liveTrigger.flowId ? flowNameMap.get(liveTrigger.flowId) : undefined
-              }
+              flowName={liveTrigger.flowId ? flowNameMap.get(liveTrigger.flowId) : undefined}
               onClose={() => setSelectedTrigger(null)}
             />
           )}

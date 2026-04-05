@@ -62,9 +62,13 @@ export function DynamicSelectField({
   // or when the current value is not in the new option set).
   const prevDepsKey = useRef<string>('');
   useEffect(() => {
-    if (!data) return;
+    if (!data) {
+      return;
+    }
     const depsKey = JSON.stringify(dependencyValues);
-    if (depsKey === prevDepsKey.current) return;
+    if (depsKey === prevDepsKey.current) {
+      return;
+    }
     prevDepsKey.current = depsKey;
 
     const currentStr = value === undefined || value === null ? '' : String(value);

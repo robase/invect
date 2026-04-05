@@ -21,10 +21,7 @@ import {
   WebhookTriggersRepository,
   type CreateWebhookTriggerRecord,
 } from './webhook-triggers.repository';
-import type {
-  CreateWebhookTriggerInput,
-  UpdateWebhookTriggerInput,
-} from '../shared/types';
+import type { CreateWebhookTriggerInput, UpdateWebhookTriggerInput } from '../shared/types';
 
 // ─── Plugin Options ─────────────────────────────────────────────────
 
@@ -79,7 +76,10 @@ function getRepository(ctx: PluginEndpointContext): WebhookTriggersRepository {
   return new WebhookTriggersRepository(ctx.database);
 }
 
-function buildWebhookUrl(webhookBaseUrl: string | undefined, webhookPath: string): string | undefined {
+function buildWebhookUrl(
+  webhookBaseUrl: string | undefined,
+  webhookPath: string,
+): string | undefined {
   return webhookBaseUrl
     ? `${webhookBaseUrl.replace(/\/$/, '')}/plugins/webhooks/receive/${webhookPath}`
     : undefined;
@@ -254,7 +254,10 @@ export function webhooksPlugin(options?: WebhooksPluginOptions): InvectPlugin {
               ctx.headers as Record<string, string>,
             );
             if (!sigResult.valid) {
-              return { status: 401, body: { error: `Signature verification failed: ${sigResult.error}` } };
+              return {
+                status: 401,
+                body: { error: `Signature verification failed: ${sigResult.error}` },
+              };
             }
           } else if (trigger.hmacEnabled && trigger.hmacHeaderName && trigger.hmacSecret) {
             const rawBody = typeof ctx.body === 'string' ? ctx.body : JSON.stringify(ctx.body);
@@ -265,16 +268,23 @@ export function webhooksPlugin(options?: WebhooksPluginOptions): InvectPlugin {
               ctx.headers as Record<string, string>,
             );
             if (!sigResult.valid) {
-              return { status: 401, body: { error: `HMAC verification failed: ${sigResult.error}` } };
+              return {
+                status: 401,
+                body: { error: `HMAC verification failed: ${sigResult.error}` },
+              };
             }
           }
 
           // IP whitelist check
           if (trigger.allowedIps) {
-            const clientIp = (ctx.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()
-              || (ctx.headers['x-real-ip'] as string)
-              || '';
-            const allowed = trigger.allowedIps.split(',').map((ip) => ip.trim()).filter(Boolean);
+            const clientIp =
+              (ctx.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+              (ctx.headers['x-real-ip'] as string) ||
+              '';
+            const allowed = trigger.allowedIps
+              .split(',')
+              .map((ip) => ip.trim())
+              .filter(Boolean);
             if (allowed.length > 0 && !allowed.includes(clientIp)) {
               return { status: 403, body: { error: 'IP address not allowed' } };
             }

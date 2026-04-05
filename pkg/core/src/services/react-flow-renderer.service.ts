@@ -287,7 +287,7 @@ export class ReactFlowRendererService {
         inputs: undefined, // Could be populated from execution context if available
         outputs: executionStatus?.output?.data,
         // Flatten params to top level for component access
-        ...(node.params || {}),
+        ...node.params,
         // Data mapper config (top-level node field)
         ...(node.mapper ? { mapper: node.mapper } : {}),
       };

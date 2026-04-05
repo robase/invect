@@ -21,8 +21,7 @@ const paramsSchema = z.object({
 export const hubspotListContactsAction = defineAction({
   id: 'hubspot.list_contacts',
   name: 'List Contacts',
-  description:
-    'List contacts from HubSpot CRM. Returns contact records with selected properties.',
+  description: 'List contacts from HubSpot CRM. Returns contact records with selected properties.',
   provider: HUBSPOT_PROVIDER,
   actionCategory: 'read',
 
@@ -113,7 +112,7 @@ export const hubspotListContactsAction = defineAction({
         };
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as { results?: unknown[] };
       return {
         success: true,
         output: data,

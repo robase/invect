@@ -1030,10 +1030,10 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
         h === '127.0.0.1' ||
         h === '[::1]' ||
         h === '0.0.0.0' ||
-        /^10\./.test(h) ||
+        h.startsWith('10.') ||
         /^172\.(1[6-9]|2\d|3[01])\./.test(h) ||
-        /^192\.168\./.test(h) ||
-        /^169\.254\./.test(h) ||
+        h.startsWith('192.168.') ||
+        h.startsWith('169.254.') ||
         /^f[cd]/i.test(h) ||
         h.includes(':')
       ) {

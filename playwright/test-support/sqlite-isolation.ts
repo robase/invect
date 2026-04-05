@@ -1,8 +1,8 @@
-import { test as base, expect, type Page } from "@playwright/test";
-import { spawn, type ChildProcess } from "node:child_process";
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
+import { test as base, expect, type Page } from '@playwright/test';
+import { spawn, type ChildProcess } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 export { expect };
 
@@ -52,7 +52,7 @@ async function waitForReady(url: string, stderr: string[], timeoutMs = 60_000) {
   }
 
   throw new Error(
-    `Server at ${url} did not become ready within ${timeoutMs}ms (last status: ${lastStatus}).\nstderr:\n${stderr.join("").slice(-4000)}`,
+    `Server at ${url} did not become ready within ${timeoutMs}ms (last status: ${lastStatus}).\nstderr:\n${stderr.join('').slice(-4000)}`,
   );
 }
 
@@ -60,36 +60,31 @@ export async function spawnSqliteIsolatedServer(
   options: SqliteServerOptions,
   workerIndex: number,
 ): Promise<{ fixture: ServerFixture; cleanup: () => Promise<void> }> {
-  const dbFile = path.join(
-    os.tmpdir(),
-    `${options.dbFilePrefix}-${workerIndex}-${Date.now()}.db`,
-  );
+  const dbFile = path.join(os.tmpdir(), `${options.dbFilePrefix}-${workerIndex}-${Date.now()}.db`);
 
-  const child: ChildProcess = spawn("pnpm", ["exec", "tsx", options.serverScript], {
+  const child: ChildProcess = spawn('pnpm', ['exec', 'tsx', options.serverScript], {
     cwd: options.serverCwd,
     env: {
       ...process.env,
-      PORT: "0",
+      PORT: '0',
       TEST_DB_PATH: dbFile,
     },
-    stdio: ["ignore", "pipe", "pipe"],
+    stdio: ['ignore', 'pipe', 'pipe'],
   });
 
   const stderr: string[] = [];
-  child.stderr?.on("data", (chunk: Buffer) => {
+  child.stderr?.on('data', (chunk: Buffer) => {
     stderr.push(chunk.toString());
   });
 
   const port = await new Promise<number>((resolve, reject) => {
     const timeout = setTimeout(() => {
       child.kill();
-      reject(
-        new Error(`Test server timeout.\nstderr:\n${stderr.join("")}`),
-      );
+      reject(new Error(`Test server timeout.\nstderr:\n${stderr.join('')}`));
     }, 60_000);
 
-    let stdoutBuffer = "";
-    child.stdout?.on("data", (chunk: Buffer) => {
+    let stdoutBuffer = '';
+    child.stdout?.on('data', (chunk: Buffer) => {
       stdoutBuffer += chunk.toString();
       const match = stdoutBuffer.match(/LISTENING:(\d+)/);
       if (match) {
@@ -98,11 +93,9 @@ export async function spawnSqliteIsolatedServer(
       }
     });
 
-    child.on("exit", (code) => {
+    child.on('exit', (code) => {
       clearTimeout(timeout);
-      reject(
-        new Error(`Test server exited with code ${code}.\nstderr:\n${stderr.join("")}`),
-      );
+      reject(new Error(`Test server exited with code ${code}.\nstderr:\n${stderr.join('')}`));
     });
   });
 
@@ -110,19 +103,19 @@ export async function spawnSqliteIsolatedServer(
   await waitForReady(`${serverUrl}${options.readyPath}`, stderr);
 
   const cleanup = async () => {
-    child.kill("SIGTERM");
+    child.kill('SIGTERM');
     await new Promise<void>((resolve) => {
       const timeout = setTimeout(() => {
-        child.kill("SIGKILL");
+        child.kill('SIGKILL');
         resolve();
       }, 3_000);
-      child.on("exit", () => {
+      child.on('exit', () => {
         clearTimeout(timeout);
         resolve();
       });
     });
 
-    for (const suffix of ["", "-journal", "-wal", "-shm"]) {
+    for (const suffix of ['', '-journal', '-wal', '-shm']) {
       try {
         fs.unlinkSync(dbFile + suffix);
       } catch {
@@ -151,14 +144,14 @@ export function createSqliteBrowserIsolationTest(options: BrowserIsolationOption
         await use(fixture);
         await cleanup();
       },
-      { scope: "worker" },
+      { scope: 'worker' },
     ],
 
     apiBase: [
       async ({ isolatedServer }, use) => {
         await use(isolatedServer.apiBase);
       },
-      { scope: "worker" },
+      { scope: 'worker' },
     ],
 
     _routeInterception: [
@@ -192,15 +185,17 @@ export async function installApiRouteInterception(
       return;
     }
 
-    const rewrittenUrl = requestUrl
-      .replace(`${sharedOrigin}${apiRoutePrefix}`, `${isolatedServerUrl}${targetApiPrefix}`);
+    const rewrittenUrl = requestUrl.replace(
+      `${sharedOrigin}${apiRoutePrefix}`,
+      `${isolatedServerUrl}${targetApiPrefix}`,
+    );
     const headers = await route.request().allHeaders();
     const body = route.request().postDataBuffer();
 
     delete headers.host;
     delete headers.origin;
     delete headers.referer;
-    delete headers["content-length"];
+    delete headers['content-length'];
 
     try {
       const response = await fetch(rewrittenUrl, {
@@ -215,7 +210,7 @@ export async function installApiRouteInterception(
         body: Buffer.from(await response.arrayBuffer()),
       });
     } catch {
-      await route.abort("failed");
+      await route.abort('failed');
     }
   });
 }

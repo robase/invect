@@ -79,20 +79,24 @@ function createMockLogger() {
 function createMockNodeExecutionService() {
   let traceCounter = 0;
   return {
-    createNodeExecution: vi.fn(async (_flowRunId: string, nodeId: string, nodeType: string, inputs: unknown) => ({
-      id: `trace-${++traceCounter}`,
-      nodeId,
-      nodeType,
-      inputs,
-      status: NodeExecutionStatus.RUNNING,
-      outputs: null,
-    })),
-    updateNodeExecutionStatus: vi.fn(async (traceId: string, status: string, extra?: { outputs?: unknown; error?: string }) => ({
-      id: traceId,
-      status,
-      outputs: extra?.outputs ?? null,
-      error: extra?.error ?? null,
-    })),
+    createNodeExecution: vi.fn(
+      async (_flowRunId: string, nodeId: string, nodeType: string, inputs: unknown) => ({
+        id: `trace-${++traceCounter}`,
+        nodeId,
+        nodeType,
+        inputs,
+        status: NodeExecutionStatus.RUNNING,
+        outputs: null,
+      }),
+    ),
+    updateNodeExecutionStatus: vi.fn(
+      async (traceId: string, status: string, extra?: { outputs?: unknown; error?: string }) => ({
+        id: traceId,
+        status,
+        outputs: extra?.outputs ?? null,
+        error: extra?.error ?? null,
+      }),
+    ),
   };
 }
 
@@ -134,7 +138,16 @@ describe('Mapper — JS Expression Evaluation', () => {
     const node = makeNode(undefined);
     const incomingData = { upstream: { name: 'alice' } };
 
-    await coordinator.executeNode('run-1', node, {}, {}, undefined, undefined, undefined, incomingData);
+    await coordinator.executeNode(
+      'run-1',
+      node,
+      {},
+      {},
+      undefined,
+      undefined,
+      undefined,
+      incomingData,
+    );
 
     // Should only create a single trace (no mapper iteration)
     expect(nodeExecutionService.createNodeExecution).toHaveBeenCalledTimes(1);
@@ -142,10 +155,26 @@ describe('Mapper — JS Expression Evaluation', () => {
 
   it('mapper disabled → executeNodeOnce (passthrough)', async () => {
     const { coordinator, nodeExecutionService } = buildCoordinator();
-    const node = makeNode({ enabled: false, expression: 'upstream.items', mode: 'auto', outputMode: 'array', concurrency: 1, onEmpty: 'skip' });
+    const node = makeNode({
+      enabled: false,
+      expression: 'upstream.items',
+      mode: 'auto',
+      outputMode: 'array',
+      concurrency: 1,
+      onEmpty: 'skip',
+    });
     const incomingData = { upstream: { items: [1, 2, 3] } };
 
-    await coordinator.executeNode('run-1', node, {}, {}, undefined, undefined, undefined, incomingData);
+    await coordinator.executeNode(
+      'run-1',
+      node,
+      {},
+      {},
+      undefined,
+      undefined,
+      undefined,
+      incomingData,
+    );
 
     // mapper disabled → no iteration
     expect(nodeExecutionService.createNodeExecution).toHaveBeenCalledTimes(1);
@@ -162,10 +191,9 @@ describe('Mapper — JS Expression Evaluation', () => {
       onEmpty: 'skip',
     });
 
-    await coordinator.executeNode(
-      'run-1', node, {}, {}, undefined, undefined, undefined,
-      { items: ['a', 'b', 'c'] },
-    );
+    await coordinator.executeNode('run-1', node, {}, {}, undefined, undefined, undefined, {
+      items: ['a', 'b', 'c'],
+    });
 
     // Parent trace + 3 iteration traces = 4
     expect(nodeExecutionService.createNodeExecution).toHaveBeenCalledTimes(4);
@@ -182,10 +210,9 @@ describe('Mapper — JS Expression Evaluation', () => {
       onEmpty: 'skip',
     });
 
-    await coordinator.executeNode(
-      'run-1', node, {}, {}, undefined, undefined, undefined,
-      { items: ['a', 'b', 'c'] },
-    );
+    await coordinator.executeNode('run-1', node, {}, {}, undefined, undefined, undefined, {
+      items: ['a', 'b', 'c'],
+    });
 
     // Single execution only
     expect(nodeExecutionService.createNodeExecution).toHaveBeenCalledTimes(1);
@@ -204,10 +231,9 @@ describe('Mapper — Mode Enforcement', () => {
       onEmpty: 'skip',
     });
 
-    await coordinator.executeNode(
-      'run-1', node, {}, {}, undefined, undefined, undefined,
-      { items: ['a', 'b', 'c'] },
-    );
+    await coordinator.executeNode('run-1', node, {}, {}, undefined, undefined, undefined, {
+      items: ['a', 'b', 'c'],
+    });
 
     // Should fail with a descriptive error
     expect(nodeExecutionService.updateNodeExecutionStatus).toHaveBeenCalledWith(
@@ -228,10 +254,9 @@ describe('Mapper — Mode Enforcement', () => {
       onEmpty: 'skip',
     });
 
-    await coordinator.executeNode(
-      'run-1', node, {}, {}, undefined, undefined, undefined,
-      { items: ['a', 'b', 'c'] },
-    );
+    await coordinator.executeNode('run-1', node, {}, {}, undefined, undefined, undefined, {
+      items: ['a', 'b', 'c'],
+    });
 
     // Should execute once (reshape wraps array in object)
     expect(nodeExecutionService.createNodeExecution).toHaveBeenCalledTimes(1);
@@ -250,10 +275,9 @@ describe('Mapper — Empty Array Handling', () => {
       onEmpty: 'skip',
     });
 
-    await coordinator.executeNode(
-      'run-1', node, {}, {}, undefined, undefined, undefined,
-      { items: [] },
-    );
+    await coordinator.executeNode('run-1', node, {}, {}, undefined, undefined, undefined, {
+      items: [],
+    });
 
     expect(nodeExecutionService.updateNodeExecutionStatus).toHaveBeenCalledWith(
       expect.any(String),
@@ -273,10 +297,9 @@ describe('Mapper — Empty Array Handling', () => {
       onEmpty: 'error',
     });
 
-    await coordinator.executeNode(
-      'run-1', node, {}, {}, undefined, undefined, undefined,
-      { items: [] },
-    );
+    await coordinator.executeNode('run-1', node, {}, {}, undefined, undefined, undefined, {
+      items: [],
+    });
 
     expect(nodeExecutionService.updateNodeExecutionStatus).toHaveBeenCalledWith(
       expect.any(String),
@@ -298,10 +321,9 @@ describe('Mapper — Expression Errors', () => {
       onEmpty: 'skip',
     });
 
-    await coordinator.executeNode(
-      'run-1', node, {}, {}, undefined, undefined, undefined,
-      { items: [1] },
-    );
+    await coordinator.executeNode('run-1', node, {}, {}, undefined, undefined, undefined, {
+      items: [1],
+    });
 
     expect(nodeExecutionService.updateNodeExecutionStatus).toHaveBeenCalledWith(
       expect.any(String),
@@ -321,10 +343,7 @@ describe('Mapper — Expression Errors', () => {
       onEmpty: 'skip',
     });
 
-    await coordinator.executeNode(
-      'run-1', node, {}, {}, undefined, undefined, undefined,
-      {},
-    );
+    await coordinator.executeNode('run-1', node, {}, {}, undefined, undefined, undefined, {});
 
     expect(nodeExecutionService.updateNodeExecutionStatus).toHaveBeenCalledWith(
       expect.any(String),
@@ -346,16 +365,13 @@ describe('Mapper — Practical Patterns', () => {
       onEmpty: 'skip',
     });
 
-    await coordinator.executeNode(
-      'run-1', node, {}, {}, undefined, undefined, undefined,
-      {
-        users: [
-          { name: 'alice', active: true },
-          { name: 'bob', active: false },
-          { name: 'carol', active: true },
-        ],
-      },
-    );
+    await coordinator.executeNode('run-1', node, {}, {}, undefined, undefined, undefined, {
+      users: [
+        { name: 'alice', active: true },
+        { name: 'bob', active: false },
+        { name: 'carol', active: true },
+      ],
+    });
 
     // 2 active users → parent trace + 2 iteration traces = 3
     expect(nodeExecutionService.createNodeExecution).toHaveBeenCalledTimes(3);
@@ -372,10 +388,9 @@ describe('Mapper — Practical Patterns', () => {
       onEmpty: 'skip',
     });
 
-    await coordinator.executeNode(
-      'run-1', node, {}, {}, undefined, undefined, undefined,
-      { orders: [{ amount: 50 }, { amount: 100 }] },
-    );
+    await coordinator.executeNode('run-1', node, {}, {}, undefined, undefined, undefined, {
+      orders: [{ amount: 50 }, { amount: 100 }],
+    });
 
     // Single execution (reshape)
     expect(nodeExecutionService.createNodeExecution).toHaveBeenCalledTimes(1);
@@ -392,13 +407,10 @@ describe('Mapper — Practical Patterns', () => {
       onEmpty: 'skip',
     });
 
-    await coordinator.executeNode(
-      'run-1', node, {}, {}, undefined, undefined, undefined,
-      {
-        users: [{ name: 'alice' }, { name: 'bob' }],
-        scores: [95, 87],
-      },
-    );
+    await coordinator.executeNode('run-1', node, {}, {}, undefined, undefined, undefined, {
+      users: [{ name: 'alice' }, { name: 'bob' }],
+      scores: [95, 87],
+    });
 
     // 2 zipped items → parent + 2 iterations = 3
     expect(nodeExecutionService.createNodeExecution).toHaveBeenCalledTimes(3);

@@ -93,13 +93,15 @@ export default async function Dashboard() {
   return (
     <div>
       <h1>Workflows</h1>
-      {flows.map(flow => (
+      {flows.map((flow) => (
         <div key={flow.id}>
           <h2>{flow.name}</h2>
-          <form action={async () => {
-            'use server';
-            await executeWorkflow(flow.id, {});
-          }}>
+          <form
+            action={async () => {
+              'use server';
+              await executeWorkflow(flow.id, {});
+            }}
+          >
             <button type="submit">Run</button>
           </form>
         </div>

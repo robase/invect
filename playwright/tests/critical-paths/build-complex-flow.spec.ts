@@ -21,11 +21,11 @@
  * SQLite database and Express server.
  */
 
-import { test, expect } from "./fixtures";
-import type { APIRequestContext, Page } from "@playwright/test";
+import { test, expect } from './fixtures';
+import type { APIRequestContext, Page } from '@playwright/test';
 
 // Always record video for this mega test, even on success
-test.use({ video: "on" });
+test.use({ video: 'on' });
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -37,7 +37,9 @@ async function getFlowIdByName(
   name: string,
 ): Promise<string | null> {
   const resp = await request.get(`${apiBase}/flows/list`);
-  if (!resp.ok()) return null;
+  if (!resp.ok()) {
+    return null;
+  }
   const body = await resp.json();
   const flows: Array<{ id: string; name: string }> = body.data ?? body;
   return flows.find((f) => f.name === name)?.id ?? null;
@@ -49,16 +51,16 @@ async function cleanupFlowByName(
   name: string,
 ): Promise<void> {
   const id = await getFlowIdByName(apiBase, request, name);
-  if (id) await request.delete(`${apiBase}/flows/${id}`);
+  if (id) {
+    await request.delete(`${apiBase}/flows/${id}`);
+  }
 }
 
-async function cleanupCredentialByName(
-  request: APIRequestContext,
-  apiBase: string,
-  name: string,
-) {
+async function cleanupCredentialByName(request: APIRequestContext, apiBase: string, name: string) {
   const list = await request.get(`${apiBase}/credentials`);
-  if (!list.ok()) return;
+  if (!list.ok()) {
+    return;
+  }
   const creds: Array<{ id: string; name: string }> = await list.json();
   for (const c of creds) {
     if (c.name === name) {
@@ -68,22 +70,22 @@ async function cleanupCredentialByName(
 }
 
 function getCanvasNodeCount(page: Page): Promise<number> {
-  return page.locator(".react-flow__node").count();
+  return page.locator('.react-flow__node').count();
 }
 
 function getCanvasEdgeCount(page: Page): Promise<number> {
-  return page.locator(".react-flow__edge").count();
+  return page.locator('.react-flow__edge').count();
 }
 
 // ---------------------------------------------------------------------------
 // Test suite
 // ---------------------------------------------------------------------------
 
-test.describe("Build a Complex Flow — End-to-End User Journey", () => {
-  test.describe.configure({ mode: "serial" });
+test.describe('Build a Complex Flow — End-to-End User Journey', () => {
+  test.describe.configure({ mode: 'serial' });
 
-  const FLOW_NAME = "Mega Test: Customer Order Pipeline";
-  const CRED_NAME = "Mega Test API Key";
+  const FLOW_NAME = 'Mega Test: Customer Order Pipeline';
+  const CRED_NAME = 'Mega Test API Key';
 
   // Track IDs for cleanup
   let flowId: string | null = null;
@@ -97,26 +99,25 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
   // PHASE 1: Create a new flow from the dashboard
   // =========================================================================
 
-  test("Phase 1 — create a new flow from the dashboard", async ({
-    page,
-    apiBase,
-    request,
-  }) => {
+  test('Phase 1 — create a new flow from the dashboard', async ({ page, apiBase, request }) => {
     // Clean up from any prior run
     await cleanupFlowByName(apiBase, request, FLOW_NAME);
 
     // Navigate to the dashboard
-    await page.goto("/invect");
-    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({
+    await page.goto('/invect');
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({
       timeout: 15_000,
     });
-    await page.getByText("Loading flows").waitFor({ state: "hidden", timeout: 10_000 }).catch(() => {});
+    await page
+      .getByText('Loading flows')
+      .waitFor({ state: 'hidden', timeout: 10_000 })
+      .catch(() => {});
 
     // Click "New Flow"
-    await page.getByRole("button", { name: "New Flow" }).click();
+    await page.getByRole('button', { name: 'New Flow' }).click();
 
     // Canvas should appear
-    await expect(page.locator(".react-flow")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.react-flow')).toBeVisible({ timeout: 15_000 });
     await expect(page).toHaveURL(/\/invect\/flow\//, { timeout: 10_000 });
 
     // Extract the flow ID from URL
@@ -131,7 +132,7 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
       await nameInput.click();
       await nameInput.clear();
       await nameInput.fill(FLOW_NAME);
-      await nameInput.press("Enter");
+      await nameInput.press('Enter');
     }
   });
 
@@ -139,57 +140,60 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
   // PHASE 2: Open node palette and add nodes
   // =========================================================================
 
-  test("Phase 2 — add nodes from the palette to build the flow", async ({
-    page,
-  }) => {
+  test('Phase 2 — add nodes from the palette to build the flow', async ({ page }) => {
     // Navigate directly to the flow
     expect(flowId).toBeTruthy();
     await page.goto(`/invect/flow/${flowId}`);
-    await expect(page.locator(".react-flow")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.react-flow')).toBeVisible({ timeout: 15_000 });
 
     // Open the node sidebar if not already open
-    const nodesHeading = page.getByRole("heading", { name: "Nodes", level: 2 });
+    const nodesHeading = page.getByRole('heading', { name: 'Nodes', level: 2 });
     const sidebarOpen = await nodesHeading.isVisible({ timeout: 3_000 }).catch(() => false);
 
     if (!sidebarOpen) {
       const addNodesBtn = page
-        .getByTitle("Open node panel")
-        .or(page.getByRole("button", { name: /add nodes/i }))
+        .getByTitle('Open node panel')
+        .or(page.getByRole('button', { name: /add nodes/i }))
         .first();
       await addNodesBtn.click();
       await expect(nodesHeading).toBeVisible({ timeout: 5_000 });
     }
 
     // Verify the palette shows provider groups
-    const categoryButtons = page.getByRole("button", {
+    const categoryButtons = page.getByRole('button', {
       name: /triggers|invect core|http/i,
     });
     await expect(categoryButtons.first()).toBeVisible({ timeout: 5_000 });
 
     // Search for "Input" and add it
-    const searchInput = page.getByPlaceholder("Search nodes...");
-    await searchInput.fill("Input");
+    const searchInput = page.getByPlaceholder('Search nodes...');
+    await searchInput.fill('Input');
     await page.waitForTimeout(300);
 
     // Click the Input node card to add it to the canvas
-    const inputCard = page.locator('[class*="cursor-pointer"]').filter({ hasText: /^Input$/i }).first();
+    const inputCard = page
+      .locator('[class*="cursor-pointer"]')
+      .filter({ hasText: /^Input$/i })
+      .first();
     // Fallback: find any clickable element with "Input" text in the sidebar
     const inputNodeBtn = inputCard.or(
-      page.locator(".overflow-y-auto, [data-radix-scroll-area-viewport]")
-        .locator("div")
+      page
+        .locator('.overflow-y-auto, [data-radix-scroll-area-viewport]')
+        .locator('div')
         .filter({ hasText: /^Input$/ })
-        .first()
+        .first(),
     );
     await inputNodeBtn.first().click();
     await page.waitForTimeout(500);
 
     // Clear search, search for JavaScript
     await searchInput.clear();
-    await searchInput.fill("JavaScript");
+    await searchInput.fill('JavaScript');
     await page.waitForTimeout(300);
 
-    const javascriptCard = page.locator(".overflow-y-auto, [data-radix-scroll-area-viewport]")
-      .locator("div")
+    const javascriptCard = page
+      .locator('.overflow-y-auto, [data-radix-scroll-area-viewport]')
+      .locator('div')
       .filter({ hasText: /JavaScript/i })
       .first();
     await javascriptCard.click();
@@ -197,11 +201,12 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
 
     // Add an If/Else node
     await searchInput.clear();
-    await searchInput.fill("If");
+    await searchInput.fill('If');
     await page.waitForTimeout(300);
 
-    const ifElseCard = page.locator(".overflow-y-auto, [data-radix-scroll-area-viewport]")
-      .locator("div")
+    const ifElseCard = page
+      .locator('.overflow-y-auto, [data-radix-scroll-area-viewport]')
+      .locator('div')
       .filter({ hasText: /If.*Else/i })
       .first();
     await ifElseCard.click();
@@ -209,11 +214,12 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
 
     // Add two Template String nodes
     await searchInput.clear();
-    await searchInput.fill("Template");
+    await searchInput.fill('Template');
     await page.waitForTimeout(300);
 
-    const templateCard = page.locator(".overflow-y-auto, [data-radix-scroll-area-viewport]")
-      .locator("div")
+    const templateCard = page
+      .locator('.overflow-y-auto, [data-radix-scroll-area-viewport]')
+      .locator('div')
       .filter({ hasText: /Template/i })
       .first();
     await templateCard.click();
@@ -225,11 +231,12 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
 
     // Add a Flow Output node
     await searchInput.clear();
-    await searchInput.fill("Output");
+    await searchInput.fill('Output');
     await page.waitForTimeout(300);
 
-    const outputCard = page.locator(".overflow-y-auto, [data-radix-scroll-area-viewport]")
-      .locator("div")
+    const outputCard = page
+      .locator('.overflow-y-auto, [data-radix-scroll-area-viewport]')
+      .locator('div')
       .filter({ hasText: /Flow Output/i })
       .first();
     await outputCard.click();
@@ -241,48 +248,48 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
     // Verify we have at least 6 nodes on the canvas
     await expect(async () => {
       const count = await getCanvasNodeCount(page);
-      expect(count, "Canvas should have at least 6 nodes").toBeGreaterThanOrEqual(6);
+      expect(count, 'Canvas should have at least 6 nodes').toBeGreaterThanOrEqual(6);
     }).toPass({ timeout: 10_000 });
 
     // Persist the draft so later serial phases can reload the created nodes.
-    const saveButton = page.getByRole("button", { name: /^save$/i }).first();
+    const saveButton = page.getByRole('button', { name: /^save$/i }).first();
     const hasSaveButton = await saveButton.isVisible({ timeout: 3_000 }).catch(() => false);
 
     if (hasSaveButton) {
       await saveButton.click();
     } else {
-      await page.keyboard.press("Meta+S");
+      await page.keyboard.press('Meta+S');
     }
 
-    await expect(page.getByText(/Unsaved Changes/i)).not.toBeVisible({ timeout: 10_000 }).catch(() => {});
+    await expect(page.getByText(/Unsaved Changes/i))
+      .not.toBeVisible({ timeout: 10_000 })
+      .catch(() => {});
   });
 
   // =========================================================================
   // PHASE 3: Configure the nodes via the config panel
   // =========================================================================
 
-  test("Phase 3 — configure the Input node with default data", async ({
-    page,
-  }) => {
+  test('Phase 3 — configure the Input node with default data', async ({ page }) => {
     expect(flowId).toBeTruthy();
     await page.goto(`/invect/flow/${flowId}`);
-    await expect(page.locator(".react-flow")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.react-flow')).toBeVisible({ timeout: 15_000 });
 
     // Double-click the Input node to open config panel
-    const inputNode = page.locator(".react-flow__node").filter({ hasText: /Input/i }).first();
+    const inputNode = page.locator('.react-flow__node').filter({ hasText: /Input/i }).first();
     await expect(inputNode).toBeVisible({ timeout: 10_000 });
     await inputNode.dblclick();
 
-    const dialog = page.getByRole("dialog");
+    const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible({ timeout: 5_000 });
 
     // Verify the three-pane layout
-    await expect(dialog.getByText("Input", { exact: true }).first()).toBeVisible();
-    await expect(dialog.getByText("Parameters", { exact: true }).first()).toBeVisible();
-    await expect(dialog.getByText("Output", { exact: true }).first()).toBeVisible();
+    await expect(dialog.getByText('Input', { exact: true }).first()).toBeVisible();
+    await expect(dialog.getByText('Parameters', { exact: true }).first()).toBeVisible();
+    await expect(dialog.getByText('Output', { exact: true }).first()).toBeVisible();
 
     // Look for a default value field or code editor in the Parameters section
-    const paramEditors = dialog.locator(".cm-editor");
+    const paramEditors = dialog.locator('.cm-editor');
     const paramEditorCount = await paramEditors.count();
 
     if (paramEditorCount > 0) {
@@ -296,46 +303,51 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
         // Click the first editable editor in the Parameters section
         const configEditor = editableEditors.first();
         await configEditor.click();
-        await page.keyboard.press("Meta+a");
+        await page.keyboard.press('Meta+a');
 
         // Type test JSON data
-        const testData = JSON.stringify({
-          customer: {
-            name: "Alice Johnson",
-            age: 32,
-            tier: "gold",
-            email: "alice@example.com",
+        const testData = JSON.stringify(
+          {
+            customer: {
+              name: 'Alice Johnson',
+              age: 32,
+              tier: 'gold',
+              email: 'alice@example.com',
+            },
+            orderTotal: 250.0,
+            itemCount: 3,
           },
-          orderTotal: 250.00,
-          itemCount: 3,
-        }, null, 2);
+          null,
+          2,
+        );
         await page.keyboard.type(testData, { delay: 1 });
       }
     }
 
     // Close the config panel
-    await page.keyboard.press("Escape");
+    await page.keyboard.press('Escape');
     await expect(dialog).not.toBeVisible({ timeout: 5_000 });
   });
 
-  test("Phase 3b — configure the JavaScript node with a transformation", async ({
-    page,
-  }) => {
+  test('Phase 3b — configure the JavaScript node with a transformation', async ({ page }) => {
     expect(flowId).toBeTruthy();
     await page.goto(`/invect/flow/${flowId}`);
-    await expect(page.locator(".react-flow")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.react-flow')).toBeVisible({ timeout: 15_000 });
 
     // Open JavaScript node
-    const jsNode = page.locator(".react-flow__node").filter({ hasText: /JavaScript/i }).first();
+    const jsNode = page
+      .locator('.react-flow__node')
+      .filter({ hasText: /JavaScript/i })
+      .first();
     await expect(jsNode).toBeVisible({ timeout: 10_000 });
     await jsNode.dblclick();
 
-    const dialog = page.getByRole("dialog");
+    const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible({ timeout: 5_000 });
 
     // The JavaScript node should have a code parameter field
     // Look for the PARAMETERS section and find code editors within it
-    await expect(dialog.getByText("Parameters", { exact: true }).first()).toBeVisible();
+    await expect(dialog.getByText('Parameters', { exact: true }).first()).toBeVisible();
 
     // Find editable CodeMirror editors — the JavaScript code field
     const editableEditors = dialog.locator(".cm-editor .cm-content[contenteditable='true']");
@@ -345,11 +357,14 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
       // The second editable editor is typically in the configuration panel (first is input panel)
       const codeEditor = editableEditors.nth(1);
       await codeEditor.click();
-      await page.keyboard.press("Meta+a");
-      await page.keyboard.type('({ name: input.customer.name, isGold: input.customer.tier === "gold", total: input.orderTotal, discount: input.customer.tier === "gold" ? input.orderTotal * 0.1 : 0 })', { delay: 1 });
+      await page.keyboard.press('Meta+a');
+      await page.keyboard.type(
+        '({ name: input.customer.name, isGold: input.customer.tier === "gold", total: input.orderTotal, discount: input.customer.tier === "gold" ? input.orderTotal * 0.1 : 0 })',
+        { delay: 1 },
+      );
     }
 
-    await page.keyboard.press("Escape");
+    await page.keyboard.press('Escape');
     await expect(dialog).not.toBeVisible({ timeout: 5_000 });
   });
 
@@ -357,7 +372,7 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
   // PHASE 4: Create a credential from the credentials page
   // =========================================================================
 
-  test("Phase 4 — create an API credential via the credentials page", async ({
+  test('Phase 4 — create an API credential via the credentials page', async ({
     page,
     request,
     apiBase,
@@ -366,57 +381,53 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
     await cleanupCredentialByName(request, apiBase, CRED_NAME);
 
     // Navigate to the credentials page via sidebar
-    await page.goto("/invect/credentials");
-    await expect(
-      page.getByRole("heading", { level: 1, name: "Credentials" }),
-    ).toBeVisible({ timeout: 15_000 });
+    await page.goto('/invect/credentials');
+    await expect(page.getByRole('heading', { level: 1, name: 'Credentials' })).toBeVisible({
+      timeout: 15_000,
+    });
 
     // Click "New Credential"
-    await page.getByRole("button", { name: "New Credential" }).click();
-    await expect(
-      page.getByRole("heading", { name: "Create Credential" }),
-    ).toBeVisible({ timeout: 5_000 });
+    await page.getByRole('button', { name: 'New Credential' }).click();
+    await expect(page.getByRole('heading', { name: 'Create Credential' })).toBeVisible({
+      timeout: 5_000,
+    });
 
     // Fill in the name
-    await page.getByLabel("Name*").fill(CRED_NAME);
+    await page.getByLabel('Name*').fill(CRED_NAME);
 
     // It should default to Bearer auth type — fill the token
-    const tokenField = page.getByLabel("Token*");
+    const tokenField = page.getByLabel('Token*');
     await expect(tokenField).toBeVisible({ timeout: 3_000 });
-    await tokenField.fill("sk-test-mega-12345");
+    await tokenField.fill('sk-test-mega-12345');
 
     // Verify it's a password field (masked)
-    await expect(tokenField).toHaveAttribute("type", "password");
+    await expect(tokenField).toHaveAttribute('type', 'password');
 
     // Click "Create Credential"
-    await page.getByRole("button", { name: "Create Credential" }).click();
+    await page.getByRole('button', { name: 'Create Credential' }).click();
 
     // Modal should close
-    await expect(
-      page.getByRole("heading", { name: "Create Credential" }),
-    ).not.toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole('heading', { name: 'Create Credential' })).not.toBeVisible({
+      timeout: 5_000,
+    });
 
     // Credential should appear in the list
     await expect(page.getByText(CRED_NAME)).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText("Bearer").first()).toBeVisible();
+    await expect(page.getByText('Bearer').first()).toBeVisible();
 
     // Verify via API
     const list = await request.get(`${apiBase}/credentials`);
     expect(list.ok()).toBeTruthy();
     const creds: Array<{ id: string; name: string }> = await list.json();
     const created = creds.find((c) => c.name === CRED_NAME);
-    expect(created, "Credential should exist via API").toBeTruthy();
+    expect(created, 'Credential should exist via API').toBeTruthy();
   });
 
   // =========================================================================
   // PHASE 5: Select a node, set up edges via API, and run the Input node
   // =========================================================================
 
-  test("Phase 5 — wire up nodes via API and run them", async ({
-    page,
-    request,
-    apiBase,
-  }) => {
+  test('Phase 5 — wire up nodes via API and run them', async ({ page, request, apiBase }) => {
     expect(flowId).toBeTruthy();
 
     // Set up a proper flow definition via API so we have real edges
@@ -427,108 +438,124 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
         invectDefinition: {
           nodes: [
             {
-              id: "mega-input",
-              type: "core.input",
-              label: "Customer Data",
-              referenceId: "customer_data",
+              id: 'mega-input',
+              type: 'core.input',
+              label: 'Customer Data',
+              referenceId: 'customer_data',
               params: {
-                variableName: "customer_data",
-                defaultValue: JSON.stringify({
-                  customer: {
-                    name: "Alice Johnson",
-                    age: 32,
-                    tier: "gold",
-                    email: "alice@example.com",
+                variableName: 'customer_data',
+                defaultValue: JSON.stringify(
+                  {
+                    customer: {
+                      name: 'Alice Johnson',
+                      age: 32,
+                      tier: 'gold',
+                      email: 'alice@example.com',
+                    },
+                    orderTotal: 250.0,
+                    itemCount: 3,
                   },
-                  orderTotal: 250.00,
-                  itemCount: 3,
-                }, null, 2),
+                  null,
+                  2,
+                ),
               },
               position: { x: 50, y: 200 },
             },
             {
-              id: "mega-jq",
-              type: "core.javascript",
-              label: "Transform Data",
-              referenceId: "transformed",
+              id: 'mega-jq',
+              type: 'core.javascript',
+              label: 'Transform Data',
+              referenceId: 'transformed',
               params: {
                 code: '({ name: customer_data.customer.name, isGold: customer_data.customer.tier === "gold", total: customer_data.orderTotal, discount: customer_data.customer.tier === "gold" ? customer_data.orderTotal * 0.1 : 0 })',
               },
               position: { x: 350, y: 200 },
             },
             {
-              id: "mega-if",
-              type: "core.if_else",
-              label: "Gold Check",
-              referenceId: "gold_check",
+              id: 'mega-if',
+              type: 'core.if_else',
+              label: 'Gold Check',
+              referenceId: 'gold_check',
               params: {
-                condition: { "==": [{ var: "transformed.isGold" }, true] },
+                condition: { '==': [{ var: 'transformed.isGold' }, true] },
               },
               position: { x: 650, y: 200 },
             },
             {
-              id: "mega-template-gold",
-              type: "core.template_string",
-              label: "Gold Message",
-              referenceId: "gold_message",
+              id: 'mega-template-gold',
+              type: 'core.template_string',
+              label: 'Gold Message',
+              referenceId: 'gold_message',
               params: {
-                template: "Dear {{ gold_check.transformed.name }}, as a Gold member you get a ${{ gold_check.transformed.discount }} discount! Your total is ${{ gold_check.transformed.total }}.",
+                template:
+                  'Dear {{ gold_check.transformed.name }}, as a Gold member you get a ${{ gold_check.transformed.discount }} discount! Your total is ${{ gold_check.transformed.total }}.',
               },
               position: { x: 950, y: 100 },
             },
             {
-              id: "mega-template-regular",
-              type: "core.template_string",
-              label: "Regular Message",
-              referenceId: "regular_message",
+              id: 'mega-template-regular',
+              type: 'core.template_string',
+              label: 'Regular Message',
+              referenceId: 'regular_message',
               params: {
-                template: "Hello {{ gold_check.transformed.name }}! Your order total is ${{ gold_check.transformed.total }}. Upgrade to Gold for discounts!",
+                template:
+                  'Hello {{ gold_check.transformed.name }}! Your order total is ${{ gold_check.transformed.total }}. Upgrade to Gold for discounts!',
               },
               position: { x: 950, y: 300 },
             },
             {
-              id: "mega-output",
-              type: "core.output",
-              label: "Final Output",
-              referenceId: "final_output",
+              id: 'mega-output',
+              type: 'core.output',
+              label: 'Final Output',
+              referenceId: 'final_output',
               params: {
-                outputName: "final_output",
-                outputValue: "{{ gold_message }}{{ regular_message }}",
+                outputName: 'final_output',
+                outputValue: '{{ gold_message }}{{ regular_message }}',
               },
               position: { x: 1250, y: 200 },
             },
           ],
           edges: [
-            { id: "e1", source: "mega-input", target: "mega-jq" },
-            { id: "e2", source: "mega-jq", target: "mega-if" },
-            { id: "e3", source: "mega-if", target: "mega-template-gold", sourceHandle: "true_output" },
-            { id: "e4", source: "mega-if", target: "mega-template-regular", sourceHandle: "false_output" },
-            { id: "e5", source: "mega-template-gold", target: "mega-output" },
-            { id: "e6", source: "mega-template-regular", target: "mega-output" },
+            { id: 'e1', source: 'mega-input', target: 'mega-jq' },
+            { id: 'e2', source: 'mega-jq', target: 'mega-if' },
+            {
+              id: 'e3',
+              source: 'mega-if',
+              target: 'mega-template-gold',
+              sourceHandle: 'true_output',
+            },
+            {
+              id: 'e4',
+              source: 'mega-if',
+              target: 'mega-template-regular',
+              sourceHandle: 'false_output',
+            },
+            { id: 'e5', source: 'mega-template-gold', target: 'mega-output' },
+            { id: 'e6', source: 'mega-template-regular', target: 'mega-output' },
           ],
         },
       },
     });
-    expect(resp.ok(), "Version creation should succeed").toBeTruthy();
+    expect(resp.ok(), 'Version creation should succeed').toBeTruthy();
 
     // Navigate to the flow editor
     await page.goto(`/invect/flow/${flowId}`);
-    await expect(page.locator(".react-flow")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.react-flow')).toBeVisible({ timeout: 15_000 });
 
     // Verify the right number of nodes rendered
     await expect(async () => {
       const count = await getCanvasNodeCount(page);
-      expect(count, "Canvas should have 6 nodes").toBe(6);
+      expect(count, 'Canvas should have 6 nodes').toBe(6);
     }).toPass({ timeout: 10_000 });
 
     // Verify edges are visible
     await expect(async () => {
       const edgeCount = await getCanvasEdgeCount(page);
-      expect(edgeCount, "Canvas should have 6 edges").toBe(6);
+      expect(edgeCount, 'Canvas should have 6 edges').toBe(6);
     }).toPass({ timeout: 10_000 });
 
     // Click the Customer Data node to select it
-    const inputNode = page.locator(".react-flow__node").filter({ hasText: "Customer Data" });
+    const inputNode = page.locator('.react-flow__node').filter({ hasText: 'Customer Data' });
     await expect(inputNode).toBeVisible({ timeout: 10_000 });
     await inputNode.click();
 
@@ -536,7 +563,7 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
     await expect(inputNode).toHaveClass(/selected/, { timeout: 3_000 });
 
     // Deselect by clicking canvas background
-    await page.locator(".react-flow__pane").click({ position: { x: 10, y: 10 } });
+    await page.locator('.react-flow__pane').click({ position: { x: 10, y: 10 } });
     await expect(inputNode).not.toHaveClass(/\bselected\b/, { timeout: 3_000 });
   });
 
@@ -544,7 +571,7 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
   // PHASE 6: Open nodes, run them individually, inspect input/output
   // =========================================================================
 
-  test("Phase 6a — run the Input node and inspect its output", async ({
+  test('Phase 6a — run the Input node and inspect its output', async ({
     page,
     openNodeConfigPanel,
     closeConfigPanel,
@@ -552,15 +579,15 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
   }) => {
     expect(flowId).toBeTruthy();
     await page.goto(`/invect/flow/${flowId}`);
-    await expect(page.locator(".react-flow")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.react-flow')).toBeVisible({ timeout: 15_000 });
 
     // Open the Customer Data (input) node
-    await openNodeConfigPanel("Customer Data");
+    await openNodeConfigPanel('Customer Data');
 
-    const dialog = page.getByRole("dialog");
+    const dialog = page.getByRole('dialog');
 
     // Verify the three-pane layout is visible
-    await expect(dialog.getByText("Output", { exact: true }).first()).toBeVisible();
+    await expect(dialog.getByText('Output', { exact: true }).first()).toBeVisible();
 
     // Click "Run Node" to execute the input node
     const runBtn = dialog
@@ -572,19 +599,22 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
 
     // Wait for execution to complete
     await expect(
-      dialog.locator("button[data-slot='button']").filter({ hasText: /^Run Node$/ }).first(),
+      dialog
+        .locator("button[data-slot='button']")
+        .filter({ hasText: /^Run Node$/ })
+        .first(),
     ).toBeVisible({ timeout: 30_000 });
 
     // Check output panel has the customer data
     const output = await getOutputPanelText();
-    expect(output).toContain("Alice Johnson");
-    expect(output).toContain("gold");
-    expect(output).not.toContain("[object Object]");
+    expect(output).toContain('Alice Johnson');
+    expect(output).toContain('gold');
+    expect(output).not.toContain('[object Object]');
 
     await closeConfigPanel();
   });
 
-  test("Phase 6b — run the JavaScript node and verify transformation", async ({
+  test('Phase 6b — run the JavaScript node and verify transformation', async ({
     page,
     openNodeConfigPanel,
     closeConfigPanel,
@@ -593,22 +623,22 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
   }) => {
     expect(flowId).toBeTruthy();
     await page.goto(`/invect/flow/${flowId}`);
-    await expect(page.locator(".react-flow")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.react-flow')).toBeVisible({ timeout: 15_000 });
 
     // Open the Transform Data node
-    await openNodeConfigPanel("Transform Data");
+    await openNodeConfigPanel('Transform Data');
 
-    const dialog = page.getByRole("dialog");
+    const dialog = page.getByRole('dialog');
 
     // Input panel should show upstream data from "Customer Data"
     const inputText = await getInputPanelText();
     // It might show [NO DATA] if the run didn't persist across page navigations,
     // or it may show the actual data
-    const hasData = inputText.includes("customer") || inputText.includes("Alice");
-    const hasNoData = inputText.includes("[NO DATA]") || inputText.includes("Run node");
+    const hasData = inputText.includes('customer') || inputText.includes('Alice');
+    const hasNoData = inputText.includes('[NO DATA]') || inputText.includes('Run node');
 
     // At least one state should be true
-    expect(hasData || hasNoData, "Input panel should show data or run prompt").toBeTruthy();
+    expect(hasData || hasNoData, 'Input panel should show data or run prompt').toBeTruthy();
 
     // Run the JavaScript node
     const runBtn = dialog
@@ -620,22 +650,25 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
 
     // Wait for completion
     await expect(
-      dialog.locator("button[data-slot='button']").filter({ hasText: /^Run Node$/ }).first(),
+      dialog
+        .locator("button[data-slot='button']")
+        .filter({ hasText: /^Run Node$/ })
+        .first(),
     ).toBeVisible({ timeout: 30_000 });
 
     // Check output — should contain transformed data
     const output = await getOutputPanelText();
 
     // The transformation produces { name, isGold, total, discount }
-    if (!output.includes("error") && !output.includes("Error")) {
-      expect(output).toContain("name");
-      expect(output).not.toContain("[object Object]");
+    if (!output.includes('error') && !output.includes('Error')) {
+      expect(output).toContain('name');
+      expect(output).not.toContain('[object Object]');
     }
 
     await closeConfigPanel();
   });
 
-  test("Phase 6c — run the If/Else node and verify branching", async ({
+  test('Phase 6c — run the If/Else node and verify branching', async ({
     page,
     openNodeConfigPanel,
     closeConfigPanel,
@@ -643,12 +676,12 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
   }) => {
     expect(flowId).toBeTruthy();
     await page.goto(`/invect/flow/${flowId}`);
-    await expect(page.locator(".react-flow")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.react-flow')).toBeVisible({ timeout: 15_000 });
 
     // Open the Gold Check (if/else) node
-    await openNodeConfigPanel("Gold Check");
+    await openNodeConfigPanel('Gold Check');
 
-    const dialog = page.getByRole("dialog");
+    const dialog = page.getByRole('dialog');
 
     // Run the node
     const runBtn = dialog
@@ -659,12 +692,15 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
     await runBtn.click();
 
     await expect(
-      dialog.locator("button[data-slot='button']").filter({ hasText: /^Run Node$/ }).first(),
+      dialog
+        .locator("button[data-slot='button']")
+        .filter({ hasText: /^Run Node$/ })
+        .first(),
     ).toBeVisible({ timeout: 30_000 });
 
     // Check output
     const output = await getOutputPanelText();
-    expect(output).not.toContain("[object Object]");
+    expect(output).not.toContain('[object Object]');
 
     await closeConfigPanel();
   });
@@ -673,7 +709,7 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
   // PHASE 7: Test mode — type custom input and run
   // =========================================================================
 
-  test("Phase 7 — use test mode to run a node with custom input", async ({
+  test('Phase 7 — use test mode to run a node with custom input', async ({
     page,
     openNodeConfigPanel,
     closeConfigPanel,
@@ -682,25 +718,29 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
   }) => {
     expect(flowId).toBeTruthy();
     await page.goto(`/invect/flow/${flowId}`);
-    await expect(page.locator(".react-flow")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.react-flow')).toBeVisible({ timeout: 15_000 });
 
     // Open the Transform Data (JQ) node
-    await openNodeConfigPanel("Transform Data");
+    await openNodeConfigPanel('Transform Data');
 
-    const dialog = page.getByRole("dialog");
+    const dialog = page.getByRole('dialog');
 
-    const customInput = JSON.stringify({
-      customer_data: {
-        customer: {
-          name: "Bob Smith",
-          age: 45,
-          tier: "silver",
-          email: "bob@example.com",
+    const customInput = JSON.stringify(
+      {
+        customer_data: {
+          customer: {
+            name: 'Bob Smith',
+            age: 45,
+            tier: 'silver',
+            email: 'bob@example.com',
+          },
+          orderTotal: 500.0,
+          itemCount: 7,
         },
-        orderTotal: 500.00,
-        itemCount: 7,
       },
-    }, null, 2);
+      null,
+      2,
+    );
 
     const editableContent = dialog.locator('.cm-content[contenteditable="true"]').first();
     await expect(editableContent).toBeVisible({ timeout: 5_000 });
@@ -708,15 +748,17 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
 
     await expect.poll(async () => getInputPanelText()).toContain('Bob Smith');
 
-    await expect(dialog.getByText(/Invalid JSON/i)).not.toBeVisible({ timeout: 5_000 }).catch(() => {});
+    await expect(dialog.getByText(/Invalid JSON/i))
+      .not.toBeVisible({ timeout: 5_000 })
+      .catch(() => {});
 
     // TEST badge should appear
-    await expect(dialog.getByText("TEST", { exact: true })).toBeVisible({
+    await expect(dialog.getByText('TEST', { exact: true })).toBeVisible({
       timeout: 5_000,
     });
 
     // Reset button should appear
-    const resetBtn = dialog.getByTitle("Reset to original input");
+    const resetBtn = dialog.getByTitle('Reset to original input');
     await expect(resetBtn).toBeVisible({ timeout: 3_000 });
 
     // Run the node with test data
@@ -727,21 +769,26 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
     await runBtn.click();
 
     await expect(
-      dialog.locator("button[data-slot='button']").filter({ hasText: /^Run Node$/ }).first(),
+      dialog
+        .locator("button[data-slot='button']")
+        .filter({ hasText: /^Run Node$/ })
+        .first(),
     ).toBeVisible({ timeout: 30_000 });
 
     // Output should reflect the test data (Bob Smith, silver tier)
     const output = await getOutputPanelText();
-    if (!output.includes("error") && !output.includes("Error")) {
-      expect(output).toContain("Bob Smith");
-      expect(output).not.toContain("[object Object]");
+    if (!output.includes('error') && !output.includes('Error')) {
+      expect(output).toContain('Bob Smith');
+      expect(output).not.toContain('[object Object]');
     }
 
     // Successful execution exits test mode and clears the reset affordance.
-    await expect(dialog.getByText("TEST", { exact: true })).not.toBeVisible({
+    await expect(dialog.getByText('TEST', { exact: true })).not.toBeVisible({
       timeout: 5_000,
     });
-    await expect(resetBtn).not.toBeVisible({ timeout: 5_000 }).catch(() => {});
+    await expect(resetBtn)
+      .not.toBeVisible({ timeout: 5_000 })
+      .catch(() => {});
 
     await closeConfigPanel();
   });
@@ -750,17 +797,13 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
   // PHASE 8: Save the flow
   // =========================================================================
 
-  test("Phase 8 — save the flow and verify persistence", async ({
-    page,
-    request,
-    apiBase,
-  }) => {
+  test('Phase 8 — save the flow and verify persistence', async ({ page, request, apiBase }) => {
     expect(flowId).toBeTruthy();
     await page.goto(`/invect/flow/${flowId}`);
-    await expect(page.locator(".react-flow")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.react-flow')).toBeVisible({ timeout: 15_000 });
 
     // Make the flow dirty by moving a node
-    const firstNode = page.locator(".react-flow__node").first();
+    const firstNode = page.locator('.react-flow__node').first();
     await expect(firstNode).toBeVisible({ timeout: 10_000 });
 
     const box = await firstNode.boundingBox();
@@ -772,16 +815,16 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
     await page.mouse.up();
 
     // Should show unsaved indicator
-    await expect(page.getByText("Unsaved Changes")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText('Unsaved Changes')).toBeVisible({ timeout: 5_000 });
 
     // Click Save button
-    const saveButton = page.getByRole("button", { name: /^save$/i }).first();
+    const saveButton = page.getByRole('button', { name: /^save$/i }).first();
     const hasSaveButton = await saveButton.isVisible({ timeout: 3_000 }).catch(() => false);
 
     if (hasSaveButton) {
       await saveButton.click();
     } else {
-      await page.keyboard.press("Meta+S");
+      await page.keyboard.press('Meta+S');
     }
 
     // Wait for save to complete — check for success indication
@@ -789,7 +832,9 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
       .locator('[role="status"], [role="alert"], .toast, .snackbar')
       .filter({ hasText: /saved|success/i })
       .first();
-    await expect(successToast).toBeVisible({ timeout: 5_000 }).catch(() => {});
+    await expect(successToast)
+      .toBeVisible({ timeout: 5_000 })
+      .catch(() => {});
 
     // Verify no error
     const errorToast = page
@@ -797,7 +842,7 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
       .filter({ hasText: /error|failed/i })
       .first();
     const hasError = await errorToast.isVisible({ timeout: 2_000 }).catch(() => false);
-    expect(hasError, "No save error should appear").toBe(false);
+    expect(hasError, 'No save error should appear').toBe(false);
 
     // Verify via API
     const getResp = await request.get(`${apiBase}/flows/${flowId}`);
@@ -810,17 +855,13 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
   // PHASE 9: Run the full flow end-to-end
   // =========================================================================
 
-  test("Phase 9 — run the full flow and verify execution", async ({
-    page,
-    request,
-    apiBase,
-  }) => {
+  test('Phase 9 — run the full flow and verify execution', async ({ page, request, apiBase }) => {
     expect(flowId).toBeTruthy();
     await page.goto(`/invect/flow/${flowId}`);
-    await expect(page.locator(".react-flow")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.react-flow')).toBeVisible({ timeout: 15_000 });
 
     // Click the "Run" button in the header
-    const runButton = page.getByRole("button", { name: /^Run$/ }).first();
+    const runButton = page.getByRole('button', { name: /^Run$/ }).first();
     await expect(runButton).toBeVisible({ timeout: 5_000 });
     await runButton.click();
 
@@ -830,16 +871,14 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
 
     // Check if we navigated to runs view
     const urlAfterRun = page.url();
-    const navigatedToRuns = urlAfterRun.includes("/runs");
+    const navigatedToRuns = urlAfterRun.includes('/runs');
 
     if (navigatedToRuns) {
       // Wait for the runs page to load and show at least one execution
       await page.waitForTimeout(3_000);
 
       // Look for a status badge (SUCCESS, RUNNING, FAILED, etc.)
-      const statusBadge = page
-        .getByText(/SUCCESS|COMPLETED|RUNNING|FAILED|PENDING/i)
-        .first();
+      const statusBadge = page.getByText(/SUCCESS|COMPLETED|RUNNING|FAILED|PENDING/i).first();
 
       await expect(statusBadge).toBeVisible({ timeout: 30_000 });
     }
@@ -854,7 +893,7 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
       const runs = runsBody.data ?? runsBody;
       expect(
         Array.isArray(runs) ? runs.length : 0,
-        "At least one flow run should exist",
+        'At least one flow run should exist',
       ).toBeGreaterThanOrEqual(1);
     }
   });
@@ -863,17 +902,15 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
   // PHASE 10: Navigate between views (Runs ↔ Editor)
   // =========================================================================
 
-  test("Phase 10 — navigate between flow editor and runs view", async ({
-    page,
-  }) => {
+  test('Phase 10 — navigate between flow editor and runs view', async ({ page }) => {
     expect(flowId).toBeTruthy();
 
     // Start at the flow editor
     await page.goto(`/invect/flow/${flowId}`);
-    await expect(page.locator(".react-flow")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.react-flow')).toBeVisible({ timeout: 15_000 });
 
     // Switch to Runs view using the mode switcher
-    const runsButton = page.getByRole("button", { name: "Runs" });
+    const runsButton = page.getByRole('button', { name: 'Runs' });
     const hasRunsButton = await runsButton.isVisible({ timeout: 3_000 }).catch(() => false);
 
     if (hasRunsButton) {
@@ -888,15 +925,18 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
         .catch(() => false);
 
       // Switch back to Edit using the mode switcher
-      const editButton = page.getByRole("button", { name: "Edit" });
+      const editButton = page.getByRole('button', { name: 'Edit' });
       if (await editButton.isVisible({ timeout: 3_000 }).catch(() => false)) {
         await editButton.click();
-        await expect(page.locator(".react-flow")).toBeVisible({ timeout: 10_000 });
+        await expect(page.locator('.react-flow')).toBeVisible({ timeout: 10_000 });
 
         // Verify nodes are still there
         await expect(async () => {
           const count = await getCanvasNodeCount(page);
-          expect(count, "Nodes should still be on canvas after switching views").toBeGreaterThanOrEqual(6);
+          expect(
+            count,
+            'Nodes should still be on canvas after switching views',
+          ).toBeGreaterThanOrEqual(6);
         }).toPass({ timeout: 10_000 });
       }
     }
@@ -906,20 +946,20 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
   // PHASE 11: Navigate via sidebar and verify dashboard
   // =========================================================================
 
-  test("Phase 11 — use sidebar navigation to browse credentials and executions", async ({
+  test('Phase 11 — use sidebar navigation to browse credentials and executions', async ({
     page,
   }) => {
     // Navigate to dashboard
-    await page.goto("/invect");
-    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({
+    await page.goto('/invect');
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({
       timeout: 15_000,
     });
 
     // The sidebar should have navigation links
-    const sidebar = page.locator(".imp-sidebar-shell");
+    const sidebar = page.locator('.imp-sidebar-shell');
 
     // Click Credentials link
-    const credLink = sidebar.getByRole("link", { name: /credentials/i }).first();
+    const credLink = sidebar.getByRole('link', { name: /credentials/i }).first();
     if (await credLink.isVisible({ timeout: 3_000 }).catch(() => false)) {
       await credLink.click();
       await expect(page).toHaveURL(/\/credentials/, { timeout: 10_000 });
@@ -929,17 +969,17 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
     }
 
     // Click Executions link
-    const execLink = sidebar.getByRole("link", { name: /executions/i }).first();
+    const execLink = sidebar.getByRole('link', { name: /executions/i }).first();
     if (await execLink.isVisible({ timeout: 3_000 }).catch(() => false)) {
       await execLink.click();
       await expect(page).toHaveURL(/\/executions/, { timeout: 10_000 });
     }
 
     // Navigate back to Hub/Dashboard
-    const hubLink = sidebar.getByRole("link", { name: /hub|dashboard|home/i }).first();
+    const hubLink = sidebar.getByRole('link', { name: /hub|dashboard|home/i }).first();
     if (await hubLink.isVisible({ timeout: 3_000 }).catch(() => false)) {
       await hubLink.click();
-      await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({
+      await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({
         timeout: 10_000,
       });
     }
@@ -949,19 +989,20 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
   // PHASE 12: Verify the flow card on dashboard and open it
   // =========================================================================
 
-  test("Phase 12 — verify flow appears on dashboard and can be re-opened", async ({
-    page,
-  }) => {
+  test('Phase 12 — verify flow appears on dashboard and can be re-opened', async ({ page }) => {
     // Navigate to dashboard
-    await page.goto("/invect");
-    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({
+    await page.goto('/invect');
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({
       timeout: 15_000,
     });
-    await page.getByText("Loading flows").waitFor({ state: "hidden", timeout: 10_000 }).catch(() => {});
+    await page
+      .getByText('Loading flows')
+      .waitFor({ state: 'hidden', timeout: 10_000 })
+      .catch(() => {});
 
     // Find our flow card
-    const card = page.locator(".bg-card").filter({
-      has: page.locator("h3").filter({ hasText: FLOW_NAME }),
+    const card = page.locator('.bg-card').filter({
+      has: page.locator('h3').filter({ hasText: FLOW_NAME }),
     });
 
     // The flow might have been renamed or might use a default name
@@ -970,7 +1011,7 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
     if (hasOurCard) {
       // Click the card to navigate to the editor
       await card.click();
-      await expect(page.locator(".react-flow")).toBeVisible({ timeout: 15_000 });
+      await expect(page.locator('.react-flow')).toBeVisible({ timeout: 15_000 });
 
       // Verify our nodes are still there
       await expect(async () => {
@@ -979,19 +1020,19 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
       }).toPass({ timeout: 10_000 });
 
       // Verify specific nodes exist
-      const customerNode = page.locator(".react-flow__node").filter({ hasText: "Customer Data" });
+      const customerNode = page.locator('.react-flow__node').filter({ hasText: 'Customer Data' });
       await expect(customerNode).toBeVisible({ timeout: 5_000 });
 
-      const jqNode = page.locator(".react-flow__node").filter({ hasText: "Transform Data" });
+      const jqNode = page.locator('.react-flow__node').filter({ hasText: 'Transform Data' });
       await expect(jqNode).toBeVisible({ timeout: 5_000 });
 
-      const goldCheckNode = page.locator(".react-flow__node").filter({ hasText: "Gold Check" });
+      const goldCheckNode = page.locator('.react-flow__node').filter({ hasText: 'Gold Check' });
       await expect(goldCheckNode).toBeVisible({ timeout: 5_000 });
     } else {
       // The flow was created but may have a default name — check by ID
       if (flowId) {
         await page.goto(`/invect/flow/${flowId}`);
-        await expect(page.locator(".react-flow")).toBeVisible({ timeout: 15_000 });
+        await expect(page.locator('.react-flow')).toBeVisible({ timeout: 15_000 });
       }
     }
   });
@@ -1000,7 +1041,7 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
   // PHASE 13: Inspect a node's template syntax in the config panel
   // =========================================================================
 
-  test("Phase 13 — verify template node shows template syntax and resolves", async ({
+  test('Phase 13 — verify template node shows template syntax and resolves', async ({
     page,
     openNodeConfigPanel,
     closeConfigPanel,
@@ -1008,19 +1049,26 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
   }) => {
     expect(flowId).toBeTruthy();
     await page.goto(`/invect/flow/${flowId}`);
-    await expect(page.locator(".react-flow")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.react-flow')).toBeVisible({ timeout: 15_000 });
 
     // Open the Gold Message template node
-    await openNodeConfigPanel("Gold Message");
+    await openNodeConfigPanel('Gold Message');
 
-    const dialog = page.getByRole("dialog");
+    const dialog = page.getByRole('dialog');
 
     // Should show template syntax in the config
-    const hasTemplateVars = await dialog.getByText(/\{\{.*gold_check/).isVisible({ timeout: 5_000 }).catch(() => false)
-      || await dialog.getByText(/\{\{.*name/).isVisible({ timeout: 5_000 }).catch(() => false);
+    const hasTemplateVars =
+      (await dialog
+        .getByText(/\{\{.*gold_check/)
+        .isVisible({ timeout: 5_000 })
+        .catch(() => false)) ||
+      (await dialog
+        .getByText(/\{\{.*name/)
+        .isVisible({ timeout: 5_000 })
+        .catch(() => false));
 
     // The template field should contain {{ ... }} markers
-    expect(hasTemplateVars || true, "Template should show variable references").toBeTruthy();
+    expect(hasTemplateVars || true, 'Template should show variable references').toBeTruthy();
 
     // Run the template node
     const runBtn = dialog
@@ -1031,16 +1079,19 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
     await runBtn.click();
 
     await expect(
-      dialog.locator("button[data-slot='button']").filter({ hasText: /^Run Node$/ }).first(),
+      dialog
+        .locator("button[data-slot='button']")
+        .filter({ hasText: /^Run Node$/ })
+        .first(),
     ).toBeVisible({ timeout: 30_000 });
 
     // Check output
     const output = await getOutputPanelText();
-    expect(output).not.toContain("[object Object]");
+    expect(output).not.toContain('[object Object]');
 
     // If the upstream was resolved, the output should contain real names
-    if (output.includes("Alice") || output.includes("Bob")) {
-      expect(output).not.toContain("{{ ");
+    if (output.includes('Alice') || output.includes('Bob')) {
+      expect(output).not.toContain('{{ ');
     }
 
     await closeConfigPanel();
@@ -1050,15 +1101,13 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
   // PHASE 14: Keyboard shortcuts — Cmd+S to save
   // =========================================================================
 
-  test("Phase 14 — use keyboard shortcut Cmd+S to save", async ({
-    page,
-  }) => {
+  test('Phase 14 — use keyboard shortcut Cmd+S to save', async ({ page }) => {
     expect(flowId).toBeTruthy();
     await page.goto(`/invect/flow/${flowId}`);
-    await expect(page.locator(".react-flow")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.react-flow')).toBeVisible({ timeout: 15_000 });
 
     // Move a node to make the editor dirty
-    const anyNode = page.locator(".react-flow__node").first();
+    const anyNode = page.locator('.react-flow__node').first();
     await expect(anyNode).toBeVisible({ timeout: 10_000 });
 
     const box = await anyNode.boundingBox();
@@ -1070,10 +1119,10 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
     }
 
     // Wait for unsaved changes indicator
-    await expect(page.getByText("Unsaved Changes")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText('Unsaved Changes')).toBeVisible({ timeout: 5_000 });
 
     // Save with keyboard shortcut
-    await page.keyboard.press("Meta+S");
+    await page.keyboard.press('Meta+S');
 
     // Verify save succeeded (no error toast)
     const errorToast = page
@@ -1081,17 +1130,14 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
       .filter({ hasText: /error|failed/i })
       .first();
     const hasError = await errorToast.isVisible({ timeout: 2_000 }).catch(() => false);
-    expect(hasError, "No error after Cmd+S").toBe(false);
+    expect(hasError, 'No error after Cmd+S').toBe(false);
   });
 
   // =========================================================================
   // PHASE 15: Verify the full flow run result via API
   // =========================================================================
 
-  test("Phase 15 — verify flow run results via API", async ({
-    request,
-    apiBase,
-  }) => {
+  test('Phase 15 — verify flow run results via API', async ({ request, apiBase }) => {
     expect(flowId).toBeTruthy();
 
     // Execute the flow via API
@@ -1110,7 +1156,7 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
       const status = result.status ?? result.state;
       if (status) {
         expect(
-          ["SUCCESS", "COMPLETED", "RUNNING", "PENDING"].includes(status),
+          ['SUCCESS', 'COMPLETED', 'RUNNING', 'PENDING'].includes(status),
           `Flow run status should be valid, got: ${status}`,
         ).toBeTruthy();
       }
@@ -1126,7 +1172,7 @@ test.describe("Build a Complex Flow — End-to-End User Journey", () => {
       const runs = body.data ?? body;
       expect(
         Array.isArray(runs) ? runs.length : 0,
-        "Should have at least 1 flow run",
+        'Should have at least 1 flow run',
       ).toBeGreaterThanOrEqual(1);
     }
   });

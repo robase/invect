@@ -407,9 +407,7 @@ describe('generatePrismaSchema — snapshots', () => {
       file: path.join(tmpDir, 'schema.prisma'),
     });
 
-    await expect(result.code).toMatchFileSnapshot(
-      './__snapshots__/prisma-core-postgresql.txt',
-    );
+    await expect(result.code).toMatchFileSnapshot('./__snapshots__/prisma-core-postgresql.txt');
   });
 
   it('should match snapshot for core-only MySQL', async () => {
@@ -419,9 +417,7 @@ describe('generatePrismaSchema — snapshots', () => {
       file: path.join(tmpDir, 'schema.prisma'),
     });
 
-    await expect(result.code).toMatchFileSnapshot(
-      './__snapshots__/prisma-core-mysql.txt',
-    );
+    await expect(result.code).toMatchFileSnapshot('./__snapshots__/prisma-core-mysql.txt');
   });
 
   it('should match snapshot for core-only SQLite', async () => {
@@ -431,9 +427,7 @@ describe('generatePrismaSchema — snapshots', () => {
       file: path.join(tmpDir, 'schema.prisma'),
     });
 
-    await expect(result.code).toMatchFileSnapshot(
-      './__snapshots__/prisma-core-sqlite.txt',
-    );
+    await expect(result.code).toMatchFileSnapshot('./__snapshots__/prisma-core-sqlite.txt');
   });
 
   it('should match snapshot for core + ecommerce plugin (PostgreSQL)', async () => {
@@ -487,10 +481,7 @@ describe('generatePrismaSchema — Prisma v7 support', () => {
   it('should use prisma-client provider for v7+ projects', async () => {
     // Simulate a Prisma v7 project by creating a package.json
     const pkgJsonPath = path.join(tmpDir, 'package.json');
-    fs.writeFileSync(
-      pkgJsonPath,
-      JSON.stringify({ dependencies: { prisma: '^7.0.0' } }),
-    );
+    fs.writeFileSync(pkgJsonPath, JSON.stringify({ dependencies: { prisma: '^7.0.0' } }));
 
     // Change cwd temporarily so getPrismaVersion finds the package.json
     const originalCwd = process.cwd();
@@ -515,10 +506,7 @@ describe('generatePrismaSchema — Prisma v7 support', () => {
 
   it('should migrate existing v5 schema to v7 format', async () => {
     const pkgJsonPath = path.join(tmpDir, 'package.json');
-    fs.writeFileSync(
-      pkgJsonPath,
-      JSON.stringify({ dependencies: { prisma: '^7.0.0' } }),
-    );
+    fs.writeFileSync(pkgJsonPath, JSON.stringify({ dependencies: { prisma: '^7.0.0' } }));
 
     const existingSchema = `generator client {
   provider = "prisma-client-js"
@@ -564,10 +552,7 @@ model User {
 
   it('should use prisma-client-js for v5 projects', async () => {
     const pkgJsonPath = path.join(tmpDir, 'package.json');
-    fs.writeFileSync(
-      pkgJsonPath,
-      JSON.stringify({ dependencies: { prisma: '^5.0.0' } }),
-    );
+    fs.writeFileSync(pkgJsonPath, JSON.stringify({ dependencies: { prisma: '^5.0.0' } }));
 
     const originalCwd = process.cwd();
     process.chdir(tmpDir);

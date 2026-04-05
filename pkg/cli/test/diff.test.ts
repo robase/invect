@@ -109,9 +109,7 @@ describe('provenance tracking', () => {
     const merged = mergeSchemas([ecommercePlugin, auditLogPlugin]);
 
     for (const table of merged.tables) {
-      const tableProv = merged.provenance.find(
-        (p) => p.table === table.name && p.field === null,
-      );
+      const tableProv = merged.provenance.find((p) => p.table === table.name && p.field === null);
       expect(tableProv, `missing provenance for table ${table.name}`).toBeDefined();
     }
   });
@@ -119,15 +117,11 @@ describe('provenance tracking', () => {
   it('should attribute new plugin fields correctly', () => {
     const merged = mergeSchemas([coreExtensionPlugin]);
 
-    const ownerIdProv = merged.provenance.find(
-      (p) => p.table === 'flows' && p.field === 'ownerId',
-    );
+    const ownerIdProv = merged.provenance.find((p) => p.table === 'flows' && p.field === 'ownerId');
     expect(ownerIdProv?.source).toBe('core-extension');
 
     // Core fields should still be attributed to 'core'
-    const nameFieldProv = merged.provenance.find(
-      (p) => p.table === 'flows' && p.field === 'name',
-    );
+    const nameFieldProv = merged.provenance.find((p) => p.table === 'flows' && p.field === 'name');
     expect(nameFieldProv?.source).toBe('core');
   });
 
@@ -137,9 +131,7 @@ describe('provenance tracking', () => {
     // Every core field should have a provenance entry
     for (const table of merged.tables) {
       for (const fieldName of Object.keys(table.definition.fields)) {
-        const prov = merged.provenance.find(
-          (p) => p.table === table.name && p.field === fieldName,
-        );
+        const prov = merged.provenance.find((p) => p.table === table.name && p.field === fieldName);
         expect(prov, `missing provenance for ${table.name}.${fieldName}`).toBeDefined();
         expect(prov!.source).toBe('core');
       }

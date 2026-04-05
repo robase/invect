@@ -1,8 +1,28 @@
 {
   "name": "@invect/layouts",
   "version": "0.0.1",
-  "type": "module",
   "description": "Shared layout utilities for Invect graph positioning",
+  "keywords": [
+    "dagre",
+    "graph",
+    "invect",
+    "layout"
+  ],
+  "homepage": "https://invect.dev",
+  "bugs": {
+    "url": "https://github.com/robase/invect/issues"
+  },
+  "license": "MIT",
+  "author": "robase <team@invect.dev>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/robase/invect.git",
+    "directory": "pkg/layouts"
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "type": "module",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
   "types": "dist/index.d.mts",
@@ -13,18 +33,17 @@
       "require": "./dist/index.cjs"
     }
   },
-  "files": [
-    "dist/**/*"
-  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsdown",
     "build:watch": "tsdown --watch",
     "dev": "tsdown --watch",
     "clean": "rm -rf dist",
-    "format": "prettier --write \"src/**/*.ts\"",
+    "format": "oxfmt",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src",
-    "lint:fix": "eslint src --fix",
+    "lint": "oxlint --fix",
     "test": "echo \"No tests configured\""
   },
   "dependencies": {
@@ -32,33 +51,8 @@
     "elkjs": "^0.9.3"
   },
   "devDependencies": {
-    "@eslint/js": "^9.31.0",
     "@types/node": "^22.10.2",
-    "eslint": "^9.31.0",
-    "globals": "^16.3.0",
-    "prettier": "^3.6.2",
     "tsdown": "^0.21.1",
-    "typescript": "^5.8.3",
-    "typescript-eslint": "^8.36.0"
-  },
-  "keywords": [
-    "invect",
-    "layout",
-    "dagre",
-    "graph"
-  ],
-  "author": "robase <team@invect.dev>",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/robase/invect.git",
-    "directory": "pkg/layouts"
-  },
-  "bugs": {
-    "url": "https://github.com/robase/invect/issues"
-  },
-  "homepage": "https://invect.dev",
-  "publishConfig": {
-    "access": "public"
+    "typescript": "^5.8.3"
   }
 }

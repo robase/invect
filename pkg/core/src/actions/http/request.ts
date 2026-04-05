@@ -151,7 +151,7 @@ export const httpRequestAction = defineAction({
     }
 
     // Build headers — start with user headers
-    let headers: Record<string, string> = { ...(params.headers ?? {}) };
+    let headers: Record<string, string> = { ...params.headers };
 
     // Add auth from credential if present
     let credential: ActionCredential | null = context.credential;

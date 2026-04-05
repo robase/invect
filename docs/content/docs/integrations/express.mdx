@@ -80,15 +80,15 @@ router.post('/flows/:flowId/run', async (req, res) => {
 
 The router exposes 30+ endpoints. Key ones:
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/flows` | List all flows |
-| `POST` | `/flows` | Create a flow |
-| `POST` | `/flows/:id/run` | Execute a flow |
-| `GET` | `/flow-runs/:id` | Get execution details |
-| `GET` | `/agent/tools` | List available agent tools |
-| `GET` | `/credentials` | List credentials |
-| `POST` | `/credentials/oauth2/start` | Start OAuth2 flow |
+| Method | Path                        | Description                |
+| ------ | --------------------------- | -------------------------- |
+| `GET`  | `/flows`                    | List all flows             |
+| `POST` | `/flows`                    | Create a flow              |
+| `POST` | `/flows/:id/run`            | Execute a flow             |
+| `GET`  | `/flow-runs/:id`            | Get execution details      |
+| `GET`  | `/agent/tools`              | List available agent tools |
+| `GET`  | `/credentials`              | List credentials           |
+| `POST` | `/credentials/oauth2/start` | Start OAuth2 flow          |
 
 ## Embedding in Admin Panels
 

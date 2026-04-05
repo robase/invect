@@ -102,16 +102,24 @@ export class WebhookSignatureService {
   }
 
   getDeliveryId(provider: string, headers: Record<string, string>): string | undefined {
-    if (!provider || provider === 'none' || provider === 'generic') {return undefined;}
+    if (!provider || provider === 'none' || provider === 'generic') {
+      return undefined;
+    }
     const config = WEBHOOK_PROVIDER_SIGNATURES[provider];
-    if (!config?.deliveryIdHeader) {return undefined;}
+    if (!config?.deliveryIdHeader) {
+      return undefined;
+    }
     return headers[config.deliveryIdHeader] || undefined;
   }
 
   getEventType(provider: string, headers: Record<string, string>): string | undefined {
-    if (!provider || provider === 'none' || provider === 'generic') {return undefined;}
+    if (!provider || provider === 'none' || provider === 'generic') {
+      return undefined;
+    }
     const config = WEBHOOK_PROVIDER_SIGNATURES[provider];
-    if (!config?.eventTypeHeader) {return undefined;}
+    if (!config?.eventTypeHeader) {
+      return undefined;
+    }
     return headers[config.eventTypeHeader] || undefined;
   }
 
@@ -137,9 +145,7 @@ export class WebhookSignatureService {
         .digest('hex');
 
       // Support optional sha256= prefix
-      const signature = headerValue.startsWith('sha256=')
-        ? headerValue.slice(7)
-        : headerValue;
+      const signature = headerValue.startsWith('sha256=') ? headerValue.slice(7) : headerValue;
 
       const a = Buffer.from(expected, 'utf8');
       const b = Buffer.from(signature, 'utf8');
@@ -178,9 +184,7 @@ export class WebhookSignatureService {
       return { valid: false, error: 'Signature length mismatch' };
     }
 
-    return timingSafeEqual(a, b)
-      ? { valid: true }
-      : { valid: false, error: 'Signature mismatch' };
+    return timingSafeEqual(a, b) ? { valid: true } : { valid: false, error: 'Signature mismatch' };
   }
 
   private verifySlack(

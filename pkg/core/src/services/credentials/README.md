@@ -5,6 +5,7 @@ This directory contains the complete credentials management system for Invect.
 ## Components
 
 ### 1. Encryption Service (`encryption.service.ts`)
+
 - **AES-256-GCM encryption** for sensitive credential data
 - PBKDF2 key derivation with salt
 - Authenticated encryption with authentication tags
@@ -13,6 +14,7 @@ This directory contains the complete credentials management system for Invect.
 - Token generation utilities
 
 **Usage**:
+
 ```typescript
 import { createEncryptionService } from './services/credentials';
 
@@ -27,6 +29,7 @@ const decrypted = encryption.decryptObject<ConfigType>(encrypted);
 ```
 
 ### 2. Credentials Service (`credentials.service.ts`)
+
 - **CRUD operations** for credentials
 - Automatic encryption/decryption
 - **Access control** (user ownership + workspace sharing)
@@ -35,6 +38,7 @@ const decrypted = encryption.decryptObject<ConfigType>(encrypted);
 - **Expiration management**
 
 **Features**:
+
 - ✅ Create credentials with encrypted config
 - ✅ List credentials (configs excluded for security)
 - ✅ Get single credential (config decrypted for editing)
@@ -45,6 +49,7 @@ const decrypted = encryption.decryptObject<ConfigType>(encrypted);
 - ✅ Find expiring credentials
 
 ### 3. API Routes (`../api/credentials.routes.ts`)
+
 - **RESTful API endpoints**
 - Express Router compatible
 - Request validation with Zod
@@ -52,11 +57,12 @@ const decrypted = encryption.decryptObject<ConfigType>(encrypted);
 - Authentication integration
 
 **Endpoints**:
+
 ```
 POST   /api/credentials          - Create credential
 GET    /api/credentials          - List credentials
 GET    /api/credentials/:id      - Get credential (with config)
-PATCH  /api/credentials/:id      - Update credential  
+PATCH  /api/credentials/:id      - Update credential
 DELETE /api/credentials/:id      - Delete credential
 POST   /api/credentials/:id/test - Test credential
 GET    /api/credentials/:id/usage - Get usage info
@@ -80,6 +86,7 @@ The credentials table is already added to the schema in:
 `pkg/core/src/database/schema-sqlite.ts`
 
 Run migrations to create the table:
+
 ```bash
 cd pkg/core
 pnpm drizzle-kit generate
@@ -89,7 +96,10 @@ pnpm drizzle-kit migrate
 ### 3. Initialize Services
 
 ```typescript
-import { createEncryptionService, createCredentialsService } from '@invect/core/services/credentials';
+import {
+  createEncryptionService,
+  createCredentialsService,
+} from '@invect/core/services/credentials';
 import { db } from './database';
 
 // Create services
@@ -140,8 +150,8 @@ const credential = await credentialsService.create({
 ```typescript
 const credentials = await credentialsService.list({
   userId: 'user_123',
-  provider: 'stripe',      // optional filter
-  isActive: true,          // optional filter
+  provider: 'stripe', // optional filter
+  isActive: true, // optional filter
 });
 // Configs are NOT included for security
 ```
@@ -166,7 +176,7 @@ const credential = await credentialsService.get(credentialId, userId);
 // Use in API call
 const response = await fetch(apiUrl, {
   headers: {
-    'Authorization': `Bearer ${credential.config.token}`,
+    Authorization: `Bearer ${credential.config.token}`,
   },
 });
 
@@ -188,17 +198,20 @@ if (result.success) {
 ## Security
 
 ### Encryption
+
 - All sensitive credential data is encrypted with AES-256-GCM
 - Each encryption uses a unique salt and IV
 - Authentication tags prevent tampering
 - Master key is stored in environment variable
 
 ### Access Control
+
 - Users can only access their own credentials
 - Workspace-shared credentials require workspace membership
 - All operations validate user permissions
 
 ### Best Practices
+
 1. **Never log decrypted credentials**
 2. **Rotate encryption key periodically**
 3. **Use HTTPS in production**
@@ -275,8 +288,8 @@ describe('Credentials Service', () => {
   let service: CredentialsService;
 
   beforeEach(() => {
-    encryption = new EncryptionService({ 
-      masterKey: 'test-key-at-least-32-characters-long!' 
+    encryption = new EncryptionService({
+      masterKey: 'test-key-at-least-32-characters-long!',
     });
     service = new CredentialsService(db, encryption);
   });

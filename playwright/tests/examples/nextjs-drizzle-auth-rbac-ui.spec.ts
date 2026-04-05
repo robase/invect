@@ -31,20 +31,16 @@ let databaseUrl = '';
 let serverProcess: ChildProcess | null = null;
 let serverLogs = '';
 
-let createdUser:
-  | {
-      email: string;
-      id: string;
-      name: string;
-      password: string;
-    }
-  | null = null;
-let sharedFlow:
-  | {
-      id: string;
-      name: string;
-    }
-  | null = null;
+let createdUser: {
+  email: string;
+  id: string;
+  name: string;
+  password: string;
+} | null = null;
+let sharedFlow: {
+  id: string;
+  name: string;
+} | null = null;
 
 function exampleEnv(overrides: Record<string, string> = {}) {
   return {
@@ -111,10 +107,7 @@ async function startPostgresContainer(): Promise<{ containerName: string; port: 
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
     try {
-      execSync(
-        `docker exec ${name} pg_isready -U ${PG_USER} -d ${PG_DB}`,
-        { stdio: 'pipe' },
-      );
+      execSync(`docker exec ${name} pg_isready -U ${PG_USER} -d ${PG_DB}`, { stdio: 'pipe' });
       return { containerName: name, port: pgPort };
     } catch {
       await new Promise((resolve) => setTimeout(resolve, 300));
@@ -125,7 +118,9 @@ async function startPostgresContainer(): Promise<{ containerName: string; port: 
 }
 
 function stopPostgresContainer(name: string) {
-  if (!name) return;
+  if (!name) {
+    return;
+  }
   try {
     execSync(`docker rm -f ${name}`, { stdio: 'pipe' });
   } catch {
@@ -199,7 +194,9 @@ async function gotoSignIn(page: Page) {
 
 async function waitForInvectDashboard(page: Page) {
   await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 60_000 });
-  await expect(page.getByText('Loading flows')).not.toBeVisible({ timeout: 30_000 }).catch(() => {});
+  await expect(page.getByText('Loading flows'))
+    .not.toBeVisible({ timeout: 30_000 })
+    .catch(() => {});
 }
 
 async function login(page: Page, email: string, password: string) {
@@ -240,23 +237,25 @@ async function createFlow(page: Page, name: string) {
   expect(createResponse.ok()).toBeTruthy();
 
   const flow = (await createResponse.json()) as { id: string; name: string };
-  const versionResponse = await page.context().request.post(`${apiBase}/flows/${flow.id}/versions`, {
-    data: {
-      invectDefinition: {
-        nodes: [
-          {
-            id: 'input-1',
-            type: 'core.input',
-            label: 'Seed Input',
-            referenceId: 'seed_input',
-            params: { variableName: 'seed_input', defaultValue: '"hello"' },
-            position: { x: 100, y: 150 },
-          },
-        ],
-        edges: [],
+  const versionResponse = await page
+    .context()
+    .request.post(`${apiBase}/flows/${flow.id}/versions`, {
+      data: {
+        invectDefinition: {
+          nodes: [
+            {
+              id: 'input-1',
+              type: 'core.input',
+              label: 'Seed Input',
+              referenceId: 'seed_input',
+              params: { variableName: 'seed_input', defaultValue: '"hello"' },
+              position: { x: 100, y: 150 },
+            },
+          ],
+          edges: [],
+        },
       },
-    },
-  });
+    });
   expect(versionResponse.ok()).toBeTruthy();
 
   return flow;
@@ -272,7 +271,11 @@ test.describe('Next.js auth + RBAC example UI', () => {
     containerName = pg.containerName;
     databaseUrl = `postgresql://${PG_USER}:${PG_PASSWORD}@127.0.0.1:${pg.port}/${PG_DB}`;
 
-    await runNodeScript(DRIZZLE_KIT_BIN, ['push', '--config=drizzle.config.ts', '--force'], exampleEnv());
+    await runNodeScript(
+      DRIZZLE_KIT_BIN,
+      ['push', '--config=drizzle.config.ts', '--force'],
+      exampleEnv(),
+    );
     await runNodeScript(TSX_BIN, ['db/seed.ts'], exampleEnv());
 
     serverProcess = spawn(process.execPath, [NEXT_BIN, 'dev', '-p', String(appPort)], {
@@ -309,7 +312,9 @@ test.describe('Next.js auth + RBAC example UI', () => {
     stopPostgresContainer(containerName);
   });
 
-  test('sign-in validates, profile renders, and sign-out returns to the auth gate', async ({ page }) => {
+  test('sign-in validates, profile renders, and sign-out returns to the auth gate', async ({
+    page,
+  }) => {
     await gotoSignIn(page);
 
     await login(page, ADMIN_EMAIL, ADMIN_PASSWORD);
@@ -319,7 +324,9 @@ test.describe('Next.js auth + RBAC example UI', () => {
     await expect(page.getByText(ADMIN_EMAIL)).toBeVisible();
 
     await page.getByRole('button', { name: 'Sign Out' }).click();
-    await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible({
+      timeout: 30_000,
+    });
   });
 
   test('admin can create a non-admin user from User Management', async ({ page }) => {
@@ -330,7 +337,9 @@ test.describe('Next.js auth + RBAC example UI', () => {
     await login(page, ADMIN_EMAIL, ADMIN_PASSWORD);
     await page.goto(`${workflowsBase}/users`);
 
-    await expect(page.getByRole('heading', { name: 'User Management' })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('heading', { name: 'User Management' })).toBeVisible({
+      timeout: 30_000,
+    });
 
     await page.getByRole('button', { name: 'Create User' }).click();
     const form = page.locator('form').filter({ hasText: 'Create New User' });
@@ -368,7 +377,9 @@ test.describe('Next.js auth + RBAC example UI', () => {
 
     try {
       await page.goto(`${workflowsBase}/users`);
-      await expect(page.getByRole('heading', { name: 'User Management' })).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByRole('heading', { name: 'User Management' })).toBeVisible({
+        timeout: 30_000,
+      });
       await expect(
         page.getByText('Only administrators can manage users. Contact an admin for access.'),
       ).toBeVisible();
@@ -385,7 +396,9 @@ test.describe('Next.js auth + RBAC example UI', () => {
     await login(page, ADMIN_EMAIL, ADMIN_PASSWORD);
     await page.goto(`${workflowsBase}/access`);
 
-    await expect(page.getByRole('heading', { name: 'Access Control' })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('heading', { name: 'Access Control' })).toBeVisible({
+      timeout: 30_000,
+    });
     await page.getByRole('button', { name: /New Team/i }).click();
     await page.getByPlaceholder('Team name').fill(teamName);
     await page.getByRole('button', { name: 'Create' }).click();
@@ -405,7 +418,10 @@ test.describe('Next.js auth + RBAC example UI', () => {
     await expect(page.getByText(createdUser!.name)).toBeVisible({ timeout: 30_000 });
   });
 
-  test('admin can share a flow and non-owners do not see the Share action', async ({ browser, page }) => {
+  test('admin can share a flow and non-owners do not see the Share action', async ({
+    browser,
+    page,
+  }) => {
     expect(createdUser).not.toBeNull();
 
     await login(page, ADMIN_EMAIL, ADMIN_PASSWORD);
@@ -417,7 +433,9 @@ test.describe('Next.js auth + RBAC example UI', () => {
     await expect(shareButton).toBeVisible({ timeout: 60_000 });
     await shareButton.click();
 
-    await expect(page.getByRole('heading', { name: 'Share Flow' })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('heading', { name: 'Share Flow' })).toBeVisible({
+      timeout: 30_000,
+    });
     await expect(page.getByText('No flow-specific access records yet.')).toBeVisible();
 
     await page.locator('input[placeholder="User ID"]').fill(createdUser!.id);

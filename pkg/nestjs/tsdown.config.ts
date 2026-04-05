@@ -24,12 +24,12 @@ export default defineConfig({
   },
   outExtensions({ format }) {
     return {
-      js: format === 'cjs' ? '.cjs' : '.js'
+      js: format === 'cjs' ? '.cjs' : '.js',
     };
   },
   esbuildOptions(options) {
     options.banner = {
-      js: '"use strict";'
+      js: '"use strict";',
     };
-  }
+  },
 });

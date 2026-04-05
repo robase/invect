@@ -9,11 +9,7 @@ const nextConfig = {
     '@invect/user-auth',
     '@invect/rbac',
   ],
-  serverExternalPackages: [
-    'pg',
-    'better-auth',
-    'drizzle-orm',
-  ],
+  serverExternalPackages: ['pg', 'better-auth', 'drizzle-orm'],
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.externals.push({

@@ -5,7 +5,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { z } from 'zod/v4';
 import { PluginManager } from '../../../src/services/plugin-manager';
-import type { InvectPlugin, FlowRunHookContext, NodeExecutionHookContext } from '../../../src/types/plugin.types';
+import type {
+  InvectPlugin,
+  FlowRunHookContext,
+  NodeExecutionHookContext,
+} from '../../../src/types/plugin.types';
 import type { ActionDefinition } from '../../../src/actions/types';
 
 const mockLogger = {
@@ -106,7 +110,9 @@ describe('PluginManager', () => {
     it('should throw when plugin init fails', async () => {
       const plugin: InvectPlugin = {
         id: 'fail-init',
-        init: () => { throw new Error('boom'); },
+        init: () => {
+          throw new Error('boom');
+        },
       };
       const pm = new PluginManager([plugin]);
 
@@ -119,8 +125,18 @@ describe('PluginManager', () => {
   describe('shutdownPlugins', () => {
     it('should call shutdown in reverse order', async () => {
       const order: string[] = [];
-      const p1: InvectPlugin = { id: 'p1', shutdown: () => { order.push('p1'); } };
-      const p2: InvectPlugin = { id: 'p2', shutdown: () => { order.push('p2'); } };
+      const p1: InvectPlugin = {
+        id: 'p1',
+        shutdown: () => {
+          order.push('p1');
+        },
+      };
+      const p2: InvectPlugin = {
+        id: 'p2',
+        shutdown: () => {
+          order.push('p2');
+        },
+      };
       const pm = new PluginManager([p1, p2]);
 
       await pm.shutdownPlugins(mockLogger);
@@ -128,7 +144,12 @@ describe('PluginManager', () => {
     });
 
     it('should continue if a plugin shutdown throws', async () => {
-      const p1: InvectPlugin = { id: 'p1', shutdown: () => { throw new Error('fail'); } };
+      const p1: InvectPlugin = {
+        id: 'p1',
+        shutdown: () => {
+          throw new Error('fail');
+        },
+      };
       const p2: InvectPlugin = { id: 'p2', shutdown: vi.fn() };
       const pm = new PluginManager([p1, p2]);
 
@@ -207,7 +228,9 @@ describe('PluginManager', () => {
       const plugin: InvectPlugin = {
         id: 'boom',
         hooks: {
-          beforeFlowRun: async () => { throw new Error('hook crash'); },
+          beforeFlowRun: async () => {
+            throw new Error('hook crash');
+          },
         },
       };
       const pm = new PluginManager([plugin]);

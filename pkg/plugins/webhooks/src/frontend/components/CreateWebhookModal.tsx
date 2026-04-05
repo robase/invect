@@ -7,13 +7,7 @@
 
 import { useState, type FC, type RefObject } from 'react';
 import { Check } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@invect/ui';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@invect/ui';
 import { useCreateWebhookTrigger } from '../hooks/useWebhookQueries';
 import { CopyableField } from './CopyableField';
 import type { CreateWebhookTriggerInput } from '../../shared/types';
@@ -48,7 +42,9 @@ export const CreateWebhookModal: FC<CreateWebhookModalProps> = ({
   const createMutation = useCreateWebhookTrigger();
 
   const handleCreate = async () => {
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      return;
+    }
 
     const input: CreateWebhookTriggerInput = {
       name: name.trim(),
@@ -84,7 +80,14 @@ export const CreateWebhookModal: FC<CreateWebhookModalProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) {
+          handleClose();
+        }
+      }}
+    >
       <DialogContent
         container={containerRef?.current}
         className="max-w-md gap-0 p-0 overflow-hidden"

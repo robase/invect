@@ -273,9 +273,13 @@ export function NodeConfigPanel({
 
   const handleAddTool = useCallback(
     (toolId: string): string => {
-      if (!nodeId) return '';
+      if (!nodeId) {
+        return '';
+      }
       const toolDef = availableTools.find((t) => t.id === toolId);
-      if (!toolDef) return '';
+      if (!toolDef) {
+        return '';
+      }
 
       const instanceId = nanoid();
       const newInstance: AddedToolInstance = {
@@ -300,7 +304,9 @@ export function NodeConfigPanel({
 
   const handleRemoveTool = useCallback(
     (instanceId: string) => {
-      if (!nodeId) return;
+      if (!nodeId) {
+        return;
+      }
       const currentNode = storeNodes.find((n) => n.id === nodeId);
       const currentParams = (currentNode?.data as ReactFlowNodeData | undefined)?.params ?? {};
       const currentTools =
@@ -317,7 +323,9 @@ export function NodeConfigPanel({
 
   const handleUpdateTool = useCallback(
     (instanceId: string, updates: Partial<Omit<AddedToolInstance, 'instanceId' | 'toolId'>>) => {
-      if (!nodeId) return;
+      if (!nodeId) {
+        return;
+      }
       const currentNode = storeNodes.find((n) => n.id === nodeId);
       const currentParams = (currentNode?.data as ReactFlowNodeData | undefined)?.params ?? {};
       const currentTools =
@@ -335,7 +343,9 @@ export function NodeConfigPanel({
   );
 
   const agentToolsProps = useMemo(() => {
-    if (nodeType !== GraphNodeType.AGENT) return undefined;
+    if (nodeType !== GraphNodeType.AGENT) {
+      return undefined;
+    }
     return {
       availableTools,
       addedTools,

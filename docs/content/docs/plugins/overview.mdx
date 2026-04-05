@@ -31,7 +31,8 @@ Plugins are plain objects that conform to the `InvectPlugin` interface. They req
     pluginA --> tables
     pluginB --> lifecycle
     pluginC --> tools
-  `}
+
+`}
 />
 
 ## Quick Start
@@ -59,13 +60,14 @@ import { createInvectRouter } from '@invect/express';
 import { myPlugin } from './my-plugin';
 
 app.use('/invect', createInvectRouter({
-  database: {
-    type: 'sqlite',
-    connectionString: 'file:./dev.db',
-  },
-  plugins: [myPlugin],
+database: {
+type: 'sqlite',
+connectionString: 'file:./dev.db',
+},
+plugins: [myPlugin],
 }));
-```
+
+````
 </Tab>
 <Tab value="NestJS">
 ```ts
@@ -84,7 +86,8 @@ import { myPlugin } from './my-plugin';
   ],
 })
 export class AppModule {}
-```
+````
+
 </Tab>
 <Tab value="Next.js">
 ```ts
@@ -92,13 +95,14 @@ import { createInvectHandler } from '@invect/nextjs';
 import { myPlugin } from './my-plugin';
 
 const handler = createInvectHandler({
-  database: {
-    type: 'sqlite',
-    connectionString: process.env.DATABASE_URL || 'file:./dev.db',
-  },
-  plugins: [myPlugin],
+database: {
+type: 'sqlite',
+connectionString: process.env.DATABASE_URL || 'file:./dev.db',
+},
+plugins: [myPlugin],
 });
-```
+
+````
 </Tab>
 </Tabs>
 
@@ -142,7 +146,7 @@ interface InvectPlugin {
   /** Structured error codes for this plugin. */
   $ERROR_CODES?: Record<string, { message: string; status: number }>;
 }
-```
+````
 
 ---
 
@@ -161,10 +165,10 @@ export const auditPlugin: InvectPlugin = {
     auditLogs: {
       order: 200, // Controls table creation order
       fields: {
-        id:        { type: 'uuid', primaryKey: true, defaultValue: 'uuid()' },
-        action:    { type: 'string', required: true },
-        userId:    { type: 'string', required: false, index: true },
-        metadata:  { type: 'json', required: false },
+        id: { type: 'uuid', primaryKey: true, defaultValue: 'uuid()' },
+        action: { type: 'string', required: true },
+        userId: { type: 'string', required: false, index: true },
+        metadata: { type: 'json', required: false },
         createdAt: { type: 'date', required: true, defaultValue: 'now()' },
       },
     },
@@ -183,7 +187,7 @@ export const rbacPlugin: InvectPlugin = {
     // Same key as the core table name
     flows: {
       fields: {
-        ownerId:  { type: 'string', required: false },
+        ownerId: { type: 'string', required: false },
         tenantId: { type: 'string', required: false, index: true },
       },
     },
@@ -200,17 +204,17 @@ Plugin fields are merged with core fields during schema generation. Conflicts (t
 
 ### Field Types
 
-| Type | SQLite | PostgreSQL | MySQL | Notes |
-|------|--------|------------|-------|-------|
-| `'string'` | `text` | `text` | `varchar(255)` | General-purpose text |
-| `'text'` | `text` | `text` | `text` | Long-form content |
-| `'number'` | `integer` | `integer` | `int` | Integer values |
-| `'bigint'` | `integer` | `bigint` | `bigint` | Large integers |
-| `'boolean'` | `integer` | `boolean` | `boolean` | True/false |
-| `'date'` | `text` | `timestamp` | `timestamp` | ISO date strings / timestamps |
-| `'json'` | `text` | `jsonb` | `json` | Serialized JSON |
-| `'uuid'` | `text` | `uuid` | `varchar(36)` | UUID strings |
-| `string[]` | — | enum | enum | Enum values, e.g. `['a','b','c']` |
+| Type        | SQLite    | PostgreSQL  | MySQL          | Notes                             |
+| ----------- | --------- | ----------- | -------------- | --------------------------------- |
+| `'string'`  | `text`    | `text`      | `varchar(255)` | General-purpose text              |
+| `'text'`    | `text`    | `text`      | `text`         | Long-form content                 |
+| `'number'`  | `integer` | `integer`   | `int`          | Integer values                    |
+| `'bigint'`  | `integer` | `bigint`    | `bigint`       | Large integers                    |
+| `'boolean'` | `integer` | `boolean`   | `boolean`      | True/false                        |
+| `'date'`    | `text`    | `timestamp` | `timestamp`    | ISO date strings / timestamps     |
+| `'json'`    | `text`    | `jsonb`     | `json`         | Serialized JSON                   |
+| `'uuid'`    | `text`    | `uuid`      | `varchar(36)`  | UUID strings                      |
+| `string[]`  | —         | enum        | enum           | Enum values, e.g. `['a','b','c']` |
 
 ### Field Options
 
@@ -300,11 +304,11 @@ export const analyticsPlugin: InvectPlugin = {
 
 These endpoints are available at:
 
-| Framework | URL |
-|-----------|-----|
-| Express | `GET /invect/plugins/analytics/summary` |
-| NestJS | `GET /invect/plugins/analytics/summary` |
-| Next.js | `GET /api/invect/plugins/analytics/summary` |
+| Framework | URL                                         |
+| --------- | ------------------------------------------- |
+| Express   | `GET /invect/plugins/analytics/summary`     |
+| NestJS    | `GET /invect/plugins/analytics/summary`     |
+| Next.js   | `GET /api/invect/plugins/analytics/summary` |
 
 ### Endpoint Context
 
@@ -344,15 +348,15 @@ Hooks let plugins observe and modify the execution engine at key points. All hoo
 
 ### Available Hooks
 
-| Hook | When It Runs | Can Modify |
-|------|-------------|------------|
-| `beforeFlowRun` | Before a flow execution starts | Cancel the run, modify inputs |
-| `afterFlowRun` | After a flow completes (success or failure) | Observe results |
-| `beforeNodeExecute` | Before each node executes | Skip the node, override params |
-| `afterNodeExecute` | After each node completes | Override output |
-| `onRequest` | Before any API request is processed | Modify or reject requests |
-| `onResponse` | After any API response is produced | Modify the response |
-| `onAuthorize` | During authorization checks | Override auth decisions |
+| Hook                | When It Runs                                | Can Modify                     |
+| ------------------- | ------------------------------------------- | ------------------------------ |
+| `beforeFlowRun`     | Before a flow execution starts              | Cancel the run, modify inputs  |
+| `afterFlowRun`      | After a flow completes (success or failure) | Observe results                |
+| `beforeNodeExecute` | Before each node executes                   | Skip the node, override params |
+| `afterNodeExecute`  | After each node completes                   | Override output                |
+| `onRequest`         | Before any API request is processed         | Modify or reject requests      |
+| `onResponse`        | After any API response is produced          | Modify the response            |
+| `onAuthorize`       | During authorization checks                 | Override auth decisions        |
 
 ### Flow Execution Hooks
 
@@ -378,7 +382,7 @@ export const loggingPlugin: InvectPlugin = {
 
     afterFlowRun: async (ctx) => {
       console.log(`Flow ${ctx.flowId} finished`, {
-        status: ctx.status,      // 'SUCCESS' | 'FAILED'
+        status: ctx.status, // 'SUCCESS' | 'FAILED'
         duration: ctx.duration,
         outputs: ctx.outputs,
         error: ctx.error,
@@ -408,7 +412,7 @@ export const nodeMonitorPlugin: InvectPlugin = {
 
     afterNodeExecute: async (ctx) => {
       console.log(`Node ${ctx.nodeId} completed`, {
-        status: ctx.status,    // 'SUCCESS' | 'FAILED'
+        status: ctx.status, // 'SUCCESS' | 'FAILED'
         duration: ctx.duration,
       });
 
@@ -521,11 +525,11 @@ export const cachePlugin: InvectPlugin = {
 
 The `init` function receives an `InvectPluginContext` with:
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `config` | `Record<string, unknown>` | The full Invect configuration |
-| `logger` | `Logger` | Structured logger |
-| `registerAction` | `(action) => void` | Register actions at runtime |
+| Property         | Type                      | Description                   |
+| ---------------- | ------------------------- | ----------------------------- |
+| `config`         | `Record<string, unknown>` | The full Invect configuration |
+| `logger`         | `Logger`                  | Structured logger             |
+| `registerAction` | `(action) => void`        | Register actions at runtime   |
 
 ---
 
@@ -572,12 +576,12 @@ export const auditPlugin: InvectPlugin = {
     auditLogs: {
       order: 200,
       fields: {
-        id:        { type: 'uuid', primaryKey: true, defaultValue: 'uuid()' },
-        event:     { type: 'string', required: true, index: true },
-        flowId:    { type: 'string', required: false, references: { table: 'flows', column: 'id' } },
+        id: { type: 'uuid', primaryKey: true, defaultValue: 'uuid()' },
+        event: { type: 'string', required: true, index: true },
+        flowId: { type: 'string', required: false, references: { table: 'flows', column: 'id' } },
         flowRunId: { type: 'string', required: false },
-        userId:    { type: 'string', required: false, index: true },
-        metadata:  { type: 'json', required: false },
+        userId: { type: 'string', required: false, index: true },
+        metadata: { type: 'json', required: false },
         createdAt: { type: 'date', required: true, defaultValue: 'now()' },
       },
     },
@@ -631,6 +635,6 @@ export const auditPlugin: InvectPlugin = {
 - **Plugin IDs must be unique.** Invect throws on duplicate IDs at construction time.
 - **Hooks are fail-safe.** If a `beforeFlowRun` hook throws, the flow is cancelled. All `after*` hooks swallow errors and log warnings.
 - **Shutdown runs in reverse order.** If plugins A, B, C are registered, shutdown order is C → B → A.
-- **Schema fields cannot override core fields.** Plugins can only *add* new columns to core tables, not redefine existing ones.
+- **Schema fields cannot override core fields.** Plugins can only _add_ new columns to core tables, not redefine existing ones.
 - **Endpoints are framework-agnostic.** Write once, works on Express, NestJS, and Next.js.
 - **Actions are dual-purpose.** Every plugin action is automatically available as both a flow node and an agent tool.

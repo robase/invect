@@ -1,4 +1,4 @@
-import { defineConfig } from 'tsdown'
+import { defineConfig } from 'tsdown';
 
 export default defineConfig({
   entry: [
@@ -21,9 +21,9 @@ export default defineConfig({
       skipLibCheck: true,
       baseUrl: '.',
       paths: {
-        'src/*': ['src/*']
-      }
-    }
+        'src/*': ['src/*'],
+      },
+    },
   },
   sourcemap: true,
   clean: false,
@@ -59,11 +59,11 @@ export default defineConfig({
   },
   outExtensions({ format }) {
     return {
-      js: format === 'cjs' ? '.cjs' : '.js'
-    }
+      js: format === 'cjs' ? '.cjs' : '.js',
+    };
   },
   // Path alias for src/* imports
   alias: {
-    'src': './src'
-  }
-})
+    src: './src',
+  },
+});
