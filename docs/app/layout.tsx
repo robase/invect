@@ -33,7 +33,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       className={`${geistSans.variable} ${iosevkaMono.variable} dark`}
       suppressHydrationWarning
     >
-      <body className="flex min-h-screen flex-col">
+      <body className="flex flex-col min-h-screen">
         <RootProvider
           theme={{
             defaultTheme: 'dark',
