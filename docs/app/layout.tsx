@@ -11,30 +11,10 @@ const geistSans = localFont({
 });
 
 const iosevkaMono = localFont({
-  src: [
-    {
-      path: '../../pkg/ui/src/assets/fonts/iosevka-latin-400-normal.woff2',
-      weight: '400',
-      style: 'normal',
-    },
-    {
-      path: '../../pkg/ui/src/assets/fonts/iosevka-latin-500-normal.woff2',
-      weight: '500',
-      style: 'normal',
-    },
-    {
-      path: '../../pkg/ui/src/assets/fonts/iosevka-latin-600-normal.woff2',
-      weight: '600',
-      style: 'normal',
-    },
-    {
-      path: '../../pkg/ui/src/assets/fonts/iosevka-latin-700-normal.woff2',
-      weight: '700',
-      style: 'normal',
-    },
-  ],
+  src: '../../pkg/ui/src/assets/fonts/iosevka-latin-400-normal.woff2',
   variable: '--font-iosevka',
   display: 'swap',
+  weight: '400',
 });
 
 export const metadata = {
