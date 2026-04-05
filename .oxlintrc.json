@@ -50,7 +50,13 @@
   ],
   "overrides": [
     {
-      "files": ["**/tests/**", "**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "**/playwright/**", "**/test/**"],
+      "files": [
+        "**/tests/**",
+        "**/*.test.{ts,tsx}",
+        "**/*.spec.{ts,tsx}",
+        "**/playwright/**",
+        "**/test/**"
+      ],
       "rules": {
         "typescript/no-explicit-any": "off",
         "typescript/no-non-null-assertion": "off",
@@ -70,7 +76,8 @@
     {
       "files": ["pkg/cli/**", "examples/**", "docker/**", "scripts/**"],
       "rules": {
-        "no-console": "off"
+        "no-console": "off",
+        "typescript/no-explicit-any": "warn"
       }
     }
   ],

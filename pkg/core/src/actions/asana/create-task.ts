@@ -126,9 +126,15 @@ export const asanaCreateTaskAction = defineAction({
       name,
       projects: [projectGid],
     };
-    if (notes) {taskData.notes = notes;}
-    if (dueOn) {taskData.due_on = dueOn;}
-    if (assignee) {taskData.assignee = assignee;}
+    if (notes) {
+      taskData.notes = notes;
+    }
+    if (dueOn) {
+      taskData.due_on = dueOn;
+    }
+    if (assignee) {
+      taskData.assignee = assignee;
+    }
 
     try {
       const response = await fetch(`${ASANA_API}/tasks`, {

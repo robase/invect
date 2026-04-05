@@ -20,8 +20,7 @@ const paramsSchema = z.object({
 export const asanaListProjectsAction = defineAction({
   id: 'asana.list_projects',
   name: 'List Projects',
-  description:
-    'List projects in an Asana workspace. Returns project GIDs, names, and metadata.',
+  description: 'List projects in an Asana workspace. Returns project GIDs, names, and metadata.',
   provider: ASANA_PROVIDER,
   actionCategory: 'read',
 

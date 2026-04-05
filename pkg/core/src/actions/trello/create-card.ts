@@ -118,8 +118,7 @@ export const trelloCreateCardAction = defineAction({
       };
     }
 
-    const apiKey =
-      (credential.config?.apiKey as string) ?? (credential.config?.clientId as string);
+    const apiKey = (credential.config?.apiKey as string) ?? (credential.config?.clientId as string);
 
     context.logger.debug('Creating Trello card', { listId, name });
 
@@ -142,9 +141,15 @@ export const trelloCreateCardAction = defineAction({
         idList: listId,
         name,
       };
-      if (description) {body.desc = description;}
-      if (due) {body.due = due;}
-      if (position) {body.pos = position;}
+      if (description) {
+        body.desc = description;
+      }
+      if (due) {
+        body.due = due;
+      }
+      if (position) {
+        body.pos = position;
+      }
 
       const response = await fetch(url.toString(), {
         method: 'POST',

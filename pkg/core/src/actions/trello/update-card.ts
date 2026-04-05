@@ -128,17 +128,26 @@ export const trelloUpdateCardAction = defineAction({
       };
     }
 
-    const apiKey =
-      (credential.config?.apiKey as string) ?? (credential.config?.clientId as string);
+    const apiKey = (credential.config?.apiKey as string) ?? (credential.config?.clientId as string);
 
     context.logger.debug('Updating Trello card', { cardId });
 
     const cardData: Record<string, unknown> = {};
-    if (name) {cardData.name = name;}
-    if (description) {cardData.desc = description;}
-    if (listId) {cardData.idList = listId;}
-    if (due) {cardData.due = due;}
-    if (closed !== undefined) {cardData.closed = closed;}
+    if (name) {
+      cardData.name = name;
+    }
+    if (description) {
+      cardData.desc = description;
+    }
+    if (listId) {
+      cardData.idList = listId;
+    }
+    if (due) {
+      cardData.due = due;
+    }
+    if (closed !== undefined) {
+      cardData.closed = closed;
+    }
 
     try {
       const url = new URL(`${TRELLO_API}/cards/${encodeURIComponent(cardId)}`);

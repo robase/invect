@@ -130,11 +130,21 @@ export const asanaUpdateTaskAction = defineAction({
     context.logger.debug('Updating Asana task', { taskGid });
 
     const taskData: Record<string, unknown> = {};
-    if (name) {taskData.name = name;}
-    if (notes) {taskData.notes = notes;}
-    if (dueOn) {taskData.due_on = dueOn;}
-    if (completed !== undefined) {taskData.completed = completed;}
-    if (assignee) {taskData.assignee = assignee;}
+    if (name) {
+      taskData.name = name;
+    }
+    if (notes) {
+      taskData.notes = notes;
+    }
+    if (dueOn) {
+      taskData.due_on = dueOn;
+    }
+    if (completed !== undefined) {
+      taskData.completed = completed;
+    }
+    if (assignee) {
+      taskData.assignee = assignee;
+    }
 
     try {
       const response = await fetch(`${ASANA_API}/tasks/${encodeURIComponent(taskGid)}`, {

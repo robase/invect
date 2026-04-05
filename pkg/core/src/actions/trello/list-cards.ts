@@ -80,8 +80,7 @@ export const trelloListCardsAction = defineAction({
       };
     }
 
-    const apiKey =
-      (credential.config?.apiKey as string) ?? (credential.config?.clientId as string);
+    const apiKey = (credential.config?.apiKey as string) ?? (credential.config?.clientId as string);
 
     context.logger.debug('Listing Trello cards', { listId });
 
