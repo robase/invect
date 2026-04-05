@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { GraphNodeType } from '@invect/core/types';
 import type { FlowRunResult } from '@invect/core/types';
 import { parseJson, stringifyJson } from './utils';
 

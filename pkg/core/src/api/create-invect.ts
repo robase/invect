@@ -28,7 +28,6 @@ import {
 } from '../services/agent-tools';
 import { AgentNodeExecutor } from '../nodes/agent-executor';
 import type { GraphNodeType } from '../types.internal';
-import type { CreateCredentialInput } from '../services/credentials';
 import type { CredentialAuthType } from '../database/schema-sqlite';
 
 import type { InvectInstance } from './types';

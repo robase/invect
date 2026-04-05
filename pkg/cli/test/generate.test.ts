@@ -15,7 +15,6 @@ import {
   generateSqliteSchema,
   generatePostgresSchema,
   generateMysqlSchema,
-  CORE_SCHEMA,
   CORE_TABLE_NAMES,
 } from '@invect/core';
 

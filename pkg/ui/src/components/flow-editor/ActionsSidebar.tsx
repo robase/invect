@@ -100,7 +100,7 @@ export function ActionsSidebar({
     });
   };
 
-  const addedToolIds = useMemo(() => new Set(addedTools.map((t) => t.toolId)), [addedTools]);
+  const _addedToolIds = useMemo(() => new Set(addedTools.map((t) => t.toolId)), [addedTools]);
 
   const filteredTools = useMemo(() => {
     let tools = availableTools.filter(

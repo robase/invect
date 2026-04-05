@@ -1,5 +1,4 @@
 import { cn } from '../../lib/utils';
-import type { GraphNodeType } from '@invect/core/types';
 import { NodeExecutionStatus } from '@invect/core/types';
 
 // Utility functions for styling nodes and edges, inspired by Invect
@@ -286,7 +285,7 @@ export const getNodeMinimapColor = (nodeType: NodeType): string => {
 };
 
 // Status styling using concrete Tailwind classes
-export const getNodeStatusStyles = (status: NodeStatus | undefined, baseBorderColor: string) => {
+export const getNodeStatusStyles = (status: NodeStatus | undefined, _baseBorderColor: string) => {
   switch (status) {
     case 'running':
       return cn('!border-4 !border-blue-600 !shadow-xl !shadow-blue-500/40 animate-pulse');

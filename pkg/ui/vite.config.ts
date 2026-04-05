@@ -30,6 +30,7 @@ function extractInlinedFonts(): Plugin {
       // Replace base64 data URIs with relative file references
       let css = readFileSync(cssPath, 'utf-8');
       for (const file of readdirSync(fontsDir)) {
+        // oxlint-disable-next-line security/detect-non-literal-fs-filename -- iterating font files from known build directory
         const fontData = readFileSync(resolve(srcFontsDir, file));
         const base64 = fontData.toString('base64');
         // Match the data URI for this font (woff2 mime type)

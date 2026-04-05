@@ -58,6 +58,7 @@ export class IdGenerator {
     }
 
     // Flow ID should be: 1-20 lowercase chars/hyphens + dash + 4 random chars
+    // oxlint-disable-next-line security/detect-unsafe-regex -- input bounded to 25 chars by length check above
     const flowIdPattern = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?-[a-zA-Z0-9]{4}$/;
     return flowIdPattern.test(flowId) && flowId.length >= 6 && flowId.length <= 25;
   }

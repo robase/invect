@@ -1594,7 +1594,7 @@ export function userAuth(options: UserAuthPluginOptions): InvectPlugin {
                 name: adminName,
                 role: 'admin',
               },
-            }).catch((err: unknown) => {
+            }).catch((_err: unknown) => {
               pluginContext.logger.debug?.(
                 `createUser API requires auth, falling back to signUpEmail for ${adminEmail}`,
               );

@@ -77,7 +77,7 @@ interface DataMapperPaneProps {
 /*  Constants                                                          */
 /* ------------------------------------------------------------------ */
 
-const DEFAULT_MAPPER_CONFIG: MapperConfig = {
+const _DEFAULT_MAPPER_CONFIG: MapperConfig = {
   enabled: true,
   expression: '',
   mode: 'auto',
@@ -336,7 +336,7 @@ export function DataMapperPane({
   previewResult,
   isTestingMapper = false,
   inputData,
-  portalContainer,
+  portalContainer: _portalContainer,
 }: DataMapperPaneProps) {
   const enabled = value?.enabled ?? false;
 

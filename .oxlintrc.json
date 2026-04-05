@@ -1,6 +1,7 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["typescript", "import", "unicorn"],
+  "jsPlugins": ["eslint-plugin-security"],
   "categories": {
     "correctness": "error"
   },
@@ -35,7 +36,21 @@
     "typescript/no-empty-function": "warn",
     "typescript/no-unnecessary-parameter-property-assignment": "warn",
     "import/namespace": "off",
-    "unicorn/no-useless-fallback-in-spread": "warn"
+    "unicorn/no-useless-fallback-in-spread": "warn",
+    "security/detect-unsafe-regex": "error",
+    "security/detect-non-literal-regexp": "warn",
+    "security/detect-non-literal-require": "error",
+    "security/detect-non-literal-fs-filename": "warn",
+    "security/detect-eval-with-expression": "error",
+    "security/detect-pseudoRandomBytes": "error",
+    "security/detect-possible-timing-attacks": "warn",
+    "security/detect-no-csrf-before-method-override": "error",
+    "security/detect-buffer-noassert": "error",
+    "security/detect-child-process": "warn",
+    "security/detect-disable-mustache-escape": "error",
+    "security/detect-new-buffer": "error",
+    "security/detect-bidi-characters": "error",
+    "security/detect-object-injection": "off"
   },
   "ignorePatterns": [
     "node_modules",
@@ -64,7 +79,10 @@
         "typescript/no-empty-function": "off",
         "no-console": "off",
         "no-empty-pattern": "off",
-        "prefer-const": "warn"
+        "no-unused-vars": "off",
+        "prefer-const": "warn",
+        "security/detect-non-literal-fs-filename": "off",
+        "security/detect-non-literal-regexp": "off"
       }
     },
     {
@@ -74,10 +92,13 @@
       }
     },
     {
-      "files": ["pkg/cli/**", "examples/**", "docker/**", "scripts/**"],
+      "files": ["pkg/cli/src/**", "examples/**", "docker/**", "scripts/**"],
       "rules": {
         "no-console": "off",
-        "typescript/no-explicit-any": "warn"
+        "typescript/no-explicit-any": "warn",
+        "typescript/no-non-null-assertion": "off",
+        "security/detect-non-literal-fs-filename": "off",
+        "security/detect-non-literal-regexp": "off"
       }
     }
   ],

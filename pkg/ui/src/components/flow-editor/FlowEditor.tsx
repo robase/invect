@@ -299,10 +299,18 @@ export function FlowWorkbenchView({
   }, [agentToolsData]);
 
   // Create stable callback refs for tool selector (to avoid re-renders when passing to nodes)
-  const openToolSelectorRef = useRef<(nodeId: string) => void>(() => {});
-  const showMoreToolsRef = useRef<(nodeId: string) => void>(() => {});
-  const removeToolRef = useRef<(nodeId: string, toolId: string) => void>(() => {});
-  const toolClickRef = useRef<(nodeId: string, instanceId: string) => void>(() => {});
+  const openToolSelectorRef = useRef<(nodeId: string) => void>(() => {
+    // noop
+  });
+  const showMoreToolsRef = useRef<(nodeId: string) => void>(() => {
+    // noop
+  });
+  const removeToolRef = useRef<(nodeId: string, toolId: string) => void>(() => {
+    // noop
+  });
+  const toolClickRef = useRef<(nodeId: string, instanceId: string) => void>(() => {
+    // noop
+  });
 
   // Track shift key state to prevent config panel opening during drag selection
   React.useEffect(() => {
@@ -459,7 +467,7 @@ export function FlowWorkbenchView({
   );
 
   // Tool panel handlers for Agent nodes
-  const setNodeSidebarOpen = useUIStore((s) => s.setNodeSidebarOpen);
+  const _setNodeSidebarOpen = useUIStore((s) => s.setNodeSidebarOpen);
 
   const handleOpenToolSelector = useCallback(
     (nodeId: string) => {
@@ -553,7 +561,7 @@ export function FlowWorkbenchView({
       const currentTools = getAddedToolsForNode(toolPanelNodeId);
       updateNodeData(toolPanelNodeId, {
         params: {
-          ...(((node.data as Record<string, unknown>)?.params as Record<string, unknown>) || {}),
+          ...((node.data as Record<string, unknown>)?.params as Record<string, unknown>),
           addedTools: [...currentTools, newInstance],
         },
       });
@@ -576,7 +584,7 @@ export function FlowWorkbenchView({
       const currentTools = getAddedToolsForNode(toolPanelNodeId);
       updateNodeData(toolPanelNodeId, {
         params: {
-          ...(((node.data as Record<string, unknown>)?.params as Record<string, unknown>) || {}),
+          ...((node.data as Record<string, unknown>)?.params as Record<string, unknown>),
           addedTools: currentTools.filter((t) => t.instanceId !== instanceId),
         },
       });
@@ -602,7 +610,7 @@ export function FlowWorkbenchView({
       const currentTools = getAddedToolsForNode(toolPanelNodeId);
       updateNodeData(toolPanelNodeId, {
         params: {
-          ...(((node.data as Record<string, unknown>)?.params as Record<string, unknown>) || {}),
+          ...((node.data as Record<string, unknown>)?.params as Record<string, unknown>),
           addedTools: currentTools.map((t) =>
             t.instanceId === instanceId ? { ...t, ...updates } : t,
           ),

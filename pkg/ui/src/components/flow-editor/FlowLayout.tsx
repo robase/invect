@@ -1,5 +1,5 @@
 import type React from 'react';
-import { PanelLeft, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 interface FlowLayoutProps {
   sidebar: React.ReactNode;

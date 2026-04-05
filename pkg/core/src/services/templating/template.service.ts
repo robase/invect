@@ -164,6 +164,7 @@ export class TemplateService {
   validate(template: string): TemplateValidationResult {
     const expressions: string[] = [];
     let match;
+    // oxlint-disable-next-line security/detect-non-literal-regexp -- creating global variant of existing pattern
     const pattern = new RegExp(EXPRESSION_BLOCK_PATTERN.source, 'g');
     while ((match = pattern.exec(template)) !== null) {
       expressions.push(match[1].trim());

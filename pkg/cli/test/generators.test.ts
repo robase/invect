@@ -171,7 +171,7 @@ describe('generateDrizzleSchema (single dialect)', () => {
 
 describe('generateAllDrizzleSchemas (single dialect)', () => {
   it('should generate a single invect.schema.ts file', async () => {
-    const { results, stats } = await generateAllDrizzleSchemas({
+    const { results } = await generateAllDrizzleSchemas({
       plugins: [],
       outputDir: tmpDir,
       dialect: 'sqlite',

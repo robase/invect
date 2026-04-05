@@ -212,7 +212,9 @@ export class DatabaseConnectionFactory {
       }
 
       const dir = path.dirname(filePath);
+      // oxlint-disable-next-line security/detect-non-literal-fs-filename -- database directory path derived from config
       if (!fs.existsSync(dir)) {
+        // oxlint-disable-next-line security/detect-non-literal-fs-filename -- database directory path derived from config
         fs.mkdirSync(dir, { recursive: true });
         logger.debug('Created SQLite database directory', { dir });
       }

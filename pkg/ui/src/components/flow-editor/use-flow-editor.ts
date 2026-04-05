@@ -1,13 +1,10 @@
-import { useEffect, useCallback, useMemo } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import type { Node, Edge } from '@xyflow/react';
-import { GraphNodeType } from '@invect/core/types';
 import { useFlowReactFlowData, useCreateFlowVersion } from '../../api/flows.api';
 import { useExecuteFlow } from '../../api/executions.api';
 import { useFlowEditorStore, type LayoutDirection } from './flow-editor.store';
-import { useNodeRegistry } from '~/contexts/NodeRegistryContext';
 import { transformToInvectDefinition } from '~/utils/flowTransformations';
-import { generateUniqueDisplayName, generateUniqueReferenceId } from '~/utils/nodeReferenceUtils';
 import { applyLayout, type LayoutAlgorithm } from '~/utils/layoutUtils';
 
 // Simple toast helper (can be replaced with proper toast library)
@@ -238,143 +235,5 @@ export function useFlowEditor({ flowId, version, basePath = '' }: UseFlowEditorO
 
     // Direct store access for advanced usage
     store,
-  };
-}
-
-/**
- * Hook for node CRUD operations in the flow editor.
- * Uses Zustand store for immediate local updates.
- */
-function useNodeOperations() {
-  const { getNodeDefinition } = useNodeRegistry();
-  const store = useFlowEditorStore();
-  const { nodes, addNode, removeNode, updateNodeData } = store;
-
-  const createNode = useCallback(
-    (type: GraphNodeType, position: { x: number; y: number } = { x: 250, y: 150 }): Node => {
-      const id = `${type}-${Date.now()}`;
-      const definition = getNodeDefinition(type);
-
-      const fieldDefaults = (definition?.paramFields || []).reduce<Record<string, unknown>>(
-        (acc, field) => {
-          if (field.defaultValue !== undefined) {
-            acc[field.name] = field.defaultValue;
-          }
-          return acc;
-        },
-        {},
-      );
-
-      const defaultParams = {
-        ...definition?.defaultParams,
-        ...fieldDefaults,
-      };
-
-      const baseDisplayName = definition?.label || type;
-      const displayName = generateUniqueDisplayName(baseDisplayName, nodes);
-      const referenceId = generateUniqueReferenceId(displayName, nodes);
-
-      // Create node with properly typed data conforming to ReactFlowNodeData
-      const newNode: Node = {
-        id,
-        type,
-        position,
-        data: {
-          id,
-          type,
-          display_name: displayName,
-          reference_id: referenceId,
-          status: 'idle',
-          params: defaultParams,
-        },
-      };
-
-      addNode(newNode);
-      return newNode;
-    },
-    [getNodeDefinition, nodes, addNode],
-  );
-
-  const duplicateNode = useCallback(
-    (nodeId: string) => {
-      const node = nodes.find((n) => n.id === nodeId);
-      if (!node) {
-        return null;
-      }
-
-      // Access node data - at runtime this will be ReactFlowNodeData
-      const nodeData = node.data as Record<string, unknown>;
-      const type = (nodeData.type ?? node.type) as GraphNodeType;
-
-      return createNode(type, {
-        x: node.position.x + 50,
-        y: node.position.y + 50,
-      });
-    },
-    [nodes, createNode],
-  );
-
-  return {
-    createNode,
-    duplicateNode,
-    removeNode,
-    updateNodeData,
-    nodes,
-  };
-}
-
-/**
- * Hook for edge operations in the flow editor.
- */
-function useEdgeOperations() {
-  const store = useFlowEditorStore();
-  const { edges, addEdge, removeEdge, onConnect } = store;
-
-  return {
-    edges,
-    addEdge,
-    removeEdge,
-    onConnect,
-  };
-}
-
-/**
- * Hook for selection state in the flow editor.
- */
-function useFlowSelection() {
-  const store = useFlowEditorStore();
-  const { selectedNodeId, configPanelOpen, selectNode, openConfigPanel, closeConfigPanel, nodes } =
-    store;
-
-  const selectedNode = useMemo(
-    () => (selectedNodeId ? (nodes.find((n) => n.id === selectedNodeId) ?? null) : null),
-    [selectedNodeId, nodes],
-  );
-
-  return {
-    selectedNodeId,
-    selectedNode,
-    configPanelOpen,
-    selectNode,
-    openConfigPanel,
-    closeConfigPanel,
-  };
-}
-
-/**
- * Combined hook that provides all flow editor functionality.
- * This is the main hook components should use.
- */
-function useFlowEditorFull(options: UseFlowEditorOptions) {
-  const editor = useFlowEditor(options);
-  const nodeOps = useNodeOperations();
-  const edgeOps = useEdgeOperations();
-  const selection = useFlowSelection();
-
-  return {
-    ...editor,
-    ...nodeOps,
-    ...edgeOps,
-    ...selection,
   };
 }

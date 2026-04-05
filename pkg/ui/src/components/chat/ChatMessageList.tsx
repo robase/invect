@@ -52,11 +52,11 @@ export function ChatMessageList({
   streamingText,
   error,
   hasConfiguredCredential,
-  hasAvailableLlmCredentials,
-  onOpenSettings,
+  hasAvailableLlmCredentials: _hasAvailableLlmCredentials,
+  onOpenSettings: _onOpenSettings,
   onSendMessage,
 }: ChatMessageListProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const _scrollRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll: only scroll to bottom if already near bottom (within 80px)
   const viewportRef = useRef<HTMLDivElement | null>(null);
@@ -450,6 +450,14 @@ function ToolCallBubble({ toolMeta }: { toolMeta: NonNullable<ChatMessage['toolM
   const hasResult = toolMeta.result !== null && toolMeta.result !== undefined;
   const isExpandable = !isPending && hasResult;
 
+  // oxlint-disable typescript/no-non-null-assertion -- guarded by isExpandable which requires hasResult
+  const expandableData = isExpandable
+    ? isError
+      ? { error: toolMeta.result!.error }
+      : (toolMeta.result!.data ?? toolMeta.result)
+    : undefined;
+  // oxlint-enable typescript/no-non-null-assertion
+
   const toolLabel = toolMeta.toolName.replace(/_/g, ' ');
 
   const durationLabel = useMemo(() => {
@@ -527,14 +535,7 @@ function ToolCallBubble({ toolMeta }: { toolMeta: NonNullable<ChatMessage['toolM
 
         <CollapsibleContent>
           <div className="mt-1 text-[10px]">
-            <ToolDataScrollable
-              data={
-                isError
-                  ? { error: toolMeta.result!.error }
-                  : (toolMeta.result!.data ?? toolMeta.result)
-              }
-              isError={isError}
-            />
+            <ToolDataScrollable data={expandableData} isError={isError} />
           </div>
         </CollapsibleContent>
       </Collapsible>

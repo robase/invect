@@ -82,6 +82,9 @@ export const OAUTH2_PROVIDERS: Record<string, OAuth2ProviderDefinition> = {
       // Calendar
       'https://www.googleapis.com/auth/calendar',
       'https://www.googleapis.com/auth/calendar.events',
+      // Analytics
+      'https://www.googleapis.com/auth/analytics.readonly',
+      'https://www.googleapis.com/auth/analytics',
     ],
     additionalAuthParams: {
       access_type: 'offline',
@@ -659,6 +662,41 @@ export const OAUTH2_PROVIDERS: Record<string, OAuth2ProviderDefinition> = {
     supportsRefresh: true,
     docsUrl: 'https://docs.sentry.io/api/auth/',
     category: 'development',
+  },
+
+  // LinkedIn
+  linkedin: {
+    id: 'linkedin',
+    name: 'LinkedIn',
+    description: 'Access LinkedIn for profiles, posts, and company pages',
+    icon: 'Linkedin',
+    authorizationUrl: 'https://www.linkedin.com/oauth/v2/authorization',
+    tokenUrl: 'https://www.linkedin.com/oauth/v2/accessToken',
+    defaultScopes: ['openid', 'profile', 'email', 'w_member_social'],
+    supportsRefresh: true,
+    docsUrl:
+      'https://learn.microsoft.com/en-us/linkedin/shared/authentication/authorization-code-flow',
+    category: 'marketing',
+  },
+
+  // Facebook
+  facebook: {
+    id: 'facebook',
+    name: 'Facebook',
+    description: 'Access Facebook pages, posts, and insights',
+    icon: 'Facebook',
+    authorizationUrl: 'https://www.facebook.com/v19.0/dialog/oauth',
+    tokenUrl: 'https://graph.facebook.com/v19.0/oauth/access_token',
+    defaultScopes: [
+      'public_profile',
+      'email',
+      'pages_show_list',
+      'pages_read_engagement',
+      'pages_manage_posts',
+    ],
+    supportsRefresh: false,
+    docsUrl: 'https://developers.facebook.com/docs/facebook-login/guides/access-tokens/',
+    category: 'marketing',
   },
 };
 

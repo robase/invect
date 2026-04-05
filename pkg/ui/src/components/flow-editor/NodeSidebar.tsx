@@ -4,7 +4,7 @@ import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { useNodeRegistry } from '../../contexts/NodeRegistryContext';
 import type { NodeDefinition } from '../../types/node-definition.types';
-import type { ToolDefinition, AddedToolInstance, ToolCategory } from '../nodes/ToolSelectorModal';
+import type { ToolDefinition, AddedToolInstance } from '../nodes/ToolSelectorModal';
 import { ProviderIcon } from '../shared/ProviderIcon';
 import { useFlowEditorStore } from './flow-editor.store';
 import { ActionsSidebar } from './ActionsSidebar';

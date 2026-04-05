@@ -23,7 +23,6 @@ export class FlowsService {
         'DatabaseService is required for FlowService operation. Please update your code to pass a DatabaseService instance.',
       );
     }
-    this.databaseService = databaseService;
   }
 
   /**

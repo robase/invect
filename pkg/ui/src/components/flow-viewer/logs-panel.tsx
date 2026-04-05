@@ -72,7 +72,7 @@ const formatTimestamp = (value?: string) => {
   }
   try {
     return new Date(value).toLocaleString();
-  } catch (error) {
+  } catch {
     return value;
   }
 };

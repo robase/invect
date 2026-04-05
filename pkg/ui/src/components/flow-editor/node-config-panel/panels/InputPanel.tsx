@@ -279,6 +279,7 @@ export function InputPanel({
                 <div className="flex-1 min-h-0">
                   <DataMapperPane
                     value={mapperValue}
+                    // oxlint-disable-next-line typescript/no-non-null-assertion -- only rendered when mapper is open
                     onChange={onMapperChange!}
                     availableVariables={mapperAvailableVariables}
                     onTestMapper={onTestMapper}

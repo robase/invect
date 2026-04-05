@@ -165,7 +165,7 @@ export class ChatStreamSession {
           }
         }
 
-        if (lastError || !response!) {
+        if (lastError || !response) {
           const msg =
             lastError instanceof Error ? lastError.message : String(lastError ?? 'unknown');
           logger.error('LLM call failed after retries:', { error: msg });
@@ -305,7 +305,7 @@ export class ChatStreamSession {
    * Generate contextual follow-up suggestions based on the tools that were called.
    * Returns 2-3 relevant suggestions as clickable chips.
    */
-  private generateSuggestions(context: ChatContext): Array<{ label: string; prompt: string }> {
+  private generateSuggestions(_context: ChatContext): Array<{ label: string; prompt: string }> {
     const tools = new Set(this.toolsCalled);
     const suggestions: Array<{ label: string; prompt: string }> = [];
 
@@ -414,6 +414,7 @@ export class ChatStreamSession {
 
     // Drop oldest messages until under budget, keeping at least the last 2
     while (totalTokens > TOKEN_BUDGET && truncated.length > 2) {
+      // oxlint-disable-next-line typescript/no-non-null-assertion -- array length checked in while condition
       const removed = truncated.shift()!;
       totalTokens -= estimateMessageTokens(removed);
     }

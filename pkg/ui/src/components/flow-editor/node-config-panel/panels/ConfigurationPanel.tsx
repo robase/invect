@@ -68,7 +68,7 @@ export function ConfigurationPanel({
   nodeType,
   modelStatusMessage,
   portalContainer,
-  upstreamVariables = [],
+  upstreamVariables: _upstreamVariables = [],
   inputData,
   headerLabel,
   onHeaderLabelChange,
@@ -127,7 +127,12 @@ export function ConfigurationPanel({
             )}
             <InlineEdit
               value={headerLabel}
-              onChange={onHeaderLabelChange ?? (() => {})}
+              onChange={
+                onHeaderLabelChange ??
+                (() => {
+                  // noop
+                })
+              }
               placeholder="Untitled Node"
               displayClassName="text-sm font-semibold truncate"
               inputClassName="text-sm font-semibold h-auto py-0.5 px-1"

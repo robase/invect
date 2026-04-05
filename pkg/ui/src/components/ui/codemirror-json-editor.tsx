@@ -289,6 +289,7 @@ const slotGutter = gutter({
       const line = view.state.doc.line(i);
       const key = findTopLevelKeyOnLine(line.text);
       if (key && slotsByKey.has(key)) {
+        // oxlint-disable-next-line typescript/no-non-null-assertion -- guarded by has() check above
         builder.add(line.from, line.from, new SlotGutterMarker(slotsByKey.get(key)!));
       }
     }

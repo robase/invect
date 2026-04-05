@@ -37,9 +37,7 @@ export abstract class BaseNodeExecutor<
   in out TNodeType extends GraphNodeType,
   TParamsSchema extends ZodType = typeof defaultParamsSchema,
 > {
-  constructor(readonly nodeType: TNodeType) {
-    this.nodeType = nodeType;
-  }
+  constructor(readonly nodeType: TNodeType) {}
 
   /**
    * Zod schema for validating node parameters.

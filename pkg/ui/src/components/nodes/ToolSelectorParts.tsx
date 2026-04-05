@@ -26,7 +26,6 @@ import { ProviderIcon } from '../shared/ProviderIcon';
 import { useNodeRegistry } from '../../contexts/NodeRegistryContext';
 import { ToolParamField, type AddCredentialRequest } from './ToolParamField';
 import type { ToolDefinition, ToolCategory, AddedToolInstance } from './ToolSelectorModal';
-import type { NodeParamField } from '../../types/node-definition.types';
 
 // ── Category config ────────────────────────────────────────────────────
 
@@ -202,7 +201,7 @@ export const ToolDetailsPanel = memo(function ToolDetailsPanel({
   onUpdate,
   onRemove,
   onAddCredential,
-  portalContainer,
+  portalContainer: _portalContainer,
 }: {
   tool: ToolDefinition | null;
   instance: AddedToolInstance | null;

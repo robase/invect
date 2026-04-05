@@ -179,6 +179,7 @@ export async function generateAction(options: {
     debug('Config loaded', {
       hasPlugins: !!config.plugins,
       pluginCount: config.plugins?.length ?? 0,
+      // oxlint-disable-next-line typescript/no-explicit-any -- plugin type from config loader is loose
       pluginIds: config.plugins?.map((p: any) => p.id),
     });
   } catch (error) {
@@ -450,6 +451,7 @@ async function runAppendMode(
       continue;
     }
 
+    // oxlint-disable-next-line security/detect-unsafe-regex -- runs on generated import strings, not user input
     const newSpecifiersMatch = imp.match(/import\s+(?:type\s+)?\{([^}]*)\}\s*from/);
     if (!newSpecifiersMatch) {
       continue;
@@ -772,6 +774,7 @@ async function printSummary(
 
       for (const t of newTables) {
         const fields = Object.keys(
+          // oxlint-disable-next-line typescript/no-explicit-any -- plugin schema type is abstract Record
           ((plugin.schema![t] as any)?.fields || {}) as Record<string, unknown>,
         );
         console.log(
@@ -782,6 +785,7 @@ async function printSummary(
 
       for (const t of extendedTables) {
         const fields = Object.keys(
+          // oxlint-disable-next-line typescript/no-explicit-any -- plugin schema type is abstract Record
           ((plugin.schema![t] as any)?.fields || {}) as Record<string, unknown>,
         );
         console.log(
@@ -977,7 +981,7 @@ async function runDrizzleKitGenerate(): Promise<void> {
   }
 }
 
-async function runDrizzleKitPush(): Promise<void> {
+async function _runDrizzleKitPush(): Promise<void> {
   console.log(pc.dim('\n  Running drizzle-kit push...\n'));
 
   try {

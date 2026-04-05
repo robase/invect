@@ -32,9 +32,6 @@ export class DatabaseError extends InvectError {
   ) {
     super(message);
     this.name = 'DatabaseError';
-    if (details) {
-      this.details = details;
-    }
   }
 }
 

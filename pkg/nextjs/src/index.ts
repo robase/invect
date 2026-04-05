@@ -859,6 +859,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
           const pattern = ep.path
             .replace(/\*/g, '(.*)') // wildcard * → match any path segments
             .replace(/:([^/]+)/g, '([^/]+)'); // :param → match single segment
+          // oxlint-disable-next-line security/detect-non-literal-regexp -- pattern built from registered plugin endpoint paths
           return new RegExp(`^${pattern}$`).test(pluginPath);
         });
 
@@ -877,6 +878,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
             paramNames.push(name);
             return '([^/]+)';
           });
+        // oxlint-disable-next-line security/detect-non-literal-regexp -- pattern built from registered plugin endpoint paths
         const paramMatch = new RegExp(`^${paramPattern}$`).exec(pluginPath);
         const pluginParams: Record<string, string> = {};
         if (paramMatch) {

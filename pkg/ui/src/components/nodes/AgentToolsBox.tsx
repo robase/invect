@@ -1,16 +1,7 @@
 'use client';
 
 import { memo } from 'react';
-import {
-  Plus,
-  Database,
-  Globe,
-  Code2,
-  Wrench,
-  Sparkles,
-  MoreHorizontal,
-  Settings,
-} from 'lucide-react';
+import { Plus, Settings } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { ProviderIcon } from '../shared/ProviderIcon';
 import type { AddedToolInstance, ToolDefinition } from './ToolSelectorModal';
@@ -61,7 +52,7 @@ const ToolTile = memo(function ToolTile({
   toolDef,
   isSelected,
   onToolClick,
-  onRemoveTool,
+  onRemoveTool: _onRemoveTool,
 }: {
   tool: AddedToolInstance;
   toolDef: ToolDefinition | undefined;

@@ -31,6 +31,7 @@ export async function generateRawSql(options: {
     generateMysqlRawSql,
   } = await import('@invect/core');
 
+  // oxlint-disable-next-line typescript/no-explicit-any -- plugins type from dynamic import doesn't match exactly
   const mergedSchema = mergeSchemas(options.plugins as any);
   const coreTableCount = Object.keys(CORE_SCHEMA).length;
 

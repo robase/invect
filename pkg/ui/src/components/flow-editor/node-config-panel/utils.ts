@@ -10,7 +10,7 @@ export const getIconComponent = (iconName?: string) => {
 
 export const formatNodeTypeLabel = (value: string) => {
   // For action-based types like "gmail.list_messages", show just the action part
-  const actionPart = value.includes('.') ? value.split('.').pop()! : value;
+  const actionPart = value.includes('.') ? (value.split('.').pop() ?? value) : value;
   return actionPart.toLowerCase().replace(/_/g, ' ');
 };
 

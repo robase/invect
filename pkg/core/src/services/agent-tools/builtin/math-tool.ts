@@ -86,12 +86,14 @@ function evaluateMathExpression(
   // Replace constants
   let processedExpr = expression;
   for (const [name, value] of Object.entries(mathConstants)) {
+    // oxlint-disable-next-line security/detect-non-literal-regexp -- name comes from validated mathConstants keys
     const regex = new RegExp(`\\b${name}\\b`, 'g');
     processedExpr = processedExpr.replace(regex, String(value));
   }
 
   // Replace variables
   for (const [name, value] of Object.entries(variables)) {
+    // oxlint-disable-next-line security/detect-non-literal-regexp -- name comes from validated variables keys
     const regex = new RegExp(`\\b${name}\\b`, 'g');
     processedExpr = processedExpr.replace(regex, String(value));
   }
@@ -100,10 +102,12 @@ function evaluateMathExpression(
   processedExpr = processedExpr.replace(/\^/g, '**');
 
   // Replace % with * 0.01 for percentage
+  // oxlint-disable-next-line security/detect-unsafe-regex -- standard number literal pattern, no backtracking risk
   processedExpr = processedExpr.replace(/(\d+(?:\.\d+)?)\s*%/g, '($1 * 0.01)');
 
   // Replace function calls with Math. prefix
   for (const funcName of Object.keys(mathFunctions)) {
+    // oxlint-disable-next-line security/detect-non-literal-regexp -- funcName comes from mathFunctions allowlist
     const regex = new RegExp(`\\b${funcName}\\s*\\(`, 'g');
     processedExpr = processedExpr.replace(regex, `Math.${funcName}(`);
   }

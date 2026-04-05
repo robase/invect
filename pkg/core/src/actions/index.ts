@@ -43,6 +43,7 @@ export {
   MICROSOFT_PROVIDER,
   MICROSOFT_TEAMS_PROVIDER,
   SENTRY_PROVIDER,
+  GRAFANA_PROVIDER,
 } from './providers';
 
 // Registry
@@ -78,6 +79,7 @@ export { triggerActions } from './triggers';
 export { microsoftActions } from './microsoft';
 export { sentryActions } from './sentry';
 export { microsoftTeamsActions } from './microsoft-teams';
+export { grafanaActions } from './grafana';
 
 // ── Convenience: all built-in actions ───────────────────────────────────
 
@@ -97,6 +99,7 @@ import { triggerActions } from './triggers';
 import { microsoftActions } from './microsoft';
 import { microsoftTeamsActions } from './microsoft-teams';
 import { sentryActions } from './sentry';
+import { grafanaActions } from './grafana';
 
 /** Every built-in action across all providers. */
 export const allBuiltinActions: ActionDefinition[] = [
@@ -115,6 +118,7 @@ export const allBuiltinActions: ActionDefinition[] = [
   ...microsoftActions,
   ...microsoftTeamsActions,
   ...sentryActions,
+  ...grafanaActions,
 ];
 
 // ── Registration helper ─────────────────────────────────────────────────

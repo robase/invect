@@ -1,3 +1,4 @@
+// oxlint-disable typescript/no-explicit-any -- @mrleebo/prisma-ast has no type definitions
 /**
  * Prisma Schema Generator (CLI wrapper)
  *

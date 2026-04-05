@@ -222,3 +222,133 @@ export const ONEDRIVE_PROVIDER: ProviderDef = {
   description: 'Microsoft OneDrive file storage and management via Graph API',
   docsUrl: 'https://learn.microsoft.com/en-us/onedrive/developer/rest-api/',
 };
+
+export const STRIPE_PROVIDER: ProviderDef = {
+  id: 'stripe',
+  name: 'Stripe',
+  icon: 'CreditCard',
+  category: 'custom',
+  nodeCategory: 'Integrations',
+  description: 'Stripe payment processing — customers, charges, and subscriptions',
+  docsUrl: 'https://stripe.com/docs/api',
+};
+
+export const TWITTER_PROVIDER: ProviderDef = {
+  id: 'twitter',
+  name: 'Twitter / X',
+  icon: 'Twitter',
+  category: 'custom',
+  nodeCategory: 'Integrations',
+  description: 'Twitter/X — tweets, users, and timelines',
+  docsUrl: 'https://developer.twitter.com/en/docs/twitter-api',
+};
+
+export const GRAFANA_PROVIDER: ProviderDef = {
+  id: 'grafana',
+  name: 'Grafana',
+  icon: 'BarChart3',
+  category: 'development',
+  nodeCategory: 'Integrations',
+  description: 'Grafana observability — dashboards, datasources, alerts, and annotations',
+  docsUrl: 'https://grafana.com/docs/grafana/latest/developers/http_api/',
+};
+
+export const LINKEDIN_PROVIDER: ProviderDef = {
+  id: 'linkedin',
+  name: 'LinkedIn',
+  icon: 'Linkedin',
+  category: 'custom',
+  nodeCategory: 'Integrations',
+  description: 'LinkedIn — profiles, posts, and company pages',
+  docsUrl: 'https://learn.microsoft.com/en-us/linkedin/marketing/',
+};
+
+export const FACEBOOK_PROVIDER: ProviderDef = {
+  id: 'facebook',
+  name: 'Facebook',
+  icon: 'Facebook',
+  category: 'custom',
+  nodeCategory: 'Integrations',
+  description: 'Facebook pages, posts, and insights via Graph API',
+  docsUrl: 'https://developers.facebook.com/docs/graph-api/',
+};
+
+export const SHOPIFY_PROVIDER: ProviderDef = {
+  id: 'shopify',
+  name: 'Shopify',
+  icon: 'ShoppingBag',
+  category: 'custom',
+  nodeCategory: 'Integrations',
+  description: 'Shopify e-commerce — products, orders, and customers',
+  docsUrl: 'https://shopify.dev/docs/api/admin-rest',
+};
+
+export const WOOCOMMERCE_PROVIDER: ProviderDef = {
+  id: 'woocommerce',
+  name: 'WooCommerce',
+  icon: 'ShoppingCart',
+  category: 'custom',
+  nodeCategory: 'Integrations',
+  description: 'WooCommerce e-commerce — products, orders, and customers',
+  docsUrl: 'https://woocommerce.github.io/woocommerce-rest-api-docs/',
+};
+
+export const ZENDESK_PROVIDER: ProviderDef = {
+  id: 'zendesk',
+  name: 'Zendesk',
+  icon: 'Headphones',
+  category: 'custom',
+  nodeCategory: 'Integrations',
+  description: 'Zendesk customer support — tickets, users, and organizations',
+  docsUrl: 'https://developer.zendesk.com/api-reference/',
+};
+
+export const INTERCOM_PROVIDER: ProviderDef = {
+  id: 'intercom',
+  name: 'Intercom',
+  icon: 'MessageCircle',
+  category: 'custom',
+  nodeCategory: 'Integrations',
+  description: 'Intercom customer messaging — contacts, conversations, and articles',
+  docsUrl: 'https://developers.intercom.com/docs/references/rest-api/api.intercom.io/',
+};
+
+export const FRESHDESK_PROVIDER: ProviderDef = {
+  id: 'freshdesk',
+  name: 'Freshdesk',
+  icon: 'Headphones',
+  category: 'custom',
+  nodeCategory: 'Integrations',
+  description: 'Freshdesk customer support — tickets, contacts, and agents',
+  docsUrl: 'https://developers.freshdesk.com/api/',
+};
+
+export const SEGMENT_PROVIDER: ProviderDef = {
+  id: 'segment',
+  name: 'Segment',
+  icon: 'BarChart',
+  category: 'custom',
+  nodeCategory: 'Integrations',
+  description: 'Segment analytics — track events, identify users, and manage data',
+  docsUrl: 'https://segment.com/docs/connections/sources/catalog/libraries/server/http-api/',
+};
+
+export const MIXPANEL_PROVIDER: ProviderDef = {
+  id: 'mixpanel',
+  name: 'Mixpanel',
+  icon: 'BarChart2',
+  category: 'custom',
+  nodeCategory: 'Integrations',
+  description: 'Mixpanel product analytics — track events and query data',
+  docsUrl: 'https://developer.mixpanel.com/reference/overview',
+};
+
+export const GOOGLE_ANALYTICS_PROVIDER: ProviderDef = {
+  id: 'google_analytics',
+  name: 'Google Analytics',
+  icon: 'BarChart',
+  category: 'custom',
+  nodeCategory: 'Integrations',
+  description: 'Google Analytics 4 — run reports, query metrics, and manage properties',
+  docsUrl: 'https://developers.google.com/analytics/devguides/reporting/data/v1',
+};

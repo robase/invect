@@ -17,7 +17,7 @@ import { useExecuteFlowToNode, useTestNode } from '../../../api/executions.api';
 import { useTestMapper } from '../../../api/node-data.api';
 import { CreateCredentialModal } from '../../credentials/CreateCredentialModal';
 
-import { formatNodeTypeLabel, getIconComponent, stringifyJson } from './utils';
+import { formatNodeTypeLabel, getIconComponent } from './utils';
 import { useNodeConfigState } from './use-node-config-state';
 import { updateReferenceIdForDisplayName } from '../../../utils/nodeReferenceUtils';
 import { useFlowActions } from '../../../routes/flow-route-layout';

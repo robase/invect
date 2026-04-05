@@ -1,9 +1,8 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Edit,
   Trash2,
   CheckCircle2,
-  Clock,
   AlertTriangle,
   Database,
   Globe,
@@ -18,7 +17,6 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { ProviderIcon } from '../shared/ProviderIcon';
 import { getCredentialBranding, getCredentialProviderLabel } from '../../utils/credentialBranding';
 
@@ -717,9 +715,9 @@ function OAuth2AwareTestSection({
 
 function OAuth2ConnectSection({
   credential,
-  onTest,
-  testingId,
-  testResult,
+  onTest: _onTest,
+  testingId: _testingId,
+  testResult: _testResult,
 }: {
   credential: Credential;
   onTest: (id: string) => void;

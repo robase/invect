@@ -135,7 +135,7 @@ export const ToolSelectorModal = memo(function ToolSelectorModal({
   onRemoveTool,
   onUpdateTool,
   portalContainer,
-  initialShowSelected = false,
+  initialShowSelected: _initialShowSelected = false,
   initialSelectedInstanceId = null,
 }: ToolSelectorModalProps) {
   const queryClient = useQueryClient();
@@ -196,7 +196,7 @@ export const ToolSelectorModal = memo(function ToolSelectorModal({
         if (!t.tags) {
           return false;
         }
-        return selectedTags.every((tag) => t.tags!.includes(tag));
+        return selectedTags.every((tag) => t.tags?.includes(tag) ?? false);
       });
     }
 

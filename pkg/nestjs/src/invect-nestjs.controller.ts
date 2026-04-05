@@ -1041,6 +1041,7 @@ export class InvectController {
         return false;
       }
       const pattern = ep.path.replace(/:([^/]+)/g, '([^/]+)');
+      // oxlint-disable-next-line security/detect-non-literal-regexp -- pattern built from registered plugin endpoint paths
       return new RegExp(`^${pattern}$`).test(pluginPath);
     });
 
@@ -1057,6 +1058,7 @@ export class InvectController {
       paramNames.push(name);
       return '([^/]+)';
     });
+    // oxlint-disable-next-line security/detect-non-literal-regexp -- pattern built from registered plugin endpoint paths
     const paramMatch = new RegExp(`^${paramPattern}$`).exec(pluginPath);
     const params: Record<string, string> = {};
     if (paramMatch) {

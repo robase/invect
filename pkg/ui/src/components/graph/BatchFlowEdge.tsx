@@ -6,7 +6,6 @@ import {
   BaseEdge,
   MarkerType,
 } from '@xyflow/react';
-import type { Edge } from '@xyflow/react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { X, Zap, AlertTriangle, SkipForward } from 'lucide-react';
@@ -206,42 +205,12 @@ export const BatchFlowEdge = memo(function BatchFlowEdge(props: EdgeProps) {
 BatchFlowEdge.displayName = 'BatchFlowEdge';
 
 // Predefined edge types matching Invect's patterns
-const edgeTypes = {
+const _edgeTypes = {
   // invect: BatchFlowEdge,
   default: BatchFlowEdge,
 };
 
 // Edge creation utilities
-const createBatchFlowEdge = (
-  id: string,
-  source: string,
-  target: string,
-  sourceHandle?: string,
-  targetHandle?: string,
-  data?: Partial<BatchFlowEdgeData>,
-): Edge<BatchFlowEdgeData> => ({
-  id,
-  source,
-  target,
-  sourceHandle,
-  targetHandle,
-  type: 'default',
-  animated: data?.animated || false,
-  data: {
-    type: 'default',
-    animated: false,
-    highlighted: false,
-    selected: false,
-    ...data,
-  },
-  style: getEdgeStyles(data as BatchFlowEdgeData),
-  markerEnd: {
-    type: MarkerType.ArrowClosed, // Changed from string to enum
-    width: 16,
-    height: 16,
-    color: getEdgeStyles(data as BatchFlowEdgeData).stroke,
-  },
-});
 
 // Default edge styles for different connection types
 export const defaultEdgeOptions = {

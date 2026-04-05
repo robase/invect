@@ -1,4 +1,4 @@
-import { NODE_COMPONENTS, getNodeComponent } from './nodeRegistry';
+import { NODE_COMPONENTS } from './nodeRegistry';
 import { withNodeContext } from './withNodeContext';
 
 /**
@@ -16,21 +16,4 @@ export function createContextAwareNodes(): Record<string, React.ComponentType<an
     // eslint-disable-next-line typescript/no-explicit-any -- React node components require generic any props
     {} as Record<string, React.ComponentType<any>>,
   );
-}
-
-/**
- * Build a context-aware node type mapping that includes both static types
- * and dynamically registered action-based types.
- */
-function createContextAwareNodesFromDefinitions(
-  nodeTypes: string[],
-  // eslint-disable-next-line typescript/no-explicit-any -- React node components require generic any props
-): Record<string, React.ComponentType<any>> {
-  const base = createContextAwareNodes();
-  for (const type of nodeTypes) {
-    if (!(type in base)) {
-      base[type] = withNodeContext(getNodeComponent(type));
-    }
-  }
-  return base;
 }
