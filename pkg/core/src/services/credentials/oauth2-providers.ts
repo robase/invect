@@ -679,6 +679,20 @@ export const OAUTH2_PROVIDERS: Record<string, OAuth2ProviderDefinition> = {
     category: 'marketing',
   },
 
+  // GitLab
+  gitlab: {
+    id: 'gitlab',
+    name: 'GitLab',
+    description: 'Access GitLab repositories, issues, and merge requests',
+    icon: 'GitBranch',
+    authorizationUrl: 'https://gitlab.com/oauth/authorize',
+    tokenUrl: 'https://gitlab.com/oauth/token',
+    defaultScopes: ['api', 'read_user', 'read_repository', 'write_repository'],
+    supportsRefresh: true,
+    docsUrl: 'https://docs.gitlab.com/ee/api/oauth2.html',
+    category: 'development',
+  },
+
   // Facebook
   facebook: {
     id: 'facebook',

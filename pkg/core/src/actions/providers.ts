@@ -352,3 +352,13 @@ export const GOOGLE_ANALYTICS_PROVIDER: ProviderDef = {
   description: 'Google Analytics 4 — run reports, query metrics, and manage properties',
   docsUrl: 'https://developers.google.com/analytics/devguides/reporting/data/v1',
 };
+
+export const GITLAB_PROVIDER: ProviderDef = {
+  id: 'gitlab',
+  name: 'GitLab',
+  icon: 'GitBranch',
+  category: 'development',
+  nodeCategory: 'Integrations',
+  description: 'GitLab repositories, issues, and merge requests',
+  docsUrl: 'https://docs.gitlab.com/ee/api/rest/',
+};
