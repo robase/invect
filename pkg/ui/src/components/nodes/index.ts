@@ -38,7 +38,7 @@ export interface BaseNodeData {
   icon?: string;
   status?: string;
   executionStatus?: NodeExecutionStatus;
-  executionOutput?: any;
+  executionOutput?: unknown;
   executionError?: string;
 }
 

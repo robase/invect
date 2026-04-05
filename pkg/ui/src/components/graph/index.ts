@@ -31,7 +31,7 @@ export interface BatchFlowNodeData extends Record<string, unknown> {
     display_name: string;
     type: string; // Data type
     required?: boolean;
-    value?: any;
+    value?: unknown;
   }>;
   template?: Record<
     string,
@@ -41,8 +41,8 @@ export interface BatchFlowNodeData extends Record<string, unknown> {
       type: string; // Parameter type, e.g., "str", "int", "bool", "code"
       required?: boolean;
       show?: boolean; // Whether to show in the UI by default
-      value?: any;
-      options?: any[]; // For dropdowns
+      value?: unknown;
+      options?: unknown[]; // For dropdowns
       list?: boolean; // If it's a list input
       multiline?: boolean; // For text areas
       placeholder?: string;
@@ -54,8 +54,8 @@ export interface BatchFlowNodeData extends Record<string, unknown> {
   connectedTemplateFields?: Set<string>; // Set of template field names that are connected
   executionStatus?: NodeExecutionStatus; // Execution status from backend
   executionError?: string; // Execution error message
-  executionOutput?: any; // Output data from completed node execution
+  executionOutput?: unknown; // Output data from completed node execution
   // selected?: boolean; // Provided by NodeProps
   // showNode?: boolean; // Invect specific, might map to a local state like isExpanded
-  flow?: any; // Flow context if needed
+  flow?: unknown; // Flow context if needed
 }

@@ -13,6 +13,7 @@ const AGENT_TYPE = GraphNodeType.AGENT;
  * Provider-action nodes (e.g. "gmail.list_messages") are resolved
  * dynamically at runtime — see `getNodeComponent()`.
  */
+// eslint-disable-next-line typescript/no-explicit-any -- React node components require generic any props
 const BASE_COMPONENTS: Record<string, React.ComponentType<any>> = {
   [GraphNodeType.TEMPLATE_STRING]: UniversalNode,
   [GraphNodeType.MODEL]: UniversalNode,
@@ -38,6 +39,7 @@ export const NODE_COMPONENTS = BASE_COMPONENTS;
  * Returns the custom component for known special types (e.g. AGENT),
  * or UniversalNode as the default for everything else.
  */
+// eslint-disable-next-line typescript/no-explicit-any -- React node components require generic any props
 export function getNodeComponent(nodeType: string): React.ComponentType<any> {
   if (nodeType === AGENT_TYPE) {
     return AgentNode;

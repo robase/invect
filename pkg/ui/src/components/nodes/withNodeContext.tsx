@@ -23,8 +23,8 @@ function mapToIndicatorStatus(uiStatus: string | undefined): NodeStatusIndicator
 
 export function withNodeContext<
   P extends {
-    data?: any;
-    onEdit?: any;
+    data?: Record<string, unknown>;
+    onEdit?: (...args: unknown[]) => void;
     isStatusView?: boolean;
     id: string;
   },

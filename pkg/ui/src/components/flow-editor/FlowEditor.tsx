@@ -836,6 +836,7 @@ export function FlowWorkbenchView({
   const { nodeDefinitions } = useNodeRegistry();
   const nodeTypes: NodeTypes = useMemo(() => {
     // @ts-ignore React 19 vs 18 type mismatch in @xyflow/react
+    // eslint-disable-next-line typescript/no-explicit-any -- React node components require generic any props
     const mapping: Record<string, React.ComponentType<any>> = {
       // Ensure all GraphNodeType enum values are always present
       [GraphNodeType.TEMPLATE_STRING]: UniversalNode,

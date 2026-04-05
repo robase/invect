@@ -202,3 +202,23 @@ export const TRELLO_PROVIDER: ProviderDef = {
   description: 'Trello boards, lists, and cards',
   docsUrl: 'https://developer.atlassian.com/cloud/trello/rest/',
 };
+
+export const DROPBOX_PROVIDER: ProviderDef = {
+  id: 'dropbox',
+  name: 'Dropbox',
+  icon: 'Cloud',
+  category: 'storage',
+  nodeCategory: 'Integrations',
+  description: 'Dropbox file storage and sharing',
+  docsUrl: 'https://www.dropbox.com/developers/documentation/http/documentation',
+};
+
+export const ONEDRIVE_PROVIDER: ProviderDef = {
+  id: 'onedrive',
+  name: 'OneDrive',
+  icon: 'HardDrive',
+  category: 'storage',
+  nodeCategory: 'Integrations',
+  description: 'Microsoft OneDrive file storage and management via Graph API',
+  docsUrl: 'https://learn.microsoft.com/en-us/onedrive/developer/rest-api/',
+};
