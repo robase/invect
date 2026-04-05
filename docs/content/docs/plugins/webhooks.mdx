@@ -23,7 +23,6 @@ app.use('/invect', createInvectRouter({
   database: {
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL || 'file:./dev.db',
-    id: 'main',
   },
   plugins: [
     webhooksPlugin({
@@ -39,7 +38,6 @@ InvectModule.forRoot({
   database: {
     type: 'postgresql',
     connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/invect',
-    id: 'main',
   },
   plugins: [webhooksPlugin({ webhookBaseUrl: process.env.INVECT_URL })],
 })
@@ -51,7 +49,6 @@ createInvectHandler({
   database: {
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL || 'file:./dev.db',
-    id: 'main',
   },
   plugins: [webhooksPlugin({ webhookBaseUrl: process.env.INVECT_URL })],
 })

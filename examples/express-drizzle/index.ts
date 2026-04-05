@@ -34,7 +34,6 @@ app.use(express.json());
 // Mount Invect routes under /invect (or a path of your choice)
 const invectRouter = await createInvectRouter({
   database: {
-    id: 'my-db-name',
     type: 'sqlite', // Example, adjust based on your setup
     connectionString: sqliteConnectionString,
   },
@@ -52,7 +51,8 @@ const invectRouter = await createInvectRouter({
       ? [
           {
             name: 'Anthropic API Key',
-            type: 'llm',
+            type: 'llm' as const,
+            provider: 'anthropic',
             authType: 'apiKey',
             config: { apiKey: process.env.SEED_ANTHROPIC_API_KEY },
             description: 'Anthropic Claude API credential for AI model nodes',
@@ -65,7 +65,8 @@ const invectRouter = await createInvectRouter({
       ? [
           {
             name: 'Linear OAuth2',
-            type: 'http-api',
+            type: 'http-api' as const,
+            provider: 'linear',
             authType: 'oauth2',
             config: {
               clientId: process.env.SEED_LINEAR_CLIENT_ID,

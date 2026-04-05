@@ -35,7 +35,6 @@ interface ResolvedConfig {
   database?: {
     connectionString: string;
     type: 'postgresql' | 'sqlite' | 'mysql';
-    id: string;
     name?: string;
   };
   /** Raw config object */

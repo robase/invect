@@ -187,7 +187,6 @@ export class DatabaseService {
       this.logger.debug('Executing query on external database', {
         query,
         dbType: queryDBConfig.type,
-        dbId: queryDBConfig.id,
       });
 
       // Create or get existing query database connection
@@ -202,7 +201,6 @@ export class DatabaseService {
       this.logger.debug('Query executed successfully', {
         rowCount: Array.isArray(result) ? result.length : 'unknown',
         dbType: queryDBConfig.type,
-        dbId: queryDBConfig.id,
       });
 
       return result;
@@ -211,12 +209,11 @@ export class DatabaseService {
         error: error instanceof Error ? error.message : error,
         query,
         dbType: queryDBConfig.type,
-        dbId: queryDBConfig.id,
         stack: error instanceof Error ? error.stack : undefined,
       });
 
       throw new DatabaseError(
-        `Query execution failed on ${queryDBConfig.type} database (${queryDBConfig.id}): ${
+        `Query execution failed on ${queryDBConfig.type} database: ${
           error instanceof Error ? error.message : error
         }`,
         {

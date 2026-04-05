@@ -3,7 +3,6 @@ import { z } from 'zod/v4';
 const databaseConfigSchema = z.object({
   connectionString: z.string().min(1, 'Database URL is required'),
   type: z.enum(['postgresql', 'sqlite', 'mysql']),
-  id: z.string(), // Optional ID for the database, useful for multi-database setups
   name: z.string().optional(), // Human readable name for the database
   /**
    * Underlying driver package to use for database connections.
@@ -192,15 +191,40 @@ export const InvectConfigSchema = z.object({
    */
   defaultCredentials: z
     .array(
-      z.object({
-        name: z.string(),
-        type: z.string(),
-        authType: z.string(),
-        config: z.record(z.string(), z.unknown()),
-        description: z.string().optional(),
-        isShared: z.boolean().optional(),
-        metadata: z.record(z.string(), z.unknown()).optional(),
-      }),
+      z.discriminatedUnion('type', [
+        // LLM credentials require a provider
+        z.object({
+          name: z.string(),
+          type: z.literal('llm'),
+          provider: z.string(),
+          authType: z.string(),
+          config: z.record(z.string(), z.unknown()),
+          description: z.string().optional(),
+          isShared: z.boolean().optional(),
+          metadata: z.record(z.string(), z.unknown()).optional(),
+        }),
+        // Non-LLM credentials have an optional provider
+        z.object({
+          name: z.string(),
+          type: z.literal('http-api'),
+          provider: z.string().optional(),
+          authType: z.string(),
+          config: z.record(z.string(), z.unknown()),
+          description: z.string().optional(),
+          isShared: z.boolean().optional(),
+          metadata: z.record(z.string(), z.unknown()).optional(),
+        }),
+        z.object({
+          name: z.string(),
+          type: z.literal('database'),
+          provider: z.string().optional(),
+          authType: z.string(),
+          config: z.record(z.string(), z.unknown()),
+          description: z.string().optional(),
+          isShared: z.boolean().optional(),
+          metadata: z.record(z.string(), z.unknown()).optional(),
+        }),
+      ]),
     )
     .optional(),
 });
@@ -225,7 +249,6 @@ export type InvectConfig = z.infer<typeof InvectConfigSchema>;
  *
  * export default defineConfig({
  *   database: {
- *     id: 'main',
  *     type: 'sqlite',
  *     connectionString: 'file:./dev.db',
  *   },

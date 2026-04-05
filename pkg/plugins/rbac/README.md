@@ -30,7 +30,7 @@ import { userAuth } from '@invect/user-auth';
 import { rbacPlugin } from '@invect/rbac';
 
 app.use('/invect', createInvectRouter({
-  database: { type: 'sqlite', connectionString: 'file:./dev.db', id: 'main' },
+  database: { type: 'sqlite', connectionString: 'file:./dev.db' },
   plugins: [
     userAuth({ auth }),   // Must come first
     rbacPlugin(),

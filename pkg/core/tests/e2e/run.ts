@@ -42,7 +42,6 @@ async function runExamples(): Promise<void> {
     database: {
       type: "sqlite",
       connectionString: `file:${sqlitePath}`,
-      id: "default",
     },
     logging: {
       level: "warn", // Use "debug" for verbose output

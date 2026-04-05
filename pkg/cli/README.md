@@ -74,7 +74,6 @@ export default defineConfig({
   database: {
     type: 'sqlite',
     connectionString: 'file:./dev.db',
-    id: 'main',
   },
   plugins: [
     // Your plugins here — their schemas are merged automatically

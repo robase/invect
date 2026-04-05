@@ -62,7 +62,6 @@ app.use('/invect', createInvectRouter({
   database: {
     type: 'sqlite',
     connectionString: 'file:./dev.db',
-    id: 'main',
   },
   plugins: [myPlugin],
 }));
@@ -79,7 +78,6 @@ import { myPlugin } from './my-plugin';
       database: {
         type: 'postgresql',
         connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/invect',
-        id: 'main',
       },
       plugins: [myPlugin],
     }),
@@ -97,7 +95,6 @@ const handler = createInvectHandler({
   database: {
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL || 'file:./dev.db',
-    id: 'main',
   },
   plugins: [myPlugin],
 });

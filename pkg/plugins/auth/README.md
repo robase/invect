@@ -36,7 +36,7 @@ const auth = betterAuth({
 });
 
 app.use('/invect', createInvectRouter({
-  database: { type: 'sqlite', connectionString: 'file:./dev.db', id: 'main' },
+  database: { type: 'sqlite', connectionString: 'file:./dev.db' },
   plugins: [
     userAuth({
       auth,

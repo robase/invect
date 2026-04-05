@@ -46,7 +46,6 @@ sqlite.close();
   imports: [
     InvectModule.forRoot({
       database: {
-        id: `test-nestjs-${process.pid}`,
         type: "sqlite",
         connectionString: `file:${dbPath}`,
       },

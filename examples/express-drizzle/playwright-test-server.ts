@@ -82,7 +82,6 @@ app.use(
   '/invect',
   await createInvectRouter({
     database: {
-      id: `test-${process.pid}`,
       type: 'sqlite',
       connectionString: `file:${dbPath}`,
     },

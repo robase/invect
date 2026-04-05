@@ -14,7 +14,6 @@ const webhookBaseUrl = process.env.INVECT_WEBHOOK_BASE_URL || 'http://localhost:
 
 export const invectConfig = defineConfig({
   database: {
-    id: 'main',
     type: 'sqlite',
     connectionString: process.env.DB_FILE_NAME || 'file:./dev.db',
   },
@@ -26,25 +25,26 @@ export const invectConfig = defineConfig({
       ? [
           {
             name: 'Anthropic API Key',
-            type: 'llm',
+            type: 'llm' as const,
+            provider: 'anthropic',
             authType: 'apiKey',
             config: { apiKey: process.env.SEED_ANTHROPIC_API_KEY },
             description: 'Anthropic Claude API credential for AI model nodes',
             isShared: true,
-            metadata: { provider: 'anthropic' },
           },
           {
             name: 'OpenRouter API Key',
-            type: 'llm',
+            type: 'llm' as const,
+            provider: 'openrouter',
             authType: 'apiKey',
             config: { apiKey: process.env.SEED_OPENROUTER_API_KEY },
             description: 'OpenRouter API credential for AI model nodes',
             isShared: true,
-            metadata: { provider: 'openrouter' },
           },
           {
             name: 'Linear OAuth2',
-            type: 'http-api',
+            type: 'http-api' as const,
+            provider: 'linear',
             authType: 'oauth2',
             config: {
               clientId: process.env.SEED_LINEAR_CLIENT_ID,
@@ -53,7 +53,19 @@ export const invectConfig = defineConfig({
             },
             description: 'Linear OAuth2 credential for issue tracking',
             isShared: true,
-            metadata: { provider: 'linear' },
+          },
+          {
+            name: 'Gmail OAuth2',
+            type: 'http-api' as const,
+            provider: 'google_gmail',
+            authType: 'oauth2',
+            config: {
+              clientId: process.env.SEED_GMAIL_CLIENT_ID,
+              clientSecret: process.env.SEED_GMAIL_CLIENT_SECRET,
+              oauth2Provider: 'google_gmail',
+            },
+            description: 'Gmail OAuth2 credential',
+            isShared: true,
           },
         ]
       : []),

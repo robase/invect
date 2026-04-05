@@ -22,7 +22,6 @@ const handler = createInvectHandler({
   database: {
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL || 'file:./dev.db',
-    id: 'main',
   },
 });
 
@@ -63,7 +62,6 @@ function getInvect(): Promise<InvectInstance> {
       database: {
         type: 'sqlite',
         connectionString: process.env.DATABASE_URL || 'file:./dev.db',
-        id: 'main',
       },
     }).then((instance) => {
       invect = instance;

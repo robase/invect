@@ -7,7 +7,7 @@
   "type": "module",
   "main": "dist/backend/index.cjs",
   "module": "dist/backend/index.mjs",
-  "types": "dist/backend/index.d.ts",
+  "types": "dist/backend/index.d.mts",
   "files": [
     "dist/**/*"
   ],
@@ -25,17 +25,17 @@
   },
   "exports": {
     ".": {
-      "types": "./dist/backend/index.d.ts",
+      "types": "./dist/backend/index.d.mts",
       "import": "./dist/backend/index.mjs",
       "require": "./dist/backend/index.cjs"
     },
     "./ui": {
-      "types": "./dist/frontend/index.d.ts",
+      "types": "./dist/frontend/index.d.mts",
       "import": "./dist/frontend/index.mjs",
       "require": "./dist/frontend/index.cjs"
     },
     "./types": {
-      "types": "./dist/shared/types.d.ts",
+      "types": "./dist/shared/types.d.mts",
       "import": "./dist/shared/types.mjs",
       "require": "./dist/shared/types.cjs"
     }

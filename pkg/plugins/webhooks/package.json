@@ -4,7 +4,7 @@
   "description": "Webhook trigger plugin for Invect — adds webhook management, ingestion, signature verification, and a dedicated webhooks UI page",
   "main": "dist/backend/index.cjs",
   "module": "dist/backend/index.mjs",
-  "types": "dist/backend/index.d.ts",
+  "types": "dist/backend/index.d.mts",
   "type": "module",
   "files": [
     "dist/**/*"
@@ -66,24 +66,24 @@
   },
   "exports": {
     ".": {
-      "types": "./dist/backend/index.d.ts",
+      "types": "./dist/backend/index.d.mts",
       "import": "./dist/backend/index.mjs",
       "require": "./dist/backend/index.cjs"
     },
     "./ui": {
-      "types": "./dist/frontend/index.d.ts",
+      "types": "./dist/frontend/index.d.mts",
       "import": "./dist/frontend/index.mjs",
       "require": "./dist/frontend/index.cjs"
     },
     "./types": {
-      "types": "./dist/shared/types.d.ts",
+      "types": "./dist/shared/types.d.mts",
       "import": "./dist/shared/types.mjs",
       "require": "./dist/shared/types.cjs"
     }
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/robase/flow-backend.git",
+    "url": "https://github.com/robase/invect.git",
     "directory": "pkg/plugins/webhooks"
   }
 }

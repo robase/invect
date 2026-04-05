@@ -59,7 +59,7 @@ export function ChatMessageList({
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll: only scroll to bottom if already near bottom (within 80px)
-  const viewportRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
   const isNearBottomRef = useRef(true);
 
   // Capture ref to the ScrollArea viewport for scroll tracking
@@ -253,7 +253,7 @@ function ChatMessageBubble({
     return <ToolCallBubble toolMeta={message.toolMeta} />;
   }
 
-  if (message.role === 'assistant') {
+  if (message.role === 'assistant' && message.content.trim()) {
     return <AssistantMessageBubble message={message} />;
   }
 

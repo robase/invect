@@ -14,7 +14,6 @@ const DATABASE_URL =
 
 export const invectConfig = defineConfig({
   database: {
-    id: 'nest-prisma',
     type: 'postgresql',
     connectionString: DATABASE_URL,
   },

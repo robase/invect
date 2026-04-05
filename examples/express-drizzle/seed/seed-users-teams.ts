@@ -250,7 +250,6 @@ async function main() {
     database: {
       type: 'sqlite',
       connectionString: `file:${sqlitePath}`,
-      id: 'seed-db',
     },
     logging: { level: 'warn' },
   });

@@ -41,7 +41,6 @@ import { InvectModule } from '@invect/nestjs';
       database: {
         type: 'sqlite',
         connectionString: 'file:./dev.db',
-        id: 'main',
       },
     }),
   ],
@@ -63,7 +62,6 @@ import { InvectModule } from '@invect/nestjs';
         database: {
           type: 'postgres',
           connectionString: config.get('DATABASE_URL'),
-          id: 'main',
         },
       }),
       inject: [ConfigService],

@@ -40,7 +40,6 @@ const core = new Invect({
   database: {
     type: 'sqlite',
     connectionString: 'file:./dev.db',
-    id: 'main',
   },
 });
 

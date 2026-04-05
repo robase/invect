@@ -147,7 +147,6 @@ export default defineConfig({
   database: {
     type: 'sqlite',
     connectionString: 'file:./dev.db',
-    id: 'main',
   },
 });
 ```
@@ -160,7 +159,6 @@ export default defineConfig({
   database: {
     type: 'postgresql',
     connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/invect',
-    id: 'main',
   },
 });
 ```
@@ -173,7 +171,6 @@ export default defineConfig({
   database: {
     type: 'mysql',
     connectionString: process.env.DATABASE_URL || 'mysql://user:pass@localhost:3306/invect',
-    id: 'main',
   },
 });
 ```
@@ -190,7 +187,6 @@ export default defineConfig({
   database: {
     type: 'postgresql',
     connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/invect',
-    id: 'main',
   },
   plugins: [auditLogPlugin],
 });

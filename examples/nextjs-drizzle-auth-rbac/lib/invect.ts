@@ -14,7 +14,6 @@ export const invectConfig = defineConfig({
   database: {
     connectionString: process.env.DATABASE_URL ?? 'postgresql://acme:acme@localhost:5432/acme_dashboard',
     type: 'postgresql',
-    id: 'main',
     name: 'Acme Dashboard DB',
   },
   logging: {

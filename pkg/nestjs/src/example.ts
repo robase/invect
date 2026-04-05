@@ -12,7 +12,6 @@ import { InvectModule } from '@invect/nestjs';
       database: {
         type: 'sqlite',
         connectionString: 'file:./dev.db',
-        id: 'main',
       },
       logging: {
         level: 'info',
@@ -30,7 +29,6 @@ export class AppModule {}
         database: {
           type: 'sqlite',
           connectionString: process.env.DATABASE_URL || 'file:./dev.db',
-          id: 'main',
         },
         logging: {
           level:

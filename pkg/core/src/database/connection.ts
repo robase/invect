@@ -148,12 +148,11 @@ export class DatabaseConnectionFactory {
     if (this.queryConnections.has(connectionKey)) {
       logger.debug('Reusing existing query database connection', {
         type: dbConfig.type,
-        id: dbConfig.id,
       });
       return this.queryConnections.get(connectionKey) as QueryDatabaseConnection;
     }
 
-    logger.info('Creating new query database connection', { type: dbConfig.type, id: dbConfig.id });
+    logger.info('Creating new query database connection', { type: dbConfig.type });
 
     let connection: QueryDatabaseConnection;
 
@@ -402,7 +401,7 @@ export class DatabaseConnectionFactory {
       db = drizzleSQLite(client);
     }
 
-    logger.info('SQLite query connection established successfully', { filePath, id: config.id });
+    logger.info('SQLite query connection established successfully', { filePath });
     return { db, driver };
   }
 
@@ -432,7 +431,7 @@ export class DatabaseConnectionFactory {
    * Generate a unique key for query connection caching
    */
   private static generateQueryConnectionKey(config: InvectDatabaseConfig): string {
-    return `query:${config.type}:${config.id}:${config.connectionString}`;
+    return `query:${config.type}:${config.connectionString}`;
   }
 
   /**

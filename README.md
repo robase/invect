@@ -10,7 +10,7 @@
 <p align="center">
   Drop-in AI workflows for your Node.js app.
   <br />
-  <a href="https://invect.dev/docs"><strong>Documentation</strong></a> · <a href="https://invect.dev/docs/quick-start"><strong>Quick Start</strong></a> · <a href="https://github.com/robase/flow-backend"><strong>GitHub</strong></a>
+  <a href="https://invect.dev/docs"><strong>Documentation</strong></a> · <a href="https://invect.dev/docs/quick-start"><strong>Quick Start</strong></a> · <a href="https://github.com/robase/invect"><strong>GitHub</strong></a>
 </p>
 
 <p align="center">
@@ -45,7 +45,6 @@ app.use('/invect', createInvectRouter({
   database: {
     type: 'sqlite',
     connectionString: 'file:./dev.db',
-    id: 'main',
   },
 }));
 

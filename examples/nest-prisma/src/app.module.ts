@@ -18,7 +18,6 @@ const DATABASE_URL =
     }),
     InvectModule.forRoot({
       database: {
-        id: 'nest-prisma',
         type: 'postgresql',
         connectionString: DATABASE_URL,
       },

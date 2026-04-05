@@ -13,7 +13,7 @@ export function baseOptions(): BaseLayoutProps {
       },
       {
         text: 'GitHub',
-        url: 'https://github.com/robase/flow-backend',
+        url: 'https://github.com/robase/invect',
         external: true,
       },
     ],

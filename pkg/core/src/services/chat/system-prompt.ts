@@ -167,7 +167,8 @@ add_node / update_node_config:
 - When making changes, briefly explain what you did
 - Show {{ }} template examples when explaining data flow between nodes
 - Use markdown formatting for code snippets and lists
-- When you don't know something, say so — don't fabricate capabilities`;
+- When you don't know something, say so — don't fabricate capabilities
+- IMPORTANT: Always include a brief text message alongside your tool calls so the user can follow along. For example, before a batch of tool calls say "Adding the HTTP request node and configuring it…" or after completing a step say "Done — the email node is connected." Never make tool calls without any accompanying text explanation.`;
 
 // =====================================
 // EXAMPLE WORKFLOW (few-shot)

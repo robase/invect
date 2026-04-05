@@ -35,7 +35,6 @@ const router = await createInvectRouter({
   database: {
     type: 'sqlite',
     connectionString: 'file:./dev.db',
-    id: 'main',
   },
 });
 
@@ -59,7 +58,6 @@ import { InvectModule } from '@invect/nestjs';
       database: {
         type: 'sqlite',
         connectionString: process.env.DATABASE_URL || 'file:./dev.db',
-        id: 'main',
       },
     }),
   ],
@@ -75,7 +73,6 @@ const handler = createInvectHandler({
   database: {
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL || 'file:./dev.db',
-    id: 'main',
   },
 });
 

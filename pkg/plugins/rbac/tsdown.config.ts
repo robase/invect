@@ -7,7 +7,7 @@ export default defineConfig({
     'shared/types': 'src/shared/types.ts',
   },
   format: ['esm', 'cjs'],
-  dts: false,
+  dts: true,
   splitting: false,
   sourcemap: true,
   clean: true,

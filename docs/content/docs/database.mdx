@@ -24,7 +24,6 @@ createInvectRouter({
   database: {
     type: 'sqlite',
     connectionString: 'file:./dev.db',
-    id: 'main',
   },
 });
 ```
@@ -35,7 +34,6 @@ createInvectRouter({
   database: {
     type: 'postgresql',
     connectionString: 'postgresql://user:pass@localhost:5432/invect',
-    id: 'main',
   },
 });
 ```
@@ -46,7 +44,6 @@ createInvectRouter({
   database: {
     type: 'mysql',
     connectionString: 'mysql://user:pass@localhost:3306/invect',
-    id: 'main',
   },
 });
 ```
@@ -102,7 +99,6 @@ app.use('/invect', createInvectRouter({
   database: {
     type: 'postgresql',
     connectionString: process.env.DATABASE_URL!, // Your existing DB
-    id: 'main',
   },
 }));
 ```

@@ -29,6 +29,7 @@ import {
 import { AgentNodeExecutor } from '../nodes/agent-executor';
 import type { GraphNodeType } from '../types.internal';
 import type { CreateCredentialInput } from '../services/credentials';
+import type { CredentialAuthType } from '../database/schema-sqlite';
 
 import type { InvectInstance } from './types';
 import { createFlowsAPI } from './flows';
@@ -94,19 +95,40 @@ async function seedDefaultCredentials(sf: ServiceFactory, config: InvectConfig):
 
   const credentialsService = sf.getCredentialsService();
   const existing = await credentialsService.list();
-  const existingNames = new Set(existing.map((c) => c.name));
+  const existingByName = new Map(existing.map((c) => [c.name, c]));
 
   for (const seed of seeds) {
-    if (existingNames.has(seed.name)) {
-      config.logger.debug(`Seed credential "${seed.name}" already exists — skipping`);
-      continue;
-    }
     try {
-      const created = await credentialsService.create(seed as CreateCredentialInput);
-      // eslint-disable-next-line no-console
-      console.log(`🔐 Seeded credential: ${created.name} (${created.id})`);
+      const { provider, ...rest } = seed;
+      const metadata = { ...rest.metadata, ...(provider ? { provider } : {}) };
+      const existingCred = existingByName.get(seed.name);
+
+      if (existingCred) {
+        await credentialsService.update(existingCred.id, {
+          name: rest.name,
+          type: rest.type,
+          authType: rest.authType as CredentialAuthType,
+          config: rest.config,
+          description: rest.description,
+          isShared: rest.isShared,
+          metadata,
+        });
+        config.logger.debug(`Upserted credential "${seed.name}" (${existingCred.id})`);
+      } else {
+        const created = await credentialsService.create({
+          name: rest.name,
+          type: rest.type,
+          authType: rest.authType as CredentialAuthType,
+          config: rest.config,
+          description: rest.description,
+          isShared: rest.isShared,
+          metadata,
+        });
+        // eslint-disable-next-line no-console
+        console.log(`🔐 Seeded credential: ${created.name} (${created.id})`);
+      }
     } catch (error) {
-      config.logger.warn(`Failed to seed credential "${seed.name}"`, error);
+      config.logger.warn(`Failed to upsert credential "${seed.name}"`, error);
     }
   }
 }
@@ -120,7 +142,7 @@ async function seedDefaultCredentials(sf: ServiceFactory, config: InvectConfig):
  * @example
  * ```typescript
  * const invect = await createInvect({
- *   database: { type: 'sqlite', connectionString: 'file:./dev.db', id: 'main' },
+ *   database: { type: 'sqlite', connectionString: 'file:./dev.db' },
  * });
  *
  * const flow = await invect.flows.create({ name: 'My Flow' });

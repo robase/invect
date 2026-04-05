@@ -41,7 +41,6 @@ const handler = createInvectHandler({
   database: {
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL || 'file:./dev.db',
-    id: 'main',
   },
 });
 

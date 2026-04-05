@@ -29,6 +29,7 @@ import type {
   UpdateCredentialInput,
   CredentialFilters,
 } from './services/credentials';
+import type { CredentialAuthType } from './database/schema-sqlite';
 
 import type {
   FlowTriggerRegistration,
@@ -1919,19 +1920,40 @@ export class Invect {
     }
 
     const existing = await this.listCredentials();
-    const existingNames = new Set(existing.map((c) => c.name));
+    const existingByName = new Map(existing.map((c) => [c.name, c]));
 
     for (const seed of seeds) {
-      if (existingNames.has(seed.name)) {
-        this.config.logger.debug(`Seed credential "${seed.name}" already exists — skipping`);
-        continue;
-      }
       try {
-        const created = await this.createCredential(seed as CreateCredentialInput);
-        // eslint-disable-next-line no-console
-        console.log(`🔐 Seeded credential: ${created.name} (${created.id})`);
+        const { provider, ...rest } = seed;
+        const metadata = { ...rest.metadata, ...(provider ? { provider } : {}) };
+        const existingCred = existingByName.get(seed.name);
+
+        if (existingCred) {
+          await this.updateCredential(existingCred.id, {
+            name: rest.name,
+            type: rest.type,
+            authType: rest.authType as CredentialAuthType,
+            config: rest.config,
+            description: rest.description,
+            isShared: rest.isShared,
+            metadata,
+          });
+          this.config.logger.debug(`Upserted credential "${seed.name}" (${existingCred.id})`);
+        } else {
+          const created = await this.createCredential({
+            name: rest.name,
+            type: rest.type,
+            authType: rest.authType as CredentialAuthType,
+            config: rest.config,
+            description: rest.description,
+            isShared: rest.isShared,
+            metadata,
+          });
+          // eslint-disable-next-line no-console
+          console.log(`🔐 Seeded credential: ${created.name} (${created.id})`);
+        }
       } catch (error) {
-        this.config.logger.warn(`Failed to seed credential "${seed.name}"`, error);
+        this.config.logger.warn(`Failed to upsert credential "${seed.name}"`, error);
       }
     }
   }

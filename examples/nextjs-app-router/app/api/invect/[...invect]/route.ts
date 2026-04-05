@@ -4,7 +4,6 @@ const config = {
   database: {
     connectionString: 'file:./invect.db',
     type: 'sqlite' as const,
-    id: 'main',
     name: 'Main Database',
   },
   logging: {

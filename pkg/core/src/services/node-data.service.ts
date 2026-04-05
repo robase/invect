@@ -148,7 +148,6 @@ export class NodeDataService {
       // Map 'postgres' to 'postgresql' for InvectDatabaseConfig compatibility
       const dbType = connectionConfig.type === 'postgres' ? 'postgresql' : connectionConfig.type;
       const dbConfig: InvectDatabaseConfig = {
-        id: `credential-${connectionConfig.type}`,
         type: dbType as 'postgresql' | 'sqlite' | 'mysql',
         connectionString: connectionConfig.connectionString,
       };
