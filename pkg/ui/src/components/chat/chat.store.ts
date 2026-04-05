@@ -54,11 +54,17 @@ export interface ChatSettings {
   maxSteps: number;
   /** Selected credential ID for the chat assistant LLM provider */
   credentialId: string | null;
+  /** Selected model ID override (null = provider default) */
+  model: string | null;
+  /** Recently used model IDs */
+  recentModels: string[];
 }
 
 const DEFAULT_CHAT_SETTINGS: ChatSettings = {
   maxSteps: 50,
   credentialId: null,
+  model: null,
+  recentModels: [],
 };
 
 // =====================================
@@ -392,6 +398,10 @@ export const useChatStore = create<ChatStore>()(
 
       updateSettings: (patch) =>
         set((s) => {
+          // Reset model when credential changes (different provider = different models)
+          if ('credentialId' in patch && patch.credentialId !== s.settings.credentialId) {
+            patch = { ...patch, model: null };
+          }
           const next = { ...s.settings, ...patch };
           s.settings = next;
           // Persist to localStorage

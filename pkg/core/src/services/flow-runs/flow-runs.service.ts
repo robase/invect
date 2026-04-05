@@ -1,6 +1,6 @@
 import type { FlowsService } from '../flows/flows.service';
 import type { DatabaseService } from '../database/database.service';
-import { Logger, PaginatedResponse, QueryOptions } from 'src/types/schemas';
+import { Logger, PaginatedResponse, QueryOptions } from 'src/schemas';
 import { DatabaseError, FlowNotFoundError } from 'src/types/common/errors.types';
 import { FlowRunStatus } from 'src/types/base';
 

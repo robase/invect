@@ -8,7 +8,7 @@
  * 4. Flow-based (another flow as a tool)
  */
 
-import { Logger } from 'src/types/schemas';
+import { Logger } from 'src/schemas';
 import {
   AgentToolDefinition,
   AgentToolExecutor,

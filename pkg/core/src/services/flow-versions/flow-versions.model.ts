@@ -1,7 +1,7 @@
 // Flow Versions Model for Invect core — adapter-based implementation
 import type { InvectAdapter, WhereClause } from '../../database/adapter';
 import { DatabaseError } from 'src/types/common/errors.types';
-import { Logger, PaginatedResponse, QueryOptions } from 'src/types/schemas';
+import { Logger, PaginatedResponse, QueryOptions } from 'src/schemas';
 import { CreateFlowVersionRequest, InvectDefinitionRuntime } from './schemas-fresh';
 import { FlowVersion } from '../../database';
 

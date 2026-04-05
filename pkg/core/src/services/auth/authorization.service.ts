@@ -20,7 +20,7 @@ import {
   AuthUnauthenticatedEvent,
   DEFAULT_ROLE_PERMISSIONS,
 } from '../../types/auth.types';
-import type { Logger } from '../../types/schemas-fresh/invect-config';
+import type { Logger } from '../../schemas/invect-config';
 
 /**
  * Options for creating the AuthorizationService

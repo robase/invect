@@ -31,7 +31,8 @@ import {
   FlowRunStatus,
   type InvectDefinition,
   BatchProvider,
-} from "../src";
+} from "../../src";
+import type { InvectInstance } from "../../src/api/types";
 import { getOutputVariable, type AgentOutputLike, type FlowExample } from "./example-types";
 
 /**
@@ -282,7 +283,8 @@ export const complexAgentFlowExample: FlowExample = {
         // Group tool calls by tool ID
         const toolCounts: Record<string, number> = {};
         for (const toolResult of agentOutput.toolResults || []) {
-          toolCounts[toolResult.toolId] = (toolCounts[toolResult.toolId] || 0) + 1;
+          const id = toolResult.toolId ?? "unknown";
+          toolCounts[id] = (toolCounts[id] || 0) + 1;
         }
         console.log(`   Tool Usage:`);
         for (const [toolId, count] of Object.entries(toolCounts)) {

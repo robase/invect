@@ -15,7 +15,7 @@ import type {
   CredentialAuthType,
   CredentialType,
 } from '../../database/schema-sqlite';
-import type { Logger } from 'src/types/schemas';
+import type { Logger } from 'src/schemas';
 
 import type { Credential as ModelCredential } from './credentials.model';
 

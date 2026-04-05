@@ -58,25 +58,10 @@ model Flows {
   liveVersionNumber Int?           @map("live_version_number")
   createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt         DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
-  flowAccess        FlowAccess[]
   flowTriggers      FlowTriggers[]
   flowVersions      FlowVersions[]
   chatMessages      ChatMessages[]
   flowRuns          FlowRuns[]
-}
-
-model FlowAccess {
-  id         String    @id @default(uuid())
-  flowId     String    @map("flow_id")
-  userId     String?   @map("user_id")
-  teamId     String?   @map("team_id")
-  permission String    @default("viewer")
-  grantedBy  String?   @map("granted_by")
-  grantedAt  DateTime  @default(now()) @map("granted_at") @db.Timestamptz(3)
-  expiresAt  DateTime? @map("expires_at") @db.Timestamptz(3)
-  flow       Flows     @relation(fields: [flowId], references: [id], onDelete: Cascade)
-
-  @@map("flow_access")
 }
 
 model FlowTriggers {
@@ -99,14 +84,14 @@ model FlowTriggers {
 }
 
 model FlowVersions {
-  flowId            String   @map("flow_id")
-  version           Int
+  flowId           String   @map("flow_id")
+  version          Int
   invectDefinition Json     @map("invect_definition")
-  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  createdBy         String?  @map("created_by")
-  flow              Flows    @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  createdBy        String?  @map("created_by")
+  flow             Flows    @relation(fields: [flowId], references: [id], onDelete: Cascade)
 
-  @@id("[version, flowId]")
+  @@id([version, flowId])
   @@map("flow_versions")
 }
 
@@ -123,47 +108,50 @@ model ChatMessages {
 }
 
 model FlowRuns {
-  id                  String                @id @default(uuid())
-  flowId              String                @map("flow_id")
-  flowVersion         Int                   @map("flow_version")
-  status              String                @default("PENDING")
-  inputs              Json
-  outputs             Json?
-  error               String?
-  startedAt           DateTime              @default(now()) @map("started_at") @db.Timestamptz(3)
-  completedAt         DateTime?             @map("completed_at") @db.Timestamptz(3)
-  duration            Int?
-  createdBy           String?               @map("created_by")
-  triggerType         String?               @map("trigger_type")
-  triggerId           String?               @map("trigger_id")
-  triggerNodeId       String?               @map("trigger_node_id")
-  triggerData         Json?                 @map("trigger_data")
-  lastHeartbeatAt     DateTime?             @map("last_heartbeat_at") @db.Timestamptz(3)
-  flow                Flows                 @relation(fields: [flowId], references: [id], onDelete: Cascade)
-  nodeExecutions      NodeExecutions[]
-  batchJobs           BatchJobs[]
-  agentToolExecutions AgentToolExecutions[]
+  id              String         @id @default(uuid())
+  flowId          String         @map("flow_id")
+  flowVersion     Int            @map("flow_version")
+  status          String         @default("PENDING")
+  inputs          Json
+  outputs         Json?
+  error           String?
+  startedAt       DateTime       @default(now()) @map("started_at") @db.Timestamptz(3)
+  completedAt     DateTime?      @map("completed_at") @db.Timestamptz(3)
+  duration        Int?
+  createdBy       String?        @map("created_by")
+  triggerType     String?        @map("trigger_type")
+  triggerId       String?        @map("trigger_id")
+  triggerNodeId   String?        @map("trigger_node_id")
+  triggerData     Json?          @map("trigger_data")
+  lastHeartbeatAt DateTime?      @map("last_heartbeat_at") @db.Timestamptz(3)
+  flow            Flows          @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  actionTraces    ActionTraces[]
+  batchJobs       BatchJobs[]
 
   @@map("flow_executions")
 }
 
-model NodeExecutions {
-  id                  String                @id @default(uuid())
-  flowRunId           String                @map("flow_run_id")
-  nodeId              String                @map("node_id")
-  nodeType            String                @map("node_type")
-  status              String                @default("PENDING")
-  inputs              Json
-  outputs             Json?
-  error               String?
-  startedAt           DateTime              @default(now()) @map("started_at") @db.Timestamptz(3)
-  completedAt         DateTime?             @map("completed_at") @db.Timestamptz(3)
-  duration            Int?
-  retryCount          Int                   @default(0) @map("retry_count")
-  flowRun             FlowRuns              @relation(fields: [flowRunId], references: [id], onDelete: Cascade)
-  agentToolExecutions AgentToolExecutions[]
+model ActionTraces {
+  id                    String        @id @default(uuid())
+  flowRunId             String        @map("flow_run_id")
+  parentNodeExecutionId String?       @map("parent_node_execution_id")
+  nodeId                String?       @map("node_id")
+  nodeType              String?       @map("node_type")
+  toolId                String?       @map("tool_id")
+  toolName              String?       @map("tool_name")
+  iteration             Int?
+  status                String        @default("PENDING")
+  inputs                Json
+  outputs               Json?
+  error                 String?
+  startedAt             DateTime      @default(now()) @map("started_at") @db.Timestamptz(3)
+  completedAt           DateTime?     @map("completed_at") @db.Timestamptz(3)
+  duration              Int?
+  retryCount            Int           @default(0) @map("retry_count")
+  flowRun               FlowRuns      @relation(fields: [flowRunId], references: [id], onDelete: Cascade)
+  parentNodeExecution   ActionTraces? @relation(fields: [parentNodeExecutionId], references: [id], onDelete: Cascade)
 
-  @@map("execution_traces")
+  @@map("action_traces")
 }
 
 model BatchJobs {
@@ -183,26 +171,6 @@ model BatchJobs {
   flowRun      FlowRuns  @relation(fields: [flowRunId], references: [id], onDelete: Cascade)
 
   @@map("batch_jobs")
-}
-
-model AgentToolExecutions {
-  id              String         @id @default(uuid())
-  nodeExecutionId String         @map("node_execution_id")
-  flowRunId       String         @map("flow_run_id")
-  toolId          String         @map("tool_id")
-  toolName        String         @map("tool_name")
-  iteration       Int
-  input           Json
-  output          Json?
-  error           String?
-  success         Boolean
-  startedAt       DateTime       @default(now()) @map("started_at") @db.Timestamptz(3)
-  completedAt     DateTime?      @map("completed_at") @db.Timestamptz(3)
-  duration        Int?
-  nodeExecution   NodeExecutions @relation(fields: [nodeExecutionId], references: [id], onDelete: Cascade)
-  flowRun         FlowRuns       @relation(fields: [flowRunId], references: [id], onDelete: Cascade)
-
-  @@map("agent_tool_executions")
 }
 
 model AuditLogs {

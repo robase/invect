@@ -1,6 +1,6 @@
-import { Logger } from 'src/types/schemas';
+import { Logger } from 'src/schemas';
 import { AnyNodeExecutor } from './base-node';
-import { GraphNodeType } from 'src/types-fresh';
+import { GraphNodeType } from 'src/types.internal';
 import { AgentNodeExecutor } from './agent-executor';
 import { NodeDefinition } from '../types/node-definition.types';
 import { AgentToolRegistry } from 'src/services/agent-tools/agent-tool-registry';

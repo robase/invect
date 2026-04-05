@@ -13,7 +13,7 @@
  * (draft accumulator, abort flag, usage counters).
  */
 
-import type { Logger } from 'src/types/schemas';
+import type { Logger } from 'src/schemas';
 import type { AgentMessage, AgentPromptResult } from 'src/types/agent-tool.types';
 import type { ProviderAdapter } from '../ai/provider-adapter';
 import type { InvectIdentity } from 'src/types/auth.types';
@@ -44,6 +44,14 @@ export interface ChatStreamSessionDeps {
   invect: InvectInstance;
   /** Action registry for provider summary in system prompt */
   actionRegistry: ActionRegistry | null;
+}
+
+/** Check if an error is a rate-limit (429) error */
+function isRateLimitError(error: unknown): boolean {
+  if (error instanceof Error) {
+    return error.message.includes('429') || error.message.includes('rate_limit');
+  }
+  return false;
 }
 
 /**
@@ -117,19 +125,48 @@ export class ChatStreamSession {
           toolCount: toolDefs.length,
         });
 
-        // 5. Call the LLM via the existing adapter
+        // 5. Call the LLM via the existing adapter (with retry on rate-limit)
         let response: AgentPromptResult;
-        try {
-          response = await adapter.executeAgentPrompt({
-            model: config.model,
-            messages: conversationMessages,
-            tools: toolDefs,
-            systemPrompt,
-            maxTokens: 4096,
-          });
-        } catch (error: unknown) {
-          const msg = error instanceof Error ? error.message : String(error);
-          logger.error('LLM call failed in chat stream:', { error: msg });
+        const MAX_RETRIES = 3;
+        let lastError: unknown;
+
+        for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+          try {
+            response = await adapter.executeAgentPrompt({
+              model: config.model,
+              messages: conversationMessages,
+              tools: toolDefs,
+              systemPrompt,
+              maxTokens: 4096,
+            });
+            lastError = undefined;
+            break;
+          } catch (error: unknown) {
+            lastError = error;
+            if (isRateLimitError(error) && attempt < MAX_RETRIES && !this.aborted) {
+              const delayMs = Math.min(1000 * 2 ** attempt, 30_000); // 1s, 2s, 4s
+              const delaySec = Math.round(delayMs / 1000);
+              logger.warn(
+                `Rate limited on chat step ${steps}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})`,
+              );
+              yield {
+                type: 'text_delta',
+                text: `\n\n⏳ *Rate limited by the AI provider — retrying in ${delaySec}s (attempt ${attempt + 1}/${MAX_RETRIES})…*\n\n`,
+              };
+              await new Promise((resolve) => setTimeout(resolve, delayMs));
+              continue;
+            }
+            const msg = error instanceof Error ? error.message : String(error);
+            logger.error('LLM call failed in chat stream:', { error: msg });
+            yield { type: 'error', message: `LLM call failed: ${msg}`, recoverable: false };
+            return;
+          }
+        }
+
+        if (lastError || !response!) {
+          const msg =
+            lastError instanceof Error ? lastError.message : String(lastError ?? 'unknown');
+          logger.error('LLM call failed after retries:', { error: msg });
           yield { type: 'error', message: `LLM call failed: ${msg}`, recoverable: false };
           return;
         }

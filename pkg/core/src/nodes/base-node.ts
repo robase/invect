@@ -1,5 +1,5 @@
 import type { NodeOutput, NodeInputData } from 'src/types/node-io-types';
-import { GraphNodeType, NodeExecutionContext } from 'src/types-fresh';
+import { GraphNodeType, NodeExecutionContext } from 'src/types.internal';
 import { NodeExecutionStatus } from 'src/types/base';
 import { FlowNodeForType } from 'src/services/flow-versions/schemas-fresh';
 import z, { ZodType } from 'zod/v4';

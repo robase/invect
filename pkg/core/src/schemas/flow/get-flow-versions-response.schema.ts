@@ -1,5 +1,5 @@
 import { z } from 'zod/v4';
-import { flowVersionsResponseSchema } from '../../validation/flow.schemas';
+import { flowVersionsResponseSchema } from '../../types/validation/flow.schemas';
 
 /**
  * GET /flows/:id/versions response schema

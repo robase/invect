@@ -3,7 +3,7 @@
  *
  * Resolves and loads the user's Invect configuration file to discover
  * plugins and their schemas. Uses jiti for runtime TypeScript loading
- * (same approach as better-auth's CLI).
+ * Discovers and loads the user's invect.config.ts file.
  *
  * Search order:
  *   1. Explicit --config path
@@ -78,7 +78,7 @@ export function findConfigPath(explicitPath?: string): string | null {
 }
 
 // =============================================================================
-// TSConfig path alias resolution (same approach as better-auth CLI)
+// TSConfig path alias resolution
 // =============================================================================
 
 /**

@@ -151,17 +151,17 @@ describe('generateDrizzleSchema (single dialect)', () => {
       dialect: 'sqlite',
     });
 
-    expect(result.fileName).toBe('./src/database/schema-sqlite.ts');
+    expect(result.fileName).toBe('./db/invect.schema.ts');
   });
 
-  it('should use correct default for each dialect', async () => {
+  it('should use same default path for all dialects', async () => {
     const sqlite = await generateDrizzleSchema({ plugins: [], dialect: 'sqlite' });
     const pg = await generateDrizzleSchema({ plugins: [], dialect: 'postgresql' });
     const mysql = await generateDrizzleSchema({ plugins: [], dialect: 'mysql' });
 
-    expect(sqlite.fileName).toContain('schema-sqlite.ts');
-    expect(pg.fileName).toContain('schema-postgres.ts');
-    expect(mysql.fileName).toContain('schema-mysql.ts');
+    expect(sqlite.fileName).toBe('./db/invect.schema.ts');
+    expect(pg.fileName).toBe('./db/invect.schema.ts');
+    expect(mysql.fileName).toBe('./db/invect.schema.ts');
   });
 });
 
@@ -169,31 +169,47 @@ describe('generateDrizzleSchema (single dialect)', () => {
 // 2. generateAllDrizzleSchemas — all dialects at once
 // =============================================================================
 
-describe('generateAllDrizzleSchemas (all dialects)', () => {
-  it('should generate all 3 dialect files', async () => {
+describe('generateAllDrizzleSchemas (single dialect)', () => {
+  it('should generate a single invect.schema.ts file', async () => {
     const { results, stats } = await generateAllDrizzleSchemas({
       plugins: [],
       outputDir: tmpDir,
+      dialect: 'sqlite',
     });
 
-    expect(results).toHaveLength(3);
-    expect(results.map((r) => r.fileName)).toEqual([
-      `${tmpDir}/schema-sqlite.ts`,
-      `${tmpDir}/schema-postgres.ts`,
-      `${tmpDir}/schema-mysql.ts`,
-    ]);
+    expect(results).toHaveLength(1);
+    expect(results[0].fileName).toBe(`${tmpDir}/invect.schema.ts`);
+    expect(results[0].code).toBeDefined();
+    expect(results[0].overwrite).toBeFalsy();
+  });
 
-    // All should have code (new files)
-    for (const r of results) {
-      expect(r.code).toBeDefined();
-      expect(r.overwrite).toBeFalsy();
-    }
+  it('should generate postgresql dialect when specified', async () => {
+    const { results } = await generateAllDrizzleSchemas({
+      plugins: [],
+      outputDir: tmpDir,
+      dialect: 'postgresql',
+    });
+
+    expect(results).toHaveLength(1);
+    expect(results[0].code).toContain("pgTable('flows'");
+  });
+
+  it('should generate mysql dialect when specified', async () => {
+    const { results } = await generateAllDrizzleSchemas({
+      plugins: [],
+      outputDir: tmpDir,
+      dialect: 'mysql',
+    });
+
+    expect(results).toHaveLength(1);
+    expect(results[0].code).toContain("mysqlTable('flows'");
   });
 
   it('should return correct stats for core-only', async () => {
     const { stats } = await generateAllDrizzleSchemas({
       plugins: [],
       outputDir: tmpDir,
+      dialect: 'sqlite',
     });
 
     expect(stats.totalTables).toBeGreaterThan(0);
@@ -206,6 +222,7 @@ describe('generateAllDrizzleSchemas (all dialects)', () => {
     const { stats } = await generateAllDrizzleSchemas({
       plugins: [ecommercePlugin, auditLogPlugin],
       outputDir: tmpDir,
+      dialect: 'sqlite',
     });
 
     expect(stats.pluginTableCount).toBe(5); // 4 ecommerce + 1 audit
@@ -213,11 +230,12 @@ describe('generateAllDrizzleSchemas (all dialects)', () => {
     expect(stats.totalTables).toBe(stats.coreTableCount + stats.pluginTableCount);
   });
 
-  it('should detect unchanged files across all dialects', async () => {
-    // First run: generate all
+  it('should detect unchanged file', async () => {
+    // First run: generate
     const first = await generateAllDrizzleSchemas({
       plugins: [minimalPlugin],
       outputDir: tmpDir,
+      dialect: 'sqlite',
     });
 
     // Write to disk
@@ -231,6 +249,7 @@ describe('generateAllDrizzleSchemas (all dialects)', () => {
     const second = await generateAllDrizzleSchemas({
       plugins: [minimalPlugin],
       outputDir: tmpDir,
+      dialect: 'sqlite',
     });
 
     for (const r of second.results) {
@@ -243,6 +262,7 @@ describe('generateAllDrizzleSchemas (all dialects)', () => {
     const first = await generateAllDrizzleSchemas({
       plugins: [],
       outputDir: tmpDir,
+      dialect: 'sqlite',
     });
 
     // Write to disk
@@ -256,9 +276,10 @@ describe('generateAllDrizzleSchemas (all dialects)', () => {
     const second = await generateAllDrizzleSchemas({
       plugins: [auditLogPlugin],
       outputDir: tmpDir,
+      dialect: 'sqlite',
     });
 
-    // All should have changes (new table added)
+    // Should have changes (new table added)
     for (const r of second.results) {
       expect(r.code).toBeDefined();
       expect(r.overwrite).toBe(true);
@@ -268,11 +289,20 @@ describe('generateAllDrizzleSchemas (all dialects)', () => {
   it('should use default output dir when not specified', async () => {
     const { results } = await generateAllDrizzleSchemas({
       plugins: [],
+      dialect: 'sqlite',
     });
 
-    for (const r of results) {
-      expect(r.fileName).toContain('./src/database/');
-    }
+    expect(results[0].fileName).toBe('./db/invect.schema.ts');
+  });
+
+  it('should throw on unsupported dialect', async () => {
+    await expect(
+      generateAllDrizzleSchemas({
+        plugins: [],
+        outputDir: tmpDir,
+        dialect: 'oracle' as any,
+      }),
+    ).rejects.toThrow(/Unsupported dialect/);
   });
 });
 

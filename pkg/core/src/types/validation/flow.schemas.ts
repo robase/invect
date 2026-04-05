@@ -4,7 +4,7 @@
 import { z } from 'zod/v4';
 import { successResponseSchema, tagsSchema } from './common.schemas';
 import { invectDefinitionSchema } from 'src/services/flow-versions/schemas-fresh';
-import { PaginatedResponseSchema } from '../schemas/pagination-sort-filter';
+import { PaginatedResponseSchema } from 'src/schemas/pagination-sort-filter';
 
 /**
  * Flow creation schema

@@ -2,13 +2,10 @@
  * `npx invect-cli generate` — Generate Drizzle schema files
  *
  * Merges the core Invect schema with all plugin schemas, then generates
- * the three dialect-specific Drizzle ORM schema files:
- *   - schema-sqlite.ts
- *   - schema-postgres.ts
- *   - schema-mysql.ts
+ * a single `invect.schema.ts` file for the user's selected database dialect.
  *
  * After generating schema files, optionally runs `drizzle-kit generate`
- * to create SQL migration files — mirrors how better-auth chains to
+ * to create SQL migration files — mirrors how Drizzle Kit chains to
  * ORM tooling after schema generation.
  *
  * Usage:
@@ -16,7 +13,7 @@
  *   npx invect-cli generate --config ./my.ts   # Explicit config path
  *   npx invect-cli generate --output ./db      # Custom output directory
  *   npx invect-cli generate --yes              # Skip confirmation
- *   npx invect-cli generate --dialect sqlite   # Generate only one dialect
+ *   npx invect-cli generate --dialect sqlite   # Specify dialect
  */
 
 import { Command } from 'commander';
@@ -26,6 +23,12 @@ import pc from 'picocolors';
 import prompts from 'prompts';
 import { execSync } from 'node:child_process';
 import { findConfigPath, loadConfig } from '../utils/config-loader.js';
+
+/** Exit cleanly when the user cancels a prompt (Ctrl-C). */
+const onCancel = () => {
+  console.log(pc.dim('\n  Cancelled.\n'));
+  process.exit(0);
+};
 import { generateAllDrizzleSchemas, generateAppendSchema } from '../generators/drizzle.js';
 import { generatePrismaSchema } from '../generators/prisma.js';
 
@@ -103,7 +106,7 @@ export const generateCommand = new Command('generate')
   .option(
     '--output <path>',
     'Output directory for generated schema files (used when --schema is not set)',
-    './src/database',
+    './db',
   )
   .option(
     '--schema <path>',
@@ -204,6 +207,14 @@ export async function generateAction(options: {
     : undefined;
   let dialect = normalizeDialect(options.dialect);
 
+  // Try to resolve dialect from invect.config.ts database settings
+  if (!dialect && config.database?.type) {
+    dialect = normalizeDialect(config.database.type);
+    if (dialect) {
+      debug('Dialect resolved from invect config:', dialect);
+    }
+  }
+
   // Auto-detect from drizzle.config.ts if --schema not explicitly provided
   if (!schemaFile) {
     const detected = detectDrizzleSchema();
@@ -237,7 +248,7 @@ export async function generateAction(options: {
   if (useAppendMode) {
     await runAppendMode(config, schemaFile!, dialect!, options);
   } else {
-    await runSeparateFilesMode(config, options);
+    await runSeparateFilesMode(config, { ...options, dialect: dialect || options.dialect });
   }
 }
 
@@ -248,7 +259,7 @@ export async function generateAction(options: {
 /**
  * Generate Prisma schema using the prisma-ast merge strategy.
  *
- * Mirrors better-auth's approach:
+ * Append mode — appends Invect tables to the user's existing schema file:
  * - If schema.prisma exists, merges Invect models into it
  * - If not, creates a complete schema.prisma
  * - Detects Prisma v7+ and adjusts provider/url accordingly
@@ -313,7 +324,7 @@ async function runPrismaMode(
         ? `Update ${pc.cyan(rel)}?`
         : `Create ${pc.cyan(rel)}?`,
       initial: true,
-    });
+    }, { onCancel });
 
     if (!response.proceed) {
       console.log(pc.dim('\n  Cancelled.\n'));
@@ -507,7 +518,7 @@ async function runAppendMode(
         ? `Append Invect tables to ${pc.cyan(rel)}?`
         : `Create ${pc.cyan(rel)} with Invect tables?`,
       initial: true,
-    });
+    }, { onCancel });
 
     if (!response.proceed) {
       console.log(pc.dim('\n  Cancelled.\n'));
@@ -532,29 +543,31 @@ async function runAppendMode(
     ),
   );
 
-  // Run drizzle-kit push/generate — but only if the schema actually changed.
-  // Skipping push when unchanged avoids "index already exists" errors from
-  // drizzle-kit push when re-running generate on an already-applied schema.
+  // Run drizzle-kit generate+migrate — but only if the schema actually changed.
+  // We use generate+migrate instead of push because drizzle-kit push has a known
+  // SQLite bug where it tries to CREATE INDEX without IF NOT EXISTS, failing when
+  // indexes already exist during table recreation.
   if (!schemaFileChanged) {
     console.log(
-      pc.dim('  Schema file unchanged after regeneration — skipping drizzle-kit push.\n') +
+      pc.dim('  Schema file unchanged after regeneration — skipping drizzle-kit.\n') +
         pc.dim('  The database is already up to date.\n'),
     );
   } else {
-    const { runPush } = await prompts({
+    const { runMigrate } = await prompts({
       type: 'confirm',
-      name: 'runPush',
-      message: `Run ${pc.cyan('drizzle-kit push')} to apply schema changes?`,
+      name: 'runMigrate',
+      message: `Run ${pc.cyan('drizzle-kit generate')} + ${pc.cyan('drizzle-kit migrate')} to apply schema changes?`,
       initial: true,
-    });
+    }, { onCancel });
 
-    if (runPush) {
-      await runDrizzleKitPush();
+    if (runMigrate) {
+      await runDrizzleKitGenerate();
+      await runDrizzleKitMigrate();
     } else {
       console.log(
-        pc.dim('\n  Next: run ') +
-          pc.cyan('npx drizzle-kit push') +
-          pc.dim(' to apply schema changes.\n'),
+        pc.dim('\n  Next steps:') +
+          pc.dim('\n    1. Run ') + pc.cyan('npx drizzle-kit generate') + pc.dim(' to create migration files') +
+          pc.dim('\n    2. Run ') + pc.cyan('npx drizzle-kit migrate') + pc.dim(' to apply them\n'),
       );
     }
   }
@@ -568,6 +581,18 @@ async function runSeparateFilesMode(
   config: Awaited<ReturnType<typeof loadConfig>>,
   options: { output: string; dialect?: string; yes?: boolean },
 ) {
+  const dialect = normalizeDialect(options.dialect);
+  if (!dialect) {
+    console.error(
+      pc.red('✗ Cannot determine database dialect.') +
+        '\n\n' +
+        pc.dim('  Provide --dialect (sqlite, postgresql, or mysql).') +
+        '\n' +
+        pc.dim('  Or ensure your invect.config.ts specifies a database type.\n'),
+    );
+    process.exit(1);
+  }
+
   const outputDir = path.resolve(process.cwd(), options.output);
 
   let generated;
@@ -575,6 +600,7 @@ async function runSeparateFilesMode(
     generated = await generateAllDrizzleSchemas({
       plugins: config.plugins,
       outputDir,
+      dialect,
     });
   } catch (error) {
     console.error(pc.red(`\n✗ Schema generation failed:`));
@@ -586,19 +612,7 @@ async function runSeparateFilesMode(
 
   await printSummary(config, stats);
 
-  // Filter by dialect if --dialect specified
-  const filteredResults = options.dialect
-    ? results.filter((r) => {
-        const d = options.dialect!.toLowerCase();
-        if (d === 'sqlite') return r.fileName.includes('sqlite');
-        if (d === 'postgresql' || d === 'pg' || d === 'postgres')
-          return r.fileName.includes('postgres');
-        if (d === 'mysql') return r.fileName.includes('mysql');
-        return true;
-      })
-    : results;
-
-  const hasChanges = filteredResults.some((r) => r.code !== undefined);
+  const hasChanges = results.some((r) => r.code !== undefined);
 
   if (!hasChanges) {
     console.log(pc.bold(pc.green('\n✓ Schema files are already up to date.\n')));
@@ -607,7 +621,7 @@ async function runSeparateFilesMode(
 
   console.log('');
   console.log(pc.bold('  Files:'));
-  for (const result of filteredResults) {
+  for (const result of results) {
     const rel = path.relative(process.cwd(), result.fileName);
     if (result.code === undefined) {
       console.log(pc.dim(`    · ${rel} (unchanged)`));
@@ -626,7 +640,7 @@ async function runSeparateFilesMode(
       name: 'proceed',
       message: 'Generate schema files?',
       initial: true,
-    });
+    }, { onCancel });
 
     if (!response.proceed) {
       console.log(pc.dim('\n  Cancelled.\n'));
@@ -636,7 +650,7 @@ async function runSeparateFilesMode(
 
   // Write files
   let writtenCount = 0;
-  for (const result of filteredResults) {
+  for (const result of results) {
     if (result.code === undefined) continue;
 
     const dir = path.dirname(result.fileName);
@@ -657,7 +671,7 @@ async function runSeparateFilesMode(
     name: 'runDrizzleKit',
     message: `Run ${pc.cyan('drizzle-kit generate')} to create SQL migrations?`,
     initial: true,
-  });
+  }, { onCancel });
 
   if (runDrizzleKit) {
     await runDrizzleKitGenerate();
@@ -875,7 +889,7 @@ async function runDrizzleKitGenerate(): Promise<void> {
       ? `npx drizzle-kit generate --config ${configFile}`
       : 'npx drizzle-kit generate';
 
-    execSync(cmd, { stdio: 'inherit', cwd: process.cwd(), env: drizzleKitEnv() });
+    execSync(cmd, { stdio: ['pipe', 'inherit', 'inherit'], cwd: process.cwd(), env: drizzleKitEnv() });
 
     console.log(
       pc.bold(pc.green('\n✓ SQL migrations generated.\n')) +
@@ -931,6 +945,40 @@ async function runDrizzleKitPush(): Promise<void> {
         '\n' +
         pc.dim('  You can retry manually: ') +
         pc.cyan('npx drizzle-kit push') +
+        '\n',
+    );
+  }
+}
+
+async function runDrizzleKitMigrate(): Promise<void> {
+  console.log(pc.dim('\n  Running drizzle-kit migrate...\n'));
+
+  try {
+    const configFile = findDrizzleConfig();
+    const cmd = configFile
+      ? `npx drizzle-kit migrate --config ${configFile}`
+      : 'npx drizzle-kit migrate';
+
+    execSync(cmd, {
+      cwd: process.cwd(),
+      stdio: ['pipe', 'inherit', 'inherit'],
+      env: drizzleKitEnv(),
+    });
+
+    console.log(
+      pc.bold(pc.green('\n✓ Migrations applied.\n')),
+    );
+  } catch (error: unknown) {
+    if (wasAbortedByUser(error)) {
+      console.log(pc.dim('\n  drizzle-kit migrate was cancelled.\n'));
+      return;
+    }
+
+    console.error(
+      pc.yellow('\n⚠ drizzle-kit migrate encountered an error (see above).') +
+        '\n' +
+        pc.dim('  You can retry manually: ') +
+        pc.cyan('npx drizzle-kit migrate') +
         '\n',
     );
   }
@@ -1033,7 +1081,7 @@ async function runSqlMode(
         ? `Update ${pc.cyan(rel)}?`
         : `Create ${pc.cyan(rel)}?`,
       initial: true,
-    });
+    }, { onCancel });
 
     if (!response.proceed) {
       console.log(pc.dim('\n  Cancelled.\n'));

@@ -5,7 +5,7 @@
  */
 
 import type { InvectAdapter } from '../../database/adapter';
-import type { Logger } from 'src/types/schemas';
+import type { Logger } from 'src/schemas';
 import { DatabaseError } from 'src/types/common/errors.types';
 import type {
   FlowTriggerRegistration,

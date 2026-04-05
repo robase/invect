@@ -1,6 +1,6 @@
 import type { TriggersAPI } from './types';
 import type { ServiceFactory } from '../services/service-factory';
-import type { Logger } from '../types/schemas';
+import type { Logger } from '../schemas';
 
 export function createTriggersAPI(sf: ServiceFactory, logger: Logger): TriggersAPI {
   const svc = sf.getTriggersService();

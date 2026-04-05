@@ -16,7 +16,7 @@ import type {
   ActionResult,
   ActionCredential,
 } from './types';
-import type { NodeExecutionContext } from 'src/types-fresh';
+import type { NodeExecutionContext } from 'src/types.internal';
 import type { AgentToolExecutionContext, AgentToolResult } from 'src/types/agent-tool.types';
 import { NodeExecutionStatus } from 'src/types/base';
 import type {

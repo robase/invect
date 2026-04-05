@@ -1,7 +1,7 @@
-import { FlowRunContext } from 'src/types-fresh';
+import { FlowRunContext } from 'src/types.internal';
 import { NodeExecutionStatus } from 'src/types/base';
 import { ValidationError } from 'src/types/common/errors.types';
-import { Logger } from 'src/types/schemas';
+import { Logger } from 'src/schemas';
 import { NodeExecutionService } from './node-executions/node-execution.service';
 import { BaseLogger } from 'src/utils/logger';
 import { FlowEdge, FlowNodeDefinitions } from './flow-versions/schemas-fresh';

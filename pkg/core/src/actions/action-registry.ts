@@ -16,7 +16,7 @@ import type {
   LoadOptionsContext,
   LoadOptionsResult,
 } from './types';
-import type { Logger } from 'src/types/schemas-fresh/invect-config';
+import type { Logger } from 'src/schemas/invect-config';
 import type { NodeDefinition, NodeParamField, NodeCategory } from 'src/types/node-definition.types';
 import type { AgentToolDefinition, AgentToolCategory } from 'src/types/agent-tool.types';
 

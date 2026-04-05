@@ -1,5 +1,5 @@
 import { z } from 'zod/v4';
-import { metadataSchema } from 'src/types-fresh';
+import { metadataSchema } from 'src/types.internal';
 
 // =============================================================================
 // LOOP CONFIGURATION SCHEMA

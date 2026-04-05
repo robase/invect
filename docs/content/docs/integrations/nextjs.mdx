@@ -15,7 +15,7 @@ npm install @invect/core @invect/nextjs
 
 Create a catch-all API route for Invect:
 
-```ts title="app/api/invect/[...route]/route.ts"
+```ts title="app/api/invect/[...invect]/route.ts"
 import { createInvectHandler } from '@invect/nextjs';
 
 const handler = createInvectHandler({
@@ -26,10 +26,7 @@ const handler = createInvectHandler({
   },
 });
 
-export const GET = handler;
-export const POST = handler;
-export const PUT = handler;
-export const DELETE = handler;
+export { handler as GET, handler as POST, handler as PUT, handler as DELETE, handler as PATCH };
 ```
 
 ### Frontend Component
@@ -54,31 +51,36 @@ You can also use the core directly in server actions:
 ```ts title="app/actions/workflows.ts"
 'use server';
 
-import { Invect } from '@invect/core';
+import { createInvect, type InvectInstance } from '@invect/core';
 
-let core: Invect | null = null;
+let invect: InvectInstance | null = null;
+let initPromise: Promise<InvectInstance> | null = null;
 
-function getCore() {
-  if (!core) {
-    core = new Invect({
+function getInvect(): Promise<InvectInstance> {
+  if (invect) return Promise.resolve(invect);
+  if (!initPromise) {
+    initPromise = createInvect({
       database: {
         type: 'sqlite',
         connectionString: process.env.DATABASE_URL || 'file:./dev.db',
         id: 'main',
       },
+    }).then((instance) => {
+      invect = instance;
+      return instance;
     });
-    core.initialize();
   }
-  return core;
+  return initPromise;
 }
 
-export async function executeWorkflow(flowId: string, inputs: any) {
-  const result = await getCore().startFlowRun(flowId, inputs);
-  return result;
+export async function executeWorkflow(flowId: string, inputs: Record<string, unknown>) {
+  const core = await getInvect();
+  return core.runs.start(flowId, inputs);
 }
 
 export async function listWorkflows() {
-  return getCore().listFlows();
+  const core = await getInvect();
+  return core.flows.list();
 }
 ```
 

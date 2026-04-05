@@ -1,4 +1,4 @@
-import { GraphNodeType } from 'src/types-fresh';
+import { GraphNodeType } from 'src/types.internal';
 
 /**
  * Generate a stable slug for a node label. Falls back to node ID if label missing.

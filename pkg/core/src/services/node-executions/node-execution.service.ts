@@ -1,8 +1,8 @@
 import type { DatabaseService } from '../database/database.service';
-import { Logger } from 'src/types/schemas';
+import { Logger } from 'src/schemas';
 import { DatabaseError } from 'src/types/common/errors.types';
 import { NodeExecutionStatus } from 'src/types/base';
-import { PaginatedResponse, QueryOptions } from 'src/types/schemas/pagination-sort-filter';
+import { PaginatedResponse, QueryOptions } from 'src/schemas/pagination-sort-filter';
 import {
   NodeExecution,
   AgentToolExecution,

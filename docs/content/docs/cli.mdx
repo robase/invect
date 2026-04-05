@@ -42,17 +42,13 @@ The wizard walks through:
 
 ### `generate`
 
-Generate Drizzle schema files from the merged core + plugin schemas.
+Generate schema files from the merged core + plugin schemas.
 
 ```bash
 npx invect-cli generate
 ```
 
-This reads your config, merges the core schema with any plugin schemas, and writes three dialect-specific Drizzle files:
-
-- `schema-sqlite.ts`
-- `schema-postgres.ts`
-- `schema-mysql.ts`
+This reads your config, merges the core schema with any plugin schemas, and writes a single `invect.schema.ts` file for your configured database dialect. The file is written to `./db/` by default.
 
 Run this whenever you add a plugin that defines new tables or after upgrading Invect.
 
@@ -61,8 +57,10 @@ Run this whenever you add a plugin that defines new tables or after upgrading In
 | Flag | Description | Default |
 |------|-------------|---------|
 | `--config <path>` | Path to config file | Auto-detected |
-| `--output <path>` | Output directory | `./src/database` |
-| `--dialect <name>` | Generate only one dialect (`sqlite`, `postgresql`, `mysql`) | All three |
+| `--output <path>` | Output directory for generated files | `./db` |
+| `--schema <path>` | Append Invect tables to an existing Drizzle schema file | Auto-detected from `drizzle.config.ts` |
+| `--adapter <name>` | Schema adapter (`drizzle`, `prisma`, `sql`) | Auto-detected |
+| `--dialect <name>` | Database dialect (`sqlite`, `postgresql`, `mysql`) | From config |
 | `-y, --yes` | Skip confirmation prompt | `false` |
 
 **Example with options:**
@@ -143,35 +141,41 @@ A minimal config:
 <Tabs groupId="database" persist items={['SQLite', 'PostgreSQL', 'MySQL']}>
 <Tab value="SQLite">
 ```ts title="invect.config.ts"
-export default {
+import { defineConfig } from '@invect/core';
+
+export default defineConfig({
   database: {
     type: 'sqlite',
     connectionString: 'file:./dev.db',
     id: 'main',
   },
-};
+});
 ```
 </Tab>
 <Tab value="PostgreSQL">
 ```ts title="invect.config.ts"
-export default {
+import { defineConfig } from '@invect/core';
+
+export default defineConfig({
   database: {
     type: 'postgresql',
     connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/invect',
     id: 'main',
   },
-};
+});
 ```
 </Tab>
 <Tab value="MySQL">
 ```ts title="invect.config.ts"
-export default {
+import { defineConfig } from '@invect/core';
+
+export default defineConfig({
   database: {
     type: 'mysql',
     connectionString: process.env.DATABASE_URL || 'mysql://user:pass@localhost:3306/invect',
     id: 'main',
   },
-};
+});
 ```
 </Tab>
 </Tabs>
@@ -179,16 +183,17 @@ export default {
 With plugins and environment variables:
 
 ```ts title="invect.config.ts"
+import { defineConfig } from '@invect/core';
 import { auditLogPlugin } from './plugins/audit-log';
 
-export default {
+export default defineConfig({
   database: {
     type: 'postgresql',
     connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/invect',
     id: 'main',
   },
   plugins: [auditLogPlugin],
-};
+});
 ```
 
 ## Typical Workflow

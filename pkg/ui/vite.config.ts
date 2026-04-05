@@ -1,7 +1,54 @@
 import { resolve } from 'node:path';
+import { copyFileSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { defineConfig } from 'vite';
+import type { Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import dts from 'vite-plugin-dts';
+
+/**
+ * Vite plugin that extracts inlined base64 font data URIs from the CSS output
+ * and replaces them with references to separate font files in dist/fonts/.
+ * Necessary because Vite lib mode always inlines assets regardless of assetsInlineLimit.
+ */
+function extractInlinedFonts(): Plugin {
+  return {
+    name: 'extract-inlined-fonts',
+    closeBundle() {
+      const distDir = resolve(__dirname, 'dist');
+      const fontsDir = resolve(distDir, 'fonts');
+      const cssPath = resolve(distDir, 'index.css');
+
+      // Copy font files to dist/fonts/
+      const srcFontsDir = resolve(__dirname, 'src/assets/fonts');
+      mkdirSync(fontsDir, { recursive: true });
+      for (const file of readdirSync(srcFontsDir)) {
+        if (file.endsWith('.woff2')) {
+          copyFileSync(resolve(srcFontsDir, file), resolve(fontsDir, file));
+        }
+      }
+
+      // Replace base64 data URIs with relative file references
+      let css = readFileSync(cssPath, 'utf-8');
+      for (const file of readdirSync(fontsDir)) {
+        const fontData = readFileSync(resolve(srcFontsDir, file));
+        const base64 = fontData.toString('base64');
+        // Match the data URI for this font (woff2 mime type)
+        const dataUri = `url(data:font/woff2;base64,${base64})`;
+        if (css.includes(dataUri)) {
+          css = css.replace(dataUri, `url(./fonts/${file})`);
+        } else {
+          // Try application/font-woff2 mime type
+          const altDataUri = `url(data:application/font-woff2;base64,${base64})`;
+          if (css.includes(altDataUri)) {
+            css = css.replace(altDataUri, `url(./fonts/${file})`);
+          }
+        }
+      }
+
+      writeFileSync(cssPath, css);
+    },
+  };
+}
 
 const external = [
   'react',
@@ -55,6 +102,7 @@ export default defineConfig(({ mode }) => ({
       copyDtsFiles: true,
       exclude: ['src/**/*.test.*', 'src/**/*.spec.*'],
     }),
+    extractInlinedFonts(),
   ],
   resolve: {
     tsconfigPaths: true,

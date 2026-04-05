@@ -8,8 +8,8 @@
 
 import type { FlowsAPI } from './types';
 import type { ServiceFactory } from '../services/service-factory';
-import type { Logger } from '../types/schemas';
-import * as Schemas from '../types/schemas';
+import type { Logger } from '../schemas';
+import * as Schemas from '../schemas';
 import { FlowRunStatus } from '../types/base';
 import type { DashboardStats } from '../invect-core';
 import { FlowValidator } from '../services/flow-validator';

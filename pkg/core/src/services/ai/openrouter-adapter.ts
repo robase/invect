@@ -12,7 +12,7 @@
  */
 
 import OpenAI from 'openai';
-import { Logger } from 'src/types/schemas';
+import { Logger } from 'src/schemas';
 import { Model, BatchPollResult, BatchSubmissionResult } from './ai-types';
 import { BatchRequest } from '../node-data.service';
 import { OpenAIAdapter } from './openai-adapter';
@@ -39,6 +39,7 @@ interface OpenRouterModel {
     context_length?: number;
     max_completion_tokens?: number;
   };
+  supported_parameters?: string[];
 }
 
 /**
@@ -136,12 +137,13 @@ export class OpenRouterAdapter extends OpenAIAdapter {
 
       const data = (await response.json()) as { data: OpenRouterModel[] };
 
-      // Filter to chat models and map to our format
+      // Filter to text-output chat models that support tool calling
       const models: Model[] = data.data
         .filter((model) => {
-          // Filter out embedding and other non-chat models
           const modality = model.architecture?.modality;
-          return modality === 'text->text' || modality === 'text+image->text';
+          const outputsText = modality?.endsWith('->text');
+          const supportsTools = model.supported_parameters?.includes('tools');
+          return outputsText && supportsTools;
         })
         .map((model) => ({
           id: model.id,

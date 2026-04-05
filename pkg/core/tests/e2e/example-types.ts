@@ -1,5 +1,5 @@
-import type { FlowRunResult } from "../src";
-import type { InvectInstance } from "../src/api/types";
+import type { FlowRunResult } from "../../src";
+import type { InvectInstance } from "../../src/api/types";
 
 export interface StructuredNodeOutput {
   data?: {

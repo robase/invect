@@ -10,7 +10,7 @@
 
 import { z } from 'zod/v4';
 import type { AgentToolDefinition } from 'src/types/agent-tool.types';
-import type { Logger } from 'src/types/schemas';
+import type { Logger } from 'src/schemas';
 import type { ChatToolDefinition, ChatToolContext, ChatToolResult } from './chat-types';
 import { allChatTools } from './tools';
 

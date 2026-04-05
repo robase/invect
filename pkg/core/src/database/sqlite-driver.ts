@@ -8,8 +8,8 @@
  * SQLite operations should use `SqliteDriver` instead.
  */
 
-import type { InvectDatabaseConfig } from 'src/types/schemas';
-import type { Logger } from 'src/types/schemas';
+import type { InvectDatabaseConfig } from 'src/schemas';
+import type { Logger } from 'src/schemas';
 
 // ---------------------------------------------------------------------------
 // Public interface

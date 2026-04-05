@@ -3,22 +3,23 @@ title: Programmatic Usage
 description: Execute flows directly from your backend code.
 ---
 
-The visual editor is optional. The `Invect` core class exposes every operation as a typed method — build flows in the UI, trigger them from code, or do both.
+The visual editor is optional. The `createInvect()` factory returns a fully initialized instance with namespaced APIs — build flows in the UI, trigger them from code, or do both.
 
 ## Setup
 
 ```ts title="worker.ts"
-import { Invect } from '@invect/core';
+import { createInvect } from '@invect/core';
 
-const core = new Invect({
+const invect = await createInvect({
   database: {
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL || 'file:./dev.db',
     id: 'main',
   },
 });
-await core.initialize();
 ```
+
+`createInvect()` is async — it initializes the database, registers all actions, and returns a ready-to-use `InvectInstance`.
 
 ## Executing Flows
 
@@ -27,7 +28,7 @@ await core.initialize();
 Waits for the flow to complete and returns the full result:
 
 ```ts
-const result = await core.startFlowRun('flow-id-here', {
+const result = await invect.runs.start('flow-id-here', {
   email: 'user@example.com',
   data: { key: 'value' },
 });
@@ -41,14 +42,14 @@ console.log(result.outputs); // Flow output data
 Returns immediately with the flow run ID. The flow executes in the background:
 
 ```ts
-const run = await core.startFlowRunAsync('flow-id-here', inputs);
-// Flow is running — poll getFlowRun(run.id) for status
+const run = await invect.runs.startAsync('flow-id-here', inputs);
+// Flow is running — poll invect.runs.get(run.id) for status
 ```
 
 ### Pin to a specific version
 
 ```ts
-const result = await core.startFlowRun('flow-id-here', inputs, {
+const result = await invect.runs.start('flow-id-here', inputs, {
   version: 3,        // specific version number
   // version: 'latest',  // always run the latest (default)
 });
@@ -59,7 +60,7 @@ const result = await core.startFlowRun('flow-id-here', inputs, {
 Pause the flow and use the OpenAI/Anthropic batch API for 50% cheaper AI model calls:
 
 ```ts
-const result = await core.startFlowRun('flow-id-here', inputs, {
+const result = await invect.runs.start('flow-id-here', inputs, {
   useBatchProcessing: true,
 });
 // result.status will be 'PAUSED_FOR_BATCH' — polling resumes it automatically
@@ -69,7 +70,7 @@ const result = await core.startFlowRun('flow-id-here', inputs, {
 
 ```ts title="From a webhook"
 app.post('/webhooks/new-order', async (req, res) => {
-  const run = await core.startFlowRunAsync('order-processing-flow', { order: req.body });
+  const run = await invect.runs.startAsync('order-processing-flow', { order: req.body });
   res.json({ runId: run.id });
 });
 ```
@@ -78,7 +79,7 @@ app.post('/webhooks/new-order', async (req, res) => {
 import { Worker } from 'bullmq';
 
 const worker = new Worker('workflows', async (job) => {
-  return core.startFlowRun(job.data.flowId, job.data.inputs);
+  return invect.runs.start(job.data.flowId, job.data.inputs);
 });
 ```
 
@@ -86,14 +87,14 @@ const worker = new Worker('workflows', async (job) => {
 
 ```ts
 // Create
-const flow = await core.createFlow({ name: 'My Flow', description: '...' });
+const flow = await invect.flows.create({ name: 'My Flow', description: '...' });
 
 // Read
-const flows = await core.listFlows();
-const flow = await core.getFlowById(flowId);
+const flows = await invect.flows.list();
+const flow = await invect.flows.get(flowId);
 
 // Delete
-await core.deleteFlow(flowId);
+await invect.flows.delete(flowId);
 ```
 
 ## Managing Versions
@@ -101,41 +102,73 @@ await core.deleteFlow(flowId);
 Each save in the editor creates a new version. You can list versions and pin executions to any of them:
 
 ```ts
-const versions = await core.listFlowVersions(flowId);
-const version = await core.getFlowVersion(flowId, 2); // or 'latest'
+const versions = await invect.versions.list(flowId);
+const version = await invect.versions.get(flowId, 2); // or 'latest'
 ```
 
 ## Inspecting Executions
 
 ```ts
-const run = await core.getFlowRun(runId);
-console.log(run.status);          // 'SUCCESS' | 'FAILED' | 'PAUSED_FOR_BATCH'
-console.log(run.nodeExecutions);  // per-node traces with inputs, outputs, timing
+const run = await invect.runs.get(runId);
+console.log(run.status);  // 'SUCCESS' | 'FAILED' | 'PAUSED_FOR_BATCH'
 
-const runs = await core.listFlowRuns(flowId);
+const nodeTraces = await invect.runs.getNodeExecutions(runId);
+const runs = await invect.runs.listByFlowId(flowId);
 ```
 
 ## API Reference
 
+The `InvectInstance` organizes methods into namespaced APIs:
+
+### `invect.flows`
+
 | Method | Description |
 |--------|-------------|
-| `initialize()` | Set up database, register actions, start services |
-| `createFlow(input)` | Create a new flow |
-| `listFlows()` | List all flows |
-| `getFlowById(id)` | Get a flow by ID |
-| `deleteFlow(id)` | Delete a flow |
-| `listFlowVersions(flowId)` | List all versions of a flow |
-| `getFlowVersion(flowId, version)` | Get a specific version (`number` or `'latest'`) |
-| `startFlowRun(flowId, inputs, opts?)` | Execute a flow synchronously |
-| `startFlowRunAsync(flowId, inputs, opts?)` | Execute a flow in the background |
-| `getFlowRun(id)` | Get execution details and per-node traces |
-| `listFlowRuns(flowId)` | List executions for a flow |
-| `createCredential(input)` | Store a credential |
-| `listCredentials()` | List all credentials |
-| `getAgentTools()` | List available agent tools |
+| `create(input)` | Create a new flow |
+| `list(options?)` | List all flows (paginated) |
+| `get(flowId)` | Get a flow by ID |
+| `update(flowId, input)` | Update a flow |
+| `delete(flowId)` | Delete a flow |
 | `getDashboardStats()` | Flow counts, run counts by status, recent activity |
+
+### `invect.versions`
+
+| Method | Description |
+|--------|-------------|
+| `create(flowId, data)` | Create a new flow version |
+| `list(flowId, options?)` | List all versions of a flow |
+| `get(flowId, version)` | Get a specific version (`number` or `'latest'`) |
+
+### `invect.runs`
+
+| Method | Description |
+|--------|-------------|
+| `start(flowId, inputs?, opts?)` | Execute a flow synchronously |
+| `startAsync(flowId, inputs?, opts?)` | Execute a flow in the background |
+| `get(flowRunId)` | Get execution details |
+| `list(options?)` | List all executions (paginated) |
+| `listByFlowId(flowId)` | List executions for a flow |
+| `getNodeExecutions(flowRunId)` | Get per-node execution traces |
+| `cancel(flowRunId)` | Cancel a running flow |
+| `pause(flowRunId, reason?)` | Pause a running flow |
+| `resume(executionId)` | Resume a paused flow |
+
+### `invect.credentials`
+
+| Method | Description |
+|--------|-------------|
+| `create(input)` | Store a credential |
+| `list(filters?)` | List all credentials |
+| `get(id)` | Get a credential by ID |
+| `update(id, input)` | Update a credential |
+| `delete(id)` | Delete a credential |
+
+### Lifecycle
+
+| Method | Description |
+|--------|-------------|
 | `startBatchPolling()` | Start background batch job polling |
 | `stopBatchPolling()` | Stop batch job polling |
 | `startCronScheduler()` | Start the cron trigger scheduler |
-| `shutdown()` | Gracefully shut down (marks in-progress runs as failed) |
+| `shutdown()` | Gracefully shut down |
 

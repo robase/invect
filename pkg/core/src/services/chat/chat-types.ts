@@ -56,6 +56,8 @@ export interface ChatContext {
   credentialId?: string;
   /** Per-request override for max tool-calling steps (1–50) */
   maxSteps?: number;
+  /** Per-request model override (e.g. "claude-sonnet-4-20250514") */
+  model?: string;
 }
 
 // =====================================

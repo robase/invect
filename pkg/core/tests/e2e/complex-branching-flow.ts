@@ -30,7 +30,7 @@ import {
   FlowRunStatus,
   type InvectDefinition,
   type NodeOutput,
-} from "../src";
+} from "../../src";
 import type { FlowExample } from "./example-types";
 
 /**

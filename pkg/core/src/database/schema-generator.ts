@@ -38,6 +38,8 @@ function enumVarName(tableName: string, fieldName: string): string {
 }
 
 const SQLITE_RUNTIME_DEFAULT_IMPORTS: Record<string, string> = {
+  BatchProvider: '@invect/core',
+  BatchStatus: '@invect/core',
   FlowRunStatus: '@invect/core',
   NodeExecutionStatus: '@invect/core',
 };
@@ -86,17 +88,30 @@ export function generateSqliteSchema(schema: MergedSchema): string {
   }
   lines.push(`import { randomUUID } from 'crypto';`);
   lines.push(``);
-  lines.push(`// Type imports — these are used for $type<>() annotations`);
-  lines.push(`import type { JSONValue } from '.';`);
-  lines.push(``);
 
-  // Collect all typeAnnotations to generate type imports
-  const typeAnnotations = collectTypeAnnotations(schema);
-  if (typeAnnotations.size > 0) {
-    lines.push(`// Plugin & core type annotations`);
-    lines.push(`// You may need to adjust these imports based on your project structure`);
-    lines.push(``);
+  // Collect names already imported as runtime values to avoid duplicates in type import
+  const runtimeImportedNames = new Set<string>();
+  for (const identifiers of runtimeImports.values()) {
+    for (const id of identifiers) {
+      runtimeImportedNames.add(id);
+    }
   }
+
+  // Type imports from @invect/core/types
+  const typeImport = collectTypeImportsForAppend(schema, runtimeImportedNames);
+  if (typeImport) {
+    lines.push(typeImport);
+  }
+
+  // Local type aliases for plugin-defined types not in @invect/core/types
+  const localAliases = collectLocalTypeAliases(schema, runtimeImportedNames);
+  if (localAliases.length > 0) {
+    lines.push(``);
+    for (const alias of localAliases) {
+      lines.push(alias);
+    }
+  }
+  lines.push(``);
 
   // Tables
   lines.push(`// =============================================================================`);
@@ -287,7 +302,23 @@ export function generatePostgresSchema(schema: MergedSchema): string {
   lines.push(`import { relations } from 'drizzle-orm';`);
   lines.push(`import { randomUUID } from 'crypto';`);
   lines.push(``);
-  lines.push(`import type { JSONValue } from '.';`);
+
+  // Enum columns use pgEnum (not .$type<>()), so their type annotations are unused
+  const enumTypeNames = collectEnumTypeAnnotations(schema);
+
+  // Type imports from @invect/core/types
+  const typeImport = collectTypeImportsForAppend(schema, enumTypeNames);
+  if (typeImport) {
+    lines.push(typeImport);
+  }
+
+  // Local type aliases for plugin-defined types not in @invect/core/types
+  const localAliases = collectLocalTypeAliases(schema, enumTypeNames);
+  if (localAliases.length > 0) {
+    for (const alias of localAliases) {
+      lines.push(alias);
+    }
+  }
   lines.push(``);
 
   // Enums
@@ -494,7 +525,20 @@ export function generateMysqlSchema(schema: MergedSchema): string {
   lines.push(`import { relations, sql } from 'drizzle-orm';`);
   lines.push(`import { randomUUID } from 'crypto';`);
   lines.push(``);
-  lines.push(`import type { JSONValue } from '.';`);
+
+  // Type imports from @invect/core/types
+  const typeImport = collectTypeImportsForAppend(schema);
+  if (typeImport) {
+    lines.push(typeImport);
+  }
+
+  // Local type aliases for plugin-defined types not in @invect/core/types
+  const localAliases = collectLocalTypeAliases(schema);
+  if (localAliases.length > 0) {
+    for (const alias of localAliases) {
+      lines.push(alias);
+    }
+  }
   lines.push(``);
 
   // Tables
@@ -708,6 +752,9 @@ export function generateSqliteSchemaAppend(schema: MergedSchema): AppendSchemaRe
     imports.push(typeImport);
   }
 
+  // Generate local type aliases for plugin-defined types not in @invect/core/types
+  const localAliases = collectLocalTypeAliases(schema, runtimeImportedNames);
+
   const lines: string[] = [];
   lines.push(``);
   lines.push(`// =============================================================================`);
@@ -715,6 +762,13 @@ export function generateSqliteSchemaAppend(schema: MergedSchema): AppendSchemaRe
   lines.push(`// Do not edit below this line. Run \`npx invect-cli generate\` to regenerate.`);
   lines.push(`// =============================================================================`);
   lines.push(``);
+
+  if (localAliases.length > 0) {
+    for (const alias of localAliases) {
+      lines.push(alias);
+    }
+    lines.push(``);
+  }
 
   for (const table of schema.tables) {
     lines.push(generateSqliteTable(table, schema));
@@ -747,6 +801,9 @@ export function generatePostgresSchemaAppend(schema: MergedSchema): AppendSchema
     imports.push(typeImport);
   }
 
+  // Generate local type aliases for plugin-defined types not in @invect/core/types
+  const localAliases = collectLocalTypeAliases(schema, enumTypeNames);
+
   const lines: string[] = [];
   lines.push(``);
   lines.push(`// =============================================================================`);
@@ -754,6 +811,13 @@ export function generatePostgresSchemaAppend(schema: MergedSchema): AppendSchema
   lines.push(`// Do not edit below this line. Run \`npx invect-cli generate\` to regenerate.`);
   lines.push(`// =============================================================================`);
   lines.push(``);
+
+  if (localAliases.length > 0) {
+    for (const alias of localAliases) {
+      lines.push(alias);
+    }
+    lines.push(``);
+  }
 
   const enums = collectEnums(schema);
   if (enums.length > 0) {
@@ -796,6 +860,9 @@ export function generateMysqlSchemaAppend(schema: MergedSchema): AppendSchemaRes
     imports.push(typeImport);
   }
 
+  // Generate local type aliases for plugin-defined types not in @invect/core/types
+  const localAliases = collectLocalTypeAliases(schema, enumTypeNames);
+
   const lines: string[] = [];
   lines.push(``);
   lines.push(`// =============================================================================`);
@@ -803,6 +870,13 @@ export function generateMysqlSchemaAppend(schema: MergedSchema): AppendSchemaRes
   lines.push(`// Do not edit below this line. Run \`npx invect-cli generate\` to regenerate.`);
   lines.push(`// =============================================================================`);
   lines.push(``);
+
+  if (localAliases.length > 0) {
+    for (const alias of localAliases) {
+      lines.push(alias);
+    }
+    lines.push(``);
+  }
 
   for (const table of schema.tables) {
     lines.push(generateMysqlTable(table, schema));
@@ -978,9 +1052,30 @@ function isBuiltinType(annotation: string): boolean {
 }
 
 /**
+ * Types that are known to be exported from `@invect/core/types`.
+ * Only these will be included in `import type { ... } from '@invect/core/types'`.
+ * Plugin-defined types not in this set get generated as local type aliases.
+ */
+const CORE_TYPE_EXPORTS = new Set([
+  'BatchProvider',
+  'BatchStatus',
+  'CredentialAuthType',
+  'CredentialConfig',
+  'CredentialType',
+  'FlowRunStatus',
+  'InvectDefinitionRuntime',
+  'JSONValue',
+  'NodeExecutionStatus',
+  'TriggerType',
+]);
+
+/**
  * Generate a type import line for `@invect/core/types` based on the type annotations
  * used in the schema. This is needed in append mode where the generated code lives
  * in the user's project and can't use internal `src/` paths.
+ *
+ * Types not in CORE_TYPE_EXPORTS are excluded — they should be handled
+ * separately via `collectLocalTypeAliases`.
  */
 function collectTypeImportsForAppend(
   schema: MergedSchema,
@@ -990,12 +1085,33 @@ function collectTypeImportsForAppend(
   const importable = Array.from(annotations)
     .filter((a) => !isBuiltinType(a))
     .filter((a) => !runtimeImportedNames?.has(a))
+    .filter((a) => CORE_TYPE_EXPORTS.has(a))
     .sort();
 
   if (importable.length === 0) {
     return null;
   }
   return `import type { ${importable.join(', ')} } from '@invect/core/types';`;
+}
+
+/**
+ * Generate local `type X = string;` aliases for type annotations that are NOT
+ * available from `@invect/core/types` (i.e. plugin-defined types).
+ *
+ * These appear as simple string aliases so the generated schema compiles
+ * without requiring additional imports from plugin packages.
+ */
+function collectLocalTypeAliases(
+  schema: MergedSchema,
+  runtimeImportedNames?: Set<string>,
+): string[] {
+  const annotations = collectTypeAnnotations(schema);
+  return Array.from(annotations)
+    .filter((a) => !isBuiltinType(a))
+    .filter((a) => !runtimeImportedNames?.has(a))
+    .filter((a) => !CORE_TYPE_EXPORTS.has(a))
+    .sort()
+    .map((a) => `type ${a} = string;`);
 }
 
 // =============================================================================

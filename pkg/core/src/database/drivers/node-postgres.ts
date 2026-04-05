@@ -5,7 +5,7 @@
  */
 
 import type { DatabaseDriver } from './types';
-import type { Logger } from 'src/types/schemas';
+import type { Logger } from 'src/schemas';
 
 export async function createNodePostgresDriver(
   connectionString: string,

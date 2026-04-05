@@ -23,13 +23,16 @@ app.use(cors());
 
 // Mount alongside your existing routes
 app.use('/api/admin', adminRouter);
-app.use('/api/invect', createInvectRouter({
+
+const invectRouter = await createInvectRouter({
   database: {
     type: 'sqlite',
     connectionString: 'file:./dev.db',
     id: 'main',
   },
-}));
+});
+
+app.use('/api/invect', invectRouter);
 
 app.listen(3000);
 ```
@@ -39,7 +42,7 @@ app.listen(3000);
 `createInvectRouter` accepts the full `InvectConfig` object:
 
 ```ts
-createInvectRouter({
+await createInvectRouter({
   // Required
   database: {
     type: 'sqlite',            // 'sqlite' | 'postgresql' | 'mysql'
@@ -48,11 +51,11 @@ createInvectRouter({
   },
 
   // Optional
-  plugins?: InvectPlugin[],   // Plugins to load
-  auth?: { ... },              // Authentication/authorization config
-  chat?: { ... },              // AI chat assistant config
-  logging?: { ... },           // Log level configuration
-  defaultCredentials?: [...],  // Credentials to seed on startup
+  plugins?: InvectPlugin[],       // Plugins to load
+  logging?: { level: '...' },     // Log level configuration
+  defaultCredentials?: [...],     // Credentials to seed on startup
+  execution?: { ... },            // Execution timeouts and concurrency
+  triggers?: { ... },             // Webhook base URL, cron settings
 });
 ```
 
@@ -69,7 +72,7 @@ Every route is a thin wrapper around a core method:
 ```ts
 // Internally, the router does:
 router.post('/flows/:flowId/run', async (req, res) => {
-  const result = await core.startFlowRun(req.params.flowId, req.body.inputs);
+  const result = await invect.runs.start(req.params.flowId, req.body.inputs);
   res.json(result);
 });
 ```
@@ -99,13 +102,15 @@ import { createInvectRouter } from '@invect/express';
 app.use('/admin/api', adminRouter);
 
 // Invect workflows — same server, same database
-app.use('/admin/workflows', createInvectRouter({
+const invectRouter = await createInvectRouter({
   database: {
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL || 'file:./dev.db',
     id: 'main',
   },
-}));
+});
+
+app.use('/admin/workflows', invectRouter);
 ```
 
 Then in your admin frontend, drop in the React component:

@@ -1,7 +1,7 @@
 /**
  * Schema Generators — Router
  *
- * Mirrors better-auth's generators/index.ts pattern.
+ * Barrel export for all schema generators.
  * Routes to the appropriate generator based on adapter type.
  *
  * Supports both Drizzle and Prisma generators.

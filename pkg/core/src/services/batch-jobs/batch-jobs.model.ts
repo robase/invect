@@ -1,6 +1,6 @@
 // Batch Jobs Model for Invect core — adapter-based implementation
 import type { InvectAdapter, WhereClause } from '../../database/adapter';
-import { Logger } from 'src/types/schemas';
+import { Logger } from 'src/schemas';
 import { DatabaseError } from 'src/types/common/errors.types';
 import { BatchProvider, BatchStatus, BatchResult } from '../ai/base-client';
 import { BatchRequest } from '../node-data.service';

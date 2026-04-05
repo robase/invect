@@ -13,7 +13,7 @@
 
 import { BaseNodeExecutor, NodeExecutionResult } from './base-node';
 import { NodeExecutionStatus } from 'src/types/base';
-import { GraphNodeType, NodeExecutionContext } from 'src/types-fresh';
+import { GraphNodeType, NodeExecutionContext } from 'src/types.internal';
 import type { NodeInputData } from 'src/types/node-io-types';
 import { FlowNodeForType } from 'src/services/flow-versions/schemas-fresh';
 import { NodeDefinition } from '../types/node-definition.types';

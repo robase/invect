@@ -946,6 +946,14 @@ export class InvectController {
     return { enabled: this.invect.chat.isEnabled() };
   }
 
+  @Get('chat/models/:credentialId')
+  async getChatModels(
+    @Param('credentialId') credentialId: string,
+    @Query('q') q?: string,
+  ) {
+    return this.invect.chat.listModels(credentialId, q);
+  }
+
   @Post('chat')
   async streamChat(
     @Body() body: { messages: unknown[]; context?: Record<string, unknown> },

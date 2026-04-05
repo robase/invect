@@ -9,7 +9,7 @@ There are three trigger types:
 
 | Trigger | Node ID | How it starts |
 |---------|---------|---------------|
-| Manual | `trigger.manual` | UI run button, REST API, or `startFlowRun()` |
+| Manual | `trigger.manual` | UI run button, REST API, or `invect.runs.start()` |
 | Cron | `trigger.cron` | Recurring schedule via cron expression |
 | Webhook | `trigger.webhook` | Incoming HTTP POST from an external service |
 
@@ -19,7 +19,7 @@ All trigger nodes expose their data to downstream nodes via template expressions
 
 ## Manual Trigger
 
-The Manual Trigger is the default entry point for most flows. It fires when you click **Run** in the editor, call the `POST /flows/:id/run` API endpoint, or call `core.startFlowRun()` programmatically.
+The Manual Trigger is the default entry point for most flows. It fires when you click **Run** in the editor, call the `POST /flows/:id/run` API endpoint, or call `invect.runs.start()` programmatically.
 
 ### Defining input fields
 
@@ -139,10 +139,10 @@ The incoming request body and headers are exposed to downstream nodes:
 
 ## Starting flows programmatically
 
-When using `trigger.manual`, pass inputs as the second argument to `startFlowRun`:
+When using `trigger.manual`, pass inputs as the second argument to `runs.start`:
 
 ```ts
-const result = await core.startFlowRun('my-flow-id', {
+const result = await invect.runs.start('my-flow-id', {
   topic: 'quarterly report',
   userId: 'user_123',
 });
@@ -153,7 +153,7 @@ const result = await core.startFlowRun('my-flow-id', {
 By default, Invect runs the latest published version. Pin to a specific version:
 
 ```ts
-const result = await core.startFlowRun('my-flow-id', inputs, {
+const result = await invect.runs.start('my-flow-id', inputs, {
   version: 3,       // specific version number
   // version: 'latest', // explicit latest (default)
 });
@@ -164,16 +164,16 @@ const result = await core.startFlowRun('my-flow-id', inputs, {
 Opt in to batch processing for cheaper AI model calls (50% cost reduction). The flow will pause with status `PAUSED_FOR_BATCH` until the batch completes:
 
 ```ts
-const result = await core.startFlowRun('my-flow-id', inputs, {
+const result = await invect.runs.start('my-flow-id', inputs, {
   useBatchProcessing: true,
 });
 ```
 
 ### Fire and forget
 
-Use `startFlowRunAsync` to return immediately without waiting for the flow to complete:
+Use `runs.startAsync` to return immediately without waiting for the flow to complete:
 
 ```ts
-const { id: flowRunId } = await core.startFlowRunAsync('my-flow-id', inputs);
-// Flow is running in background — poll getFlowRun(flowRunId) for status
+const { id: flowRunId } = await invect.runs.startAsync('my-flow-id', inputs);
+// Flow is running in background — poll invect.runs.get(flowRunId) for status
 ```

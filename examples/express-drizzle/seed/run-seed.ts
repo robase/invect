@@ -2143,66 +2143,6 @@ async function runAllSeeds() {
       return createdFlow;
     };
 
-    // ============ SEED CREDENTIALS ============
-    const anthropicApiKey = process.env.ANTHROPIC_API_KEY || process.env.SEED_ANTHROPIC_API_KEY;
-    if (anthropicApiKey) {
-      console.log('🔐 Seeding: Anthropic API Credential...');
-      try {
-        const credential = await invect.createCredential({
-          name: 'Anthropic API Key',
-          type: 'llm',
-          authType: 'apiKey',
-          config: {
-            apiKey: anthropicApiKey,
-          },
-          description: 'Anthropic Claude API credential for AI model nodes',
-          isShared: true,
-          metadata: {
-            provider: 'anthropic',
-            models: ['claude-3-haiku-20240307', 'claude-3-haiku-20240307'],
-          },
-        });
-        anthropicCredentialId = credential.id;
-        seededCredentials.push(`  ✓ ${credential.name} (${credential.id})`);
-      } catch {
-        console.log('  ⚠️  Credential may already exist, continuing...');
-      }
-    } else {
-      console.log('⚠️  ANTHROPIC_API_KEY not set - skipping credential seed');
-    }
-
-    // Seed: Linear OAuth2 Credential
-    const linearClientId = process.env.LINEAR_CLIENT_ID || process.env.SEED_LINEAR_CLIENT_ID;
-    const linearClientSecret =
-      process.env.LINEAR_CLIENT_SECRET || process.env.SEED_LINEAR_CLIENT_SECRET;
-    if (linearClientId && linearClientSecret) {
-      console.log('🔐 Seeding: Linear OAuth2 Credential...');
-      try {
-        const linearCredential = await invect.createCredential({
-          name: 'Linear OAuth2',
-          type: 'http-api',
-          authType: 'oauth2',
-          config: {
-            clientId: linearClientId,
-            clientSecret: linearClientSecret,
-            oauth2Provider: 'linear',
-          },
-          description: 'Linear OAuth2 credential for issue tracking and project management',
-          isShared: true,
-          metadata: {
-            provider: 'linear',
-          },
-        });
-        seededCredentials.push(`  ✓ ${linearCredential.name} (${linearCredential.id})`);
-      } catch {
-        console.log('  ⚠️  Linear credential may already exist, continuing...');
-      }
-    } else {
-      console.log(
-        '⚠️  LINEAR_CLIENT_ID / LINEAR_CLIENT_SECRET not set - skipping Linear credential seed',
-      );
-    }
-
     // ============ SEED FLOWS ============
 
     // Seed 1: Complex Branching Flow (Adult)

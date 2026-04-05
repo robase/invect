@@ -5,7 +5,7 @@ const dbUrl = process.env.DB_FILE_NAME?.replace(/^file:/, '') || './dev.db';
 
 export default defineConfig({
   out: './drizzle',
-  schema: './db/schema-sqlite.ts',
+  schema: './db/schema.ts',
   dialect: 'sqlite',
   dbCredentials: {
     url: dbUrl,

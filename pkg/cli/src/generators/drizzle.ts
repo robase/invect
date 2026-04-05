@@ -5,14 +5,12 @@
  * (core + plugins). Produces dialect-specific TypeScript source code.
  *
  * This is the primary generator — Invect uses Drizzle exclusively.
- * The pattern mirrors better-auth's generators/drizzle.ts:
+ * The pattern generates dialect-specific Drizzle schema files from an abstract
  *   1. getAuthTables() → mergeSchemas() — merge core + plugin schemas
  *   2. Map abstract fields → dialect-specific Drizzle column code
  *   3. Return { code, fileName }
  *
- * Unlike better-auth which generates 1 file, Invect generates 3
- * (sqlite, postgres, mysql) because Invect supports all three dialects
- * simultaneously.
+ * Generates a single `invect.schema.ts` file for the user's selected dialect.
  */
 
 import { existsSync, readFileSync } from 'node:fs';
@@ -50,14 +48,7 @@ export const generateDrizzleSchema: SchemaGenerator = async ({
 
   const code = generator(mergedSchema);
 
-  // Default file paths per dialect
-  const defaultFiles: Record<string, string> = {
-    sqlite: './src/database/schema-sqlite.ts',
-    postgresql: './src/database/schema-postgres.ts',
-    mysql: './src/database/schema-mysql.ts',
-  };
-
-  const fileName = file || defaultFiles[dialect]!;
+  const fileName = file || './db/invect.schema.ts';
 
   // Check if the file already exists with the same content
   if (existsSync(fileName)) {
@@ -71,14 +62,15 @@ export const generateDrizzleSchema: SchemaGenerator = async ({
 };
 
 /**
- * Generate all three Drizzle schema files at once.
+ * Generate a single Drizzle schema file for the given dialect.
  *
  * This is the main entry point used by `npx invect-cli generate`.
- * Returns results for all three dialects.
+ * Returns a single result for the specified dialect as `invect.schema.ts`.
  */
 export async function generateAllDrizzleSchemas(options: {
-  plugins: SchemaGenerator extends (opts: infer O) => any ? O['plugins'] : never;
+  plugins: Array<{ id: string; schema?: Record<string, unknown>; [key: string]: unknown }>;
   outputDir?: string;
+  dialect: 'sqlite' | 'postgresql' | 'mysql';
 }): Promise<{
   results: SchemaGeneratorResult[];
   mergedSchema: any;
@@ -106,33 +98,36 @@ export async function generateAllDrizzleSchemas(options: {
     generateMysqlSchema,
   } = await import('@invect/core');
 
-  const dir = options.outputDir || './src/database';
+  const dir = options.outputDir || './db';
 
-  const dialects: Array<{
-    dialect: 'sqlite' | 'postgresql' | 'mysql';
-    fileName: string;
-    generate: (schema: typeof mergedSchema) => string;
-  }> = [
-    { dialect: 'sqlite', fileName: `${dir}/schema-sqlite.ts`, generate: generateSqliteSchema },
-    { dialect: 'postgresql', fileName: `${dir}/schema-postgres.ts`, generate: generatePostgresSchema },
-    { dialect: 'mysql', fileName: `${dir}/schema-mysql.ts`, generate: generateMysqlSchema },
-  ];
+  const generators: Record<string, (schema: typeof mergedSchema) => string> = {
+    sqlite: generateSqliteSchema,
+    postgresql: generatePostgresSchema,
+    mysql: generateMysqlSchema,
+  };
+
+  const generate = generators[options.dialect];
+  if (!generate) {
+    throw new Error(
+      `Unsupported dialect "${options.dialect}". Expected one of: sqlite, postgresql, mysql`,
+    );
+  }
+
+  const fileName = `${dir}/invect.schema.ts`;
+  const code = generate(mergedSchema);
+  const exists = existsSync(fileName);
 
   const results: SchemaGeneratorResult[] = [];
 
-  for (const { fileName, generate } of dialects) {
-    const code = generate(mergedSchema);
-    const exists = existsSync(fileName);
-
-    if (exists) {
-      const existing = readFileSync(fileName, 'utf-8');
-      if (existing === code) {
-        results.push({ code: undefined, fileName });
-        continue;
-      }
+  if (exists) {
+    const existing = readFileSync(fileName, 'utf-8');
+    if (existing === code) {
+      results.push({ code: undefined, fileName });
+    } else {
+      results.push({ code, fileName, overwrite: true });
     }
-
-    results.push({ code, fileName, overwrite: exists });
+  } else {
+    results.push({ code, fileName });
   }
 
   return {
@@ -150,7 +145,7 @@ export async function generateAllDrizzleSchemas(options: {
 /**
  * Generate Invect table definitions for appending to an existing schema file.
  *
- * This mirrors better-auth's approach: instead of creating separate files,
+ * This approach appends Invect tables into the user's existing schema file, instead of creating separate files,
  * generate only the table + relation code and append it to the user's
  * existing Drizzle schema file.
  *

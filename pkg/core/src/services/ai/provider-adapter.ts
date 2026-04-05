@@ -8,7 +8,7 @@
  * by implementing just the adapter interface.
  */
 
-import { Logger } from 'src/types/schemas';
+import { Logger } from 'src/schemas';
 import {
   AgentToolDefinition,
   AgentMessage,

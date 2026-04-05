@@ -377,15 +377,15 @@ function UserMessageBubble({
   }
 
   return (
-    <div className="flex justify-end py-1.5 group/user">
+    <div className="flex justify-end items-end gap-2 py-1.5 group/user">
+      <span className="text-[10px] text-muted-foreground/0 group-hover/user:text-muted-foreground/40 transition-colors shrink-0 pb-1.5">
+        {new Date(message.createdAt).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        })}
+      </span>
       <div className="relative text-xs leading-relaxed whitespace-pre-wrap min-w-0 text-foreground bg-primary/10 rounded-2xl rounded-tr-sm px-3 py-2 max-w-[85%]">
         {message.content}
-        <span className="block mt-1 text-[10px] text-muted-foreground/0 group-hover/user:text-muted-foreground/40 transition-colors text-right">
-          {new Date(message.createdAt).toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
-        </span>
         {onEditAndResend && (
           <button
             type="button"
@@ -416,7 +416,7 @@ function AssistantMessageBubble({ message }: { message: ChatMessage }) {
   }, [message.content]);
 
   return (
-    <div className="flex gap-2 py-2 group/assistant">
+    <div className="flex items-end gap-2 py-2 group/assistant">
       <div className="flex items-start pt-1 shrink-0">
         <div className="flex items-center justify-center rounded-full size-5 bg-primary/10">
           <Bot className="size-3 text-primary" />
@@ -437,6 +437,12 @@ function AssistantMessageBubble({ message }: { message: ChatMessage }) {
           )}
         </button>
       </div>
+      <span className="text-[10px] text-muted-foreground/0 group-hover/assistant:text-muted-foreground/40 transition-colors shrink-0 pb-1.5">
+        {new Date(message.createdAt).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        })}
+      </span>
     </div>
   );
 }

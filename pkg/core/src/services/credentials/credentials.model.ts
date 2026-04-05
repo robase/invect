@@ -2,7 +2,7 @@
 import { randomUUID } from 'crypto';
 import type { InvectAdapter, WhereClause } from '../../database/adapter';
 import { DatabaseError } from 'src/types/common/errors.types';
-import { Logger, PaginatedResponse, PaginationQuery, QueryOptions } from 'src/types/schemas';
+import { Logger, PaginatedResponse, PaginationQuery, QueryOptions } from 'src/schemas';
 import type {
   CredentialAuthType,
   CredentialConfig,

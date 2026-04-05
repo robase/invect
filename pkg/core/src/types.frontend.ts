@@ -2,7 +2,7 @@
 // This file exports only TypeScript types, enums, and constants without runtime dependencies
 
 // Re-export type definitions
-export type { FlowRunContext } from './types-fresh';
+export type { FlowRunContext } from './types.internal';
 
 export type {
   InvectDefinition,
@@ -53,9 +53,9 @@ export type {
 
 export type { Model } from './services/ai/base-client';
 
-export type { PaginatedResponse, QueryOptions } from './types/schemas/pagination-sort-filter';
+export type { PaginatedResponse, QueryOptions } from './schemas/pagination-sort-filter';
 
-export type { InvectConfig } from './types/schemas-fresh/invect-config';
+export type { InvectConfig } from './schemas/invect-config';
 
 // Plugin system types (safe for frontend — no runtime imports)
 export type {
@@ -77,7 +77,7 @@ export type {
   NodeExecutionHookResult,
 } from './types/plugin.types';
 
-export type { ExecutionConfig, LoggingConfig, Logger, InvectDatabaseConfig } from './types/schemas';
+export type { ExecutionConfig, LoggingConfig, Logger, InvectDatabaseConfig } from './schemas';
 
 // Re-export scoped logging types
 export type { LogLevel, LogScopeName, ScopedLoggingConfig } from './utils/logger';

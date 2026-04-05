@@ -1,6 +1,6 @@
 import { z } from 'zod/v4';
 import { PaginatedResponseSchema } from '../pagination-sort-filter';
-import { flowSchema } from '../../validation/flow.schemas';
+import { flowSchema } from '../../types/validation/flow.schemas';
 
 /**
  * GET /flows response schema

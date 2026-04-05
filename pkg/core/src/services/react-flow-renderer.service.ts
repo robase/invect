@@ -2,7 +2,7 @@ import { FlowVersion } from '../database';
 import { FlowRun } from './flow-runs/flow-runs.model';
 import { NodeExecution } from './node-executions/node-executions.model';
 import { NodeExecutionStatus } from '../types/base';
-import { Logger } from '../types/schemas';
+import { Logger } from '../schemas';
 import { DatabaseError } from '../types/common/errors.types';
 import { FlowEdge, FlowNodeDefinitions } from './flow-versions/schemas-fresh';
 import type { NodeOutput, NodeInputData } from '../types/node-io-types';
@@ -12,7 +12,7 @@ import { FlowsService } from './flows/flows.service';
 import { FlowVersionsService } from './flow-versions/flow-versions.service';
 import { FlowRunsService } from './flow-runs/flow-runs.service';
 import { NodeExecutionService } from './node-executions/node-execution.service';
-import * as Schemas from '../types/schemas';
+import * as Schemas from '../schemas';
 
 // Position interface matching existing schema
 export interface Position {

@@ -1359,6 +1359,20 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
    * Request body: { messages: ChatMessage[], context: ChatContext }
    * Response: Server-Sent Events stream of ChatStreamEvents
    */
+
+  /**
+   * GET /chat/models/:credentialId - List available models for a credential
+   * Core method: ✅ listChatModels()
+   */
+  router.get(
+    '/chat/models/:credentialId',
+    asyncHandler(async (req: Request, res: Response) => {
+      const q = typeof req.query.q === 'string' ? req.query.q : undefined;
+      const models = await invect.chat.listModels(req.params.credentialId, q);
+      res.json(models);
+    }),
+  );
+
   router.post(
     '/chat',
     asyncHandler(async (req: Request, res: Response) => {
@@ -1524,7 +1538,7 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
       }
 
       // Build a Web Request from the Express req so plugin handlers
-      // (e.g. better-auth) that rely on the Fetch API Request work correctly.
+      // (e.g. user-auth) that rely on the Fetch API Request work correctly.
       const webRequestUrl = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
       const webRequestInit: RequestInit = {
         method: req.method,

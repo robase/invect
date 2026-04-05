@@ -12,7 +12,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import type { Logger } from 'src/types/schemas';
+import type { Logger } from 'src/schemas';
 import { DatabaseError, ValidationError } from 'src/types/common/errors.types';
 import type { DatabaseService } from '../database/database.service';
 import type { FlowOrchestrationService } from '../flow-orchestration.service';

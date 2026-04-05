@@ -33,6 +33,28 @@ export const invectConfig = defineConfig({
             isShared: true,
             metadata: { provider: 'anthropic' },
           },
+          {
+            name: 'OpenRouter API Key',
+            type: 'llm',
+            authType: 'apiKey',
+            config: { apiKey: process.env.SEED_OPENROUTER_API_KEY },
+            description: 'OpenRouter API credential for AI model nodes',
+            isShared: true,
+            metadata: { provider: 'openrouter' },
+          },
+          {
+            name: 'Linear OAuth2',
+            type: 'http-api',
+            authType: 'oauth2',
+            config: {
+              clientId: process.env.SEED_LINEAR_CLIENT_ID,
+              clientSecret: process.env.SEED_LINEAR_CLIENT_SECRET,
+              oauth2Provider: 'linear',
+            },
+            description: 'Linear OAuth2 credential for issue tracking',
+            isShared: true,
+            metadata: { provider: 'linear' },
+          }
         ]
       : []),
   ],

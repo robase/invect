@@ -1,7 +1,7 @@
 /**
  * Schema Generator Types
  *
- * Mirrors better-auth's generator type system — each generator takes
+ * Generator type system — each generator takes
  * a common input and returns { code, fileName, overwrite? }.
  */
 

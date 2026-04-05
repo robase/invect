@@ -6,7 +6,7 @@
  * from their node executors via AgentToolCapable interface.
  */
 
-import { Logger } from 'src/types/schemas';
+import { Logger } from 'src/schemas';
 import { AgentToolRegistry } from '../agent-tool-registry';
 import { mathToolDefinition, mathToolExecutor } from './math-tool';
 import { jsonLogicToolDefinition, jsonLogicToolExecutor } from './json-logic-tool';

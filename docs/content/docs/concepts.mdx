@@ -7,7 +7,7 @@ description: Understand flows, nodes, actions, and how execution works.
 
 A **flow** is a directed graph of nodes connected by edges. Each flow has one or more **versions** — when you edit a flow in the visual editor, you're editing a new version. You can pin a programmatic execution to a specific version number, or always run the latest.
 
-Flows are stored in the database. You can create, update, and delete flows through the API or programmatically via the `Invect` core class.
+Flows are stored in the database. You can create, update, and delete flows through the API or programmatically via `createInvect()`.
 
 ## Nodes
 
@@ -64,7 +64,7 @@ Nodes execute in topological order — a node only runs after all its upstream d
 Enable batch processing when starting a flow:
 
 ```ts
-await core.startFlowRun(flowId, inputs, { useBatchProcessing: true });
+await invect.runs.start(flowId, inputs, { useBatchProcessing: true });
 ```
 
 ## Credentials

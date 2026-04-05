@@ -6,7 +6,7 @@ export default defineConfig({
     'src/database/schema-sqlite.ts',
     'src/database/schema-postgres.ts',
     'src/database/schema-mysql.ts',
-    'src/types-export.ts',
+    'src/types.frontend.ts',
   ],
   format: ['cjs', 'esm'],
   // bundle: true, // deprecated
@@ -38,6 +38,8 @@ export default defineConfig({
       'better-sqlite3',
       '@libsql/client',
       'mysql2',
+      'pg',
+      '@neondatabase/serverless',
       'zod',
       'json-logic-js',
       // Keep these external as they're large or have native bindings
@@ -51,6 +53,9 @@ export default defineConfig({
       'uuid',
       'dotenv',
     ],
+    // Suppress "Detected dependencies in bundle" hint — remaining phantom deps
+    // (mysql2 transitive: denque, iconv-lite, etc.) are harmless
+    onlyBundle: false,
   },
   outExtensions({ format }) {
     return {

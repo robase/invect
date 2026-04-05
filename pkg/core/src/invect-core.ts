@@ -2,7 +2,7 @@
 import { ServiceFactory } from './services/service-factory';
 import { DefaultNodeRegistryFactory, NodeExecutorRegistry } from './nodes/executor-registry';
 import { FlowValidator } from './services/flow-validator';
-import { GraphNodeType, SubmitAgentPromptRequest, NodeExecutionContext } from './types-fresh';
+import { GraphNodeType, SubmitAgentPromptRequest, NodeExecutionContext } from './types.internal';
 import { AgentNodeExecutor } from './nodes/agent-executor';
 
 // Database models
@@ -37,8 +37,8 @@ import type {
 } from './services/triggers';
 
 // Schemas and validation
-import * as Schemas from './types/schemas';
-import { InvectConfig, InvectConfigSchema, PaginatedResponse, QueryOptions } from './types/schemas';
+import * as Schemas from './schemas';
+import { InvectConfig, InvectConfigSchema, PaginatedResponse, QueryOptions } from './schemas';
 import {
   CreateFlowVersionRequest,
   createFlowVersionRequestSchema,

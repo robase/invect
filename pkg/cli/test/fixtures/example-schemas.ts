@@ -4,18 +4,18 @@
  * Realistic plugin schemas for different application types.
  * Used by tests to verify schema generation across all three dialects.
  *
- * Mirrors better-auth's test approach of using real-world schemas
+ * Mirrors the user-auth plugin's test approach of using real-world schemas
  * (e.g., twoFactor, username, organization) to exercise the generator.
  */
 
 import type { InvectPluginSchema } from '@invect/core';
 
 // =============================================================================
-// 0. Better Auth — auth tables (user, session, account, verification)
+// 0. User Auth — auth tables (user, session, account, verification)
 //    Mirrors the schema exported by @invect/user-auth's USER_AUTH_SCHEMA
 // =============================================================================
 
-export const betterAuthSchema: InvectPluginSchema = {
+export const userAuthSchema: InvectPluginSchema = {
   user: {
     tableName: 'user',
     order: 1,
@@ -86,9 +86,9 @@ export const betterAuthSchema: InvectPluginSchema = {
 };
 
 export const userAuthPlugin = {
-  id: 'better-auth',
-  name: 'Better Auth',
-  schema: betterAuthSchema,
+  id: 'user-auth',
+  name: 'User Auth',
+  schema: userAuthSchema,
   requiredTables: ['user', 'session', 'account', 'verification'],
 };
 

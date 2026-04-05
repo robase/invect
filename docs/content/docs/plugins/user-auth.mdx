@@ -1,22 +1,22 @@
 ---
 title: User Auth
-description: Add user authentication to Invect with better-auth.
+description: Add user authentication to Invect with the User Auth plugin.
 ---
 
 ## Overview
 
-`@invect/user-auth` wraps a [better-auth](https://better-auth.com) instance as an Invect plugin. Drop it into your config and get:
+`@invect/user-auth` is a light wrapper around [Better Auth](https://better-auth.com). Drop it into your Invect config and get:
 
-- **Session-based identity** — Every Invect API request is associated with a user via better-auth sessions.
+- **Session-based identity** — Every Invect API request is associated with a user via Better Auth sessions.
 - **Proxied auth routes** — Sign-in, sign-up, OAuth callbacks, sign-out — all mounted automatically.
-- **Role mapping** — better-auth roles map to Invect's RBAC (admin, editor, viewer).
+- **Role mapping** — Better Auth roles map to Invect's RBAC (admin, editor, viewer).
 - **Zero custom middleware** — Works with Express, NestJS, and Next.js via the plugin system.
 
 <Mermaid
   chart={`flowchart TB
     invect["Invect"]
     plugin["@invect/user-auth<br/>onRequest -> auth.api.getSession() -> identity<br/>/plugins/auth/* -> auth.handler()"]
-    auth["better-auth<br/>(your configured instance)"]
+    auth["Better Auth<br/>(your configured instance)"]
 
     invect --> plugin
     plugin --> auth
@@ -35,7 +35,7 @@ pnpm add @invect/user-auth better-auth
 
 ## Quick Start
 
-### 1. Configure better-auth
+### 1. Configure Better Auth
 
 ```ts title="auth.ts"
 import { betterAuth } from 'better-auth';
@@ -48,7 +48,7 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
-  // Add any better-auth plugins you need:
+  // Add any Better Auth plugins you need:
   // plugins: [twoFactor(), organization(), ...],
 });
 ```
@@ -119,11 +119,11 @@ export const handler = createInvectHandler({
 
 ### 3. Done
 
-Users can now sign up and sign in via better-auth's routes (proxied through Invect), and all Invect API requests are authenticated automatically.
+Users can now sign up and sign in via Better Auth's routes (proxied through Invect), and all Invect API requests are authenticated automatically.
 
 ## Auth Routes
 
-The plugin proxies all better-auth endpoints under `/plugins/auth/`. For an Invect instance mounted at `/invect`:
+The plugin proxies all Better Auth endpoints under `/plugins/auth/`. For an Invect instance mounted at `/invect`:
 
 | Route | Description |
 |-------|-------------|
@@ -134,7 +134,7 @@ The plugin proxies all better-auth endpoints under `/plugins/auth/`. For an Inve
 | `GET  /invect/plugins/auth/api/auth/sign-in/social` | OAuth sign-in (Google, GitHub, etc.) |
 | `GET  /invect/plugins/auth/api/auth/callback/:provider` | OAuth callback |
 
-All standard better-auth routes are available. See the [better-auth docs](https://better-auth.com/docs) for the full list.
+All standard Better Auth routes are available. See the [Better Auth docs](https://better-auth.com/docs) for the full list.
 
 ## How It Works
 
@@ -144,7 +144,7 @@ On every Invect API request:
 
 1. The plugin's `onAuthorize` hook fires.
 2. It calls `auth.api.getSession({ headers })` with the incoming request headers.
-3. If a valid session exists, the better-auth `user` is mapped to an `InvectIdentity`.
+3. If a valid session exists, the Better Auth `user` is mapped to an `InvectIdentity`.
 4. Invect's built-in RBAC engine uses that identity for permission checks.
 
 <Mermaid
@@ -158,9 +158,9 @@ On every Invect API request:
 
 ### Identity Mapping
 
-By default, the plugin maps better-auth users to Invect identities like this:
+By default, the plugin maps Better Auth users to Invect identities like this:
 
-| better-auth field | InvectIdentity field | Notes |
+| Better Auth field | InvectIdentity field | Notes |
 |-------------------|----------------------|-------|
 | `user.id` | `id` | Always mapped |
 | `user.name` (or `user.email`) | `name` | Falls back to email |
@@ -168,7 +168,7 @@ By default, the plugin maps better-auth users to Invect identities like this:
 
 Default role mapping:
 
-| better-auth role | Invect role |
+| Better Auth role | Invect role |
 |-----------------|--------------|
 | `'admin'` | `'admin'` |
 | `'viewer'` or `'readonly'` | `'viewer'` |
@@ -180,7 +180,7 @@ Default role mapping:
 
 ```ts
 userAuth({
-  // Required: your better-auth instance
+  // Required: your Better Auth instance
   auth: auth,
 
   // Prefix for proxied auth routes (default: 'auth')
@@ -212,7 +212,7 @@ userAuth({
 
 ### Custom User Mapping
 
-Override `mapUser` to pull teams, permissions, or metadata from your better-auth user:
+Override `mapUser` to pull teams, permissions, or metadata from your Better Auth user:
 
 ```ts
 userAuth({
@@ -260,9 +260,9 @@ userAuth({
 });
 ```
 
-## Using with better-auth Plugins
+## Using with Better Auth Plugins
 
-The plugin works with any better-auth plugin. Add them to your better-auth config — their routes are automatically proxied:
+The plugin works with any Better Auth plugin. Add them to your Better Auth config — their routes are automatically proxied:
 
 ```ts
 import { betterAuth } from 'better-auth';

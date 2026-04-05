@@ -12,7 +12,7 @@
  */
 import { newQuickJSWASMModule } from 'quickjs-emscripten';
 import type { QuickJSWASMModule, QuickJSRuntime } from 'quickjs-emscripten';
-import type { Logger } from 'src/types/schemas';
+import type { Logger } from 'src/schemas';
 
 export interface JsExpressionServiceConfig {
   /** Memory limit for the QuickJS runtime in bytes. Default: 16MB */

@@ -3,7 +3,7 @@
 import type { InvectAdapter, WhereClause } from '../../database/adapter';
 import { NodeExecutionStatus } from 'src/types/base';
 import { DatabaseError } from 'src/types/common/errors.types';
-import { Logger, PaginatedResponse, QueryOptions } from 'src/types/schemas';
+import { Logger, PaginatedResponse, QueryOptions } from 'src/schemas';
 import type { NodeOutput } from 'src/types/node-io-types';
 
 /**

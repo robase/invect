@@ -224,7 +224,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
       const path = params.invect.join('/');
 
       // Clone the request before consuming the body so plugin handlers
-      // (e.g. better-auth) can read the raw body stream themselves.
+      // (e.g. user-auth) can read the raw body stream themselves.
       const requestClone = request.clone();
 
       const body = await parseRequestBody(request);
@@ -746,6 +746,15 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
 
       if (method === 'GET' && path === 'chat/status') {
         return Response.json({ enabled: initializedCore.chat.isEnabled() });
+      }
+
+      // GET /chat/models/:credentialId - List available models for a credential
+      if (method === 'GET' && path.match(/^chat\/models\/[^/]+$/)) {
+        const credentialId = path.split('/')[2];
+        const url = new URL(request.url);
+        const q = url.searchParams.get('q') ?? undefined;
+        const models = await initializedCore.chat.listModels(credentialId, q);
+        return Response.json(models);
       }
 
       // POST /chat - Streaming chat assistant endpoint (SSE via Web ReadableStream)

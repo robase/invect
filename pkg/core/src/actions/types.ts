@@ -9,13 +9,13 @@
  */
 
 import { z } from 'zod/v4';
-import type { Logger } from 'src/types/schemas-fresh/invect-config';
+import type { Logger } from 'src/schemas/invect-config';
 import type {
   SubmitPromptRequest,
   SubmitAgentPromptRequest,
   SubmitPromptResult,
   RecordToolExecutionInput,
-} from 'src/types-fresh';
+} from 'src/types.internal';
 import type { AgentPromptResult } from 'src/types/agent-tool.types';
 import type { FlowEdge, FlowNodeDefinitions } from 'src/services/flow-versions/schemas-fresh';
 import type { NodeDefinition } from 'src/types/node-definition.types';

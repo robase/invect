@@ -2,7 +2,7 @@
  * Prisma Schema Generator (CLI wrapper)
  *
  * Generates Prisma schema from the merged abstract schema (core + plugins).
- * Mirrors better-auth's generators/prisma.ts pattern:
+ * Generates a complete Prisma schema from the merged abstract schema:
  *
  * 1. If a schema.prisma already exists, read it and ADD Invect models
  *    into it (using `@mrleebo/prisma-ast` to parse + produce the AST).
@@ -11,7 +11,7 @@
  * 3. Compare with existing file and return `code: undefined` if unchanged.
  *
  * This allows users to have their own Prisma models alongside Invect's
- * auto-generated ones — just like better-auth preserves user models.
+ * auto-generated ones — just like we preserve user models.
  */
 
 import { existsSync, readFileSync } from 'node:fs';
@@ -31,7 +31,7 @@ function debug(...args: unknown[]) {
 }
 
 // =============================================================================
-// Prisma Version Detection (mirrors better-auth's getPrismaVersion)
+// Prisma Version Detection
 // =============================================================================
 
 /**
@@ -205,14 +205,14 @@ datasource db {
  * Invect models/fields that don't already exist. This preserves all
  * user-defined models, relations, and configuration.
  *
- * Mirrors better-auth's approach in their prisma.ts generator.
+ * Generate the Prisma schema from the merged abstract schema.
  */
 function mergeIntoExistingSchema(
   existingContent: string,
   mergedSchema: any, // MergedSchema from core
   provider: PrismaProvider,
 ): string {
-  // Migrate existing schemas for Prisma v7+ (mirrors better-auth)
+    // Migrate existing schemas for Prisma v7+
   const prismaVersion = getPrismaVersion();
   const isV7 = prismaVersion !== null && prismaVersion >= 7;
   let contentToMerge = existingContent;

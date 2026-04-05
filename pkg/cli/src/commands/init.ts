@@ -21,6 +21,12 @@ import { execSync } from 'node:child_process';
 import pc from 'picocolors';
 import prompts from 'prompts';
 
+/** Exit cleanly when the user cancels a prompt (Ctrl-C). */
+const onCancel = () => {
+  console.log(pc.dim('\n  Cancelled.\n'));
+  process.exit(0);
+};
+
 function isDebug(): boolean {
   return process.argv.includes('--debug');
 }
@@ -145,8 +151,29 @@ export const initCommand = new Command('init')
     };
 
     // 1. Detect or ask for package manager
-    const pm = options.packageManager || detectPackageManager();
-    console.log(pc.dim(`  Package manager: ${pm}`));
+    let pm: string;
+    if (options.packageManager) {
+      pm = options.packageManager;
+    } else {
+      const detected = detectPackageManager();
+      step('Select Package Manager');
+      const pmChoices = [
+        { title: 'npm', value: 'npm' },
+        { title: 'pnpm', value: 'pnpm' },
+        { title: 'yarn', value: 'yarn' },
+        { title: 'bun', value: 'bun' },
+      ];
+      const detectedIndex = pmChoices.findIndex((c) => c.value === detected);
+      const { selectedPm } = await prompts({
+        type: 'select',
+        name: 'selectedPm',
+        message: 'Package manager',
+        choices: pmChoices,
+        initial: detectedIndex >= 0 ? detectedIndex : 0,
+      }, { onCancel });
+      pm = selectedPm;
+    }
+    console.log(pc.dim(`  Using: ${pm}`));
 
     // 2. Detect or ask for framework
     step('Select Framework');
@@ -164,7 +191,7 @@ export const initCommand = new Command('init')
           name: 'useDetected',
           message: `Use detected framework ${pc.cyan(detected.name)}?`,
           initial: true,
-        });
+        }, { onCancel });
         framework = useDetected ? detected : await askFramework();
       } else {
         framework = await askFramework();
@@ -254,7 +281,7 @@ export const initCommand = new Command('init')
           name: 'customPath',
           message: `Path to existing ${schemaTool.name} schema file? (leave empty to create new)`,
           initial: '',
-        });
+        }, { onCancel });
 
         if (customPath && customPath.trim()) {
           existingSchemaPath = path.resolve(process.cwd(), customPath.trim());
@@ -311,7 +338,7 @@ export const initCommand = new Command('init')
       name: 'shouldInstall',
       message: `Install packages using ${pc.bold(pm)}?`,
       initial: true,
-    });
+    }, { onCancel });
 
     if (shouldInstall) {
       try {
@@ -403,14 +430,14 @@ export const initCommand = new Command('init')
           ? 'Append Invect tables to your existing schema now?'
           : 'Generate schema files now?',
       initial: true,
-    });
+    }, { onCancel });
 
     debug('shouldGenerate =', shouldGenerate);
 
     if (shouldGenerate) {
       try {
         const { generateAction } = await import('./generate.js');
-        const outputDir = configDir === 'src' ? './src/database' : './database';
+        const outputDir = './db';
 
         if (schemaTool.id === 'sql') {
           debug('Running SQL generate mode');
@@ -519,12 +546,7 @@ async function askFramework(): Promise<Framework> {
       title: f.name,
       value: f.id,
     })),
-  });
-
-  if (!framework) {
-    console.log(pc.dim('\n  Cancelled.\n'));
-    process.exit(0);
-  }
+  }, { onCancel });
 
   return FRAMEWORKS.find((f) => f.id === framework)!;
 }
@@ -549,12 +571,7 @@ async function askDatabase(framework?: Framework, detected?: Database): Promise<
       value: available.indexOf(d),
     })),
     initial: Math.max(initialIndex, 0),
-  });
-
-  if (database === undefined) {
-    console.log(pc.dim('\n  Cancelled.\n'));
-    process.exit(0);
-  }
+  }, { onCancel });
 
   return available[database as number]!;
 }
@@ -569,7 +586,7 @@ async function askSchemaTool(): Promise<SchemaTool> {
       description: s.description,
       value: s.id,
     })),
-  });
+  }, { onCancel });
 
   if (!tool) {
     console.log(pc.dim('\n  Cancelled.\n'));
@@ -775,12 +792,7 @@ async function askSchemaPath(
     message: `Which ${schemaTool.name} schema file should Invect use?`,
     choices,
     initial: 0,
-  });
-
-  if (selected === undefined) {
-    // User cancelled (Ctrl-C)
-    return null;
-  }
+  }, { onCancel });
 
   if (selected === CUSTOM_VALUE) {
     const { customPath } = await prompts({
@@ -788,7 +800,7 @@ async function askSchemaPath(
       name: 'customPath',
       message: `Path to ${schemaTool.name} schema file:`,
       initial: '',
-    });
+    }, { onCancel });
 
     if (!customPath || !customPath.trim()) return null;
 

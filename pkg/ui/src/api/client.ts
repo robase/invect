@@ -845,6 +845,16 @@ class ApiClient {
     return this.request<{ enabled: boolean }>('/chat/status');
   }
 
+  async getChatModels(
+    credentialId: string,
+    query?: string,
+  ): Promise<Array<{ id: string; name?: string; provider?: string }>> {
+    const params = query ? `?q=${encodeURIComponent(query)}` : '';
+    return this.request<Array<{ id: string; name?: string; provider?: string }>>(
+      `/chat/models/${credentialId}${params}`,
+    );
+  }
+
   async sendChatMessage(
     messages: Array<{ role: string; content: string; toolCalls?: unknown[]; toolCallId?: string }>,
     context: {
@@ -853,6 +863,7 @@ class ApiClient {
       viewMode?: string;
       credentialId?: string;
       maxSteps?: number;
+      model?: string;
     },
     signal?: AbortSignal,
   ): Promise<Response> {

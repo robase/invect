@@ -8,7 +8,7 @@
  */
 
 import { randomBytes, createHash } from 'crypto';
-import type { Logger } from 'src/types/schemas';
+import type { Logger } from 'src/schemas';
 import type { CredentialConfig } from 'src/database/schema-sqlite';
 import {
   getOAuth2Provider,

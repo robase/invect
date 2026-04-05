@@ -1,5 +1,5 @@
 import { NodeExecutionStatus } from 'src/types/base';
-import { NodeExecutionContext, GraphNodeType } from 'src/types-fresh';
+import { NodeExecutionContext, GraphNodeType } from 'src/types.internal';
 import { InvectDefinition, FlowEdge, FlowNodeDefinitions } from '../flow-versions/schemas-fresh';
 import { NodeOutput, NodeIncomingDataObject } from 'src/types/node-io-types';
 import { generateNodeSlug } from 'src/utils/node-slug';
@@ -7,7 +7,7 @@ import type { NodeExecution } from '../node-executions/node-executions.model';
 import type { NodeExecutionService } from '../node-executions/node-execution.service';
 import type { NodeDataService } from '../node-data.service';
 import type { NodeExecutorRegistry } from 'src/nodes/executor-registry';
-import type { Logger } from 'src/types/schemas';
+import type { Logger } from 'src/schemas';
 import type { GraphService } from '../graph.service';
 import type { CredentialsService } from '../credentials/credentials.service';
 import type { BaseAIClient } from '../ai/base-client';

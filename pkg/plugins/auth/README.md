@@ -90,7 +90,7 @@ import { AuthProvider, AuthGate, SignInPage, UserButton } from '@invect/user-aut
 
 ## What It Does
 
-**Backend** — Proxies auth routes (sign-in, session, OAuth) at `/plugins/auth/*`. Resolves sessions on every Invect API request. Maps better-auth roles to Invect RBAC roles.
+**Backend** — Proxies auth routes (sign-in, session, OAuth) at `/plugins/auth/*`. Resolves sessions on every Invect API request. Maps Better Auth roles to Invect RBAC roles.
 
 **Frontend** — `AuthProvider` for session state, `AuthGate` for conditional rendering, `SignInForm` / `UserButton` for auth UI.
 

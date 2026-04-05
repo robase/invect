@@ -159,6 +159,7 @@ export function useChat(options: UseChatOptions = {}) {
         viewMode: options.viewMode,
         maxSteps: useChatStore.getState().settings.maxSteps,
         credentialId: useChatStore.getState().settings.credentialId ?? undefined,
+        model: useChatStore.getState().settings.model ?? undefined,
       };
 
       // Create abort controller

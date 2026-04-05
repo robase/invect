@@ -677,9 +677,6 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^3.2.4
         version: 3.2.4(vitest@3.2.4)
-      drizzle-kit:
-        specifier: ^0.31.4
-        version: 0.31.9
       eslint:
         specifier: ^9.31.0
         version: 9.39.4(jiti@2.6.1)

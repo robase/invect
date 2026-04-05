@@ -3,7 +3,7 @@ import type { DatabaseService } from '../database/database.service';
 import { BatchJobsModel, UpdateBatchJobInput, BatchJob } from './batch-jobs.model';
 import { BatchProvider, BatchStatus, BatchResult } from '../ai/base-client';
 import { DatabaseError } from '../../types/common/errors.types';
-import { Logger } from 'src/types/schemas';
+import { Logger } from 'src/schemas';
 import { BatchRequest } from '../node-data.service';
 import { FlowOrchestrationService } from '../flow-orchestration.service';
 

@@ -70,21 +70,12 @@ Run `npx invect-cli generate` whenever you add a plugin with new tables or upgra
 
 ### Schema Verification
 
-On startup, Invect can verify that your database has the required tables and columns. This is a read-only check — it never creates or alters anything.
+On startup, Invect automatically checks that your database has the required tables. If any core or plugin tables are missing, you'll see a clear error with the commands to fix it:
 
-```ts
-createInvectRouter({
-  database: {
-    type: 'sqlite',
-    connectionString: 'file:./dev.db',
-    id: 'main',
-  },
-  schemaVerification: true,           // Log warnings if tables are missing
-  // schemaVerification: { strict: true }, // Throw an error instead
-});
 ```
-
-If verification fails, you'll see a message telling you exactly which tables or columns are missing and the commands to fix it.
+npx invect-cli generate   # generate schema files (core + plugins)
+npx drizzle-kit push      # push schema to the database
+```
 
 ## Schema Overview
 
@@ -92,12 +83,10 @@ If verification fails, you'll see a message telling you exactly which tables or 
 |-------|-------------|
 | `flows` | Flow definitions with name, description, and metadata |
 | `flow_versions` | Versioned flow definitions (nodes, edges, parameters) |
-| `flow_runs` | Execution records with status, inputs, outputs, timing |
-| `node_executions` | Per-node execution traces with inputs, outputs, errors |
+| `flow_executions` | Execution records with status, inputs, outputs, timing |
+| `action_traces` | Per-node execution traces with inputs, outputs, errors |
 | `credentials` | Encrypted credential storage (API keys, OAuth2 tokens) |
 | `batch_jobs` | Batch processing job tracking for OpenAI/Anthropic |
-| `agent_tool_executions` | Tool call traces within agent node executions |
-| `flow_access` | Per-flow access control (user roles) |
 | `flow_triggers` | Webhook and cron trigger configuration |
 | `chat_messages` | Chat message history for conversational flows |
 

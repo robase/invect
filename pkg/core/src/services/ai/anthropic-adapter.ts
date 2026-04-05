@@ -6,7 +6,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
-import { Logger } from 'src/types/schemas';
+import { Logger } from 'src/schemas';
 import {
   AgentToolDefinition,
   AgentMessage,

@@ -11,7 +11,7 @@
  * Lifecycle: Singleton created during ServiceFactory.initialize().
  */
 
-import type { Logger } from 'src/types/schemas';
+import type { Logger } from 'src/schemas';
 import type { InvectIdentity } from 'src/types/auth.types';
 import type { InvectInstance } from 'src/api/types';
 import type { ActionRegistry } from 'src/actions';
@@ -123,6 +123,9 @@ export class ChatStreamService {
     // 4. Apply per-request overrides from context
     if (context.maxSteps && context.maxSteps >= 1 && context.maxSteps <= 50) {
       resolvedConfig = { ...resolvedConfig, maxSteps: context.maxSteps };
+    }
+    if (context.model) {
+      resolvedConfig = { ...resolvedConfig, model: context.model };
     }
 
     // 5. Create and return session stream
@@ -248,6 +251,24 @@ export class ChatStreamService {
   // =====================================
   // ADAPTER CREATION
   // =====================================
+
+  /**
+   * List available models for a given credential.
+   * Creates an ephemeral adapter and calls listModels().
+   */
+  async listModels(credentialId: string, query?: string): Promise<{ id: string; name?: string; provider?: string }[]> {
+    const resolvedConfig = await this.resolveFromCredential(credentialId, {});
+    const adapter = this.createAdapter(resolvedConfig);
+    const models = await adapter.listModels();
+    let result = models.map((m) => ({ id: m.id, name: m.name, provider: m.provider }));
+    if (query) {
+      const q = query.toLowerCase();
+      result = result.filter(
+        (m) => m.id.toLowerCase().includes(q) || (m.name?.toLowerCase().includes(q) ?? false),
+      );
+    }
+    return result;
+  }
 
   /**
    * Create an ephemeral ProviderAdapter for a chat request.

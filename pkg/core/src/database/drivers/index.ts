@@ -7,7 +7,7 @@
 
 export type { DatabaseDriver, DatabaseDriverType } from './types';
 import type { DatabaseDriver, DatabaseDriverType } from './types';
-import type { InvectDatabaseConfig, Logger } from 'src/types/schemas';
+import type { InvectDatabaseConfig, Logger } from 'src/schemas';
 
 // ---------------------------------------------------------------------------
 // Driver resolution

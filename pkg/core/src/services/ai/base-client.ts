@@ -11,7 +11,7 @@
  * - Unified API for all AI operations
  */
 
-import { Logger } from 'src/types/schemas';
+import { Logger } from 'src/schemas';
 import { BatchJobsService } from '../batch-jobs/batch-jobs.service';
 import { BatchJob } from '../batch-jobs/batch-jobs.model';
 import { BatchRequest, PromptRequest, SubmitPromptRequest } from '../node-data.service';
@@ -21,7 +21,7 @@ import {
   AgentMessage,
   AgentToolDefinition,
 } from 'src/types/agent-tool.types';
-import type { SubmitAgentPromptRequest } from 'src/types-fresh';
+import type { SubmitAgentPromptRequest } from 'src/types.internal';
 import { ProviderAdapter } from './provider-adapter';
 import { OpenAIAdapter } from './openai-adapter';
 import { AnthropicAdapter } from './anthropic-adapter';

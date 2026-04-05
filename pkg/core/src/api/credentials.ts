@@ -1,6 +1,6 @@
 import type { CredentialsAPI } from './types';
 import type { ServiceFactory } from '../services/service-factory';
-import type { Logger } from '../types/schemas';
+import type { Logger } from '../schemas';
 import type { Credential } from '../services/credentials';
 
 export function createCredentialsAPI(sf: ServiceFactory, logger: Logger): CredentialsAPI {

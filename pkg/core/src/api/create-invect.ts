@@ -7,7 +7,7 @@
 
 import { ServiceFactory } from '../services/service-factory';
 import { DefaultNodeRegistryFactory, NodeExecutorRegistry } from '../nodes/executor-registry';
-import { InvectConfig, InvectConfigSchema } from '../types/schemas';
+import { InvectConfig, InvectConfigSchema } from '../schemas';
 import { DatabaseError } from '../types/common/errors.types';
 import { LoggerManager, type ScopedLoggingConfig } from '../utils/logger';
 import { JsExpressionService, getTemplateService } from '../services/templating';
@@ -27,7 +27,7 @@ import {
   getGlobalToolRegistry,
 } from '../services/agent-tools';
 import { AgentNodeExecutor } from '../nodes/agent-executor';
-import type { GraphNodeType } from '../types-fresh';
+import type { GraphNodeType } from '../types.internal';
 import type { CreateCredentialInput } from '../services/credentials';
 
 import type { InvectInstance } from './types';

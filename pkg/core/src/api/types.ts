@@ -36,13 +36,13 @@ import type { FlowValidationResult } from '../types/validation';
 import type { ReactFlowData } from '../services/react-flow-renderer.service';
 import type { NodeDefinition } from '../types/node-definition.types';
 import type { BatchProvider, Model } from '../services/ai/base-client';
-import type { PaginatedResponse, QueryOptions, InvectDatabaseConfig } from '../types/schemas';
+import type { PaginatedResponse, QueryOptions, InvectDatabaseConfig } from '../schemas';
 import type { CreateFlowVersionRequest, FlowEdge } from '../services/flow-versions/schemas-fresh';
 import type { ExecutionStreamEvent } from '../services/execution-event-bus';
 import type { ActionDefinition, ProviderDef, LoadOptionsResult } from '../actions';
 import type { ActionRegistry } from '../actions';
 import type { AgentToolDefinition, AgentPromptResult } from '../types/agent-tool.types';
-import type { SubmitAgentPromptRequest } from '../types-fresh';
+import type { SubmitAgentPromptRequest } from '../types.internal';
 import type {
   NodeConfigUpdateEvent,
   NodeConfigUpdateResponse,
@@ -205,6 +205,7 @@ export interface ChatAPI {
     identity?: InvectIdentity;
   }): Promise<AsyncGenerator<ChatStreamEvent>>;
   isEnabled(): boolean;
+  listModels(credentialId: string, query?: string): Promise<{ id: string; name?: string; provider?: string }[]>;
   getMessages(flowId: string): Promise<ChatMessageRecord[]>;
   saveMessages(
     flowId: string,

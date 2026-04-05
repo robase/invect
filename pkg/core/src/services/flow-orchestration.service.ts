@@ -6,7 +6,7 @@ import type { JsExpressionService } from './templating/js-expression.service';
 import type { TemplateService } from './templating/template.service';
 import type { BatchJobsService } from './batch-jobs/batch-jobs.service';
 import { FlowRunResult } from './flow-runs/flow-runs.service';
-import { Logger } from 'src/types/schemas';
+import { Logger } from 'src/schemas';
 import { DatabaseError, ValidationError } from 'src/types/common/errors.types';
 import { FlowRunStatus } from 'src/types/base';
 import { FlowRun } from './flow-runs/flow-runs.model';

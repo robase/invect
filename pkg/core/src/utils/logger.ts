@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import { Logger, LoggingConfig } from 'src/types/schemas';
+import { Logger, LoggingConfig } from 'src/schemas';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'silent';
 

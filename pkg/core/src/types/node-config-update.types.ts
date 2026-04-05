@@ -1,6 +1,6 @@
-import { GraphNodeType } from 'src/types-fresh';
-import { NodeDefinition } from '../types/node-definition.types';
-import { Logger } from 'src/types/schemas';
+import { GraphNodeType } from 'src/types.internal';
+import { NodeDefinition } from './node-definition.types';
+import { Logger } from 'src/schemas';
 import { CredentialsService } from 'src/services/credentials/credentials.service';
 import { BaseAIClient } from 'src/services/ai/base-client';
 

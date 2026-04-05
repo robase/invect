@@ -7,7 +7,7 @@
  * - Authorization hooks (enforces flow-level ACLs)
  * - UI manifest for the frontend plugin to render
  *
- * Requires the @invect/user-auth (better-auth) plugin to be loaded first
+ * Requires the @invect/user-auth plugin to be loaded first
  * for session resolution. This plugin handles the *authorization* layer
  * on top of that authentication.
  */
@@ -753,14 +753,14 @@ export function rbacPlugin(options: RbacPluginOptions = {}): InvectPlugin {
     // RBAC uses the core flow_access table (already checked by core),
     // but also depends on the auth plugin's tables for user identity.
     // Declaring them here ensures a clear error if the developer has the
-    // RBAC plugin enabled but forgot the better-auth tables.
+    // RBAC plugin enabled but forgot the auth tables.
     requiredTables: [
       'user',
       'session',
       ...(enableTeams ? ['rbac_teams', 'rbac_team_members', 'rbac_scope_access'] : []),
     ],
     setupInstructions:
-      'The RBAC plugin requires better-auth tables (user, session). ' +
+      'The RBAC plugin requires user-auth tables (user, session). ' +
       'Make sure @invect/user-auth is configured, then run ' +
       '`npx invect-cli generate` followed by `npx drizzle-kit push`.',
 
@@ -768,7 +768,7 @@ export function rbacPlugin(options: RbacPluginOptions = {}): InvectPlugin {
 
     init: async (ctx: InvectPluginContext) => {
       // Verify that the auth plugin is loaded
-      if (!ctx.hasPlugin('better-auth')) {
+      if (!ctx.hasPlugin('user-auth')) {
         ctx.logger.warn(
           'RBAC plugin requires the @invect/user-auth plugin. ' +
             'RBAC will work with reduced functionality (no session resolution). ' +

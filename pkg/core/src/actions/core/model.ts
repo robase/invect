@@ -12,7 +12,7 @@ import { z } from 'zod/v4';
 import { detectProviderFromCredential } from 'src/utils/provider-detection';
 import { BatchProvider } from 'src/services/ai/base-client';
 import type { Model } from 'src/services/ai/ai-types';
-import type { SubmitPromptRequest } from 'src/types-fresh';
+import type { SubmitPromptRequest } from 'src/types.internal';
 import type {
   ActionConfigUpdateEvent,
   ActionConfigUpdateContext,

@@ -4,8 +4,8 @@
  * Types for defining tools that AI agents can use during execution.
  */
 
-import { Logger } from './schemas';
-import { NodeExecutionContext } from 'src/types-fresh';
+import { Logger } from 'src/schemas';
+import { NodeExecutionContext } from 'src/types.internal';
 
 /**
  * Tool category for organization in UI

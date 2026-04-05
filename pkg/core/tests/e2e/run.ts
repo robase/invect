@@ -1,7 +1,7 @@
 import "dotenv/config";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createInvect } from "../src/api/create-invect";
+import { createInvect } from "../../src/api/create-invect";
 import type { FlowExample } from "./example-types";
 import { inputTemplateModelExample } from "./input-template-model";
 import { complexBranchingFlowExample, complexBranchingFlowMinorExample } from "./complex-branching-flow";

@@ -25,7 +25,8 @@ import {
   GraphNodeType,
   FlowRunStatus,
   type InvectDefinition,
-} from "../src";
+} from "../../src";
+import type { InvectInstance } from "../../src/api/types";
 import { getOutputVariable, type AgentOutputLike, type FlowExample } from "./example-types";
 
 /**

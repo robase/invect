@@ -102,7 +102,7 @@ export interface CookieAttributeOptions {
 
 /**
  * A reasonable subset of Better Auth's configuration that can be passed
- * through when the plugin creates an internal better-auth instance.
+ * through when the plugin creates an internal Better Auth instance.
  *
  * These are ignored when you provide your own `auth` instance.
  *
@@ -209,13 +209,13 @@ export interface BetterAuthPassthroughOptions {
 /**
  * Configuration for the User Auth Invect plugin.
  *
- * Wraps a [better-auth](https://better-auth.com) instance as an Invect plugin.
+ * A light wrapper around [Better Auth](https://better-auth.com).
  */
 export interface UserAuthPluginOptions {
   /**
-   * A configured better-auth instance (the return value of `betterAuth()`).
+   * A configured Better Auth instance (the return value of `betterAuth()`).
    *
-   * When omitted, the plugin creates an internal better-auth instance
+   * When omitted, the plugin creates an internal Better Auth instance
    * automatically using Invect's database configuration. This is the
    * recommended approach for simple setups — no separate `auth.ts` file needed.
    *

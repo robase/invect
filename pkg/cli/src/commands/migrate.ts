@@ -22,6 +22,12 @@ import prompts from 'prompts';
 import { execSync } from 'node:child_process';
 import { findConfigPath, loadConfig } from '../utils/config-loader.js';
 
+/** Exit cleanly when the user cancels a prompt (Ctrl-C). */
+const onCancel = () => {
+  console.log(pc.dim('\n  Cancelled.\n'));
+  process.exit(0);
+};
+
 export const migrateCommand = new Command('migrate')
   .description('Apply pending database migrations via Drizzle Kit')
   .option('--config <path>', 'Path to your Invect config file')
@@ -97,7 +103,7 @@ async function migrateAction(options: {
       name: 'proceed',
       message,
       initial: true,
-    });
+    }, { onCancel });
 
     if (!response.proceed) {
       console.log(pc.dim('\n  Cancelled.\n'));

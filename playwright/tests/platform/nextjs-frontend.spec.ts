@@ -110,7 +110,7 @@ test.describe("Next.js Invect Frontend Rendering", () => {
         !e.includes("hydration"),
     );
 
-    // No errors about createRequire (the types-export.ts bug) or missing CSS
+    // No errors about createRequire (the types.frontend.ts bug) or missing CSS
     const hasBuildErrors = criticalErrors.some(
       (e) =>
         e.includes("createRequire") ||

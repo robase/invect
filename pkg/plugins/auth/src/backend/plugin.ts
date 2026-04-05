@@ -422,16 +422,16 @@ function getErrorLogDetails(error: unknown): Record<string, unknown> {
 }
 
 // ---------------------------------------------------------------------------
-// Abstract schema — defines the tables better-auth requires
+// Abstract schema — defines the tables the user-auth plugin requires
 // ---------------------------------------------------------------------------
 
 /**
- * Abstract schema for better-auth's database tables.
+ * Abstract schema for the user-auth plugin's database tables.
  *
  * These definitions allow the Invect CLI (`npx invect-cli generate`) to include
- * the better-auth tables when generating Drizzle/Prisma schema files.
+ * the auth tables when generating Drizzle/Prisma schema files.
  *
- * The shapes match better-auth's default table structure. If your better-auth
+ * The shapes match Better Auth's default table structure. If your Better Auth
  * config adds extra fields (e.g., via plugins like `twoFactor`, `organization`),
  * you can extend these in your own config.
  */
@@ -537,11 +537,11 @@ export const USER_AUTH_SCHEMA: InvectPluginSchema = {
 };
 
 // ---------------------------------------------------------------------------
-// Internal better-auth instance creation
+// Internal Better Auth instance creation
 // ---------------------------------------------------------------------------
 
 /**
- * Create a better-auth instance internally using Invect's database config.
+ * Create a Better Auth instance internally using Invect's database config.
  *
  * Dynamically imports `better-auth` (a required peer dependency) and creates
  * a fully-configured instance with email/password auth, the admin plugin,
@@ -589,8 +589,8 @@ async function createInternalBetterAuth(
 
     if (!dbConfig?.connectionString) {
       throw new Error(
-        'Cannot create internal better-auth instance: no database configuration found. ' +
-          'Either provide `auth` (a better-auth instance), `database`, or ensure ' +
+        'Cannot create internal Better Auth instance: no database configuration found. ' +
+          'Either provide `auth` (a Better Auth instance), `database`, or ensure ' +
           'Invect database has a connectionString.',
       );
     }
@@ -606,8 +606,8 @@ async function createInternalBetterAuth(
       database = await createMySQLPool(connStr);
     } else {
       throw new Error(
-        `Unsupported database type for internal better-auth: "${dbType}". ` +
-          'Supported: sqlite, pg, mysql. Alternatively, provide your own better-auth instance via `auth`.',
+        `Unsupported database type for internal Better Auth: "${dbType}". ` +
+          'Supported: sqlite, pg, mysql. Alternatively, provide your own Better Auth instance via `auth`.',
       );
     }
   }
@@ -658,7 +658,7 @@ async function createInternalBetterAuth(
   };
 
   // 6. Create the instance
-  logger.info?.('Creating internal better-auth instance');
+  logger.info?.('Creating internal Better Auth instance');
 
   const instance = betterAuthFn({
     baseURL,
@@ -687,7 +687,7 @@ async function createSQLiteClient(connectionString: string, logger: PluginLogger
   try {
     const { default: Database } = await import('better-sqlite3');
     const { Kysely, SqliteDialect, CamelCasePlugin } = await import('kysely');
-    logger.debug?.(`Using better-sqlite3 for internal better-auth database`);
+    logger.debug?.(`Using better-sqlite3 for internal Better Auth database`);
     // Strip file: prefix if present
     let dbPath = connectionString.replace(/^file:/, '');
     if (dbPath === '') {
@@ -704,9 +704,9 @@ async function createSQLiteClient(connectionString: string, logger: PluginLogger
   } catch (err) {
     if (err instanceof Error && err.message.includes('better-sqlite3')) {
       throw new Error(
-        'Cannot create SQLite database for internal better-auth: ' +
+        'Cannot create SQLite database for internal Better Auth: ' +
           'install better-sqlite3 (npm install better-sqlite3). ' +
-          'Alternatively, provide your own better-auth instance via the `auth` option.',
+          'Alternatively, provide your own Better Auth instance via the `auth` option.',
       );
     }
     throw err;
@@ -720,9 +720,9 @@ async function createPostgresPool(connectionString: string) {
     return new Pool({ connectionString });
   } catch {
     throw new Error(
-      'Cannot create PostgreSQL pool for internal better-auth: ' +
+      'Cannot create PostgreSQL pool for internal Better Auth: ' +
         'install the "pg" package. ' +
-        'Alternatively, provide your own better-auth instance via the `auth` option.',
+        'Alternatively, provide your own Better Auth instance via the `auth` option.',
     );
   }
 }
@@ -734,9 +734,9 @@ async function createMySQLPool(connectionString: string) {
     return mysql.createPool(connectionString);
   } catch {
     throw new Error(
-      'Cannot create MySQL pool for internal better-auth: ' +
+      'Cannot create MySQL pool for internal Better Auth: ' +
         'install the "mysql2" package. ' +
-        'Alternatively, provide your own better-auth instance via the `auth` option.',
+        'Alternatively, provide your own Better Auth instance via the `auth` option.',
     );
   }
 }
@@ -746,11 +746,11 @@ async function createMySQLPool(connectionString: string) {
 // ---------------------------------------------------------------------------
 
 /**
- * Create an Invect plugin that wraps a better-auth instance.
+ * Create the Invect user-auth plugin (a light wrapper around Better Auth).
  *
  * This plugin:
  *
- * 1. **Proxies better-auth routes** — All of better-auth's HTTP endpoints
+ * 1. **Proxies Better Auth routes** — All of Better Auth's HTTP endpoints
  *    (sign-in, sign-up, sign-out, OAuth callbacks, session, etc.) are mounted
  *    under the plugin endpoint space at `/plugins/auth/api/auth/*` (configurable).
  *
@@ -758,12 +758,12 @@ async function createMySQLPool(connectionString: string) {
  *    `onRequest` hook reads the session cookie / bearer token via
  *    `auth.api.getSession()` and populates `InvectIdentity`.
  *
- * 3. **Handles authorization** — The `onAuthorize` hook lets better-auth's
+ * 3. **Handles authorization** — The `onAuthorize` hook lets Better Auth's
  *    session decide whether a request is allowed.
  *
  * @example
  * ```ts
- * // Simple: let the plugin manage better-auth internally
+ * // Simple: let the plugin manage Better Auth internally
  * import { userAuth } from '@invect/user-auth';
  *
  * app.use('/invect', createInvectRouter({
@@ -815,7 +815,7 @@ export function userAuth(options: UserAuthPluginOptions): InvectPlugin {
 
   let endpointLogger: PluginLoggerLike = console;
 
-  // Determine better-auth's basePath (defaults to /api/auth).
+  // Determine Better Auth's basePath (defaults to /api/auth).
   // Computed lazily since `auth` may not exist until `init`.
   let betterAuthBasePath = '/api/auth';
 
@@ -965,10 +965,10 @@ export function userAuth(options: UserAuthPluginOptions): InvectPlugin {
 
   // ----- Build the plugin -----
   return {
-    id: 'better-auth',
-    name: 'Better Auth',
+    id: 'user-auth',
+    name: 'User Auth',
 
-    // Abstract schema for better-auth tables — the CLI reads this to generate
+    // Abstract schema for auth tables — the CLI reads this to generate
     // Drizzle/Prisma schema files that include auth tables automatically.
     schema: USER_AUTH_SCHEMA,
 
@@ -1436,15 +1436,15 @@ export function userAuth(options: UserAuthPluginOptions): InvectPlugin {
         },
       },
 
-      // ── Better-Auth proxy catch-all (must come LAST so specific routes above win) ──
+      // ── Auth proxy catch-all (must come LAST so specific routes above win) ──
       ...endpoints,
     ],
 
     hooks: {
       /**
-       * onRequest: Intercept incoming requests to resolve better-auth sessions.
+       * onRequest: Intercept incoming requests to resolve auth sessions.
        *
-       * - Better-auth proxy routes are passed through untouched.
+       * - Auth proxy routes are passed through untouched.
        * - For all other routes, we resolve the session. If no session exists
        *   and `onSessionError === 'throw'`, we short-circuit with a 401.
        */
@@ -1452,7 +1452,7 @@ export function userAuth(options: UserAuthPluginOptions): InvectPlugin {
         request: Request,
         context: { path: string; method: string; identity: InvectIdentity | null },
       ) => {
-        // Skip session resolution for better-auth proxy routes
+        // Skip session resolution for auth proxy routes
         if (isBetterAuthRoute(context.path, prefix, betterAuthBasePath)) {
           return; // Let the proxy endpoint handle it
         }
@@ -1580,6 +1580,9 @@ export function userAuth(options: UserAuthPluginOptions): InvectPlugin {
           const api = requireAuth().api as Record<string, unknown>;
           let result: BetterAuthApiUserResult | null = null;
 
+          // Try createUser first (admin plugin API), then fall back to signUpEmail.
+          // createUser requires admin auth headers which aren't available during
+          // initial seeding, so we fall through to signUpEmail when it fails.
           if (typeof api.createUser === 'function') {
             const createUser =
               api.createUser as BetterAuthHeadersBodyMethod<BetterAuthApiUserResult>;
@@ -1592,12 +1595,14 @@ export function userAuth(options: UserAuthPluginOptions): InvectPlugin {
                 role: 'admin',
               },
             }).catch((err: unknown) => {
-              pluginContext.logger.error?.(
-                `createUser failed for ${adminEmail}: ${err instanceof Error ? err.message : String(err)}`,
+              pluginContext.logger.debug?.(
+                `createUser API requires auth, falling back to signUpEmail for ${adminEmail}`,
               );
               return null;
             });
-          } else if (typeof api.signUpEmail === 'function') {
+          }
+
+          if (!result?.user && typeof api.signUpEmail === 'function') {
             const signUpEmail = api.signUpEmail as BetterAuthBodyMethod<BetterAuthApiUserResult>;
             result = await signUpEmail({
               body: {
@@ -1611,7 +1616,13 @@ export function userAuth(options: UserAuthPluginOptions): InvectPlugin {
               );
               return null;
             });
-          } else {
+          }
+
+          if (
+            !result?.user &&
+            typeof api.createUser !== 'function' &&
+            typeof api.signUpEmail !== 'function'
+          ) {
             pluginContext.logger.debug(
               `Could not create global admin ${adminEmail}: auth.api.createUser/signUpEmail are unavailable.`,
             );

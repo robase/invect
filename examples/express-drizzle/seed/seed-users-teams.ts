@@ -3,7 +3,7 @@
  * Seed script for testing the Access Control + Teams UI.
  *
  * Creates:
- *  - 8 users (with hashed passwords via better-auth)
+ *  - 8 users (with hashed passwords via Better Auth)
  *  - 3 teams with members
  *  - 6 flows
  *  - Flow access records (user + team grants)
@@ -259,9 +259,9 @@ async function main() {
 
   for (const f of FLOWS) {
     // Delete existing by name
-    const { data: existing } = await invect.listFlows();
-    for (const old of existing.filter((fl) => fl.name === f.name)) {
-      await invect.deleteFlow(old.id);
+    const { data: existing } = await invect.flows.list();
+    for (const old of existing.filter((fl: { name: string; id: string }) => fl.name === f.name)) {
+      await invect.flows.delete(old.id);
     }
 
     const flow = await invect.flows.create({ name: f.name, isActive: false });

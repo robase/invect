@@ -16,7 +16,7 @@
  * `$input` is always available as the full context object.
  */
 import type { JsExpressionService } from './js-expression.service';
-import type { Logger } from 'src/types/schemas';
+import type { Logger } from 'src/schemas';
 
 export interface TemplateRenderResult {
   success: boolean;

@@ -1,5 +1,5 @@
 import { FlowRunStatus, NodeExecutionStatus } from 'src/types/base';
-import { GraphNodeType } from 'src/types-fresh';
+import { GraphNodeType } from 'src/types.internal';
 import { InvectDefinition, FlowNodeDefinitions } from '../flow-versions/schemas-fresh';
 import type { FlowRun } from '../flow-runs/flow-runs.model';
 import type { FlowRunResult } from '../flow-runs/flow-runs.service';
@@ -9,7 +9,7 @@ import type { NodeExecutionService } from '../node-executions/node-execution.ser
 import type { NodeOutput } from 'src/types/node-io-types';
 import type { BatchJobsService } from '../batch-jobs/batch-jobs.service';
 import type { FlowsService } from '../flows/flows.service';
-import type { Logger } from 'src/types/schemas';
+import type { Logger } from 'src/schemas';
 import type { PluginHookRunner } from 'src/types/plugin.types';
 import { ValidationError } from 'src/types/common/errors.types';
 import { GraphService } from '../graph.service';

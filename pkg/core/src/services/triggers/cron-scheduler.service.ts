@@ -17,7 +17,7 @@ import { ValidationError } from 'src/types/common/errors.types';
  */
 
 import { Cron } from 'croner';
-import type { Logger } from 'src/types/schemas';
+import type { Logger } from 'src/schemas';
 import type { FlowTriggersService } from './flow-triggers.service';
 
 export class CronSchedulerService {

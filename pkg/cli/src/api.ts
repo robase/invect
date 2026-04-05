@@ -1,7 +1,7 @@
 /**
  * Programmatic API for @invect/cli
  *
- * Mirrors better-auth's packages/cli/src/api.ts pattern.
+ * Programmatic API for the Invect CLI generators.
  * Import this to use schema generators in tests or build scripts.
  *
  * @example

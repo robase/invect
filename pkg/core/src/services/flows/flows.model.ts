@@ -2,7 +2,7 @@
 import type { InvectAdapter, WhereClause } from '../../database/adapter';
 import { IdGenerator } from '../../utils/id-generator';
 import type { FlowVersion } from '../../database';
-import { Logger, PaginatedResponse, QueryOptions, FilterQuery } from 'src/types/schemas';
+import { Logger, PaginatedResponse, QueryOptions, FilterQuery } from 'src/schemas';
 import { DatabaseError } from 'src/types/common/errors.types';
 
 /**

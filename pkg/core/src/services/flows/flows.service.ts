@@ -4,7 +4,7 @@
 import type { DatabaseService } from '../database/database.service';
 import { CreateFlowInput, Flow, UpdateFlowInput } from './flows.model';
 import { FlowRun } from '../flow-runs/flow-runs.model';
-import { Logger, QueryOptions, PaginatedResponse } from 'src/types/schemas';
+import { Logger, QueryOptions, PaginatedResponse } from 'src/schemas';
 import { ValidationError, FlowNotFoundError, DatabaseError } from 'src/types/common/errors.types';
 import { FlowVersion } from 'src/database';
 

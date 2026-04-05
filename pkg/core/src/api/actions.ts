@@ -4,7 +4,7 @@ import { createToolExecutorForAction } from '../actions';
 import { getGlobalToolRegistry, type AgentToolRegistry } from '../services/agent-tools';
 import type { NodeExecutorRegistry } from '../nodes/executor-registry';
 import type { ServiceFactory } from '../services/service-factory';
-import type { Logger } from '../types/schemas';
+import type { Logger } from '../schemas';
 import { ValidationError } from '../types/common/errors.types';
 
 export function createActionsAPI(

@@ -10,7 +10,7 @@ import { sqliteSchema, mysqlSchema, postgresqlSchema } from './schema';
 import type { DatabaseDriver } from './drivers/types';
 import { createDatabaseDriver, resolveDatabaseDriverType } from './drivers';
 
-import { Logger, InvectDatabaseConfig } from 'src/types/schemas';
+import { Logger, InvectDatabaseConfig } from 'src/schemas';
 
 /**
  * Drizzle SQLite ORM instance type.

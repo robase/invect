@@ -31,13 +31,15 @@ import { createInvectRouter } from '@invect/express';
 
 const app = express();
 
-app.use('/invect', createInvectRouter({
+const router = await createInvectRouter({
   database: {
     type: 'sqlite',
     connectionString: 'file:./dev.db',
     id: 'main',
   },
-}));
+});
+
+app.use('/invect', router);
 
 app.listen(3000, () => {
   console.log('Server running on http://localhost:3000');
@@ -66,7 +68,7 @@ export class AppModule {}
 ```
 </Tab>
 <Tab value="Next.js">
-```ts title="app/api/invect/[...route]/route.ts"
+```ts title="app/api/invect/[...invect]/route.ts"
 import { createInvectHandler } from '@invect/nextjs';
 
 const handler = createInvectHandler({
@@ -77,10 +79,7 @@ const handler = createInvectHandler({
   },
 });
 
-export const GET = handler;
-export const POST = handler;
-export const PUT = handler;
-export const DELETE = handler;
+export { handler as GET, handler as POST, handler as PUT, handler as DELETE, handler as PATCH };
 ```
 </Tab>
 </Tabs>

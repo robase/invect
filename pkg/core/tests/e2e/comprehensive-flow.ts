@@ -51,7 +51,8 @@ import {
   FlowRunStatus,
   type InvectDefinition,
   type NodeOutput,
-} from "../src";
+} from "../../src";
+import type { InvectInstance } from "../../src/api/types";
 import type { FlowExample } from "./example-types";
 
 /**

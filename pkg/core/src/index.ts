@@ -5,7 +5,7 @@
 export * from './invect-core';
 export * from './nodes';
 export * from './database';
-export * from './types-fresh';
+export * from './types.internal';
 
 // Provider-Actions architecture
 export {
@@ -190,13 +190,13 @@ export { FlowTriggersService, CronSchedulerService } from './services/triggers';
 // FlowEdge is already exported above from schemas-fresh
 
 // Re-export pagination types
-export type { PaginatedResponse, QueryOptions } from './types/schemas/pagination-sort-filter';
+export type { PaginatedResponse, QueryOptions } from './schemas/pagination-sort-filter';
 
 // Re-export commonly needed base types
 export { FlowRunStatus, NodeExecutionStatus } from './types/base';
 
-export type { InvectConfig } from './types/schemas-fresh/invect-config';
-export { defineConfig } from './types/schemas-fresh/invect-config';
+export type { InvectConfig } from './schemas/invect-config';
+export { defineConfig } from './schemas/invect-config';
 
 // Plugin system
 export type {
@@ -251,7 +251,7 @@ export type {
 export { generateNodeSlug } from './utils/node-slug';
 
 // Re-export configuration types
-export type { ExecutionConfig, LoggingConfig, Logger, InvectDatabaseConfig } from './types/schemas';
+export type { ExecutionConfig, LoggingConfig, Logger, InvectDatabaseConfig } from './schemas';
 
 // Re-export scoped logging utilities
 export {
@@ -279,7 +279,7 @@ export type {
 } from './types/node-io-types';
 
 // Re-export AI related types and enums
-export { BatchProvider, AIProvider } from './services/ai/base-client';
+export { BatchProvider, BatchStatus, AIProvider } from './services/ai/base-client';
 export type { ProviderAdapter, ProviderCapabilities } from './services/ai/base-client';
 
 // Re-export Chat Assistant types and service
@@ -314,7 +314,7 @@ export type {
 } from './services/execution-event-bus';
 
 // Re-export Graph Node Types and Names
-export { GraphNodeType, GRAPH_NODE_TYPE_NAMES } from './types-fresh';
+export { GraphNodeType, GRAPH_NODE_TYPE_NAMES } from './types.internal';
 
 // Re-export validation types
 export type {

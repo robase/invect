@@ -73,7 +73,7 @@ export class MyService {
 
   async triggerWorkflow(flowId: string, data: any) {
     const core = this.invectService.getCore();
-    return core.startFlowRun(flowId, data);
+    return core.runs.start(flowId, data);
   }
 }
 ```

@@ -1,7 +1,7 @@
 import { z } from 'zod/v4';
 import type { NodeExecutionResult } from './types/node-execution.types';
 import type { NodeOutput } from './types/node-io-types';
-import type { Logger } from './types/schemas-fresh/invect-config';
+import type { Logger } from './schemas/invect-config';
 import type { FlowEdge, FlowNodeDefinitions } from './services/flow-versions/schemas-fresh';
 import type { BatchProvider, PromptResult } from './services/ai/base-client';
 import type {

@@ -7,7 +7,7 @@ import {
   PaginationQuery,
   QueryOptions,
   SortingQuery,
-} from 'src/types/schemas';
+} from 'src/schemas';
 import { FlowRunStatus } from 'src/types/base';
 
 /**

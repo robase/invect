@@ -27,7 +27,7 @@
   },
   "include": [
     "src/**/*"
-, "../types/src/schemas", "tests/run.ts"  ],
+, "../types/src/schemas"  ],
   "exclude": [
     "node_modules",
     "dist",

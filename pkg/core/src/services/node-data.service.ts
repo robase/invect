@@ -1,7 +1,7 @@
 // Node Data Service - Framework-agnostic node testing and data helpers
 import jsonLogic from 'json-logic-js';
 import { DatabaseService } from './database/database.service';
-import { Logger, InvectConfig, InvectDatabaseConfig } from 'src/types/schemas';
+import { Logger, InvectConfig, InvectDatabaseConfig } from 'src/schemas';
 import { DatabaseError, ValidationError } from 'src/types/common/errors.types';
 import { Model, BaseAIClient, BatchProvider } from './ai/base-client';
 import type { TemplateService } from './templating/template.service';

@@ -20,7 +20,7 @@
  */
 
 import type { DatabaseConnection } from './connection';
-import type { Logger } from 'src/types/schemas';
+import type { Logger } from 'src/schemas';
 import { mergeSchemas } from './schema-merger';
 import type { InvectPlugin } from 'src/types/plugin.types';
 
@@ -170,7 +170,7 @@ async function introspectSqlite(
   const schema = new Map<string, Set<string>>();
 
   const tables = (await driver.queryAll(
-    `SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '__%'`,
+    `SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite\\_%' ESCAPE '\\' AND name NOT LIKE '\\_\\_%' ESCAPE '\\'`,
   )) as Array<{ name: string }>;
 
   for (const table of tables) {

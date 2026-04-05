@@ -15,7 +15,7 @@ import { CronSchedulerService } from './triggers/cron-scheduler.service';
 import { ChatStreamService } from './chat/chat-stream.service';
 import { ExecutionEventBus, getExecutionEventBus } from './execution-event-bus';
 import { DatabaseError } from 'src/types/common/errors.types';
-import { Logger, InvectConfig } from 'src/types/schemas';
+import { Logger, InvectConfig } from 'src/schemas';
 import { NodeExecutorRegistry } from 'src/nodes/executor-registry';
 import { FlowVersionsService } from './flow-versions/flow-versions.service';
 import { ReactFlowRendererService } from './react-flow-renderer.service';
