@@ -669,7 +669,7 @@ export function FlowWorkbenchView({
       const definition = getNodeDefinition(type);
 
       // Enforce maxInstances: check if adding this node would exceed the limit
-      if (definition?.maxInstances != null) {
+      if (definition?.maxInstances !== null && definition?.maxInstances !== undefined) {
         const currentNodes = useFlowEditorStore.getState().nodes;
         const existingCount = currentNodes.filter(
           (n) => (n.data as Record<string, unknown>)?.type === type,

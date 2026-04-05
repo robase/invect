@@ -447,7 +447,7 @@ function ToolCallBubble({ toolMeta }: { toolMeta: NonNullable<ChatMessage['toolM
     <Check className="size-3 text-emerald-600" />
   );
 
-  const hasResult = toolMeta.result != null;
+  const hasResult = toolMeta.result !== null && toolMeta.result !== undefined;
   const isExpandable = !isPending && hasResult;
 
   const toolLabel = toolMeta.toolName.replace(/_/g, ' ');
@@ -620,7 +620,7 @@ function ToolDataScrollable({ data, isError }: { data: unknown; isError: boolean
 }
 
 function formatToolData(data: unknown): string {
-  if (data == null) {
+  if (data === null || data === undefined) {
     return '(empty)';
   }
   if (typeof data === 'string') {

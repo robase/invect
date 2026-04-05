@@ -126,7 +126,7 @@ export const WebhookDetailPanel: FC<WebhookDetailPanelProps> = ({ trigger, flowN
         </DialogHeader>
 
         {/* Tab nav */}
-        <div className="flex gap-1 border-b -mx-6 px-6 mt-4">
+        <div className="flex gap-1 px-6 mt-4 -mx-6 border-b">
           {[
             { key: 'overview' as const, label: 'Overview' },
             { key: 'edit' as const, label: 'Edit' },
@@ -147,7 +147,7 @@ export const WebhookDetailPanel: FC<WebhookDetailPanelProps> = ({ trigger, flowN
       </div>
 
       {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto px-6 pb-6">
+      <div className="flex-1 px-6 pb-6 overflow-y-auto">
         {section === 'overview' ? (
           <OverviewSection
             trigger={trigger}
@@ -178,7 +178,7 @@ const OverviewSection: FC<{
   <div className="pt-4 space-y-5">
     {/* Endpoint URL */}
     <div className="space-y-1">
-      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+      <label className="text-xs font-medium tracking-wide uppercase text-muted-foreground">
         Webhook URL
       </label>
       <CopyableField value={`/plugins/webhooks/receive/${trigger.webhookPath}`} />
@@ -187,13 +187,13 @@ const OverviewSection: FC<{
     {/* HMAC Authentication */}
     {trigger.hmacEnabled && trigger.hmacHeaderName && (
       <div className="space-y-1">
-        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        <label className="text-xs font-medium tracking-wide uppercase text-muted-foreground">
           HMAC Authentication
         </label>
-        <div className="rounded-lg border bg-muted/30 p-3 space-y-1">
+        <div className="p-3 space-y-1 border rounded-lg bg-muted/30">
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">Signature Header</span>
-            <span className="text-sm font-mono">{trigger.hmacHeaderName}</span>
+            <span className="font-mono text-sm">{trigger.hmacHeaderName}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">Secret</span>
@@ -206,11 +206,11 @@ const OverviewSection: FC<{
     {/* IP Whitelist */}
     {trigger.allowedIps && (
       <div className="space-y-1">
-        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        <label className="text-xs font-medium tracking-wide uppercase text-muted-foreground">
           IP Whitelist
         </label>
-        <div className="rounded-lg border bg-muted/30 p-3">
-          <span className="text-sm font-mono break-all">{trigger.allowedIps}</span>
+        <div className="p-3 border rounded-lg bg-muted/30">
+          <span className="font-mono text-sm break-all">{trigger.allowedIps}</span>
         </div>
       </div>
     )}
@@ -218,15 +218,15 @@ const OverviewSection: FC<{
     {/* Info grid */}
     <div className="grid grid-cols-2 gap-4 py-2">
       <div>
-        <span className="text-xs text-muted-foreground block mb-1">Methods</span>
-        <span className="text-sm font-mono">{trigger.allowedMethods}</span>
+        <span className="block mb-1 text-xs text-muted-foreground">Methods</span>
+        <span className="font-mono text-sm">{trigger.allowedMethods}</span>
       </div>
       <div>
-        <span className="text-xs text-muted-foreground block mb-1">Authentication</span>
+        <span className="block mb-1 text-xs text-muted-foreground">Authentication</span>
         <span className="text-sm">{getAuthModeConfig(trigger).label}</span>
       </div>
       <div>
-        <span className="text-xs text-muted-foreground block mb-1">Created</span>
+        <span className="block mb-1 text-xs text-muted-foreground">Created</span>
         <span className="text-sm">{formatFullDate(trigger.createdAt)}</span>
       </div>
       <div className="flex items-center gap-1.5">
@@ -243,14 +243,14 @@ const OverviewSection: FC<{
 
     {/* Linked flow */}
     {trigger.flowId && (
-      <div className="rounded-lg border bg-muted/30 p-3">
+      <div className="p-3 border rounded-lg bg-muted/30">
         <div className="flex items-center gap-2">
           <Workflow className="w-4 h-4 text-muted-foreground shrink-0" />
           <div className="flex-1 min-w-0">
-            <span className="text-xs text-muted-foreground block">Linked Flow</span>
+            <span className="block text-xs text-muted-foreground">Linked Flow</span>
             <a
               href={`/invect/flow/${trigger.flowId}`}
-              className="text-sm font-medium text-primary hover:underline inline-flex items-center gap-1"
+              className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
             >
               {flowName ?? trigger.flowId}
               <ExternalLink className="w-3 h-3" />
@@ -261,12 +261,12 @@ const OverviewSection: FC<{
     )}
 
     {/* Last payload */}
-    {trigger.lastPayload != null && (
+    {trigger.lastPayload !== null && trigger.lastPayload !== undefined && (
       <div className="space-y-1">
-        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        <label className="text-xs font-medium tracking-wide uppercase text-muted-foreground">
           Last Payload
         </label>
-        <pre className="text-xs font-mono bg-muted rounded-lg p-3 overflow-auto max-h-32">
+        <pre className="p-3 overflow-auto font-mono text-xs rounded-lg bg-muted max-h-32">
           {JSON.stringify(trigger.lastPayload, null, 2)}
         </pre>
       </div>
@@ -296,7 +296,7 @@ const OverviewSection: FC<{
       <button
         onClick={onDelete}
         disabled={isDeleting}
-        className="inline-flex items-center gap-2 rounded-md text-sm font-medium h-8 px-3 border border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30 transition-colors"
+        className="inline-flex items-center h-8 gap-2 px-3 text-sm font-medium text-red-600 transition-colors border border-red-200 rounded-md hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30"
       >
         {isDeleting ? (
           <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -374,7 +374,7 @@ const EditSection: FC<{
       </div>
 
       {/* HMAC Authentication */}
-      <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-3">
+      <div className="p-3 space-y-3 border rounded-lg border-border bg-muted/30">
         <div className="flex items-center justify-between">
           <div>
             <div className="text-sm font-medium">HMAC Authentication</div>
@@ -397,7 +397,7 @@ const EditSection: FC<{
           </button>
         </div>
         {hmacEnabled && (
-          <div className="space-y-3 pt-1">
+          <div className="pt-1 space-y-3">
             <div className="space-y-1.5">
               <label className="text-xs font-medium" htmlFor="wh-edit-hmac-header">
                 Signature Header Name
@@ -472,14 +472,14 @@ const EditSection: FC<{
         <button
           type="button"
           onClick={onSuccess}
-          className="inline-flex items-center justify-center rounded-md text-sm font-medium h-8 px-3 border bg-background shadow-xs hover:bg-accent transition-colors"
+          className="inline-flex items-center justify-center h-8 px-3 text-sm font-medium transition-colors border rounded-md shadow-xs bg-background hover:bg-accent"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={!name.trim() || updateMutation.isPending}
-          className="inline-flex items-center justify-center rounded-md text-sm font-medium h-8 px-3 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+          className="inline-flex items-center justify-center h-8 px-3 text-sm font-medium transition-colors rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
           {updateMutation.isPending ? 'Saving…' : 'Save Changes'}
         </button>

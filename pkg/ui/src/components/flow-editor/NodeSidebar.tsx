@@ -289,7 +289,7 @@ function NodeCard({
   // Check if this node type has reached its maxInstances limit
   const storeNodes = useFlowEditorStore((s) => s.nodes);
   const isAtLimit = useMemo(() => {
-    if (node.maxInstances == null) {
+    if (node.maxInstances === null || node.maxInstances === undefined) {
       return false;
     }
     const count = storeNodes.filter(

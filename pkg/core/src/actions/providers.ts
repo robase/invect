@@ -192,3 +192,13 @@ export const ASANA_PROVIDER: ProviderDef = {
   description: 'Asana task and project management',
   docsUrl: 'https://developers.asana.com/reference/rest-api-reference',
 };
+
+export const TRELLO_PROVIDER: ProviderDef = {
+  id: 'trello',
+  name: 'Trello',
+  icon: 'Layout',
+  category: 'development',
+  nodeCategory: 'Integrations',
+  description: 'Trello boards, lists, and cards',
+  docsUrl: 'https://developer.atlassian.com/cloud/trello/rest/',
+};

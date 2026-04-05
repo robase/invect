@@ -1,9 +1,9 @@
-@import "tw-animate-css";
+@import 'tw-animate-css';
 
 /* Import React Flow styles globally (needed for proper rendering) */
-@import "@xyflow/react/dist/style.css";
-@import "tailwindcss/theme.css" layer(theme);
-@import "tailwindcss/preflight.css" layer(base);
+@import '@xyflow/react/dist/style.css';
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/preflight.css' layer(base);
 
 /* Scan plugin source files so their Tailwind classes are included in the pre-built CSS */
 @source "../../plugins/auth/src/**/*.{ts,tsx}";
@@ -14,38 +14,43 @@
 @layer theme, base, components, utilities;
 
 @font-face {
-  font-family: "Iosevka";
+  font-family: 'Iosevka';
   font-style: normal;
   font-display: swap;
   font-weight: 400;
-  src: url("./assets/fonts/iosevka-latin-400-normal.woff2") format("woff2");
+  src: url('./assets/fonts/iosevka-latin-400-normal.woff2') format('woff2');
 }
 
 @font-face {
-  font-family: "Geist Variable";
+  font-family: 'Geist Variable';
   font-style: normal;
   font-display: swap;
   font-weight: 100 900;
-  src: url("./assets/fonts/geist-cyrillic-wght-normal.woff2") format("woff2-variations");
-  unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;
+  src: url('./assets/fonts/geist-cyrillic-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
 }
 
 @font-face {
-  font-family: "Geist Variable";
+  font-family: 'Geist Variable';
   font-style: normal;
   font-display: swap;
   font-weight: 100 900;
-  src: url("./assets/fonts/geist-latin-ext-wght-normal.woff2") format("woff2-variations");
-  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+  src: url('./assets/fonts/geist-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
 }
 
 @font-face {
-  font-family: "Geist Variable";
+  font-family: 'Geist Variable';
   font-style: normal;
   font-display: swap;
   font-weight: 100 900;
-  src: url("./assets/fonts/geist-latin-wght-normal.woff2") format("woff2-variations");
-  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+  src: url('./assets/fonts/geist-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
 /* CSS @property for animated border gradient angle */
@@ -57,16 +62,17 @@
 
 /* Animated border for running nodes - uses conic gradient with CSS @property */
 .node-running-border {
-  background: 
+  background:
     linear-gradient(var(--card, #ffffff), var(--card, #ffffff)) padding-box,
     conic-gradient(
-      from var(--border-angle),
-      rgba(148, 163, 184, 0.48) 80%,
-      var(--primary, #5B5BD6) 86%,
-      color-mix(in srgb, var(--primary, #5B5BD6) 50%, white) 90%,
-      var(--primary, #5B5BD6) 94%,
-      rgba(148, 163, 184, 0.48)
-    ) border-box;
+        from var(--border-angle),
+        rgba(148, 163, 184, 0.48) 80%,
+        var(--primary, #5b5bd6) 86%,
+        color-mix(in srgb, var(--primary, #5b5bd6) 50%, white) 90%,
+        var(--primary, #5b5bd6) 94%,
+        rgba(148, 163, 184, 0.48)
+      )
+      border-box;
   border: 2px solid transparent;
 }
 
@@ -94,14 +100,14 @@
     --imp-canvas-background: #f8f9fb;
     --imp-foreground: #1a1a2e;
     --imp-card: #ffffff;
-    --imp-shadow-sidebar: 1px 0 3px rgba(0,0,0,0.06);
-    --imp-shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-    --imp-shadow-card-hover: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
-    --imp-shadow-floating: 0 16px 48px -12px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.05);
+    --imp-shadow-sidebar: 1px 0 3px rgba(0, 0, 0, 0.06);
+    --imp-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+    --imp-shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+    --imp-shadow-floating: 0 16px 48px -12px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.05);
     --imp-card-foreground: #1a1a2e;
     --imp-popover: #ffffff;
     --imp-popover-foreground: #1a1a2e;
-    --imp-primary: #5B5BD6;
+    --imp-primary: #5b5bd6;
     --imp-primary-foreground: #ffffff;
     --imp-secondary: #f0f0f8;
     --imp-secondary-foreground: #1a1a2e;
@@ -113,15 +119,15 @@
     --imp-destructive-foreground: #ffffff;
     --imp-border: #e0e0ec;
     --imp-input: #dcdce4;
-    --imp-ring: #5B5BD6;
+    --imp-ring: #5b5bd6;
     --imp-sidebar: #fafafe;
     --imp-sidebar-foreground: #1a1a2e;
     --imp-sidebar-primary: #1a1a2e;
     --imp-sidebar-primary-foreground: #ffffff;
     --imp-sidebar-accent: #ededf7;
-    --imp-sidebar-accent-foreground: #5B5BD6;
+    --imp-sidebar-accent-foreground: #5b5bd6;
     --imp-sidebar-border: #e0e0ec;
-    --imp-sidebar-ring: #5B5BD6;
+    --imp-sidebar-ring: #5b5bd6;
     --background: #ffffff;
     --canvas-background: #f8f9fb;
     --foreground: #1a1a2e;
@@ -129,7 +135,7 @@
     --card-foreground: #1a1a2e;
     --popover: #ffffff;
     --popover-foreground: #1a1a2e;
-    --primary: #5B5BD6;
+    --primary: #5b5bd6;
     --primary-foreground: #ffffff;
     --secondary: #f0f0f8;
     --secondary-foreground: #1a1a2e;
@@ -141,10 +147,10 @@
     --destructive-foreground: #ffffff;
     --border: #e0e0ec;
     --input: #dcdce4;
-    --ring: #5B5BD6;
-    --chart-1: #5B5BD6;
-    --chart-2: #7C7CE0;
-    --chart-3: #3E63DD;
+    --ring: #5b5bd6;
+    --chart-1: #5b5bd6;
+    --chart-2: #7c7ce0;
+    --chart-3: #3e63dd;
     --chart-4: #30a46c;
     --chart-5: #e5484d;
     --radius: 0.5rem;
@@ -153,9 +159,9 @@
     --sidebar-primary: #1a1a2e;
     --sidebar-primary-foreground: #ffffff;
     --sidebar-accent: #ededf7;
-    --sidebar-accent-foreground: #5B5BD6;
+    --sidebar-accent-foreground: #5b5bd6;
     --sidebar-border: #e0e0ec;
-    --sidebar-ring: #5B5BD6;
+    --sidebar-ring: #5b5bd6;
     --shadow-x: 0px;
     --shadow-y: 1px;
     --shadow-blur: 3px;
@@ -163,7 +169,7 @@
     --shadow-opacity: 0.08;
     --shadow-color: #1a1a2e;
     /* Edge selection colors - light mode */
-    --edge-selected-stroke: #5B5BD6;
+    --edge-selected-stroke: #5b5bd6;
     /* Node selection colors - light mode */
     --node-selected-border: #60a5fa;
     --node-hover-bg: #f7f7fd;
@@ -208,11 +214,13 @@
     --sidebar-ring: var(--imp-sidebar-ring);
 
     /* Apply Geist Sans for UI text within .invect and reserve Iosevka for code-oriented surfaces. */
-    font-family: "Geist Variable", "Geist", ui-sans-serif, system-ui, sans-serif;
+    font-family: 'Geist Variable', 'Geist', ui-sans-serif, system-ui, sans-serif;
 
     @theme inline {
-      --font-sans: "Geist Variable", "Geist", ui-sans-serif, system-ui, sans-serif;
-      --font-mono: "Iosevka", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+      --font-sans: 'Geist Variable', 'Geist', ui-sans-serif, system-ui, sans-serif;
+      --font-mono:
+        'Iosevka', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono',
+        monospace;
       --color-background: var(--background);
       --color-foreground: var(--foreground);
       --color-card: var(--card);
@@ -258,13 +266,15 @@
       --color-info: var(--imp-info);
       --color-info-foreground: var(--imp-info-foreground);
       --color-info-muted: var(--imp-info-muted);
-      --font-serif: "Geist Variable", "Geist", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+      --font-serif:
+        'Geist Variable', 'Geist', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
       /* computed shadow variables below - do not modify */
       --shadow-2xs: var(--shadow-x) var(--shadow-y)
         color-mix(in srgb, var(--shadow-color) calc(var(--shadow-opacity) * 100%), transparent);
       --shadow-xs: var(--shadow-x) var(--shadow-y) var(--shadow-blur) var(--shadow-spread)
         color-mix(in srgb, var(--shadow-color) calc(var(--shadow-opacity) * 100%), transparent);
-      --shadow-sm: var(--shadow-x) var(--shadow-y) calc(var(--shadow-blur) * 1.5) var(--shadow-spread)
+      --shadow-sm: var(--shadow-x) var(--shadow-y) calc(var(--shadow-blur) * 1.5)
+        var(--shadow-spread)
         color-mix(in srgb, var(--shadow-color) calc(var(--shadow-opacity) * 100%), transparent);
       --shadow-md: calc(var(--shadow-x) * 2) calc(var(--shadow-y) * 2) calc(var(--shadow-blur) * 3)
         calc(var(--shadow-spread) - 1px)
@@ -275,8 +285,8 @@
       --shadow-xl: calc(var(--shadow-x) * 6) calc(var(--shadow-y) * 6) calc(var(--shadow-blur) * 7)
         calc(var(--shadow-spread) - 5px)
         color-mix(in srgb, var(--shadow-color) calc(var(--shadow-opacity) * 100%), transparent);
-      --shadow-2xl: calc(var(--shadow-x) * 8) calc(var(--shadow-y) * 8) calc(max(0px, var(--shadow-blur) * 9 - 8px))
-        calc(var(--shadow-spread) - 12px)
+      --shadow-2xl: calc(var(--shadow-x) * 8) calc(var(--shadow-y) * 8)
+        calc(max(0px, var(--shadow-blur) * 9 - 8px)) calc(var(--shadow-spread) - 12px)
         color-mix(in srgb, var(--shadow-color) calc(var(--shadow-opacity) * 250%), transparent);
       --shadow: var(--shadow-md);
       --color-shadow-color: var(--shadow-color);
@@ -290,12 +300,20 @@
     }
 
     @keyframes accordion-down {
-      from { height: 0; }
-      to { height: var(--radix-accordion-content-height); }
+      from {
+        height: 0;
+      }
+      to {
+        height: var(--radix-accordion-content-height);
+      }
     }
     @keyframes accordion-up {
-      from { height: var(--radix-accordion-content-height); }
-      to { height: 0; }
+      from {
+        height: var(--radix-accordion-content-height);
+      }
+      to {
+        height: 0;
+      }
     }
 
     /* Dark mode design */
@@ -307,7 +325,7 @@
       --imp-card-foreground: #ececf0;
       --imp-popover: #222228;
       --imp-popover-foreground: #ececf0;
-      --imp-primary: #7B7BDE;
+      --imp-primary: #7b7bde;
       --imp-primary-foreground: #ffffff;
       --imp-secondary: #22222c;
       --imp-secondary-foreground: #ececf0;
@@ -319,10 +337,10 @@
       --imp-destructive-foreground: #ffffff;
       --imp-border: #2e2e3c;
       --imp-input: #3a3a4a;
-      --imp-ring: #7B7BDE;
-      --chart-1: #7B7BDE;
-      --chart-2: #9B9BE8;
-      --chart-3: #5A7DE8;
+      --imp-ring: #7b7bde;
+      --chart-1: #7b7bde;
+      --chart-2: #9b9be8;
+      --chart-3: #5a7de8;
       --chart-4: #3dd68c;
       --chart-5: #ff6369;
       --imp-sidebar: #111114;
@@ -330,21 +348,22 @@
       --imp-sidebar-primary: #ececf0;
       --imp-sidebar-primary-foreground: #131316;
       --imp-sidebar-accent: #26263a;
-      --imp-sidebar-accent-foreground: #7B7BDE;
+      --imp-sidebar-accent-foreground: #7b7bde;
       --imp-sidebar-border: #2e2e3c;
-      --imp-sidebar-ring: #7B7BDE;
+      --imp-sidebar-ring: #7b7bde;
       --shadow-x: 0px;
       --shadow-y: 1px;
       --shadow-blur: 3px;
       --shadow-spread: 0px;
       --shadow-opacity: 0.2;
       --shadow-color: #000000;
-      --imp-shadow-sidebar: 1px 0 3px rgba(0,0,0,0.2);
-      --imp-shadow-card: 0 1px 3px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.15);
-      --imp-shadow-card-hover: 0 4px 12px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.15);
-      --imp-shadow-floating: 0 16px 48px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
+      --imp-shadow-sidebar: 1px 0 3px rgba(0, 0, 0, 0.2);
+      --imp-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.15);
+      --imp-shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.15);
+      --imp-shadow-floating:
+        0 16px 48px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
       /* Edge selection colors - dark mode */
-      --edge-selected-stroke: #7B7BDE;
+      --edge-selected-stroke: #7b7bde;
       /* Node selection colors - dark mode */
       --node-selected-border: #60a5fa;
       --node-hover-bg: rgba(30, 30, 36, 0.8);
@@ -410,10 +429,10 @@
       border-radius: 0.375rem;
     }
 
-    .imp-node-config-form [data-slot="input"],
-    .imp-node-config-form [data-slot="textarea"],
-    .imp-node-config-form [data-slot="select-trigger"],
-    .imp-node-config-form [role="combobox"],
+    .imp-node-config-form [data-slot='input'],
+    .imp-node-config-form [data-slot='textarea'],
+    .imp-node-config-form [data-slot='select-trigger'],
+    .imp-node-config-form [role='combobox'],
     .imp-node-config-form .cm-editor,
     .imp-node-config-form .cm-scroller,
     .imp-node-config-form .cm-content {

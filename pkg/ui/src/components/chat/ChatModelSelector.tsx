@@ -89,7 +89,7 @@ export function ChatModelSelector({ className }: ChatModelSelectorProps) {
     }
     return recentModels
       .map((id) => models.find((m) => m.id === id))
-      .filter((m): m is NonNullable<typeof m> => m != null);
+      .filter((m): m is NonNullable<typeof m> => m !== null && m !== undefined);
   }, [debouncedSearch, recentModels, models]);
 
   const displayLabel = useMemo(() => {

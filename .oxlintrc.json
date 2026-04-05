@@ -32,7 +32,10 @@
         "ts-check": false
       }
     ],
-    "typescript/no-empty-function": "warn"
+    "typescript/no-empty-function": "warn",
+    "typescript/no-unnecessary-parameter-property-assignment": "warn",
+    "import/namespace": "off",
+    "unicorn/no-useless-fallback-in-spread": "warn"
   },
   "ignorePatterns": [
     "node_modules",
@@ -42,21 +45,30 @@
     "build",
     ".turbo",
     "drizzle",
-    "pnpm-lock.yaml"
+    "pnpm-lock.yaml",
+    "docs/"
   ],
   "overrides": [
     {
-      "files": ["**/tests/**", "**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}"],
+      "files": ["**/tests/**", "**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "**/playwright/**", "**/test/**"],
       "rules": {
+        "typescript/no-explicit-any": "off",
         "typescript/no-non-null-assertion": "off",
         "typescript/ban-ts-comment": "off",
         "typescript/no-empty-function": "off",
         "no-console": "off",
+        "no-empty-pattern": "off",
         "prefer-const": "warn"
       }
     },
     {
       "files": ["pkg/ui/src/**"],
+      "rules": {
+        "no-console": "off"
+      }
+    },
+    {
+      "files": ["pkg/cli/**", "examples/**", "docker/**", "scripts/**"],
       "rules": {
         "no-console": "off"
       }
