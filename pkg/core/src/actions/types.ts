@@ -427,6 +427,14 @@ export interface ActionDefinition<TParams = unknown> {
    */
   hidden?: boolean;
 
+  /**
+   * When true the action will NOT be registered as an agent tool.
+   * Use this for flow-control nodes (if/else, input, output) and structural
+   * nodes (template string, AI model) that don't make sense as standalone
+   * tools in an agent's tool belt.
+   */
+  excludeFromTools?: boolean;
+
   /** Search / filter tags */
   tags?: string[];
 

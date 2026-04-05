@@ -31,7 +31,7 @@ const HIDDEN_HANDLE_STYLE_FALSE = {
 } as const;
 
 const HANDLE_CLASS =
-  '!bg-background !w-[10px] !h-[10px] !border-2 !border-muted-foreground !rounded-full !transition-all hover:!w-3.5 hover:!h-3.5 hover:!border-primary !shadow-none !ring-0';
+  '!bg-background !w-4 !h-4 !border-2 !border-muted-foreground !rounded-full !transition-all hover:!w-[18px] hover:!h-[18px] hover:!border-primary !shadow-none !ring-0';
 
 const DEFAULT_CATEGORY_COLOR = 'bg-muted text-muted-foreground';
 
@@ -87,7 +87,7 @@ const NodeLoadingPlaceholder = memo(
 
     return (
       <Card
-        className={`relative min-w-[200px] max-w-[240px] h-[60px] flex-row py-0 items-center cursor-move transition-colors bg-card hover:bg-card/80 ${
+        className={`relative w-[240px] h-[60px] flex-row py-0 items-center cursor-move transition-colors bg-card hover:bg-card/80 ${
           selected
             ? 'border-blue-500 dark:border-blue-400 shadow-lg shadow-blue-500/25 dark:shadow-blue-400/30'
             : 'border-sidebar-ring hover:border-muted-foreground'
@@ -110,7 +110,7 @@ const NodeLoadingPlaceholder = memo(
             <div className="text-xs font-semibold tracking-tight truncate text-card-foreground">
               {label}
             </div>
-            <div className="text-xs font-mono tracking-tight truncate text-muted-foreground">
+            <div className="font-mono text-xs tracking-tight truncate text-muted-foreground">
               {nodeType}
             </div>
           </div>
@@ -193,29 +193,24 @@ export const UniversalNode = memo(({ data, selected }: NodeProps) => {
   return (
     <Card
       className={cn(
-        'relative min-w-[200px] max-w-[240px] h-[60px] flex-row py-0 items-center cursor-move transition-colors bg-card hover:bg-card/80 shadow-md hover:shadow-lg border-l-4',
+        'relative w-[200px] h-[60px] flex-row py-0 items-center cursor-move transition-colors node-hover-bg bg-card shadow-md border-l-4',
         getProviderAccentColor(definition?.provider?.id),
         // Default border
         !isRunning &&
           !isSuccess &&
           !isError &&
           !isSkipped &&
-          'border-sidebar-ring hover:border-muted-foreground',
+          'border-sidebar-ring hover:border-primary/80',
         // Running state - animated gradient border
         isRunning && 'node-running-border animate-node-border rounded-xl',
         // Success state - green border
-        isSuccess && 'border-2 border-green-500 shadow-lg shadow-green-500/20',
+        isSuccess && 'border-2 border-green-500',
         // Error state - red border
-        isError && 'border-2 border-red-500 shadow-lg shadow-red-500/20',
+        isError && 'border-2 border-red-500',
         // Skipped state - greyed out with dashed border
         isSkipped && 'border-2 border-dashed border-muted-foreground/50 opacity-50',
         // Selection state - change existing border color to blue for visibility
-        selected &&
-          !isRunning &&
-          !isSuccess &&
-          !isError &&
-          !isSkipped &&
-          'border-blue-500 dark:border-blue-400 shadow-lg shadow-blue-500/25 dark:shadow-blue-400/30',
+        selected && !isRunning && !isSuccess && !isError && !isSkipped && 'node-selected',
       )}
     >
       {/* Unified Input Handle */}
@@ -244,7 +239,7 @@ export const UniversalNode = memo(({ data, selected }: NodeProps) => {
           <div className="text-xs font-semibold tracking-tight truncate text-card-foreground">
             {label}
           </div>
-          <div className="text-xs font-mono tracking-tight truncate text-muted-foreground">
+          <div className="font-mono text-xs tracking-tight truncate text-muted-foreground">
             {nodeType}
           </div>
         </div>

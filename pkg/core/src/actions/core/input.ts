@@ -37,6 +37,7 @@ export const inputAction = defineAction({
   name: 'Input',
   description: 'Define a flow input variable with an optional default value',
   provider: CORE_PROVIDER,
+  excludeFromTools: true,
   icon: 'LogIn',
   tags: ['input', 'entry', 'variable', 'flow', 'seed'],
 

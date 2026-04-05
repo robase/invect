@@ -947,10 +947,7 @@ export class InvectController {
   }
 
   @Get('chat/models/:credentialId')
-  async getChatModels(
-    @Param('credentialId') credentialId: string,
-    @Query('q') q?: string,
-  ) {
+  async getChatModels(@Param('credentialId') credentialId: string, @Query('q') q?: string) {
     return this.invect.chat.listModels(credentialId, q);
   }
 

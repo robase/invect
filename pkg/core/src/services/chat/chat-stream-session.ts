@@ -60,6 +60,8 @@ function isRateLimitError(error: unknown): boolean {
 export class ChatStreamSession {
   private aborted = false;
   private usage: ChatUsage = {};
+  /** Track which tool IDs were called during this session */
+  private toolsCalled: string[] = [];
 
   constructor(private readonly deps: ChatStreamSessionDeps) {}
 
@@ -181,7 +183,14 @@ export class ChatStreamSession {
           break;
         }
 
-        // 8. Execute tool calls
+        // 8. Execute tool calls and collect results
+        const toolResults: Array<{
+          id: string;
+          toolId: string;
+          input: Record<string, unknown>;
+          result: Awaited<ReturnType<typeof toolkit.executeTool>>;
+        }> = [];
+
         for (const toolCall of response.toolCalls) {
           if (this.aborted) {
             break;
@@ -220,23 +229,36 @@ export class ChatStreamSession {
             };
           }
 
-          // Append tool call + result to conversation for next LLM iteration
+          toolResults.push({
+            id: toolCall.id,
+            toolId: toolCall.toolId,
+            input: toolCall.input,
+            result,
+          });
+          this.toolsCalled.push(toolCall.toolId);
+        }
+
+        // Append ONE assistant message with ALL tool calls (correct protocol
+        // for both Anthropic and OpenAI — avoids duplicated assistant content)
+        if (toolResults.length > 0) {
           conversationMessages.push({
             role: 'assistant',
             content: response.content || '',
-            toolCalls: [
-              {
-                id: toolCall.id,
-                toolId: toolCall.toolId,
-                input: toolCall.input,
-              },
-            ],
+            toolCalls: toolResults.map((t) => ({
+              id: t.id,
+              toolId: t.toolId,
+              input: t.input,
+            })),
           });
-          conversationMessages.push({
-            role: 'tool',
-            content: JSON.stringify(result),
-            toolCallId: toolCall.id,
-          });
+
+          // Append one tool-result message per call
+          for (const t of toolResults) {
+            conversationMessages.push({
+              role: 'tool',
+              content: JSON.stringify(t.result),
+              toolCallId: t.id,
+            });
+          }
         }
       }
 
@@ -249,6 +271,14 @@ export class ChatStreamSession {
             `⚠️ I've reached the maximum number of steps (${config.maxSteps}) for a single message. ` +
             'You can send another message to continue where I left off.',
         };
+      }
+
+      // Emit contextual suggestions based on what tools were called
+      if (!this.aborted) {
+        const suggestions = this.generateSuggestions(context);
+        if (suggestions.length > 0) {
+          yield { type: 'suggestions', suggestions };
+        }
       }
 
       // Yield completion event
@@ -268,36 +298,131 @@ export class ChatStreamSession {
   }
 
   // =====================================
+  // SUGGESTION GENERATION
+  // =====================================
+
+  /**
+   * Generate contextual follow-up suggestions based on the tools that were called.
+   * Returns 2-3 relevant suggestions as clickable chips.
+   */
+  private generateSuggestions(context: ChatContext): Array<{ label: string; prompt: string }> {
+    const tools = new Set(this.toolsCalled);
+    const suggestions: Array<{ label: string; prompt: string }> = [];
+
+    // After flow modifications (add/update nodes, update_flow_definition)
+    const modifiedFlow =
+      tools.has('add_node') ||
+      tools.has('update_flow_definition') ||
+      tools.has('update_node_config') ||
+      tools.has('add_edge') ||
+      tools.has('remove_node');
+
+    if (modifiedFlow) {
+      if (!tools.has('validate_flow')) {
+        suggestions.push({
+          label: '✅ Validate flow',
+          prompt: 'Validate the flow and check for any issues.',
+        });
+      }
+      if (!tools.has('run_flow')) {
+        suggestions.push({
+          label: '▶ Test run',
+          prompt: 'Run the flow with sample data to test it.',
+        });
+      }
+      return suggestions.slice(0, 3);
+    }
+
+    // After running a flow
+    if (tools.has('run_flow')) {
+      suggestions.push({
+        label: '📊 Show results',
+        prompt: 'Show me the detailed execution results.',
+      });
+      suggestions.push({
+        label: '🔧 Improve flow',
+        prompt: 'Suggest improvements to this flow.',
+      });
+      return suggestions.slice(0, 3);
+    }
+
+    // After debugging (inspecting runs/executions)
+    if (tools.has('get_flow_run') || tools.has('get_node_execution_results')) {
+      suggestions.push({
+        label: '🔧 Fix the issue',
+        prompt: 'Apply the fix for the issue you found.',
+      });
+      suggestions.push({
+        label: '🔄 Re-run flow',
+        prompt: 'Re-run the flow to see if it works now.',
+      });
+      return suggestions.slice(0, 3);
+    }
+
+    // After searching actions (exploring what's available)
+    if (tools.has('search_actions') || tools.has('list_providers')) {
+      suggestions.push({
+        label: '➕ Add to flow',
+        prompt: 'Add the action we found to the flow.',
+      });
+      return suggestions.slice(0, 3);
+    }
+
+    // After creating a plan
+    if (tools.has('set_plan')) {
+      suggestions.push({
+        label: '✅ Execute plan',
+        prompt: 'Looks good — go ahead and execute the plan.',
+      });
+      return suggestions.slice(0, 3);
+    }
+
+    return [];
+  }
+
+  // =====================================
   // PRIVATE HELPERS
   // =====================================
 
   /**
    * Truncate message history to keep within token budget.
-   * Keeps the most recent N messages.
+   *
+   * Uses a two-pass approach:
+   *   1. Cap at maxMessages (coarse — prevents runaway message counts)
+   *   2. Estimate tokens and drop oldest messages until under TOKEN_BUDGET
+   *
+   * Token estimation uses ~4 chars per token (reasonable for English + JSON).
+   * Tool result messages tend to be large, so this prevents a few big tool
+   * results from consuming the entire context window.
    */
   private truncateHistory(messages: ChatMessage[], maxMessages: number): ChatMessage[] {
-    if (messages.length <= maxMessages) {
+    if (messages.length <= 2) {
       return messages;
     }
 
-    // Keep the last maxMessages messages
-    let truncated = messages.slice(-maxMessages);
+    // Pass 1: cap by message count
+    const truncated = messages.length > maxMessages ? messages.slice(-maxMessages) : [...messages];
 
-    // Rough token safety rail: ~4 chars per token, cap at 100k tokens
-    // to prevent large tool results from blowing the context window.
+    // Pass 2: token-budget-based truncation
+    // ~4 chars per token. 100K token cap leaves room for system prompt + tool defs.
     const TOKEN_BUDGET = 100_000;
-    const estimateTokens = (msgs: ChatMessage[]) =>
-      msgs.reduce((sum, m) => sum + Math.ceil((m.content?.length ?? 0) / 4), 0);
+    const estimateMessageTokens = (m: ChatMessage) =>
+      Math.ceil((m.content?.length ?? 0) / 4) +
+      (m.toolCalls ? Math.ceil(JSON.stringify(m.toolCalls).length / 4) : 0);
 
-    let estimatedTokens = estimateTokens(truncated);
-    while (estimatedTokens > TOKEN_BUDGET && truncated.length > 2) {
-      truncated = truncated.slice(1);
-      estimatedTokens = estimateTokens(truncated);
+    let totalTokens = truncated.reduce((sum, m) => sum + estimateMessageTokens(m), 0);
+
+    // Drop oldest messages until under budget, keeping at least the last 2
+    while (totalTokens > TOKEN_BUDGET && truncated.length > 2) {
+      const removed = truncated.shift()!;
+      totalTokens -= estimateMessageTokens(removed);
     }
 
-    this.deps.logger.debug(
-      `Truncated chat history from ${messages.length} to ${truncated.length} messages (~${estimatedTokens} est. tokens)`,
-    );
+    if (truncated.length < messages.length) {
+      this.deps.logger.debug(
+        `Truncated chat history from ${messages.length} to ${truncated.length} messages (~${totalTokens} est. tokens)`,
+      );
+    }
 
     return truncated;
   }

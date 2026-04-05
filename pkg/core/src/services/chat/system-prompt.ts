@@ -102,18 +102,45 @@ Go straight to action for simple, single-step requests:
 Rule of thumb: If it takes 1-2 tool calls, skip planning. If it takes 3+, plan first.
 
 ## Flow Building
-- For new flows or major restructuring, use update_flow_definition with the complete node/edge arrays
-- For small edits to existing flows, use granular tools (add_node, update_node_config, etc.)
+- For new flows or major changes (3+ nodes), use update_flow_definition with the complete node/edge arrays — this is faster and uses fewer steps
+- For small edits to existing flows (1-2 changes), use granular tools (add_node, update_node_config, etc.)
 - Node labels should be descriptive: "Fetch User Emails" not "Email 1"
 - Reference IDs are auto-generated as snake_case from labels — never set them manually
 - Always suggest connecting new nodes to existing ones via the connectAfter parameter
 - After structural changes (adding/removing nodes or edges), run validate_flow to catch issues before offering to run
 
-## Data Flow & Nunjucks Templates
+## Data Flow & Templates
 - Each node's output is keyed by its referenceId and made available to downstream nodes
 - Example: A node labeled "Fetch User" gets referenceId "fetch_user". If it outputs {"name": "Alice", "email": "alice@example.com"}, downstream nodes access it via {{ fetch_user.name }} or {{ fetch_user.email }}
 - Always use the referenceId (shown as "ref" in the flow context), NOT the node ID or label, in template expressions
 - Use get_current_flow_context to check exact referenceIds and params before writing templates
+- Use test_expression to verify template expressions against sample data BEFORE writing them into node params — this catches errors upfront
+
+## Data Mapper (Iteration & Transformation)
+Any node can have a \`mapper\` that processes its incoming data before execution. Set it via the mapper parameter on add_node, update_node_config, or update_flow_definition.
+
+**Modes:**
+- **iterate**: Runs the node once per item in an array. Set expression to the upstream referenceId (e.g. \`"fetch_users"\`).
+- **reshape**: Transforms the entire incoming data object before the node runs.
+- **auto** (default): If expression evaluates to an array → iterates; otherwise → reshapes.
+
+**During iteration, each execution has access to:**
+- \`{{ _item.value }}\` — the current array element
+- \`{{ _item.index }}\` — the current index (0-based)
+- \`{{ _item.key }}\` — the key (for object iteration)
+
+**Output modes** control how iteration results are collected:
+- \`array\` (default): Collect all results into an array
+- \`first\` / \`last\`: Return only the first or last result
+- \`concat\`: Flatten arrays of arrays into a single array
+- \`object\`: Key results by a field (requires keyField)
+
+**Example — send one Slack message per user from an upstream "Fetch Users" node:**
+\`\`\`
+add_node / update_node_config:
+  mapper: { enabled: true, expression: "fetch_users", mode: "iterate" }
+  params: { message: "Welcome {{ _item.value.name }}!" }
+\`\`\`
 
 ## Selected Node & View Mode
 - When the user says "this node", "configure this", or "what does this do", they mean the currently selected node shown in the context
@@ -125,10 +152,20 @@ Rule of thumb: If it takes 1-2 tool calls, skip planning. If it takes 3+, plan f
 - Use suggest_credential_setup to guide users to the secure credential UI
 - When a tool needs a credential, check list_credentials first
 
+## Memory
+- Use save_note to remember important flow context, user preferences, and credential mappings across conversations
+- Flow notes are automatically loaded at conversation start — don't re-save what's already in memory
+- When the user mentions a preference or pattern they use frequently, proactively save it
+
+## Cross-Flow Awareness
+- You can search for and read other flows in the workspace using search_flows and get_flow_definition
+- Use these to reuse patterns, copy configurations, or understand related workflows
+- When the user says "like in my other flow" or "copy from X", use these tools to find and reference the flow
+
 ## Response Style
 - Be concise and action-oriented
 - When making changes, briefly explain what you did
-- Show Nunjucks template examples when explaining data flow between nodes
+- Show {{ }} template examples when explaining data flow between nodes
 - Use markdown formatting for code snippets and lists
 - When you don't know something, say so — don't fabricate capabilities`;
 
@@ -192,6 +229,10 @@ interface FlowContextData {
     label: string;
     referenceId?: string;
     paramKeys?: string[];
+    /** Full params — only populated for the selected node */
+    params?: Record<string, unknown>;
+    /** Mapper config — only populated for the selected node */
+    mapper?: Record<string, unknown>;
   }>;
   edges: Array<{
     sourceId: string;
@@ -199,6 +240,24 @@ interface FlowContextData {
   }>;
   selectedNodeId?: string;
   viewMode?: 'edit' | 'runs';
+  /** Error context from the selected flow run (populated when viewMode is 'runs') */
+  runContext?: {
+    runId: string;
+    status: string;
+    error?: string;
+    failedNodes: Array<{
+      nodeId: string;
+      nodeType: string;
+      error: string;
+      input?: unknown;
+      output?: unknown;
+    }>;
+  };
+  /** Persistent notes from previous conversations */
+  memory?: {
+    flowNotes: string[];
+    workspaceNotes: string[];
+  };
 }
 
 /**
@@ -221,6 +280,18 @@ No flow is currently open. The user is on the home/dashboard page.`;
     parts.push(`Description: ${flow.flowDescription}`);
   }
   parts.push(`View mode: ${flow.viewMode || 'edit'}`);
+
+  // Contextual guidance based on view mode and flow state
+  if (flow.viewMode === 'runs') {
+    parts.push(
+      'The user is viewing flow run history. Prioritize get_flow_run and get_node_execution_results for diagnosis. Use editing tools only if the user explicitly asks for a fix.',
+    );
+  }
+  if (nodeCount === 0) {
+    parts.push(
+      'This flow is empty. Use update_flow_definition to add the initial nodes efficiently.',
+    );
+  }
 
   if (nodeCount <= 15) {
     // Tier 1: Compact JSON
@@ -262,6 +333,60 @@ No flow is currently open. The user is on the home/dashboard page.`;
       parts.push(
         `\nCurrently selected node: "${selectedNode.label}" (${selectedNode.type}, ID: ${selectedNode.id})`,
       );
+      // Include full params for the selected node so the LLM doesn't need
+      // a get_current_flow_context call for the most common case
+      if (selectedNode.params && Object.keys(selectedNode.params).length > 0) {
+        parts.push('Config: ' + JSON.stringify(selectedNode.params, null, 1));
+      }
+      if (selectedNode.mapper && typeof selectedNode.mapper === 'object') {
+        parts.push('Mapper: ' + JSON.stringify(selectedNode.mapper, null, 1));
+      }
+    }
+  }
+
+  // Run error context — injected when the user is viewing a specific run
+  if (flow.runContext) {
+    const rc = flow.runContext;
+    parts.push(`\n## Active Run (${rc.runId})`);
+    parts.push(`Status: ${rc.status}`);
+    if (rc.error) {
+      parts.push(`Run error: ${rc.error}`);
+    }
+    if (rc.failedNodes.length > 0) {
+      parts.push(`\nFailed nodes (${rc.failedNodes.length}):`);
+      for (const fn of rc.failedNodes) {
+        const nodeLabel = flow.nodes.find((n) => n.id === fn.nodeId)?.label ?? fn.nodeId;
+        parts.push(`- "${nodeLabel}" (${fn.nodeType}): ${fn.error}`);
+        if (fn.input) {
+          const inputStr = typeof fn.input === 'string' ? fn.input : JSON.stringify(fn.input);
+          parts.push(`  Input: ${inputStr}`);
+        }
+      }
+      parts.push(
+        '\nYou already have the error details above — diagnose the issue and suggest a fix. ' +
+          'Only use get_node_execution_results if you need additional context (e.g. outputs from other nodes).',
+      );
+    }
+  }
+
+  // Memory notes — injected from previous conversations
+  if (flow.memory) {
+    const { flowNotes, workspaceNotes } = flow.memory;
+    const hasNotes = flowNotes.length > 0 || workspaceNotes.length > 0;
+    if (hasNotes) {
+      parts.push('\n## Memory (from previous conversations)');
+      if (workspaceNotes.length > 0) {
+        parts.push('Workspace preferences:');
+        for (const note of workspaceNotes) {
+          parts.push(`- ${note}`);
+        }
+      }
+      if (flowNotes.length > 0) {
+        parts.push('Flow notes:');
+        for (const note of flowNotes) {
+          parts.push(`- ${note}`);
+        }
+      }
     }
   }
 
@@ -297,6 +422,72 @@ Use the search_actions tool for detailed information about specific integrations
 }
 
 // =====================================
+// CORE ACTION CHEAT SHEET (auto-generated)
+// =====================================
+
+/**
+ * IDs of the most-used actions to embed as a quick-reference.
+ * The cheat sheet is generated from the live registry — zero maintenance.
+ */
+const CORE_ACTION_IDS = [
+  'trigger.manual',
+  'trigger.cron',
+  'trigger.webhook',
+  'core.model',
+  'core.javascript',
+  'core.if_else',
+  'core.template_string',
+  'core.jq',
+  'core.output',
+  'http.request',
+];
+
+/** Format hints that can't be derived from param schemas. */
+const FORMAT_HINTS: Record<string, string> = {
+  'core.if_else': 'condition uses JSON Logic: {">":[{"var":"api_data.count"},10]}',
+  'core.javascript':
+    'QuickJS sandbox, no network/Node.js. Upstream vars as locals. $input has full incoming data.',
+  'trigger.cron': 'Standard 5-field cron (minute hour day month weekday)',
+};
+
+/**
+ * Build a compact cheat sheet for the most-used actions from the live registry.
+ * Token cost: ~200. Eliminates 1-2 search_actions calls per session.
+ */
+function buildCoreActionCheatSheet(actionRegistry: ActionRegistry | null): string {
+  if (!actionRegistry) {
+    return '';
+  }
+
+  const allNodes = actionRegistry.getAllNodeDefinitions();
+  const nodesByType = new Map(allNodes.map((n) => [n.type, n]));
+
+  const lines: string[] = [];
+  for (const id of CORE_ACTION_IDS) {
+    const node = nodesByType.get(id);
+    if (!node) {
+      continue;
+    }
+
+    const params = (node.paramFields ?? [])
+      .map((f) => `${f.name}${f.required ? '*' : ''}`)
+      .join(', ');
+    const desc = node.description?.slice(0, 80) ?? '';
+    const hint = FORMAT_HINTS[id];
+    const line = `- \`${id}\`: params: ${params}. ${desc}${hint ? ' — ' + hint : ''}`;
+    lines.push(line);
+  }
+
+  if (lines.length === 0) {
+    return '';
+  }
+
+  return `# Core Actions Quick Reference
+${lines.join('\n')}
+Params marked with * are required. Use search_actions for non-core integrations.`;
+}
+
+// =====================================
 // PUBLIC API
 // =====================================
 
@@ -318,6 +509,7 @@ export function buildSystemPrompt(input: BuildSystemPromptInput): string {
   sections.push(EXAMPLE_WORKFLOW_SECTION);
   sections.push(buildFlowContextSection(input.flowContext));
   sections.push(buildActionCatalogSection(input.actionRegistry));
+  sections.push(buildCoreActionCheatSheet(input.actionRegistry));
 
   return sections.join('\n\n');
 }

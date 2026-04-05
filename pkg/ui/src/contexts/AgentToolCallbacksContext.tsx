@@ -16,6 +16,10 @@ export interface AgentToolCallbacks {
   onRemoveTool: (nodeId: string, instanceId: string) => void;
   onToolClick: (nodeId: string, instanceId: string) => void;
   availableTools: ToolDefinition[];
+  /** The node ID that currently has the tool selector/config open */
+  selectedToolNodeId: string | null;
+  /** The tool instance ID currently being configured */
+  selectedToolInstanceId: string | null;
 }
 
 const AgentToolCallbacksContext = createContext<AgentToolCallbacks | null>(null);

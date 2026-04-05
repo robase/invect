@@ -15,6 +15,32 @@ import type { InvectInstance } from 'src/api/types';
 import type { FlowNodeDefinitions, FlowEdge } from 'src/services/flow-versions/schemas-fresh';
 
 /**
+ * Reusable mapper schema for chat tools.
+ */
+const mapperSchema = z
+  .object({
+    enabled: z.boolean().describe('Whether the mapper is active'),
+    expression: z
+      .string()
+      .describe(
+        'JS expression evaluated against incoming data (e.g. "fetch_users" to iterate over that upstream array)',
+      ),
+    mode: z
+      .enum(['auto', 'iterate', 'reshape'])
+      .default('auto')
+      .describe(
+        'auto = iterate if array, reshape otherwise. iterate = run node per item. reshape = transform once.',
+      ),
+    outputMode: z
+      .enum(['array', 'object', 'first', 'last', 'concat'])
+      .default('array')
+      .describe('How to collect results'),
+    concurrency: z.number().min(1).max(50).default(1).describe('Max parallel iterations'),
+    onEmpty: z.enum(['error', 'skip']).default('skip').describe('Behaviour on empty array'),
+  })
+  .describe('Data mapper for iteration/transformation');
+
+/**
  * Helper: Load the latest flow version's nodes and edges.
  */
 async function loadLatestDefinition(invect: InvectInstance, flowId: string) {
@@ -88,6 +114,7 @@ export const addNodeTool: ChatToolDefinition = {
       .string()
       .optional()
       .describe('Node ID to connect after — creates an edge from that node to this new one'),
+    mapper: mapperSchema.optional(),
   }),
   async execute(params: unknown, ctx: ChatToolContext): Promise<ChatToolResult> {
     const {
@@ -95,11 +122,20 @@ export const addNodeTool: ChatToolDefinition = {
       label,
       params: nodeParams,
       connectAfter,
+      mapper,
     } = params as {
       actionId: string;
       label: string;
       params: Record<string, unknown>;
       connectAfter?: string;
+      mapper?: {
+        enabled: boolean;
+        expression: string;
+        mode: 'auto' | 'iterate' | 'reshape';
+        outputMode: 'array' | 'object' | 'first' | 'last' | 'concat';
+        concurrency: number;
+        onEmpty: 'error' | 'skip';
+      };
     };
     const invect = ctx.invect;
     const flowId = ctx.chatContext.flowId;
@@ -155,6 +191,7 @@ export const addNodeTool: ChatToolDefinition = {
         referenceId,
         params: nodeParams ?? {},
         position,
+        ...(mapper ? { mapper } : {}),
       });
 
       // Auto-connect if requested
@@ -283,18 +320,29 @@ export const updateNodeConfigTool: ChatToolDefinition = {
     nodeId: z.string().describe('ID of the node to update'),
     params: z
       .record(z.string(), z.unknown())
+      .optional()
       .describe('Parameters to set or update (merged with existing)'),
     label: z.string().optional().describe('Optionally update the node label too'),
+    mapper: mapperSchema.optional().describe('Set or update the data mapper configuration'),
   }),
   async execute(params: unknown, ctx: ChatToolContext): Promise<ChatToolResult> {
     const {
       nodeId,
       params: newParams,
       label,
+      mapper,
     } = params as {
       nodeId: string;
-      params: Record<string, unknown>;
+      params?: Record<string, unknown>;
       label?: string;
+      mapper?: {
+        enabled: boolean;
+        expression: string;
+        mode: 'auto' | 'iterate' | 'reshape';
+        outputMode: 'array' | 'object' | 'first' | 'last' | 'concat';
+        concurrency: number;
+        onEmpty: 'error' | 'skip';
+      };
     };
     const invect = ctx.invect;
     const flowId = ctx.chatContext.flowId;
@@ -317,7 +365,14 @@ export const updateNodeConfigTool: ChatToolDefinition = {
 
       // Merge params
       const existingParams = node.params ?? {};
-      node.params = { ...existingParams, ...newParams };
+      if (newParams) {
+        node.params = { ...existingParams, ...newParams };
+      }
+
+      // Set mapper if provided
+      if (mapper) {
+        (node as Record<string, unknown>).mapper = mapper;
+      }
 
       // Update label if provided
       if (label) {
@@ -332,7 +387,8 @@ export const updateNodeConfigTool: ChatToolDefinition = {
         data: {
           nodeId,
           label: node.label,
-          updatedParams: Object.keys(newParams),
+          updatedParams: newParams ? Object.keys(newParams) : [],
+          updatedMapper: !!mapper,
           versionNumber: version.version,
         },
         uiAction: {

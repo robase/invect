@@ -57,8 +57,7 @@ export function ChatModelSelector({ className }: ChatModelSelectorProps) {
     isFetching,
   } = useQuery({
     queryKey: ['chat-models', credentialId, debouncedSearch],
-    queryFn: () =>
-      apiClient.getChatModels(credentialId ?? '', debouncedSearch || undefined),
+    queryFn: () => apiClient.getChatModels(credentialId ?? '', debouncedSearch || undefined),
     enabled: !!credentialId && open,
     staleTime: 5 * 60 * 1000, // 5 min cache per query
     retry: 1,
@@ -139,9 +138,7 @@ export function ChatModelSelector({ className }: ChatModelSelectorProps) {
           </div>
           <CommandList className="max-h-62.5">
             {isLoading && (
-              <div className="py-4 text-xs text-center text-muted-foreground">
-                Loading models…
-              </div>
+              <div className="py-4 text-xs text-center text-muted-foreground">Loading models…</div>
             )}
             {isError && (
               <div className="py-4 text-xs text-center text-muted-foreground">

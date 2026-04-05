@@ -174,14 +174,14 @@ function NodesSidebar({
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center border-r w-96 border-border bg-card text-card-foreground">
+      <div className="flex flex-col items-center justify-center border-r w-96 border-border bg-imp-background text-card-foreground">
         <InvectLoader iconClassName="h-14" label="Loading nodes..." />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-0 overflow-hidden duration-200 border-r w-96 border-border bg-card text-card-foreground animate-in slide-in-from-left fade-in">
+    <div className="flex flex-col min-h-0 overflow-hidden duration-200 border-r w-96 border-border bg-imp-background text-card-foreground animate-in slide-in-from-left fade-in">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <h2 className="text-sm font-semibold text-card-foreground">Nodes</h2>

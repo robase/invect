@@ -553,12 +553,16 @@ async function runAppendMode(
         pc.dim('  The database is already up to date.\n'),
     );
   } else {
-    const { runMigrate } = await prompts({
-      type: 'confirm',
-      name: 'runMigrate',
-      message: `Run ${pc.cyan('drizzle-kit generate')} + ${pc.cyan('drizzle-kit migrate')} to apply schema changes?`,
-      initial: true,
-    }, { onCancel });
+    let runMigrate = true;
+    if (!options.yes) {
+      const response = await prompts({
+        type: 'confirm',
+        name: 'runMigrate',
+        message: `Run ${pc.cyan('drizzle-kit generate')} + ${pc.cyan('drizzle-kit migrate')} to apply schema changes?`,
+        initial: true,
+      }, { onCancel });
+      runMigrate = response.runMigrate;
+    }
 
     if (runMigrate) {
       await runDrizzleKitGenerate();
@@ -666,12 +670,16 @@ async function runSeparateFilesMode(
   );
 
   // Optionally run drizzle-kit generate
-  const { runDrizzleKit } = await prompts({
-    type: 'confirm',
-    name: 'runDrizzleKit',
-    message: `Run ${pc.cyan('drizzle-kit generate')} to create SQL migrations?`,
-    initial: true,
-  }, { onCancel });
+  let runDrizzleKit = true;
+  if (!options.yes) {
+    const response = await prompts({
+      type: 'confirm',
+      name: 'runDrizzleKit',
+      message: `Run ${pc.cyan('drizzle-kit generate')} to create SQL migrations?`,
+      initial: true,
+    }, { onCancel });
+    runDrizzleKit = response.runDrizzleKit;
+  }
 
   if (runDrizzleKit) {
     await runDrizzleKitGenerate();
@@ -889,7 +897,7 @@ async function runDrizzleKitGenerate(): Promise<void> {
       ? `npx drizzle-kit generate --config ${configFile}`
       : 'npx drizzle-kit generate';
 
-    execSync(cmd, { stdio: ['pipe', 'inherit', 'inherit'], cwd: process.cwd(), env: drizzleKitEnv() });
+    execSync(cmd, { stdio: ['pipe', 'inherit', 'inherit'], cwd: process.cwd(), env: drizzleKitEnv(), timeout: 30_000 });
 
     console.log(
       pc.bold(pc.green('\n✓ SQL migrations generated.\n')) +

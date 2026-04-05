@@ -5,6 +5,7 @@ import { ModeSwitcher } from '../flow-editor/ModeSwitcher';
 import { FlowStatusView } from './FlowStatusView';
 import { RunsSidebar } from './RunsSidebar';
 import { LogsPanel } from './logs-panel';
+import { ChatPanel, ChatToggleButton } from '~/components/chat';
 import { useFlowRuns, useFlowRun, useNodeExecutions } from '../../api/executions.api';
 import { useFlowRunStream } from '../../api/use-flow-run-stream';
 import { useFlowReactFlowData } from '../../api/flows.api';
@@ -152,6 +153,15 @@ export function FlowRunsView({ flowId, flowVersion, basePath }: FlowRunsViewProp
       <FlowLayout
         modeSwitcher={<ModeSwitcher mode="runs" onModeChange={handleModeChange} />}
         viewportRef={viewportRef}
+        chatToggle={<ChatToggleButton />}
+        chatPanel={
+          <ChatPanel
+            flowId={flowId}
+            basePath={basePath}
+            selectedRunId={selectedRunId ?? undefined}
+            viewMode="runs"
+          />
+        }
         sidebar={
           <RunsSidebar
             runs={runs.map((r: FlowRun) => ({

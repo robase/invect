@@ -1,0 +1,38 @@
+services:
+  invect:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - invect-data:/app/data
+    environment:
+      # --- Server ---
+      PORT: 3000
+
+      # --- Database ---
+      # SQLite (default): file path inside the container
+      DATABASE_URL: "file:/app/data/invect.db"
+      INVECT_DB_TYPE: sqlite
+      # PostgreSQL: uncomment and set
+      # DATABASE_URL: "postgresql://user:pass@host:5432/invect"
+      # INVECT_DB_TYPE: postgres
+
+      # --- Admin user (created on first boot) ---
+      INVECT_ADMIN_EMAIL: admin@invect.local
+      INVECT_ADMIN_PASSWORD: changeme
+
+      # --- Security (required) ---
+      # Generate with: npx invect-cli secret
+      INVECT_ENCRYPTION_KEY: ""  # REQUIRED — used for credential encryption + auth sessions
+
+      # --- Webhooks ---
+      # INVECT_WEBHOOK_BASE_URL: "https://your-domain.com/invect"
+
+      # --- Trusted origins (comma-separated, for CORS + auth) ---
+      # INVECT_TRUSTED_ORIGINS: "https://your-domain.com"
+
+      # --- Logging ---
+      INVECT_LOG_LEVEL: info
+
+volumes:
+  invect-data:

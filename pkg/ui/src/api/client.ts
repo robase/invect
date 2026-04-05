@@ -860,10 +860,15 @@ class ApiClient {
     context: {
       flowId?: string;
       selectedNodeId?: string;
+      selectedRunId?: string;
       viewMode?: string;
       credentialId?: string;
       maxSteps?: number;
       model?: string;
+      memoryNotes?: {
+        flowNotes?: string[];
+        workspaceNotes?: string[];
+      };
     },
     signal?: AbortSignal,
   ): Promise<Response> {

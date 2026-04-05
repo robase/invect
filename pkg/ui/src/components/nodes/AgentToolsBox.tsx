@@ -36,6 +36,8 @@ interface AgentToolsBoxProps {
   tools: AddedToolInstance[];
   /** Available tool definitions for resolving category info */
   availableTools: ToolDefinition[];
+  /** Currently selected tool instance ID (being configured) */
+  selectedInstanceId?: string | null;
   /** Called when user clicks "Add Tool" button */
   onAddTool?: () => void;
   /** Called when user wants to see all selected tools (opens modal with filter) */
@@ -57,11 +59,13 @@ const MAX_VISIBLE_TOOLS = 6;
 const ToolTile = memo(function ToolTile({
   tool,
   toolDef,
+  isSelected,
   onToolClick,
   onRemoveTool,
 }: {
   tool: AddedToolInstance;
   toolDef: ToolDefinition | undefined;
+  isSelected?: boolean;
   onToolClick?: (tool: AddedToolInstance) => void;
   onRemoveTool?: (instanceId: string) => void;
 }) {
@@ -69,6 +73,8 @@ const ToolTile = memo(function ToolTile({
     <div
       className={cn(
         'group relative flex flex-row items-center p-1 gap-1 rounded-md border cursor-pointer transition-colors w-[99px]',
+        'hover:bg-accent hover:border-accent-foreground/20',
+        isSelected && 'bg-accent border-primary ring-1 ring-primary/30',
       )}
       onClick={() => onToolClick?.(tool)}
       title={tool.name}
@@ -95,6 +101,7 @@ const ToolTile = memo(function ToolTile({
 export const AgentToolsBox = memo(function AgentToolsBox({
   tools,
   availableTools,
+  selectedInstanceId,
   onAddTool,
   onShowMore,
   onToolClick,
@@ -145,6 +152,7 @@ export const AgentToolsBox = memo(function AgentToolsBox({
                 key={tool.instanceId}
                 tool={tool}
                 toolDef={getToolDef(tool.toolId)}
+                isSelected={selectedInstanceId === tool.instanceId}
                 onToolClick={onToolClick}
                 onRemoveTool={onRemoveTool}
               />

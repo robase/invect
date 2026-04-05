@@ -124,7 +124,7 @@ export function LogsPanel({
   return (
     <div
       className={cn(
-        'border-t border-border bg-card text-card-foreground',
+        'border-t border-border bg-imp-background text-card-foreground',
         isExpanded ? 'h-[420px]' : 'h-8',
       )}
     >

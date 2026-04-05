@@ -2,28 +2,21 @@
 
 import { memo, useState, useMemo, useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
-import { Badge } from '../ui/badge';
-import { Label } from '../ui/label';
-import { Textarea } from '../ui/textarea';
 import {
   X,
   Check,
-  Settings,
-  Database,
-  Globe,
-  Code2,
-  Wrench,
-  Sparkles,
   ChevronDown,
   ChevronUp,
   ExternalLink,
   Trash2,
   PanelRightClose,
+  Wrench,
 } from 'lucide-react';
+import { InlineEdit } from './inline-edit';
 import { cn } from '../../lib/utils';
+import { ProviderIcon } from '../shared/ProviderIcon';
 import { useNodeRegistry } from '../../contexts/NodeRegistryContext';
 import { ToolParamField, type AddCredentialRequest } from '../nodes/ToolParamField';
 import { CreateCredentialModal } from '../credentials/CreateCredentialModal';
@@ -35,27 +28,16 @@ import type { ToolDefinition, AddedToolInstance, ToolCategory } from '../nodes/T
 
 // ─── Category Config ───────────────────────────────────────────────
 
-const categoryConfig: Record<
-  ToolCategory,
-  { label: string; icon: React.ElementType; color: string }
-> = {
-  data: { label: 'Data', icon: Database, color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
-  web: { label: 'Web', icon: Globe, color: 'bg-green-500/20 text-green-400 border-green-500/30' },
-  code: {
-    label: 'Code',
-    icon: Code2,
-    color: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-  },
-  utility: {
-    label: 'Utility',
-    icon: Wrench,
-    color: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-  },
-  custom: {
-    label: 'Custom',
-    icon: Sparkles,
-    color: 'bg-pink-500/20 text-pink-400 border-pink-500/30',
-  },
+const DIAMOND_CONTAINER_CLASS =
+  'flex shrink-0 items-center justify-center border bg-card rotate-45 rounded-[0.45rem]';
+const DIAMOND_GLYPH_CLASS = '-rotate-45';
+
+const categoryColors: Record<ToolCategory, string> = {
+  data: 'border-blue-500/30',
+  web: 'border-green-500/30',
+  code: 'border-purple-500/30',
+  utility: 'border-orange-500/30',
+  custom: 'border-pink-500/30',
 };
 
 // ─── Main Panel ────────────────────────────────────────────────────
@@ -146,8 +128,6 @@ export const ToolConfigPanel = memo(function ToolConfigPanel({
 }: ToolConfigPanelProps) {
   const queryClient = useQueryClient();
   const [showSchema, setShowSchema] = useState(false);
-  const [editName, setEditName] = useState('');
-  const [editDescription, setEditDescription] = useState('');
 
   // Credential modal state
   const [isCreateCredentialOpen, setIsCreateCredentialOpen] = useState(false);
@@ -213,14 +193,6 @@ export const ToolConfigPanel = memo(function ToolConfigPanel({
     };
   }, [tool?.inputSchema, instance]);
 
-  // Sync local state with instance
-  useEffect(() => {
-    if (instance) {
-      setEditName(instance.name);
-      setEditDescription(instance.description);
-    }
-  }, [instance?.instanceId, instance?.name, instance?.description]);
-
   // Reset schema visibility when tool changes
   useEffect(() => {
     setShowSchema(false);
@@ -281,26 +253,20 @@ export const ToolConfigPanel = memo(function ToolConfigPanel({
     [createCredentialMutation, handleCredentialCreated],
   );
 
-  // ─── Name/Description Handlers ──────────────────────────────────
-
-  const handleNameBlur = useCallback(() => {
-    if (instance && editName !== instance.name) {
-      onUpdate(instance.instanceId, { name: editName });
-    }
-  }, [instance, editName, onUpdate]);
-
-  const handleDescriptionBlur = useCallback(() => {
-    if (instance && editDescription !== instance.description) {
-      onUpdate(instance.instanceId, { description: editDescription });
-    }
-  }, [instance, editDescription, onUpdate]);
+  const handleNameChange = useCallback(
+    (newName: string) => {
+      if (instance) {
+        onUpdate(instance.instanceId, { name: newName });
+      }
+    },
+    [instance, onUpdate],
+  );
 
   if (!open || !tool || !instance) {
     return null;
   }
 
-  const config = categoryConfig[tool.category];
-  const Icon = config.icon;
+  const borderColor = categoryColors[tool.category];
 
   return (
     <>
@@ -308,21 +274,26 @@ export const ToolConfigPanel = memo(function ToolConfigPanel({
         {/* Header */}
         <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-border">
           <div className="flex items-center min-w-0 gap-2">
-            <div
-              className={cn(
-                'flex h-8 w-8 shrink-0 items-center justify-center rounded-md border',
-                config.color,
+            <div className={cn('h-9 w-9', DIAMOND_CONTAINER_CLASS, borderColor)}>
+              {tool.provider?.id ? (
+                <ProviderIcon
+                  providerId={tool.provider.id}
+                  svgIcon={tool.provider.svgIcon}
+                  icon={tool.provider.icon}
+                  className={cn('w-5 h-5', DIAMOND_GLYPH_CLASS)}
+                />
+              ) : (
+                <Wrench className={cn('w-4 h-4', DIAMOND_GLYPH_CLASS)} />
               )}
-            >
-              <Icon className="w-4 h-4" />
             </div>
-            <div className="min-w-0">
-              <h2 className="text-[15px] font-semibold truncate text-card-foreground">
-                {instance.name}
-              </h2>
-              <Badge variant="outline" className="text-[10px] h-4 px-1.5">
-                {config.label}
-              </Badge>
+            <div className="flex-1 min-w-0">
+              <InlineEdit
+                value={instance.name}
+                onChange={handleNameChange}
+                placeholder="Untitled Tool"
+                displayClassName="text-[15px] font-semibold truncate text-card-foreground"
+                inputClassName="text-[15px] font-semibold h-auto py-0.5 px-1.5"
+              />
             </div>
           </div>
           <DeleteConfirmButton
@@ -337,45 +308,6 @@ export const ToolConfigPanel = memo(function ToolConfigPanel({
         {/* Content */}
         <ScrollArea className="flex-1 min-h-0">
           <div className="p-4 space-y-4">
-            {/* Tool Configuration section */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Settings className="w-4 h-4 text-muted-foreground" />
-                <h4 className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">
-                  Configuration
-                </h4>
-              </div>
-
-              {/* Editable name */}
-              <div className="space-y-1.5">
-                <Label htmlFor="tool-config-name" className="text-sm">
-                  Name
-                </Label>
-                <Input
-                  id="tool-config-name"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  onBlur={handleNameBlur}
-                  className="text-sm h-9"
-                />
-              </div>
-
-              {/* Editable description */}
-              <div className="space-y-1.5">
-                <Label htmlFor="tool-config-description" className="text-sm">
-                  Description
-                </Label>
-                <Textarea
-                  id="tool-config-description"
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  onBlur={handleDescriptionBlur}
-                  rows={2}
-                  className="text-sm resize-none"
-                />
-              </div>
-            </div>
-
             {/* Node params from definition */}
             {tool.nodeType && paramFields.length > 0 && (
               <div className="space-y-3">
@@ -414,22 +346,6 @@ export const ToolConfigPanel = memo(function ToolConfigPanel({
               <p className="text-sm italic text-muted-foreground">
                 This tool has no configurable parameters.
               </p>
-            )}
-
-            {/* Tags */}
-            {tool.tags && tool.tags.length > 0 && (
-              <div>
-                <h4 className="mb-2 text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">
-                  Tags
-                </h4>
-                <div className="flex flex-wrap gap-1">
-                  {tool.tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
             )}
 
             {/* Documentation link */}

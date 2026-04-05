@@ -32,7 +32,7 @@ export interface BatchFlowEdgeData extends Record<string, unknown> {
 const getEdgeStyles = (data?: BatchFlowEdgeData, selected?: boolean) => {
   const baseStyle = {
     strokeWidth: 2,
-    stroke: '#9ca3af', // Gray-400 - visible in both light and dark mode
+    stroke: 'var(--muted-foreground)', // Theme-aware default edge color
     fill: 'none', // Explicitly set fill to none for SVG paths
   };
 
@@ -49,7 +49,6 @@ const getEdgeStyles = (data?: BatchFlowEdgeData, selected?: boolean) => {
       ...baseStyle,
       stroke: '#3b82f6', // Blue for highlighted
       strokeWidth: 2.5,
-      filter: 'drop-shadow(0 0 4px rgb(59 130 246 / 0.3))',
     };
   }
 
@@ -72,7 +71,6 @@ const getEdgeStyles = (data?: BatchFlowEdgeData, selected?: boolean) => {
         ...baseStyle,
         stroke: '#ef4444', // Red-500
         strokeWidth: 2,
-        filter: 'drop-shadow(0 0 4px rgb(239 68 68 / 0.3))',
       };
     case 'skipped':
       return {
@@ -251,13 +249,13 @@ export const defaultEdgeOptions = {
   animated: false,
   style: {
     strokeWidth: 2,
-    stroke: '#9ca3af', // Gray-400 - visible in both light and dark mode
+    stroke: 'var(--muted-foreground)', // Theme-aware default edge color
     fill: 'none',
   },
   markerEnd: {
     type: MarkerType.ArrowClosed,
     width: 16,
     height: 16,
-    color: '#9ca3af', // Gray-400 - matches stroke color
+    color: 'var(--muted-foreground)', // Theme-aware marker color
   },
 };

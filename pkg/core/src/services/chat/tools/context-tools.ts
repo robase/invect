@@ -56,6 +56,7 @@ export const getCurrentFlowContextTool: ChatToolDefinition = {
             label: n.label,
             referenceId: n.referenceId,
             params: n.params,
+            ...(n.mapper ? { mapper: n.mapper } : {}),
           })),
           edges: definition.edges.map((e) => ({
             id: e.id,
@@ -135,6 +136,8 @@ export const searchActionsTool: ChatToolDefinition = {
           label: f.label,
           type: f.type,
           required: f.required,
+          description: f.description,
+          defaultValue: f.defaultValue,
         })),
       }));
 
@@ -327,6 +330,115 @@ export const listProvidersTool: ChatToolDefinition = {
 };
 
 // =====================================
+// test_expression
+// =====================================
+
+export const testExpressionTool: ChatToolDefinition = {
+  id: 'test_expression',
+  name: 'Test Expression',
+  description:
+    'Evaluate a template expression or JavaScript snippet against sample data in a sandboxed environment. ' +
+    'Use this to verify that {{ }} templates or JavaScript code work correctly BEFORE writing them into node params. ' +
+    'Supports two modes:\n' +
+    '- "template": Evaluates a {{ expr }} template (same engine used in node params)\n' +
+    '- "javascript": Evaluates raw JavaScript in a QuickJS sandbox (same engine used in core.javascript nodes)',
+  parameters: z.object({
+    type: z
+      .enum(['template', 'javascript'])
+      .describe('"template" for {{ expr }} strings, "javascript" for raw JS code'),
+    expression: z
+      .string()
+      .describe(
+        'The expression to evaluate. For "template": a string with {{ }} blocks (e.g. "{{ users.length }}"). For "javascript": raw JS code.',
+      ),
+    sampleData: z
+      .record(z.string(), z.unknown())
+      .describe(
+        'Sample data context — keys become available as variables (e.g. { "fetch_users": [...] })',
+      ),
+  }),
+  async execute(params: unknown, ctx: ChatToolContext): Promise<ChatToolResult> {
+    const { type, expression, sampleData } = params as {
+      type: 'template' | 'javascript';
+      expression: string;
+      sampleData: Record<string, unknown>;
+    };
+
+    try {
+      if (type === 'javascript') {
+        const jsResult = await ctx.invect.testing.testJsExpression({
+          expression,
+          context: sampleData,
+        });
+        if (!jsResult.success) {
+          return {
+            success: false,
+            error: jsResult.error ?? 'Expression evaluation failed',
+            suggestion: 'Check for syntax errors or undefined variables.',
+          };
+        }
+        return {
+          success: true,
+          data: { result: jsResult.result, resultType: typeof jsResult.result },
+        };
+      }
+
+      // Template mode — extract {{ }} blocks and evaluate each one
+      const BLOCK_RE = /\{\{((?:[^}]|\}(?!\}))*)\}\}/g;
+      const blocks: string[] = [];
+      let m;
+      while ((m = BLOCK_RE.exec(expression)) !== null) {
+        blocks.push(m[1].trim());
+      }
+
+      if (blocks.length === 0) {
+        return {
+          success: true,
+          data: {
+            result: expression,
+            note: 'No {{ }} expressions found — the string is a literal value.',
+          },
+        };
+      }
+
+      // Test each expression block
+      const results: Array<{ expression: string; result?: unknown; error?: string }> = [];
+      for (const block of blocks) {
+        const jsResult = await ctx.invect.testing.testJsExpression({
+          expression: block,
+          context: sampleData,
+        });
+        results.push({
+          expression: `{{ ${block} }}`,
+          ...(jsResult.success ? { result: jsResult.result } : { error: jsResult.error }),
+        });
+      }
+
+      const allOk = results.every((r) => !r.error);
+
+      // For a single pure expression, return the result directly
+      if (blocks.length === 1 && allOk) {
+        return {
+          success: true,
+          data: { result: results[0].result, resultType: typeof results[0].result },
+        };
+      }
+
+      return {
+        success: allOk,
+        data: { expressionResults: results },
+        ...(allOk ? {} : { error: 'One or more template expressions failed — see details.' }),
+      };
+    } catch (error: unknown) {
+      return {
+        success: false,
+        error: `Expression evaluation failed: ${(error as Error).message}`,
+      };
+    }
+  },
+};
+
+// =====================================
 // Export all context tools
 // =====================================
 
@@ -337,4 +449,5 @@ export const contextTools: ChatToolDefinition[] = [
   suggestCredentialSetupTool,
   getActionDetailsTool,
   listProvidersTool,
+  testExpressionTool,
 ];

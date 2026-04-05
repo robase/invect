@@ -134,6 +134,10 @@ export class ActionRegistry {
       return null;
     }
 
+    if (action.excludeFromTools) {
+      return null;
+    }
+
     // Only include fields the AI should fill at runtime
     const aiFields = action.params.fields.filter((f) => f.aiProvided !== false);
 

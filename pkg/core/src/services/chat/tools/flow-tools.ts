@@ -8,6 +8,55 @@
 import { z } from 'zod/v4';
 import type { ChatToolDefinition, ChatToolContext, ChatToolResult } from '../chat-types';
 
+/**
+ * Reusable mapper schema for chat tools.
+ * Matches the mapperConfigSchema in schemas-fresh.ts but simplified for the LLM.
+ */
+const mapperSchema = z
+  .object({
+    enabled: z.boolean().describe('Whether the mapper is active'),
+    expression: z
+      .string()
+      .describe(
+        'JS expression evaluated against incoming data (e.g. "fetch_users" to iterate over that upstream array)',
+      ),
+    mode: z
+      .enum(['auto', 'iterate', 'reshape'])
+      .default('auto')
+      .describe(
+        'auto = iterate if array, reshape otherwise. iterate = run node per item. reshape = transform once.',
+      ),
+    outputMode: z
+      .enum(['array', 'object', 'first', 'last', 'concat'])
+      .default('array')
+      .describe(
+        'How to collect results: array (default), first/last item, concat arrays, or keyed object',
+      ),
+    concurrency: z
+      .number()
+      .min(1)
+      .max(50)
+      .default(1)
+      .describe('Max parallel iterations (1 = sequential)'),
+    onEmpty: z
+      .enum(['error', 'skip'])
+      .default('skip')
+      .describe('What to do when the expression yields an empty array'),
+  })
+  .describe(
+    'Data mapper for iteration/transformation. Use when the node should process each item in an array independently.',
+  );
+
+/**
+ * Helper: Convert a label to a snake_case reference ID.
+ */
+function labelToReferenceId(label: string): string {
+  return label
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_|_$/g, '');
+}
+
 // =====================================
 // update_flow_definition
 // =====================================
@@ -27,11 +76,18 @@ export const updateFlowDefinitionTool: ChatToolDefinition = {
           .string()
           .describe('Action ID (e.g. "trigger.manual", "core.model", "gmail.send_message")'),
         label: z.string().describe('Human-readable node label'),
+        referenceId: z
+          .string()
+          .optional()
+          .describe(
+            'Snake_case reference ID for template access. Auto-generated from label if omitted (e.g. "Fetch Users" → "fetch_users").',
+          ),
         params: z
           .record(z.string(), z.unknown())
           .default({})
           .describe('Node configuration parameters'),
         position: z.object({ x: z.number(), y: z.number() }).optional().describe('Canvas position'),
+        mapper: mapperSchema.optional(),
       }),
     ),
     edges: z.array(
@@ -50,8 +106,17 @@ export const updateFlowDefinitionTool: ChatToolDefinition = {
         id: string;
         type: string;
         label: string;
+        referenceId?: string;
         params: Record<string, unknown>;
         position?: { x: number; y: number };
+        mapper?: {
+          enabled: boolean;
+          expression: string;
+          mode: 'auto' | 'iterate' | 'reshape';
+          outputMode: 'array' | 'object' | 'first' | 'last' | 'concat';
+          concurrency: number;
+          onEmpty: 'error' | 'skip';
+        };
       }>;
       edges: Array<{
         id: string;
@@ -84,9 +149,10 @@ export const updateFlowDefinitionTool: ChatToolDefinition = {
         };
       }
 
-      // Assign positions if missing (vertical layout, 250px apart)
+      // Assign positions and referenceIds if missing
       const positionedNodes = nodes.map((n, i) => ({
         ...n,
+        referenceId: n.referenceId || labelToReferenceId(n.label),
         position: n.position ?? { x: 250, y: i * 150 },
       }));
 

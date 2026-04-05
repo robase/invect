@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { GraphNodeType } from '@invect/core/types';
 import { ResizablePanel } from '../../../ui/resizable';
 import { ScrollArea } from '../../../ui/scroll-area';
@@ -6,8 +6,11 @@ import { CredentialsSection } from '../CredentialsSection';
 import { ParametersSection } from '../ParametersSection';
 import { InlineEdit } from '../../inline-edit';
 import { Button } from '../../../ui/button';
-import { Settings, Key, AlertTriangle, AlertCircle, Loader2, Play } from 'lucide-react';
+import { Badge } from '../../../ui/badge';
+import { Settings, Key, AlertTriangle, AlertCircle, Loader2, Play, Wrench } from 'lucide-react';
 import { cn } from '../../../../lib/utils';
+import { AgentToolsPanel } from './AgentToolsPanel';
+import type { AgentToolsPanelProps } from './AgentToolsPanel';
 import type { Credential } from '../../../../api/types';
 import type { NodeParamField } from '../../../../types/node-definition.types';
 
@@ -46,6 +49,8 @@ interface ConfigurationPanelProps {
   runButtonLabel?: string;
   runDisabled?: boolean;
   isRunning?: boolean;
+  /** Agent tools props — only provided when nodeType is AGENT */
+  agentTools?: Omit<AgentToolsPanelProps, 'portalContainer'>;
 }
 
 export function ConfigurationPanel({
@@ -74,7 +79,11 @@ export function ConfigurationPanel({
   runButtonLabel = 'Run Node',
   runDisabled = false,
   isRunning = false,
+  agentTools,
 }: ConfigurationPanelProps) {
+  const isAgent = nodeType === GraphNodeType.AGENT && !!agentTools;
+  const [activeTab, setActiveTab] = useState<'settings' | 'tools'>('settings');
+
   const visibleFields = useMemo(
     () => (definition?.paramFields || []).filter((field) => !field.hidden),
     [definition?.paramFields],
@@ -123,12 +132,54 @@ export function ConfigurationPanel({
               displayClassName="text-sm font-semibold truncate"
               inputClassName="text-sm font-semibold h-auto py-0.5 px-1"
             />
-            {headerNodeTypeLabel && (
+            {headerNodeTypeLabel && !isAgent && (
               <span className="text-[10px] text-muted-foreground capitalize shrink-0">
                 {headerNodeTypeLabel}
               </span>
             )}
             <div className="flex-1" />
+
+            {/* Agent tab bar — centered, matches ModeSwitcher (edit/runs) style */}
+            {isAgent && (
+              <div className="inline-flex items-center rounded-md border border-border bg-muted/40 p-0.5 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setActiveTab('settings')}
+                  className={cn(
+                    'h-7 gap-1.5 rounded-sm px-2.5 text-xs font-medium',
+                    activeTab === 'settings'
+                      ? 'bg-card text-foreground shadow-sm hover:bg-card border border-border/60'
+                      : 'text-muted-foreground/60 hover:text-foreground border border-transparent',
+                  )}
+                >
+                  <Settings className="h-3.5 w-3.5" />
+                  Settings
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setActiveTab('tools')}
+                  className={cn(
+                    'h-7 gap-1.5 rounded-sm px-2.5 text-xs font-medium',
+                    activeTab === 'tools'
+                      ? 'bg-card text-foreground shadow-sm hover:bg-card border border-border/60'
+                      : 'text-muted-foreground/60 hover:text-foreground border border-transparent',
+                  )}
+                >
+                  <Wrench className="h-3.5 w-3.5" />
+                  Tools
+                  {agentTools && agentTools.addedTools.length > 0 && (
+                    <Badge variant="secondary" className="h-4 px-1 text-[10px] tabular-nums">
+                      {agentTools.addedTools.length}
+                    </Badge>
+                  )}
+                </Button>
+              </div>
+            )}
+
+            <div className="flex-1" />
+
             <Button
               variant="default"
               size="sm"
@@ -150,102 +201,107 @@ export function ConfigurationPanel({
           </div>
         )}
 
-        {/* Scrollable form content */}
-        <ScrollArea className="flex-1 min-h-0">
-          <div
-            className={cn(
-              'imp-node-config-form min-h-full p-3 text-xs flex flex-col gap-4',
-              hasExpandableParameterFields && 'h-full',
-            )}
-          >
-            {/* Credentials section */}
-            {requiresCredential && (
-              <div className="space-y-2.5">
-                <div className="flex items-center gap-1.5">
-                  <Key className="w-3 h-3 text-muted-foreground" />
-                  <h4 className="text-[10px] font-semibold tracking-wider uppercase text-muted-foreground">
-                    Credentials
-                  </h4>
-                </div>
-                <CredentialsSection
-                  fields={credentialFields}
-                  formValues={formValues}
-                  onFieldChange={onFieldChange}
-                  credentials={credentials}
-                  isLoading={credentialsLoading}
-                  isError={credentialsError}
-                  onRefresh={onRefreshCredentials}
-                  onAddNewCredential={onAddNewCredential}
-                  portalContainer={portalContainer}
-                  disablePortal
-                />
-              </div>
-            )}
-
-            {/* Parameters section */}
+        {/* ── Tab Content ─────────────────────────────────────── */}
+        {isAgent && activeTab === 'tools' ? (
+          <AgentToolsPanel {...agentTools} portalContainer={portalContainer} />
+        ) : (
+          /* Settings content (default, or always for non-agent nodes) */
+          <ScrollArea className="flex-1 min-h-0">
             <div
               className={cn(
-                'flex flex-col gap-2.5',
-                hasExpandableParameterFields && 'flex-1 min-h-0',
+                'imp-node-config-form min-h-full p-3 text-xs flex flex-col gap-4',
+                hasExpandableParameterFields && 'h-full',
               )}
             >
-              <div className="flex items-center gap-1.5">
-                <Settings className="w-3 h-3 text-muted-foreground" />
-                <h4 className="text-[10px] font-semibold tracking-wider uppercase text-muted-foreground">
-                  Parameters
-                </h4>
+              {/* Credentials section */}
+              {requiresCredential && (
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-1.5">
+                    <Key className="w-3 h-3 text-muted-foreground" />
+                    <h4 className="text-[10px] font-semibold tracking-wider uppercase text-muted-foreground">
+                      Credentials
+                    </h4>
+                  </div>
+                  <CredentialsSection
+                    fields={credentialFields}
+                    formValues={formValues}
+                    onFieldChange={onFieldChange}
+                    credentials={credentials}
+                    isLoading={credentialsLoading}
+                    isError={credentialsError}
+                    onRefresh={onRefreshCredentials}
+                    onAddNewCredential={onAddNewCredential}
+                    portalContainer={portalContainer}
+                    disablePortal
+                  />
+                </div>
+              )}
+
+              {/* Parameters section */}
+              <div
+                className={cn(
+                  'flex flex-col gap-2.5',
+                  hasExpandableParameterFields && 'flex-1 min-h-0',
+                )}
+              >
+                <div className="flex items-center gap-1.5">
+                  <Settings className="w-3 h-3 text-muted-foreground" />
+                  <h4 className="text-[10px] font-semibold tracking-wider uppercase text-muted-foreground">
+                    Parameters
+                  </h4>
+                </div>
+                <ParametersSection
+                  fields={definition ? otherFields : []}
+                  formValues={formValues}
+                  onFieldChange={onFieldChange}
+                  emptyMessage={parametersEmptyMessage}
+                  portalContainer={portalContainer}
+                  nodeType={nodeType}
+                  inputData={inputData}
+                />
               </div>
-              <ParametersSection
-                fields={definition ? otherFields : []}
-                formValues={formValues}
-                onFieldChange={onFieldChange}
-                emptyMessage={parametersEmptyMessage}
-                portalContainer={portalContainer}
-                nodeType={nodeType}
-                inputData={inputData}
-              />
+
+              {/* Warnings */}
+              {configWarnings.length > 0 && (
+                <div className="flex items-start gap-2 p-2.5 rounded-md bg-accent/30 border border-border">
+                  <AlertTriangle className="w-3.5 h-3.5 text-accent-foreground mt-0.5 shrink-0" />
+                  <div className="space-y-1 text-xs text-accent-foreground">
+                    {configWarnings.map((warning, index) => (
+                      <div key={`node-config-warning-${index}`}>{warning}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Errors */}
+              {configErrors.length > 0 && (
+                <div className="flex items-start gap-2 p-2.5 rounded-md bg-destructive/5 border border-destructive/20">
+                  <AlertCircle className="w-3.5 h-3.5 text-destructive mt-0.5 shrink-0" />
+                  <div className="space-y-1 text-xs text-destructive">
+                    {configErrors.map((error, index) => (
+                      <div key={`node-config-error-${index}`}>{error}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Run error */}
+              {runError && (
+                <div className="flex items-start gap-2 p-2.5 rounded-md bg-destructive/5 border border-destructive/20">
+                  <AlertCircle className="w-3.5 h-3.5 text-destructive mt-0.5 shrink-0" />
+                  <div className="text-xs text-destructive">
+                    <strong>Execution Error:</strong> {runError}
+                  </div>
+                </div>
+              )}
+
+              {/* Model status message */}
+              {nodeType === GraphNodeType.MODEL && modelStatusMessage && (
+                <div className="px-1 text-xs text-muted-foreground">{modelStatusMessage}</div>
+              )}
             </div>
-
-            {/* Warnings */}
-            {configWarnings.length > 0 && (
-              <div className="flex items-start gap-2 p-2.5 rounded-md bg-accent/30 border border-border">
-                <AlertTriangle className="w-3.5 h-3.5 text-accent-foreground mt-0.5 shrink-0" />
-                <div className="space-y-1 text-xs text-accent-foreground">
-                  {configWarnings.map((warning, index) => (
-                    <div key={`node-config-warning-${index}`}>{warning}</div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Errors */}
-            {configErrors.length > 0 && (
-              <div className="flex items-start gap-2 p-2.5 rounded-md bg-destructive/5 border border-destructive/20">
-                <AlertCircle className="w-3.5 h-3.5 text-destructive mt-0.5 shrink-0" />
-                <div className="space-y-1 text-xs text-destructive">
-                  {configErrors.map((error, index) => (
-                    <div key={`node-config-error-${index}`}>{error}</div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Run error */}
-            {runError && (
-              <div className="flex items-start gap-2 p-2.5 rounded-md bg-destructive/5 border border-destructive/20">
-                <AlertCircle className="w-3.5 h-3.5 text-destructive mt-0.5 shrink-0" />
-                <div className="text-xs text-destructive">
-                  <strong>Execution Error:</strong> {runError}
-                </div>
-              </div>
-            )}
-
-            {/* Model status message */}
-            {nodeType === GraphNodeType.MODEL && modelStatusMessage && (
-              <div className="px-1 text-xs text-muted-foreground">{modelStatusMessage}</div>
-            )}
-          </div>
-        </ScrollArea>
+          </ScrollArea>
+        )}
       </div>
     </ResizablePanel>
   );

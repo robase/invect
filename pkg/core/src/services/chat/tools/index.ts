@@ -8,6 +8,8 @@ import type { ChatToolDefinition } from '../chat-types';
 import { agentNodeTools } from './agent-tools';
 import { contextTools } from './context-tools';
 import { flowTools } from './flow-tools';
+import { memoryTools } from './memory-tools';
+import { multiFlowTools } from './multi-flow-tools';
 import { nodeTools } from './node-tools';
 import { planTools } from './plan-tools';
 import { runTools } from './run-tools';
@@ -22,4 +24,6 @@ export const allChatTools: ChatToolDefinition[] = [
   ...planTools,
   ...agentNodeTools,
   ...runTools,
+  ...memoryTools,
+  ...multiFlowTools,
 ];

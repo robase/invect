@@ -23,6 +23,7 @@ export const ifElseAction = defineAction({
   description: 'Conditional branching using JSON Logic',
   provider: CORE_PROVIDER,
   icon: 'GitBranch',
+  excludeFromTools: true,
   tags: ['if', 'else', 'condition', 'branch', 'logic', 'switch', 'conditional', 'filter', 'route'],
 
   // IMPORTANT: These handle IDs MUST match the sourceHandle values used in flow

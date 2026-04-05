@@ -113,6 +113,7 @@ export class ChatStreamService {
           context.flowId,
           context.selectedNodeId,
           context.viewMode,
+          context.selectedRunId,
         );
       } catch (error: unknown) {
         this.logger.warn('Failed to load flow context for chat:', { error });
@@ -126,6 +127,17 @@ export class ChatStreamService {
     }
     if (context.model) {
       resolvedConfig = { ...resolvedConfig, model: context.model };
+    }
+
+    // 4b. Inject browser-local memory notes into flow context
+    if (flowContext && context.memoryNotes) {
+      const { flowNotes, workspaceNotes } = context.memoryNotes;
+      if (flowNotes?.length || workspaceNotes?.length) {
+        flowContext.memory = {
+          flowNotes: flowNotes ?? [],
+          workspaceNotes: workspaceNotes ?? [],
+        };
+      }
     }
 
     // 5. Create and return session stream
@@ -256,7 +268,10 @@ export class ChatStreamService {
    * List available models for a given credential.
    * Creates an ephemeral adapter and calls listModels().
    */
-  async listModels(credentialId: string, query?: string): Promise<{ id: string; name?: string; provider?: string }[]> {
+  async listModels(
+    credentialId: string,
+    query?: string,
+  ): Promise<{ id: string; name?: string; provider?: string }[]> {
     const resolvedConfig = await this.resolveFromCredential(credentialId, {});
     const adapter = this.createAdapter(resolvedConfig);
     const models = await adapter.listModels();
@@ -298,6 +313,7 @@ export class ChatStreamService {
     flowId: string,
     selectedNodeId?: string,
     viewMode?: string,
+    selectedRunId?: string,
   ): Promise<FlowContextData | null> {
     try {
       const flow = await this.flowsService.getFlowById(flowId);
@@ -340,22 +356,83 @@ export class ChatStreamService {
         targetId?: string;
       }
 
-      const nodes = ((definition?.nodes ?? []) as FlowNode[]).map((n) => ({
-        id: n.id,
-        type: n.type,
-        label: n.label || n.data?.label || 'Unnamed',
-        referenceId: n.referenceId || n.data?.referenceId,
-        paramKeys: n.params
-          ? Object.keys(n.params)
-          : n.data?.params
-            ? Object.keys(n.data.params)
-            : undefined,
-      }));
+      const nodes = ((definition?.nodes ?? []) as FlowNode[]).map((n) => {
+        const id = n.id;
+        const type = n.type;
+        const label = n.label || n.data?.label || 'Unnamed';
+        const referenceId = n.referenceId || n.data?.referenceId;
+        const isSelected = id === selectedNodeId;
+
+        // For the selected node, include full params + mapper so the LLM can
+        // inspect it without an extra get_current_flow_context call
+        if (isSelected) {
+          return {
+            id,
+            type,
+            label,
+            referenceId,
+            params: n.params ?? n.data?.params,
+            mapper: ((n as unknown as Record<string, unknown>).mapper ??
+              (n.data as unknown as Record<string, unknown> | undefined)?.mapper) as
+              | Record<string, unknown>
+              | undefined,
+          };
+        }
+
+        return {
+          id,
+          type,
+          label,
+          referenceId,
+          paramKeys: n.params
+            ? Object.keys(n.params)
+            : n.data?.params
+              ? Object.keys(n.data.params)
+              : undefined,
+        };
+      });
 
       const edges = ((definition?.edges ?? []) as FlowEdge[]).map((e) => ({
         sourceId: e.source ?? e.sourceId ?? '',
         targetId: e.target ?? e.targetId ?? '',
       }));
+
+      // When a run is selected (runs view), load its error context
+      let runContext: FlowContextData['runContext'];
+      if (selectedRunId && viewMode === 'runs' && this.invect) {
+        try {
+          const run = await this.invect.runs.get(selectedRunId);
+          if (run) {
+            const nodeExecs = await this.invect.runs.getNodeExecutions(selectedRunId);
+            const failedNodes = nodeExecs
+              .filter((ex) => ex.status === 'FAILED' || ex.error)
+              .map((ex) => ({
+                nodeId: ex.nodeId,
+                nodeType: ex.nodeType,
+                error: ex.error ?? 'Unknown error',
+                input: ex.inputs
+                  ? JSON.stringify(ex.inputs).length > 500
+                    ? JSON.stringify(ex.inputs).slice(0, 500) + '…'
+                    : ex.inputs
+                  : undefined,
+                output: ex.outputs
+                  ? JSON.stringify(ex.outputs).length > 500
+                    ? JSON.stringify(ex.outputs).slice(0, 500) + '…'
+                    : ex.outputs
+                  : undefined,
+              }));
+
+            runContext = {
+              runId: run.id,
+              status: run.status,
+              error: run.error,
+              failedNodes,
+            };
+          }
+        } catch (error) {
+          this.logger.warn('Failed to load run context for chat:', { error, selectedRunId });
+        }
+      }
 
       return {
         flowId: flow.id,
@@ -365,6 +442,7 @@ export class ChatStreamService {
         edges,
         selectedNodeId,
         viewMode: viewMode as 'edit' | 'runs' | undefined,
+        runContext,
       };
     } catch (error) {
       this.logger.warn('Error loading flow context:', { error, flowId });

@@ -13,7 +13,7 @@ import { useChat } from './use-chat';
 import { useCredentials } from '~/api/credentials.api';
 import { useChatStore } from './chat.store';
 import { ChatSettingsPanel } from './ChatSettingsPanel';
-import { ChatMessageList, MissingCredentialNotice } from './ChatMessageList';
+import { ChatMessageList } from './ChatMessageList';
 import { ChatInput } from './ChatInput';
 
 const DEFAULT_WIDTH = 440;
@@ -27,11 +27,20 @@ const MAX_WIDTH = 700;
 interface ChatPanelProps {
   flowId?: string;
   selectedNodeId?: string;
+  selectedRunId?: string;
+  viewMode?: 'edit' | 'runs';
   basePath?: string;
   className?: string;
 }
 
-export function ChatPanel({ flowId, selectedNodeId, basePath, className }: ChatPanelProps) {
+export function ChatPanel({
+  flowId,
+  selectedNodeId,
+  selectedRunId,
+  viewMode,
+  basePath,
+  className,
+}: ChatPanelProps) {
   const {
     sendMessage,
     stopStreaming,
@@ -45,7 +54,7 @@ export function ChatPanel({ flowId, selectedNodeId, basePath, className }: ChatP
     setOpen,
     isSettingsPanelOpen,
     toggleSettingsPanel,
-  } = useChat({ flowId, selectedNodeId, viewMode: 'edit', basePath });
+  } = useChat({ flowId, selectedNodeId, selectedRunId, viewMode: viewMode ?? 'edit', basePath });
 
   // Check if a credential has been selected for the chat assistant
   const credentialId = useChatStore((s) => s.settings.credentialId);
@@ -167,13 +176,6 @@ export function ChatPanel({ flowId, selectedNodeId, basePath, className }: ChatP
         <div className="absolute inset-0 z-30 flex flex-col bg-background">
           <ChatSettingsPanel onClose={toggleSettingsPanel} />
         </div>
-      )}
-
-      {!isSettingsPanelOpen && !hasConfiguredCredential && (
-        <MissingCredentialNotice
-          hasAvailableCredentials={hasAvailableLlmCredentials}
-          onOpenSettings={toggleSettingsPanel}
-        />
       )}
 
       {/* Messages */}

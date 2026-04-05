@@ -54,7 +54,7 @@ export const invectConfig = defineConfig({
             description: 'Linear OAuth2 credential for issue tracking',
             isShared: true,
             metadata: { provider: 'linear' },
-          }
+          },
         ]
       : []),
   ],

@@ -11,6 +11,7 @@ import { FlowVersionsModel } from '../flow-versions/flow-versions.model';
 import { NodeExecutionsModel } from '../node-executions/node-executions.model';
 import { FlowTriggersModel } from '../triggers/flow-triggers.model';
 import { ChatMessagesModel } from '../chat/chat-messages.model';
+
 import { InvectDatabaseConfig, Logger } from 'src/schemas';
 import type { InvectPlugin } from 'src/types/plugin.types';
 import type { InvectAdapter } from '../../database/adapter';

@@ -62,9 +62,9 @@
     conic-gradient(
       from var(--border-angle),
       rgba(148, 163, 184, 0.48) 80%,
-      #3b82f6 86%,
-      #93c5fd 90%,
-      #3b82f6 94%,
+      var(--primary, #5B5BD6) 86%,
+      color-mix(in srgb, var(--primary, #5B5BD6) 50%, white) 90%,
+      var(--primary, #5B5BD6) 94%,
       rgba(148, 163, 184, 0.48)
     ) border-box;
   border: 2px solid transparent;
@@ -164,7 +164,9 @@
     --shadow-color: #1a1a2e;
     /* Edge selection colors - light mode */
     --edge-selected-stroke: #5B5BD6;
-    --edge-selected-glow: rgba(91, 91, 214, 0.5);
+    /* Node selection colors - light mode */
+    --node-selected-border: #60a5fa;
+    --node-hover-bg: #f7f7fd;
     /* Semantic colors */
     --imp-success: #30a46c;
     --imp-success-foreground: #ffffff;
@@ -343,7 +345,9 @@
       --imp-shadow-floating: 0 16px 48px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
       /* Edge selection colors - dark mode */
       --edge-selected-stroke: #7B7BDE;
-      --edge-selected-glow: rgba(123, 123, 222, 0.6);
+      /* Node selection colors - dark mode */
+      --node-selected-border: #60a5fa;
+      --node-hover-bg: rgba(30, 30, 36, 0.8);
       /* Semantic colors - dark mode */
       --imp-success: #3dd68c;
       --imp-success-foreground: #0d2118;
@@ -432,6 +436,15 @@
       font-family: var(--font-sans);
     }
 
+    /* Node hover and selection states */
+    .node-hover-bg:hover {
+      background-color: var(--node-hover-bg) !important;
+    }
+
+    .node-selected {
+      border-color: var(--node-selected-border) !important;
+    }
+
     .react-flow__edge-path {
       stroke: var(--muted-foreground);
       stroke-width: 2.5;
@@ -441,7 +454,6 @@
       stroke: var(--edge-selected-stroke, #3b82f6);
       fill: var(--edge-selected-stroke, #3b82f6);
       stroke-width: 3;
-      filter: drop-shadow(0 0 6px var(--edge-selected-glow, rgba(59, 130, 246, 0.5)));
     }
 
     .react-flow__handle {

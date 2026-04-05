@@ -10,7 +10,7 @@ const sqlitePath = path.resolve(currentDir, '../dev.db');
 console.log('🌱 Running Invect seed scripts...\n');
 
 // Store credential ID for use in flows
-let anthropicCredentialId: string | null = null;
+const anthropicCredentialId: string | null = null;
 
 /**
  * Complex Branching Flow: User Age Check

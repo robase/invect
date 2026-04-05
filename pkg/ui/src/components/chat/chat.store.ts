@@ -36,7 +36,14 @@ export interface ChatMessage {
 }
 
 export interface ChatStreamEvent {
-  type: 'text_delta' | 'tool_call_start' | 'tool_call_result' | 'ui_action' | 'error' | 'done';
+  type:
+    | 'text_delta'
+    | 'tool_call_start'
+    | 'tool_call_result'
+    | 'ui_action'
+    | 'suggestions'
+    | 'error'
+    | 'done';
   text?: string;
   toolName?: string;
   toolCallId?: string;
@@ -47,6 +54,18 @@ export interface ChatStreamEvent {
   message?: string;
   recoverable?: boolean;
   usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number };
+  suggestions?: Array<{ label: string; prompt: string }>;
+}
+
+export interface PlanStep {
+  index: number;
+  title: string;
+  status: 'pending' | 'in_progress' | 'done' | 'skipped';
+}
+
+export interface ChatPlan {
+  summary: string;
+  steps: PlanStep[];
 }
 
 export interface ChatSettings {
@@ -96,6 +115,10 @@ interface ChatState {
   isSettingsPanelOpen: boolean;
   /** Chat settings (persisted to localStorage) */
   settings: ChatSettings;
+  /** Current plan from the assistant (set via show_plan / update_plan uiActions) */
+  currentPlan: ChatPlan | null;
+  /** Suggested follow-up actions from the assistant */
+  suggestions: Array<{ label: string; prompt: string }>;
 }
 
 interface ChatActions {
@@ -140,6 +163,10 @@ interface ChatActions {
   updateSettings: (patch: Partial<ChatSettings>) => void;
   /** Truncate messages from a given message ID onwards (for edit+resend) */
   truncateFrom: (messageId: string) => void;
+  /** Set or update the current plan */
+  setPlan: (plan: ChatPlan) => void;
+  /** Set follow-up suggestions (cleared on next user message) */
+  setSuggestions: (suggestions: Array<{ label: string; prompt: string }>) => void;
 }
 
 type ChatStore = ChatState & ChatActions;
@@ -175,6 +202,8 @@ const initialState: ChatState = {
   _dirty: false,
   isSettingsPanelOpen: false,
   settings: loadPersistedSettings(),
+  currentPlan: null,
+  suggestions: [],
 };
 
 // =====================================
@@ -207,6 +236,7 @@ export const useChatStore = create<ChatStore>()(
           s.error = null;
           s._dirty = false;
           s.isLoadingHistory = false;
+          s.currentPlan = null;
         }),
 
       loadMessages: (messages) =>
@@ -232,6 +262,7 @@ export const useChatStore = create<ChatStore>()(
           });
           s.error = null;
           s._dirty = true;
+          s.suggestions = [];
         });
         return id;
       },
@@ -420,6 +451,16 @@ export const useChatStore = create<ChatStore>()(
             s._dirty = true;
           }
         }),
+
+      setPlan: (plan) =>
+        set((s) => {
+          s.currentPlan = plan;
+        }),
+
+      setSuggestions: (suggestions) =>
+        set((s) => {
+          s.suggestions = suggestions;
+        }),
     })),
     { name: 'chat' },
   ),
@@ -433,4 +474,6 @@ const useChatStreamingText = () => useChatStore((s) => s.streamingText);
 const useChatError = () => useChatStore((s) => s.error);
 const useChatPendingPrompt = () => useChatStore((s) => s.pendingPrompt);
 const useChatSettingsPanelOpen = () => useChatStore((s) => s.isSettingsPanelOpen);
+const useChatPlan = () => useChatStore((s) => s.currentPlan);
+const useChatSuggestions = () => useChatStore((s) => s.suggestions);
 const useChatSettings = () => useChatStore((s) => s.settings);

@@ -50,6 +50,8 @@ export interface ChatContext {
   flowId?: string;
   /** Currently selected node ID */
   selectedNodeId?: string;
+  /** Currently selected flow run ID (when in runs view) */
+  selectedRunId?: string;
   /** Current editor view mode */
   viewMode?: 'edit' | 'runs';
   /** Credential ID to use for the chat model (user override) */
@@ -58,6 +60,11 @@ export interface ChatContext {
   maxSteps?: number;
   /** Per-request model override (e.g. "claude-sonnet-4-20250514") */
   model?: string;
+  /** Browser-local memory notes (sent from the frontend on each request) */
+  memoryNotes?: {
+    flowNotes?: string[];
+    workspaceNotes?: string[];
+  };
 }
 
 // =====================================
@@ -119,6 +126,10 @@ export type ChatStreamEvent =
   | { type: 'tool_call_start'; toolName: string; toolCallId: string; args: Record<string, unknown> }
   | { type: 'tool_call_result'; toolName: string; toolCallId: string; result: ChatToolResult }
   | { type: 'ui_action'; action: string; data: Record<string, unknown> }
+  | {
+      type: 'suggestions';
+      suggestions: Array<{ label: string; prompt: string }>;
+    }
   | { type: 'error'; message: string; recoverable: boolean }
   | { type: 'done'; usage?: ChatUsage };
 

@@ -52,7 +52,7 @@ const AgentNodeLoadingPlaceholder = memo(
 
     return (
       <Card
-        className={`relative min-w-[200px] max-w-[240px] h-[60px] flex-row py-0 items-center cursor-move transition-colors bg-card hover:bg-card/80 ${
+        className={`relative w-[240px] h-[60px] flex-row py-0 items-center cursor-move transition-colors bg-card hover:bg-card/80 ${
           selected
             ? 'border-blue-500 dark:border-blue-400 shadow-lg shadow-blue-500/25 dark:shadow-blue-400/30'
             : 'border-sidebar-ring hover:border-muted-foreground'
@@ -71,10 +71,10 @@ const AgentNodeLoadingPlaceholder = memo(
             <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-xs font-semibold text-card-foreground truncate tracking-tight">
+            <div className="text-xs font-semibold tracking-tight truncate text-card-foreground">
               {label}
             </div>
-            <div className="text-xs font-mono text-muted-foreground truncate tracking-tight">
+            <div className="font-mono text-xs tracking-tight truncate text-muted-foreground">
               AGENT
             </div>
           </div>
@@ -166,33 +166,41 @@ export const AgentNode = memo(({ id, data, selected }: NodeProps) => {
     return { output, topPercent };
   });
 
+  // Compute border class for the tools appendix to match the node state
+  const appendixBorderClass = isRunning
+    ? 'border-primary'
+    : isSuccess
+      ? 'border-green-500'
+      : isError
+        ? 'border-red-500'
+        : isSkipped
+          ? 'border-dashed border-muted-foreground/50'
+          : selected
+            ? 'node-selected'
+            : 'border-sidebar-ring group-hover:border-primary/60';
+
   return (
-    <div className="relative">
+    <div className="relative group">
       {/* Main node card */}
       <Card
         className={cn(
-          'relative min-w-[200px] max-w-[240px] h-[60px] flex-row py-0 items-center cursor-move transition-colors bg-card hover:bg-card/80',
+          'relative w-[200px] h-[60px] flex-row py-0 items-center cursor-move transition-colors node-hover-bg bg-card',
           // Default border
           !isRunning &&
             !isSuccess &&
             !isError &&
             !isSkipped &&
-            'border-sidebar-ring hover:border-muted-foreground',
+            'border-sidebar-ring group-hover:border-primary/60',
           // Running state - animated gradient border
           isRunning && 'node-running-border animate-node-border rounded-xl',
           // Success state - green border
-          isSuccess && 'border-2 border-green-500 shadow-lg shadow-green-500/20',
+          isSuccess && 'border-2 border-green-500',
           // Error state - red border
-          isError && 'border-2 border-red-500 shadow-lg shadow-red-500/20',
+          isError && 'border-2 border-red-500',
           // Skipped state - greyed out with dashed border
           isSkipped && 'border-2 border-dashed border-muted-foreground/50 opacity-50',
           // Selection state - change existing border color to blue for visibility
-          selected &&
-            !isRunning &&
-            !isSuccess &&
-            !isError &&
-            !isSkipped &&
-            'border-blue-500 dark:border-blue-400 shadow-lg shadow-blue-500/25 dark:shadow-blue-400/30',
+          selected && !isRunning && !isSuccess && !isError && !isSkipped && 'node-selected',
         )}
       >
         {/* Unified Input Handle */}
@@ -213,10 +221,10 @@ export const AgentNode = memo(({ id, data, selected }: NodeProps) => {
             <Bot className="w-6 h-6" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-xs font-semibold text-card-foreground truncate tracking-tight">
+            <div className="text-xs font-semibold tracking-tight truncate text-card-foreground">
               {label}
             </div>
-            <div className="text-xs font-mono text-muted-foreground truncate tracking-tight">
+            <div className="font-mono text-xs tracking-tight truncate text-muted-foreground">
               {nodeType}
             </div>
           </div>
@@ -255,10 +263,14 @@ export const AgentNode = memo(({ id, data, selected }: NodeProps) => {
         position={toolsPosition}
         onPositionChange={handlePositionChange}
         showPositionToggle={true}
+        borderClassName={appendixBorderClass}
       >
         <AgentToolsBox
           tools={addedTools}
           availableTools={availableTools}
+          selectedInstanceId={
+            toolCallbacks?.selectedToolNodeId === id ? toolCallbacks.selectedToolInstanceId : null
+          }
           onAddTool={
             toolCallbacks
               ? () => toolCallbacks.onOpenToolSelector(id)

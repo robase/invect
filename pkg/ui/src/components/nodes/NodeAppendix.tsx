@@ -9,6 +9,8 @@ interface NodeAppendixProps {
   onPositionChange?: (position: AppendixPosition) => void;
   children: React.ReactNode;
   className?: string;
+  /** Override the default border class (e.g. for selected/hover/state colours) */
+  borderClassName?: string;
   /** Whether to show the position toggle button */
   showPositionToggle?: boolean;
 }
@@ -40,6 +42,7 @@ export const NodeAppendix = memo(function NodeAppendix({
   onPositionChange,
   children,
   className,
+  borderClassName,
   showPositionToggle = true,
 }: NodeAppendixProps) {
   const handlePositionToggle = () => {
@@ -52,6 +55,8 @@ export const NodeAppendix = memo(function NodeAppendix({
   const isVertical = position === 'top' || position === 'bottom';
   const ToggleIcon = isVertical ? MoveVertical : MoveHorizontal;
 
+  const resolvedBorderClass = borderClassName || 'border-sidebar-ring';
+
   return (
     <div className={cn('absolute flex items-center nowheel nopan', positionClasses[position])}>
       {/* Connector line */}
@@ -60,7 +65,8 @@ export const NodeAppendix = memo(function NodeAppendix({
       {/* Content container */}
       <div
         className={cn(
-          'relative rounded-lg border border-sidebar-ring bg-card shadow-md nodrag',
+          'relative rounded-lg border bg-card shadow-md nodrag transition-colors',
+          resolvedBorderClass,
           className,
         )}
       >
@@ -71,7 +77,10 @@ export const NodeAppendix = memo(function NodeAppendix({
               e.stopPropagation();
               handlePositionToggle();
             }}
-            className="absolute z-10 flex items-center justify-center w-5 h-5 transition-colors border rounded-full -top-2 -right-2 border-sidebar-ring bg-card text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            className={cn(
+              'absolute z-10 flex items-center justify-center w-5 h-5 transition-colors border rounded-full -top-2 -right-2 bg-card text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+              resolvedBorderClass,
+            )}
             title="Change position"
           >
             <ToggleIcon className="w-3 h-3" />

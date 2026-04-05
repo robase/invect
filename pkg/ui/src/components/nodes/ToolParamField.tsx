@@ -6,8 +6,10 @@ import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Switch } from '../ui/switch';
-import { Bot, Key } from 'lucide-react';
+import { Bot, Info, Key } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import type { NodeParamField } from '../../types/node-definition.types';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { CredentialCombobox } from '../flow-editor/node-config-panel/CredentialCombobox';
 import { useCredentials } from '../../api/credentials.api';
 import { filterCredentialsForField } from '../../utils/credentialFiltering';
@@ -76,9 +78,26 @@ export const ToolParamField = memo(function ToolParamField({
     return (
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
-          <Label htmlFor={field.name} className="text-xs">
-            {field.label}
-          </Label>
+          <div className="flex items-center gap-1">
+            <Label htmlFor={field.name} className="text-xs">
+              {field.label}
+            </Label>
+            {field.description && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-3 h-3 text-muted-foreground cursor-help shrink-0" />
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="top"
+                    className="max-w-64 text-xs [&_p]:mb-1 [&_p:last-child]:mb-0 [&_code]:bg-muted [&_code]:px-1 [&_code]:rounded [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-3 [&_ol]:list-decimal [&_ol]:pl-3"
+                  >
+                    <ReactMarkdown>{field.description}</ReactMarkdown>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
           <div className="flex items-center gap-1">
             <Key className="w-3 h-3 text-muted-foreground" />
             <span className="text-[10px] text-muted-foreground">
@@ -99,18 +118,32 @@ export const ToolParamField = memo(function ToolParamField({
           }
           addButtonLabel={requiresOAuth2 ? 'Authenticate' : 'Add new credential'}
         />
-        {field.description && (
-          <p className="text-[10px] text-muted-foreground">{field.description}</p>
-        )}
       </div>
     );
   }
 
   const fieldHeader = (
     <div className="flex items-center justify-between">
-      <Label htmlFor={field.name} className="text-xs">
-        {field.label}
-      </Label>
+      <div className="flex items-center gap-1">
+        <Label htmlFor={field.name} className="text-xs">
+          {field.label}
+        </Label>
+        {field.description && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="w-3 h-3 text-muted-foreground cursor-help shrink-0" />
+              </TooltipTrigger>
+              <TooltipContent
+                side="top"
+                className="max-w-64 text-xs [&_p]:mb-1 [&_p:last-child]:mb-0 [&_code]:bg-muted [&_code]:px-1 [&_code]:rounded [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-3 [&_ol]:list-decimal [&_ol]:pl-3"
+              >
+                <ReactMarkdown>{field.description}</ReactMarkdown>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+      </div>
       <div className="flex items-center gap-1.5">
         <span className="text-[10px] text-muted-foreground">Agent provided</span>
         <Switch
@@ -132,9 +165,6 @@ export const ToolParamField = memo(function ToolParamField({
           <Bot className="w-3 h-3" />
           <span>Agent will provide this value</span>
         </div>
-        {field.description && (
-          <p className="text-[10px] text-muted-foreground">{field.description}</p>
-        )}
       </div>
     );
   }
@@ -245,9 +275,6 @@ export const ToolParamField = memo(function ToolParamField({
     <div className="flex flex-col gap-1.5">
       {fieldHeader}
       {renderStaticField()}
-      {field.description && (
-        <p className="text-[10px] text-muted-foreground">{field.description}</p>
-      )}
     </div>
   );
 });

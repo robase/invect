@@ -45,23 +45,46 @@ export class FlowVersionsModel {
    * Create a new flow version
    */
   async create(flowId: string, input: CreateFlowVersionRequest): Promise<FlowVersion> {
-    try {
-      const nextVersionNumber = await this.getNextVersionNumber(flowId);
+    // Retry loop handles the race condition where concurrent requests read the
+    // same MAX(version) and collide on the [version, flowId] primary key.
+    const MAX_RETRIES = 3;
 
-      const result = await this.adapter.create({
-        model: TABLE,
-        data: {
-          flow_id: flowId,
-          version: nextVersionNumber,
-          invect_definition: input.invectDefinition,
-          created_at: new Date(),
-        },
-      });
-      return this.normalize(result);
-    } catch (error) {
-      this.logger.error('Failed to create flow version', { flowId, error });
-      throw new DatabaseError('Failed to create flow version', { error });
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        const nextVersionNumber = await this.getNextVersionNumber(flowId);
+
+        const result = await this.adapter.create({
+          model: TABLE,
+          data: {
+            flow_id: flowId,
+            version: nextVersionNumber,
+            invect_definition: input.invectDefinition,
+            created_at: new Date(),
+          },
+        });
+        return this.normalize(result);
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        const isPkConflict =
+          msg.includes('UNIQUE constraint failed') ||
+          msg.includes('duplicate key') ||
+          msg.includes('unique_violation') ||
+          msg.includes('Duplicate entry');
+
+        if (isPkConflict && attempt < MAX_RETRIES - 1) {
+          this.logger.warn(
+            `Version creation conflict for flow ${flowId}, retrying (attempt ${attempt + 1})`,
+          );
+          continue;
+        }
+
+        this.logger.error('Failed to create flow version', { flowId, error });
+        throw new DatabaseError('Failed to create flow version', { error });
+      }
     }
+
+    // Unreachable, but TypeScript needs it
+    throw new DatabaseError('Failed to create flow version after retries');
   }
 
   /**

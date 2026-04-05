@@ -15,8 +15,9 @@ import {
   Copy,
   ClipboardCheck,
   Pencil,
-  KeyRound,
-  Settings2,
+  Circle,
+  CheckCircle2,
+  SkipForward,
 } from 'lucide-react';
 import { cn } from '~/lib/utils';
 import { ScrollArea } from '~/components/ui/scroll-area';
@@ -26,6 +27,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '~/component
 import type { ChatMessage } from './chat.store';
 import { useChatStore } from './chat.store';
 import { MarkdownRenderer } from './MarkdownRenderer';
+import { InlineCredentialSetup } from './InlineCredentialSetup';
 
 // =====================================
 // ChatMessageList
@@ -56,16 +58,35 @@ export function ChatMessageList({
 }: ChatMessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom on new messages / streaming text
+  // Auto-scroll: only scroll to bottom if already near bottom (within 80px)
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef(true);
+
+  // Capture ref to the ScrollArea viewport for scroll tracking
+  const scrollAreaRef = useCallback((node: HTMLDivElement | null) => {
+    if (!node) return;
+    const viewport = node.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
+    if (viewport) {
+      viewportRef.current = viewport;
+    }
+  }, []);
+
+  const handleScroll = useCallback(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+    const threshold = 80;
+    isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+  }, []);
+
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (isNearBottomRef.current && viewportRef.current) {
+      viewportRef.current.scrollTop = viewportRef.current.scrollHeight;
     }
   }, [messages, streamingText]);
 
   return (
-    <ScrollArea className="flex-1 min-h-0">
-      <div ref={scrollRef} className="flex flex-col gap-0.5 p-4">
+    <ScrollArea className="flex-1 min-h-0" onScrollCapture={handleScroll} ref={scrollAreaRef}>
+      <div className="flex flex-col gap-0.5 p-4">
         {isLoadingHistory && (
           <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
             <Loader2 className="size-4 animate-spin" />
@@ -76,12 +97,7 @@ export function ChatMessageList({
         {!isLoadingHistory && messages.length === 0 && !isStreaming && (
           <div className="flex flex-col items-center justify-center flex-1 text-center min-h-70">
             {!hasConfiguredCredential ? (
-              <div className="mx-2 w-full max-w-sm">
-                <EmptyCredentialState
-                  hasAvailableCredentials={hasAvailableLlmCredentials}
-                  onOpenSettings={onOpenSettings}
-                />
-              </div>
+              <InlineCredentialSetup />
             ) : (
               <ChatSuggestionPrompts onSelect={onSendMessage} />
             )}
@@ -142,88 +158,40 @@ export function ChatMessageList({
             </button>
           </div>
         )}
+
+        {/* Suggested follow-up actions */}
+        <SuggestionChips onSelect={onSendMessage} isStreaming={isStreaming} />
       </div>
     </ScrollArea>
   );
 }
 
 // =====================================
-// MissingCredentialNotice
+// SuggestionChips
 // =====================================
 
-export function MissingCredentialNotice({
-  hasAvailableCredentials,
-  onOpenSettings,
+function SuggestionChips({
+  onSelect,
+  isStreaming,
 }: {
-  hasAvailableCredentials: boolean;
-  onOpenSettings: () => void;
+  onSelect: (prompt: string) => void;
+  isStreaming: boolean;
 }) {
+  const suggestions = useChatStore((s) => s.suggestions);
+  if (suggestions.length === 0 || isStreaming) return null;
+
   return (
-    <div className="border-b bg-amber-50/70 px-4 py-3 text-amber-950 dark:bg-amber-950/20 dark:text-amber-100">
-      <div className="flex items-start gap-3">
-        <AlertCircle className="mt-0.5 size-4 shrink-0 text-amber-700 dark:text-amber-300" />
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium">LLM provider required</p>
-          <p className="mt-1 text-xs text-amber-900/80 dark:text-amber-100/80">
-            {hasAvailableCredentials
-              ? 'Select an existing LLM provider for the chat assistant, or create a new LLM provider credential.'
-              : 'Create a new LLM provider credential before using the chat assistant.'}
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-8 shrink-0 gap-1.5"
-          onClick={onOpenSettings}
+    <div className="flex flex-wrap gap-1.5 mt-2 ml-7">
+      {suggestions.map((s, i) => (
+        <button
+          key={i}
+          type="button"
+          onClick={() => onSelect(s.prompt)}
+          className="px-2.5 py-1 text-xs rounded-full border border-border/60 bg-muted/40 text-foreground/80 hover:bg-primary/10 hover:border-primary/30 hover:text-primary transition-colors"
         >
-          <Settings2 className="size-3.5" />
-          {hasAvailableCredentials ? 'Choose Provider' : 'Create Provider'}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-// =====================================
-// EmptyCredentialState
-// =====================================
-
-function EmptyCredentialState({
-  hasAvailableCredentials,
-  onOpenSettings,
-}: {
-  hasAvailableCredentials: boolean;
-  onOpenSettings: () => void;
-}) {
-  return (
-    <div className="flex flex-col items-center gap-3 rounded-xl border bg-muted/20 p-5">
-      <div className="flex size-10 items-center justify-center rounded-full bg-primary/10">
-        <KeyRound className="size-5 text-primary" />
-      </div>
-      <div>
-        <p className="text-sm font-semibold text-foreground">Set up an LLM provider</p>
-        <p className="mt-1 max-w-72 text-xs text-muted-foreground">
-          {hasAvailableCredentials
-            ? 'Select an existing LLM provider for the chat assistant, or create a new LLM provider credential.'
-            : 'Create a new LLM provider credential to start building flows with the assistant.'}
-        </p>
-      </div>
-      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60">
-        <span>OpenAI</span>
-        <span>·</span>
-        <span>Anthropic</span>
-        <span>·</span>
-        <span>OpenRouter</span>
-      </div>
-      <Button
-        variant="default"
-        size="sm"
-        className="w-full gap-1.5 text-xs"
-        onClick={onOpenSettings}
-      >
-        <Settings2 className="size-3.5" />
-        {hasAvailableCredentials ? 'Select LLM Provider' : 'Create LLM Provider'}
-      </Button>
+          {s.label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -456,6 +424,12 @@ function ToolCallBubble({ toolMeta }: { toolMeta: NonNullable<ChatMessage['toolM
 
   const isPending = toolMeta.status === 'pending';
   const isError = toolMeta.status === 'error';
+  const isPlanTool = toolMeta.toolName === 'set_plan' || toolMeta.toolName === 'update_plan';
+
+  // Plan tools get a special inline rendering instead of collapsed JSON
+  if (isPlanTool && !isPending && !isError && toolMeta.result?.data) {
+    return <PlanStepsBubble data={toolMeta.result.data as Record<string, unknown>} />;
+  }
 
   const statusIcon = isPending ? (
     <Loader2 className="size-3 animate-spin text-primary/60" />
@@ -556,6 +530,62 @@ function ToolCallBubble({ toolMeta }: { toolMeta: NonNullable<ChatMessage['toolM
           </div>
         </CollapsibleContent>
       </Collapsible>
+    </div>
+  );
+}
+
+// =====================================
+// PlanStepsBubble — renders set_plan / update_plan as a step list
+// =====================================
+
+function PlanStepsBubble({ data }: { data: Record<string, unknown> }) {
+  const steps = (data.steps ?? []) as Array<{
+    index: number;
+    title: string;
+    status: string;
+  }>;
+  const summary = data.summary as string | undefined;
+  const progress = data.progress as string | undefined;
+
+  const stepIcon = (status: string) => {
+    switch (status) {
+      case 'done':
+        return <CheckCircle2 className="size-3.5 text-emerald-600 shrink-0" />;
+      case 'in_progress':
+        return <Loader2 className="size-3.5 text-primary animate-spin shrink-0" />;
+      case 'skipped':
+        return <SkipForward className="size-3.5 text-muted-foreground/50 shrink-0" />;
+      default:
+        return <Circle className="size-3.5 text-muted-foreground/40 shrink-0" />;
+    }
+  };
+
+  return (
+    <div className="my-1.5 ml-6">
+      <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-[11px]">
+        {summary && <div className="font-medium text-foreground/80 mb-1.5">{summary}</div>}
+        {progress && <div className="text-[10px] text-muted-foreground/60 mb-1.5">{progress}</div>}
+        <ol className="space-y-1">
+          {steps.map((step) => (
+            <li key={step.index} className="flex items-start gap-1.5">
+              <span className="mt-0.5">{stepIcon(step.status)}</span>
+              <span
+                className={cn(
+                  'leading-snug',
+                  step.status === 'done' &&
+                    'text-foreground/60 line-through decoration-foreground/20',
+                  step.status === 'skipped' &&
+                    'text-muted-foreground/40 line-through decoration-muted-foreground/20',
+                  step.status === 'in_progress' && 'text-foreground/90 font-medium',
+                  step.status === 'pending' && 'text-foreground/70',
+                )}
+              >
+                {step.title}
+              </span>
+            </li>
+          ))}
+        </ol>
+      </div>
     </div>
   );
 }

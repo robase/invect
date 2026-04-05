@@ -269,6 +269,9 @@ export function FlowWorkbenchView({
   const [toolPanelNodeId, setToolPanelNodeId] = useState<string | null>(null);
   const [selectedToolInstanceId, setSelectedToolInstanceId] = useState<string | null>(null);
 
+  // Tracks which tool instance to pre-select when opening the config panel from AgentToolsBox
+  const [configPanelToolInstanceId, setConfigPanelToolInstanceId] = useState<string | null>(null);
+
   // Sidebar mode: "nodes" (default) or "actions" (when editing agent tools)
   const sidebarMode = toolSelectorPanelOpen ? ('actions' as const) : ('nodes' as const);
 
@@ -331,8 +334,10 @@ export function FlowWorkbenchView({
         removeToolRef.current(nodeId, instanceId),
       onToolClick: (nodeId: string, instanceId: string) => toolClickRef.current(nodeId, instanceId),
       availableTools,
+      selectedToolNodeId: toolPanelNodeId,
+      selectedToolInstanceId,
     }),
-    [availableTools],
+    [availableTools, toolPanelNodeId, selectedToolInstanceId],
   );
 
   // Only pass edges to React Flow after edgesReady is true (from Zustand store)
@@ -415,6 +420,7 @@ export function FlowWorkbenchView({
       if (isDraggingNodeRef.current || isShiftKeyHeldRef.current) {
         return;
       }
+      setConfigPanelToolInstanceId(null); // reset tool pre-selection
       openConfigPanel(clickedNode.id);
     },
     [openConfigPanel],
@@ -444,31 +450,41 @@ export function FlowWorkbenchView({
       } else {
         closeConfigPanel();
         selectNode(null);
+        setConfigPanelToolInstanceId(null);
       }
     },
     [closeConfigPanel, selectNode],
   );
 
   // Tool panel handlers for Agent nodes
-  const handleOpenToolSelector = useCallback((nodeId: string) => {
-    setToolPanelNodeId(nodeId);
-    setToolSelectorPanelOpen(true);
-  }, []);
+  const setNodeSidebarOpen = useUIStore((s) => s.setNodeSidebarOpen);
+
+  const handleOpenToolSelector = useCallback(
+    (nodeId: string) => {
+      // Open NodeConfigPanel for this node — the Tools tab will show
+      setConfigPanelToolInstanceId(null);
+      openConfigPanel(nodeId);
+    },
+    [openConfigPanel],
+  );
 
   // Opens tool selector panel (show more from agent tools box)
-  const handleShowMoreTools = useCallback((nodeId: string) => {
-    setToolPanelNodeId(nodeId);
-    setToolSelectorPanelOpen(true);
-  }, []);
+  const handleShowMoreTools = useCallback(
+    (nodeId: string) => {
+      setConfigPanelToolInstanceId(null);
+      openConfigPanel(nodeId);
+    },
+    [openConfigPanel],
+  );
 
   // Opens tool config panel when a tool instance is clicked
-  const handleToolClick = useCallback((nodeId: string, instanceId: string) => {
-    setToolPanelNodeId(nodeId);
-    setSelectedToolInstanceId(instanceId);
-    setToolConfigPanelOpen(true);
-    // Also open selector panel for context
-    setToolSelectorPanelOpen(true);
-  }, []);
+  const handleToolClick = useCallback(
+    (nodeId: string, instanceId: string) => {
+      setConfigPanelToolInstanceId(instanceId);
+      openConfigPanel(nodeId);
+    },
+    [openConfigPanel],
+  );
 
   // Close tool selector (returns sidebar to nodes mode)
   const handleCloseToolSelector = useCallback(() => {
@@ -874,6 +890,8 @@ export function FlowWorkbenchView({
         flowId={flowId}
         onOpenChange={handlePanelOpenChange}
         portalContainer={dialogContainerRef.current}
+        availableTools={availableTools}
+        initialToolInstanceId={configPanelToolInstanceId}
       />
     </>
   );

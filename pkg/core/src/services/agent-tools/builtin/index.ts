@@ -9,7 +9,6 @@
 import { Logger } from 'src/schemas';
 import { AgentToolRegistry } from '../agent-tool-registry';
 import { mathToolDefinition, mathToolExecutor } from './math-tool';
-import { jsonLogicToolDefinition, jsonLogicToolExecutor } from './json-logic-tool';
 
 /**
  * Register standalone tools (tools without corresponding nodes)
@@ -19,12 +18,8 @@ export function registerStandaloneTools(registry: AgentToolRegistry, logger?: Lo
   registry.register(mathToolDefinition, mathToolExecutor);
   logger?.debug('Registered standalone tool: math_eval');
 
-  // JSON Logic tool - standalone utility (used internally by If-Else node)
-  registry.register(jsonLogicToolDefinition, jsonLogicToolExecutor);
-  logger?.debug('Registered standalone tool: json_logic');
-
-  logger?.info(`Registered ${2} standalone agent tools`);
+  logger?.info(`Registered ${1} standalone agent tools`);
 }
 
 // Re-export standalone tools for direct use
-export { mathToolDefinition, mathToolExecutor, jsonLogicToolDefinition, jsonLogicToolExecutor };
+export { mathToolDefinition, mathToolExecutor };

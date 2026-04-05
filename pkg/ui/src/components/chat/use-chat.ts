@@ -17,11 +17,13 @@ import { useApiClient } from '../../contexts/ApiContext';
 import { useChatStore } from './chat.store';
 import { useFlowEditorStore } from '~/stores/flow-editor.store';
 import { queryKeys } from '../../api/query-keys';
+import { getAllMemoryNotes, saveMemoryNote, deleteMemoryNote } from './chat-memory';
 import type { ChatStreamEvent, ChatMessage } from './chat.store';
 
 interface UseChatOptions {
   flowId?: string;
   selectedNodeId?: string;
+  selectedRunId?: string;
   viewMode?: 'edit' | 'runs';
   basePath?: string;
 }
@@ -154,12 +156,14 @@ export function useChat(options: UseChatOptions = {}) {
       }
 
       const context = {
-        flowId: options.flowId,
-        selectedNodeId: options.selectedNodeId,
-        viewMode: options.viewMode,
+        flowId: optionsRef.current.flowId,
+        selectedNodeId: optionsRef.current.selectedNodeId,
+        selectedRunId: optionsRef.current.selectedRunId,
+        viewMode: optionsRef.current.viewMode,
         maxSteps: useChatStore.getState().settings.maxSteps,
         credentialId: useChatStore.getState().settings.credentialId ?? undefined,
         model: useChatStore.getState().settings.model ?? undefined,
+        memoryNotes: getAllMemoryNotes(optionsRef.current.flowId),
       };
 
       // Create abort controller
@@ -366,6 +370,49 @@ function handleUiAction(action: string, data: Record<string, unknown>, ctx: UiAc
       break;
     }
 
+    // ─── Plan tracking ───
+    case 'show_plan':
+    case 'update_plan': {
+      const steps = data.steps as
+        | Array<{
+            index: number;
+            title: string;
+            status: string;
+          }>
+        | undefined;
+      if (steps) {
+        useChatStore.getState().setPlan({
+          summary: (data.summary as string) ?? '',
+          steps: steps.map((s) => ({
+            index: s.index,
+            title: s.title,
+            status: s.status as 'pending' | 'in_progress' | 'done' | 'skipped',
+          })),
+        });
+      }
+      break;
+    }
+
+    // ─── Memory persistence (browser-local) ───
+    case 'save_memory_note': {
+      const scope = data.scope as 'flow' | 'workspace';
+      const content = data.content as string;
+      const flowId = data.flowId as string;
+      if (content) {
+        saveMemoryNote(scope, content, flowId || undefined);
+      }
+      break;
+    }
+    case 'delete_memory_note': {
+      const scope = data.scope as 'flow' | 'workspace';
+      const content = data.content as string;
+      const flowId = data.flowId as string;
+      if (content) {
+        deleteMemoryNote(scope, content, flowId || undefined);
+      }
+      break;
+    }
+
     default:
       console.log('[chat] Unhandled ui_action:', action, data);
   }
@@ -410,6 +457,12 @@ function handleEvent(
 
     case 'done':
       // Stream complete — finalizeAssistantMessage is called by the main loop
+      break;
+
+    case 'suggestions':
+      if (event.suggestions && Array.isArray(event.suggestions)) {
+        useChatStore.getState().setSuggestions(event.suggestions);
+      }
       break;
 
     case 'ui_action':

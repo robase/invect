@@ -60,6 +60,7 @@ import type { DatabaseConnection } from '../database/connection';
 import type { LoggerManager, ScopedLogger, LogLevel } from '../utils/logger';
 import type { DashboardStats } from '../invect-core';
 import type { ChatMessageRecord } from '../services/chat/chat-messages.model';
+
 import type { ChatMessage, ChatContext, ChatStreamEvent } from '../services/chat/chat-types';
 
 // =====================================
@@ -205,7 +206,10 @@ export interface ChatAPI {
     identity?: InvectIdentity;
   }): Promise<AsyncGenerator<ChatStreamEvent>>;
   isEnabled(): boolean;
-  listModels(credentialId: string, query?: string): Promise<{ id: string; name?: string; provider?: string }[]>;
+  listModels(
+    credentialId: string,
+    query?: string,
+  ): Promise<{ id: string; name?: string; provider?: string }[]>;
   getMessages(flowId: string): Promise<ChatMessageRecord[]>;
   saveMessages(
     flowId: string,

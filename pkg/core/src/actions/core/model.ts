@@ -38,6 +38,7 @@ export const modelAction = defineAction({
   name: 'AI Model',
   description: 'Generate text using LLMs (OpenAI, Anthropic)',
   provider: CORE_PROVIDER,
+  excludeFromTools: true,
   icon: 'Sparkles',
   tags: [
     'ai',
