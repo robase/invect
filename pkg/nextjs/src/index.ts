@@ -617,7 +617,69 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
         if (!targetUrl) {
           return Response.json({ error: 'URL is required' }, { status: 400 });
         }
-        const fetchOptions: RequestInit = { method: reqMethod, headers: reqHeaders };
+
+        // Validate URL to prevent SSRF
+        let parsedUrl: URL;
+        try {
+          parsedUrl = new URL(targetUrl);
+        } catch {
+          return Response.json({ error: 'Invalid URL' }, { status: 400 });
+        }
+        if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+          return Response.json(
+            { error: 'Only HTTP and HTTPS protocols are allowed' },
+            { status: 400 },
+          );
+        }
+
+        // Resolve hostname to IP and check against private ranges
+        const { promises: dns } = await import('node:dns');
+        const { isIP } = await import('node:net');
+        let resolvedIps: Array<{ address: string }>;
+        try {
+          resolvedIps = await dns.lookup(parsedUrl.hostname, { all: true });
+        } catch {
+          return Response.json({ error: 'Could not resolve hostname' }, { status: 400 });
+        }
+        for (const { address: ip } of resolvedIps) {
+          const ver = isIP(ip);
+          if (ver === 4) {
+            const parts = ip.split('.').map(Number);
+            if (
+              parts[0] === 127 ||
+              parts[0] === 10 ||
+              parts[0] === 0 ||
+              (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) ||
+              (parts[0] === 192 && parts[1] === 168) ||
+              (parts[0] === 169 && parts[1] === 254)
+            ) {
+              return Response.json(
+                { error: 'Requests to private/internal network addresses are not allowed' },
+                { status: 400 },
+              );
+            }
+          } else if (ver === 6) {
+            const lower = ip.toLowerCase();
+            if (
+              lower === '::1' ||
+              lower.startsWith('fe80') ||
+              lower.startsWith('fc') ||
+              lower.startsWith('fd') ||
+              lower.startsWith('::ffff:')
+            ) {
+              return Response.json(
+                { error: 'Requests to private/internal network addresses are not allowed' },
+                { status: 400 },
+              );
+            }
+          }
+        }
+
+        const fetchOptions: RequestInit = {
+          method: reqMethod,
+          headers: reqHeaders,
+          redirect: 'error',
+        };
         if (reqBody && ['POST', 'PUT', 'PATCH'].includes(reqMethod)) {
           fetchOptions.body = typeof reqBody === 'string' ? reqBody : JSON.stringify(reqBody);
         }
@@ -686,7 +748,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
       // GET /credentials/:id
       if (method === 'GET' && path.match(/^credentials\/[^/]+$/)) {
         const credentialId = path.split('/')[1];
-        return Response.json(await initializedCore.credentials.get(credentialId));
+        return Response.json(await initializedCore.credentials.getSanitized(credentialId));
       }
 
       // DELETE /credentials/:id

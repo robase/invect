@@ -37,8 +37,13 @@ export class EncryptionService {
       throw new Error('Master encryption key is required');
     }
 
-    // Store the master key as a buffer
-    this.masterKey = Buffer.from(config.masterKey, 'utf-8');
+    // Decode the base64-encoded master key into raw bytes.
+    // If the key is not valid base64 (legacy plain-text key), fall back to UTF-8.
+    const decoded = Buffer.from(config.masterKey, 'base64');
+    this.masterKey =
+      decoded.length >= 32 && decoded.toString('base64') === config.masterKey
+        ? decoded
+        : Buffer.from(config.masterKey, 'utf-8');
   }
 
   /**

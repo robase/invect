@@ -362,3 +362,13 @@ export const GITLAB_PROVIDER: ProviderDef = {
   description: 'GitLab repositories, issues, and merge requests',
   docsUrl: 'https://docs.gitlab.com/ee/api/rest/',
 };
+
+export const RESEND_PROVIDER: ProviderDef = {
+  id: 'resend',
+  name: 'Resend',
+  icon: 'Mail',
+  category: 'email',
+  nodeCategory: 'Integrations',
+  description: 'Resend transactional email API — send, track, and manage emails',
+  docsUrl: 'https://resend.com/docs/api-reference/introduction',
+};

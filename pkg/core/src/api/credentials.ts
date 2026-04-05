@@ -1,15 +1,19 @@
 import type { CredentialsAPI } from './types';
 import type { ServiceFactory } from '../services/service-factory';
 import type { Logger } from '../schemas';
-import type { Credential } from '../services/credentials';
+import { CredentialsService, type Credential } from '../services/credentials';
 
 export function createCredentialsAPI(sf: ServiceFactory, logger: Logger): CredentialsAPI {
   const svc = sf.getCredentialsService();
 
+  function sanitize(cred: Credential): Credential {
+    return { ...cred, config: CredentialsService.sanitizeConfig(cred.config) };
+  }
+
   return {
-    create(input) {
+    async create(input) {
       logger.debug('createCredential called');
-      return svc.create(input);
+      return sanitize(await svc.create(input));
     },
 
     list(filters) {
@@ -27,9 +31,9 @@ export function createCredentialsAPI(sf: ServiceFactory, logger: Logger): Creden
       return svc.getSanitized(id);
     },
 
-    update(id, input) {
+    async update(id, input) {
       logger.debug('updateCredential called', { id });
-      return svc.update(id, input);
+      return sanitize(await svc.update(id, input));
     },
 
     delete(id) {
@@ -132,30 +136,34 @@ export function createCredentialsAPI(sf: ServiceFactory, logger: Logger): Creden
 
       // If we have an existing credential ID, update it instead of creating a new one
       if (pendingState.existingCredentialId) {
-        return svc.update(pendingState.existingCredentialId, {
+        return sanitize(
+          await svc.update(pendingState.existingCredentialId, {
+            config,
+            metadata: {
+              oauth2Provider: pendingState.providerId,
+              scopes: tokens.scope?.split(' ') || provider.defaultScopes,
+            },
+          }),
+        );
+      }
+
+      return sanitize(
+        await svc.create({
+          name: pendingState.credentialName || provider.name,
+          type: 'http-api',
+          authType: 'oauth2',
           config,
+          description: `OAuth2 credential for ${provider.name}`,
           metadata: {
             oauth2Provider: pendingState.providerId,
             scopes: tokens.scope?.split(' ') || provider.defaultScopes,
           },
-        });
-      }
-
-      return svc.create({
-        name: pendingState.credentialName || provider.name,
-        type: 'http-api',
-        authType: 'oauth2',
-        config,
-        description: `OAuth2 credential for ${provider.name}`,
-        metadata: {
-          oauth2Provider: pendingState.providerId,
-          scopes: tokens.scope?.split(' ') || provider.defaultScopes,
-        },
-      });
+        }),
+      );
     },
 
-    refreshOAuth2Credential(credentialId) {
-      return svc.getDecryptedWithRefresh(credentialId);
+    async refreshOAuth2Credential(credentialId) {
+      return sanitize(await svc.getDecryptedWithRefresh(credentialId));
     },
   };
 }

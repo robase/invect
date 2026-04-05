@@ -958,6 +958,7 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
   /**
    * POST /webhooks/credentials/:webhookPath - Public credential webhook ingestion endpoint
    * Core methods: ✅ CredentialsService.findByWebhookPath(webhookPath), updateCredentialLastUsed(id)
+   * Validates the webhook secret via X-Webhook-Secret header or ?secret query param.
    */
   router.post(
     '/webhooks/credentials/:webhookPath',
@@ -968,9 +969,15 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
         return res.status(404).json({ ok: false, error: 'Credential webhook not found' });
       }
 
+      // Validate webhook secret
+      const providedSecret =
+        req.header('x-webhook-secret') || (req.query.secret as string | undefined);
+      if (!credential.webhookSecret || providedSecret !== credential.webhookSecret) {
+        return res.status(401).json({ ok: false, error: 'Invalid webhook secret' });
+      }
+
       res.json({
         ok: true,
-        credentialId: credential.id,
         triggeredFlows: 0,
         runs: [],
         body: req.body ?? null,
@@ -1001,9 +1008,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
    * POST /credentials/test-request - Test a credential by making an HTTP request
    * This endpoint proxies HTTP requests to avoid CORS issues when testing credentials
    * Body: { url, method, headers, body }
+   * Permission: credential:read
    */
   router.post(
     '/credentials/test-request',
+    requirePermission('credential:read'),
     asyncHandler(async (req: Request, res: Response) => {
       const { url, method = 'GET', headers = {}, body } = req.body;
 
@@ -1024,29 +1033,60 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
         res.status(400).json({ error: 'Only HTTP and HTTPS protocols are allowed' });
         return;
       }
-      const h = parsedUrl.hostname;
-      if (
-        h === 'localhost' ||
-        h === '127.0.0.1' ||
-        h === '[::1]' ||
-        h === '0.0.0.0' ||
-        h.startsWith('10.') ||
-        /^172\.(1[6-9]|2\d|3[01])\./.test(h) ||
-        h.startsWith('192.168.') ||
-        h.startsWith('169.254.') ||
-        /^f[cd]/i.test(h) ||
-        h.includes(':')
-      ) {
-        res
-          .status(400)
-          .json({ error: 'Requests to private/internal network addresses are not allowed' });
+
+      // Resolve hostname to IP and check against private ranges to prevent
+      // DNS rebinding, decimal/octal IP encoding, and IPv6 mapped addresses.
+      const { promises: dns } = await import('node:dns');
+      let resolvedIps: string[];
+      try {
+        const results = await dns.lookup(parsedUrl.hostname, { all: true });
+        resolvedIps = results.map((r) => r.address);
+      } catch {
+        res.status(400).json({ error: 'Could not resolve hostname' });
         return;
+      }
+
+      const { isIP } = await import('node:net');
+      for (const ip of resolvedIps) {
+        const version = isIP(ip);
+        if (version === 4) {
+          const parts = ip.split('.').map(Number);
+          if (
+            parts[0] === 127 ||
+            parts[0] === 10 ||
+            parts[0] === 0 ||
+            (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) ||
+            (parts[0] === 192 && parts[1] === 168) ||
+            (parts[0] === 169 && parts[1] === 254)
+          ) {
+            res
+              .status(400)
+              .json({ error: 'Requests to private/internal network addresses are not allowed' });
+            return;
+          }
+        } else if (version === 6) {
+          // Block loopback (::1), link-local (fe80::), ULA (fc/fd), and IPv4-mapped (::ffff:x.x.x.x)
+          const lower = ip.toLowerCase();
+          if (
+            lower === '::1' ||
+            lower.startsWith('fe80') ||
+            lower.startsWith('fc') ||
+            lower.startsWith('fd') ||
+            lower.startsWith('::ffff:')
+          ) {
+            res
+              .status(400)
+              .json({ error: 'Requests to private/internal network addresses are not allowed' });
+            return;
+          }
+        }
       }
 
       try {
         const fetchOptions: RequestInit = {
           method,
           headers: headers as Record<string, string>,
+          redirect: 'error', // Prevent open redirects to internal IPs
         };
 
         if (body && ['POST', 'PUT', 'PATCH'].includes(method)) {
@@ -1085,9 +1125,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
 
   /**
    * GET /credentials/oauth2/providers - List all available OAuth2 providers
+   * Permission: credential:read
    */
   router.get(
     '/credentials/oauth2/providers',
+    requirePermission('credential:read'),
     asyncHandler(async (_req: Request, res: Response) => {
       const providers = invect.credentials.getOAuth2Providers();
       res.json(providers);
@@ -1096,9 +1138,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
 
   /**
    * GET /credentials/oauth2/providers/:providerId - Get a specific OAuth2 provider
+   * Permission: credential:read
    */
   router.get(
     '/credentials/oauth2/providers/:providerId',
+    requirePermission('credential:read'),
     asyncHandler(async (req: Request, res: Response) => {
       const provider = invect.credentials.getOAuth2Provider(req.params.providerId);
       if (!provider) {
@@ -1114,9 +1158,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
    * Body: { providerId, clientId, clientSecret, redirectUri, scopes?, returnUrl?, credentialName? }
    *   OR  { existingCredentialId, redirectUri, scopes?, returnUrl? } — secrets read from stored credential
    * Returns: { authorizationUrl, state }
+   * Permission: credential:create
    */
   router.post(
     '/credentials/oauth2/start',
+    requirePermission('credential:create'),
     asyncHandler(async (req: Request, res: Response) => {
       const {
         providerId,
@@ -1161,9 +1207,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
    * POST /credentials/oauth2/callback - Handle OAuth2 callback and exchange code for tokens
    * Body: { code, state, redirectUri, clientId?, clientSecret? }
    * clientId/clientSecret are optional — resolved from pending state if omitted
+   * Permission: credential:create
    */
   router.post(
     '/credentials/oauth2/callback',
+    requirePermission('credential:create'),
     asyncHandler(async (req: Request, res: Response) => {
       const { code, state, clientId, clientSecret, redirectUri } = req.body;
 
@@ -1221,13 +1269,10 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
         return;
       }
 
-      // For GET callback, we need the client credentials to be stored in session or config
-      // This is a simplified flow - in production, you'd store these securely
+      // Do not echo the authorization code — instruct the client to use POST instead
       res.json({
         message:
           'OAuth callback received. Use POST /credentials/oauth2/callback to exchange the code.',
-        code,
-        state,
         providerId: pendingState.providerId,
         returnUrl: pendingState.returnUrl,
       });
@@ -1236,9 +1281,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
 
   /**
    * POST /credentials/:id/refresh - Manually refresh an OAuth2 credential's access token
+   * Permission: credential:update (with resource check)
    */
   router.post(
     '/credentials/:id/refresh',
+    requirePermission('credential:update', (req) => req.params.id),
     asyncHandler(async (req: Request, res: Response) => {
       const credential = await invect.credentials.refreshOAuth2Credential(req.params.id);
       res.json(credential);

@@ -643,11 +643,11 @@ export class InvectController {
   }
 
   /**
-   * GET /credentials/:id - Get a credential
+   * GET /credentials/:id - Get a credential (sanitized)
    */
   @Get('credentials/:id')
   async getCredential(@Param('id') id: string): Promise<unknown> {
-    return await this.invect.credentials.get(id);
+    return await this.invect.credentials.getSanitized(id);
   }
 
   /**
@@ -723,25 +723,55 @@ export class InvectController {
     if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
       throw new BadRequestException('Only HTTP and HTTPS protocols are allowed');
     }
-    const h = parsedUrl.hostname;
-    if (
-      h === 'localhost' ||
-      h === '127.0.0.1' ||
-      h === '[::1]' ||
-      h === '0.0.0.0' ||
-      h.startsWith('10.') ||
-      /^172\.(1[6-9]|2\d|3[01])\./.test(h) ||
-      h.startsWith('192.168.') ||
-      h.startsWith('169.254.') ||
-      /^f[cd]/i.test(h) ||
-      h.includes(':')
-    ) {
-      throw new BadRequestException(
-        'Requests to private/internal network addresses are not allowed',
-      );
+
+    // Resolve hostname to IP and check against private ranges to prevent
+    // DNS rebinding, decimal/octal IP encoding, and IPv6 mapped addresses.
+    const { promises: dns } = await import('node:dns');
+    let resolvedIps: Array<{ address: string }>;
+    try {
+      resolvedIps = await dns.lookup(parsedUrl.hostname, { all: true });
+    } catch {
+      throw new BadRequestException('Could not resolve hostname');
     }
 
-    const fetchOptions: RequestInit = { method, headers };
+    const { isIP } = await import('node:net');
+    for (const { address: ip } of resolvedIps) {
+      const version = isIP(ip);
+      if (version === 4) {
+        const parts = ip.split('.').map(Number);
+        if (
+          parts[0] === 127 ||
+          parts[0] === 10 ||
+          parts[0] === 0 ||
+          (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) ||
+          (parts[0] === 192 && parts[1] === 168) ||
+          (parts[0] === 169 && parts[1] === 254)
+        ) {
+          throw new BadRequestException(
+            'Requests to private/internal network addresses are not allowed',
+          );
+        }
+      } else if (version === 6) {
+        const lower = ip.toLowerCase();
+        if (
+          lower === '::1' ||
+          lower.startsWith('fe80') ||
+          lower.startsWith('fc') ||
+          lower.startsWith('fd') ||
+          lower.startsWith('::ffff:')
+        ) {
+          throw new BadRequestException(
+            'Requests to private/internal network addresses are not allowed',
+          );
+        }
+      }
+    }
+
+    const fetchOptions: RequestInit = {
+      method,
+      headers,
+      redirect: 'error', // Prevent open redirects to internal IPs
+    };
     if (reqBody && ['POST', 'PUT', 'PATCH'].includes(method)) {
       fetchOptions.body = typeof reqBody === 'string' ? reqBody : JSON.stringify(reqBody);
     }

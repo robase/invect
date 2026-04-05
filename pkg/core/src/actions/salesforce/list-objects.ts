@@ -92,7 +92,7 @@ export const salesforceListObjectsAction = defineAction({
         };
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as { sobjects?: unknown };
       return { success: true, output: data.sobjects ?? data };
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);

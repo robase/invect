@@ -88,8 +88,8 @@ export const jiraListProjectsAction = defineAction({
         return { success: false, error: `Jira API error (${response.status}): ${errText}` };
       }
 
-      const data = (await response.json()) as { values?: unknown[] };
-      const projects = (data.values ?? []).map((p: Record<string, unknown>) => ({
+      const data = (await response.json()) as { values?: Record<string, unknown>[] };
+      const projects = (data.values ?? []).map((p) => ({
         id: p.id,
         key: p.key,
         name: p.name,

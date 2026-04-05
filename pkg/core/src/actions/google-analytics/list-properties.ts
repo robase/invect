@@ -102,10 +102,7 @@ export const googleAnalyticsListPropertiesAction = defineAction({
         output: {
           accountSummaries: summaries,
           accountCount: summaries.length,
-          propertyCount: summaries.reduce(
-            (sum, a) => sum + (a.propertySummaries?.length ?? 0),
-            0,
-          ),
+          propertyCount: summaries.reduce((sum, a) => sum + (a.propertySummaries?.length ?? 0), 0),
         },
         metadata: { accountCount: summaries.length },
       };

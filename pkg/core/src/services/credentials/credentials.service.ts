@@ -161,6 +161,10 @@ export class CredentialsService {
       'connectionString',
       'secretAccessKey',
       'secret',
+      'secretKey',
+      'consumerSecret',
+      'key',
+      'webhookSecret',
     ];
     const MASK = '••••••••';
     const sanitized = { ...config };
@@ -430,19 +434,20 @@ export class CredentialsService {
 
   /**
    * Get credentials that are about to expire
-   * Useful for sending notifications
+   * Useful for sending notifications.
+   * Returns sanitized configs (secrets redacted) to avoid leaking sensitive data.
    */
   async getExpiringCredentials(daysUntilExpiry: number = 7): Promise<Credential[]> {
     const expiredCredentials = await this.model.getExpiredCredentials(daysUntilExpiry);
 
-    // Decrypt configs for return
+    // Decrypt configs, then sanitize before returning
     return expiredCredentials.map((cred) => {
       const decryptedConfig = this.encryption.decryptObject<CredentialConfig>(
         JSON.stringify(cred.config),
       );
       return {
         ...cred,
-        config: decryptedConfig,
+        config: CredentialsService.sanitizeConfig(decryptedConfig),
       };
     });
   }

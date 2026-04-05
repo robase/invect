@@ -105,7 +105,7 @@ export const asanaListProjectsAction = defineAction({
         return { success: false, error: `Asana API error (${response.status}): ${errText}` };
       }
 
-      const result = await response.json();
+      const result = (await response.json()) as { data?: unknown };
       return { success: true, output: result.data ?? result };
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);

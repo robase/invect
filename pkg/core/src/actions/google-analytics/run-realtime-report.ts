@@ -22,8 +22,7 @@ const paramsSchema = z.object({
 export const googleAnalyticsRunRealtimeReportAction = defineAction({
   id: 'google_analytics.run_realtime_report',
   name: 'Run Realtime Report',
-  description:
-    'Run a realtime report for a GA4 property. Returns live metrics like active users.',
+  description: 'Run a realtime report for a GA4 property. Returns live metrics like active users.',
   provider: GOOGLE_ANALYTICS_PROVIDER,
   actionCategory: 'read',
 

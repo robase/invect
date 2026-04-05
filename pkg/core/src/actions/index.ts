@@ -44,6 +44,27 @@ export {
   MICROSOFT_TEAMS_PROVIDER,
   SENTRY_PROVIDER,
   GRAFANA_PROVIDER,
+  SALESFORCE_PROVIDER,
+  HUBSPOT_PROVIDER,
+  JIRA_PROVIDER,
+  ASANA_PROVIDER,
+  TRELLO_PROVIDER,
+  DROPBOX_PROVIDER,
+  ONEDRIVE_PROVIDER,
+  STRIPE_PROVIDER,
+  TWITTER_PROVIDER,
+  LINKEDIN_PROVIDER,
+  FACEBOOK_PROVIDER,
+  SHOPIFY_PROVIDER,
+  WOOCOMMERCE_PROVIDER,
+  ZENDESK_PROVIDER,
+  INTERCOM_PROVIDER,
+  FRESHDESK_PROVIDER,
+  SEGMENT_PROVIDER,
+  MIXPANEL_PROVIDER,
+  GOOGLE_ANALYTICS_PROVIDER,
+  GITLAB_PROVIDER,
+  RESEND_PROVIDER,
 } from './providers';
 
 // Registry
@@ -80,6 +101,27 @@ export { microsoftActions } from './microsoft';
 export { sentryActions } from './sentry';
 export { microsoftTeamsActions } from './microsoft-teams';
 export { grafanaActions } from './grafana';
+export { salesforceActions } from './salesforce';
+export { hubspotActions } from './hubspot';
+export { jiraActions } from './jira';
+export { asanaActions } from './asana';
+export { trelloActions } from './trello';
+export { dropboxActions } from './dropbox';
+export { onedriveActions } from './onedrive';
+export { stripeActions } from './stripe';
+export { twitterActions } from './twitter';
+export { linkedinActions } from './linkedin';
+export { facebookActions } from './facebook';
+export { shopifyActions } from './shopify';
+export { woocommerceActions } from './woocommerce';
+export { zendeskActions } from './zendesk';
+export { intercomActions } from './intercom';
+export { freshdeskActions } from './freshdesk';
+export { segmentActions } from './segment';
+export { mixpanelActions } from './mixpanel';
+export { googleAnalyticsActions } from './google-analytics';
+export { gitlabActions } from './gitlab';
+export { resendActions } from './resend';
 
 // ── Convenience: all built-in actions ───────────────────────────────────
 
@@ -100,6 +142,27 @@ import { microsoftActions } from './microsoft';
 import { microsoftTeamsActions } from './microsoft-teams';
 import { sentryActions } from './sentry';
 import { grafanaActions } from './grafana';
+import { salesforceActions } from './salesforce';
+import { hubspotActions } from './hubspot';
+import { jiraActions } from './jira';
+import { asanaActions } from './asana';
+import { trelloActions } from './trello';
+import { dropboxActions } from './dropbox';
+import { onedriveActions } from './onedrive';
+import { stripeActions } from './stripe';
+import { twitterActions } from './twitter';
+import { linkedinActions } from './linkedin';
+import { facebookActions } from './facebook';
+import { shopifyActions } from './shopify';
+import { woocommerceActions } from './woocommerce';
+import { zendeskActions } from './zendesk';
+import { intercomActions } from './intercom';
+import { freshdeskActions } from './freshdesk';
+import { segmentActions } from './segment';
+import { mixpanelActions } from './mixpanel';
+import { googleAnalyticsActions } from './google-analytics';
+import { gitlabActions } from './gitlab';
+import { resendActions } from './resend';
 
 /** Every built-in action across all providers. */
 export const allBuiltinActions: ActionDefinition[] = [
@@ -119,6 +182,27 @@ export const allBuiltinActions: ActionDefinition[] = [
   ...microsoftTeamsActions,
   ...sentryActions,
   ...grafanaActions,
+  ...salesforceActions,
+  ...hubspotActions,
+  ...jiraActions,
+  ...asanaActions,
+  ...trelloActions,
+  ...dropboxActions,
+  ...onedriveActions,
+  ...stripeActions,
+  ...twitterActions,
+  ...linkedinActions,
+  ...facebookActions,
+  ...shopifyActions,
+  ...woocommerceActions,
+  ...zendeskActions,
+  ...intercomActions,
+  ...freshdeskActions,
+  ...segmentActions,
+  ...mixpanelActions,
+  ...googleAnalyticsActions,
+  ...gitlabActions,
+  ...resendActions,
 ];
 
 // ── Registration helper ─────────────────────────────────────────────────
