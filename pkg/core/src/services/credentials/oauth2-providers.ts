@@ -52,108 +52,34 @@ export interface OAuth2ProviderDefinition {
  */
 export const OAUTH2_PROVIDERS: Record<string, OAuth2ProviderDefinition> = {
   // =============================================================================
-  // GOOGLE PROVIDERS
+  // GOOGLE
   // =============================================================================
 
-  // Google Docs - Verified from FlowiseAI GoogleDocsOAuth2.credential.ts
-  google_docs: {
-    id: 'google_docs',
-    name: 'Google Docs',
-    description: 'Access Google Docs for document creation and editing',
-    icon: 'FileText',
+  // Unified Google OAuth2 provider — scopes cover Gmail, Drive, Docs, Sheets, Calendar.
+  // A single Google credential works across all Google API actions.
+  google: {
+    id: 'google',
+    name: 'Google',
+    description: 'Access Google APIs — Gmail, Drive, Docs, Sheets, Calendar, and more',
+    icon: 'Globe',
     authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
     tokenUrl: 'https://oauth2.googleapis.com/token',
     defaultScopes: [
-      'https://www.googleapis.com/auth/documents',
-      'https://www.googleapis.com/auth/drive',
-      'https://www.googleapis.com/auth/drive.file',
-    ],
-    additionalAuthParams: {
-      access_type: 'offline',
-      prompt: 'consent',
-    },
-    supportsRefresh: true,
-    docsUrl: 'https://developers.google.com/docs/api/quickstart',
-    category: 'productivity',
-  },
-
-  // Google Sheets - Verified from FlowiseAI GoogleSheetsOAuth2.credential.ts
-  google_sheets: {
-    id: 'google_sheets',
-    name: 'Google Sheets',
-    description: 'Access Google Sheets for spreadsheet operations',
-    icon: 'Sheet',
-    authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
-    tokenUrl: 'https://oauth2.googleapis.com/token',
-    defaultScopes: [
-      'https://www.googleapis.com/auth/drive.file',
-      'https://www.googleapis.com/auth/spreadsheets',
-      'https://www.googleapis.com/auth/drive.metadata',
-    ],
-    additionalAuthParams: {
-      access_type: 'offline',
-      prompt: 'consent',
-    },
-    supportsRefresh: true,
-    docsUrl: 'https://developers.google.com/sheets/api/quickstart',
-    category: 'productivity',
-  },
-
-  // Google Drive - Verified from FlowiseAI GoogleDriveOAuth2.credential.ts
-  google_drive: {
-    id: 'google_drive',
-    name: 'Google Drive',
-    description: 'Access Google Drive for file management',
-    icon: 'HardDrive',
-    authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
-    tokenUrl: 'https://oauth2.googleapis.com/token',
-    defaultScopes: [
-      'https://www.googleapis.com/auth/drive',
-      'https://www.googleapis.com/auth/drive.appdata',
-      'https://www.googleapis.com/auth/drive.photos.readonly',
-    ],
-    additionalAuthParams: {
-      access_type: 'offline',
-      prompt: 'consent',
-    },
-    supportsRefresh: true,
-    docsUrl: 'https://developers.google.com/drive/api/quickstart',
-    category: 'storage',
-  },
-
-  // Gmail - Verified from FlowiseAI GmailOAuth2.credential.ts
-  // Updated scopes to match Flowise: gmail.readonly, gmail.compose, gmail.modify, gmail.labels
-  google_gmail: {
-    id: 'google_gmail',
-    name: 'Gmail',
-    description: 'Access Gmail for email operations',
-    icon: 'Mail',
-    authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
-    tokenUrl: 'https://oauth2.googleapis.com/token',
-    defaultScopes: [
+      // Gmail
       'https://www.googleapis.com/auth/gmail.readonly',
       'https://www.googleapis.com/auth/gmail.compose',
       'https://www.googleapis.com/auth/gmail.modify',
       'https://www.googleapis.com/auth/gmail.labels',
-    ],
-    additionalAuthParams: {
-      access_type: 'offline',
-      prompt: 'consent',
-    },
-    supportsRefresh: true,
-    docsUrl: 'https://developers.google.com/gmail/api/quickstart',
-    category: 'communication',
-  },
-
-  // Google Calendar - Verified from FlowiseAI GoogleCalendarOAuth2.credential.ts
-  google_calendar: {
-    id: 'google_calendar',
-    name: 'Google Calendar',
-    description: 'Access Google Calendar for event management',
-    icon: 'Calendar',
-    authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
-    tokenUrl: 'https://oauth2.googleapis.com/token',
-    defaultScopes: [
+      // Drive (covers Docs file access too)
+      'https://www.googleapis.com/auth/drive',
+      'https://www.googleapis.com/auth/drive.file',
+      'https://www.googleapis.com/auth/drive.appdata',
+      'https://www.googleapis.com/auth/drive.metadata',
+      // Docs
+      'https://www.googleapis.com/auth/documents',
+      // Sheets
+      'https://www.googleapis.com/auth/spreadsheets',
+      // Calendar
       'https://www.googleapis.com/auth/calendar',
       'https://www.googleapis.com/auth/calendar.events',
     ],
@@ -162,130 +88,75 @@ export const OAUTH2_PROVIDERS: Record<string, OAuth2ProviderDefinition> = {
       prompt: 'consent',
     },
     supportsRefresh: true,
-    docsUrl: 'https://developers.google.com/calendar/api/quickstart',
+    docsUrl: 'https://developers.google.com/identity/protocols/oauth2',
     category: 'productivity',
   },
 
   // =============================================================================
-  // MICROSOFT PROVIDERS
+  // MICROSOFT
   // =============================================================================
 
-  // Microsoft 365 (General) - Base Microsoft OAuth2 / Graph API
+  // Unified Microsoft OAuth2 provider — scopes cover Outlook, Teams, OneDrive, Calendar.
+  // A single Microsoft credential works across all Microsoft Graph API actions.
   microsoft: {
     id: 'microsoft',
-    name: 'Microsoft 365',
+    name: 'Microsoft',
     description:
-      'Access Microsoft 365 services via Graph API — calendars, mail, meetings, and more',
+      'Access Microsoft 365 services via Graph API — Outlook, Teams, OneDrive, Calendar, and more',
     icon: 'Cloud',
     authorizationUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
     tokenUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
     defaultScopes: [
+      // Core
       'openid',
       'profile',
       'email',
       'offline_access',
       'User.Read',
-      'Calendars.Read',
-      'Mail.Read',
-      'Mail.ReadBasic',
-      'OnlineMeetings.Read',
-      'OnlineMeetingTranscript.Read.All',
-    ],
-    supportsRefresh: true,
-    docsUrl:
-      'https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-auth-code-flow',
-    category: 'productivity',
-  },
-
-  // Microsoft Outlook - Verified from FlowiseAI MicrosoftOutlookOAuth2.credential.ts
-  microsoft_outlook: {
-    id: 'microsoft_outlook',
-    name: 'Microsoft Outlook',
-    description: 'Access Outlook for email, calendar, and contacts',
-    icon: 'Mail',
-    authorizationUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
-    tokenUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
-    defaultScopes: [
-      'openid',
-      'offline_access',
-      'Contacts.Read',
-      'Contacts.ReadWrite',
+      // Calendar
       'Calendars.Read',
       'Calendars.Read.Shared',
       'Calendars.ReadWrite',
+      // Mail / Outlook
       'Mail.Read',
+      'Mail.ReadBasic',
       'Mail.ReadWrite',
       'Mail.ReadWrite.Shared',
       'Mail.Send',
       'Mail.Send.Shared',
       'MailboxSettings.Read',
-    ],
-    supportsRefresh: true,
-    docsUrl: 'https://docs.microsoft.com/en-us/graph/api/resources/mail-api-overview',
-    category: 'communication',
-  },
-
-  // Microsoft Teams - Verified from FlowiseAI MicrosoftTeamsOAuth2.credential.ts
-  microsoft_teams: {
-    id: 'microsoft_teams',
-    name: 'Microsoft Teams',
-    description: 'Access Microsoft Teams for messaging and collaboration',
-    icon: 'Users',
-    authorizationUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
-    tokenUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
-    defaultScopes: [
-      // Basic authentication
-      'openid',
-      'offline_access',
-      // User permissions
-      'User.Read',
-      'User.ReadWrite.All',
-      // Teams and Groups
+      'Contacts.Read',
+      'Contacts.ReadWrite',
+      // Meetings
+      'OnlineMeetings.Read',
+      'OnlineMeetingTranscript.Read.All',
+      // Teams & Groups
       'Group.ReadWrite.All',
       'Team.ReadBasic.All',
       'Team.Create',
       'TeamMember.ReadWrite.All',
-      // Channels
       'Channel.ReadBasic.All',
       'Channel.Create',
       'Channel.Delete.All',
       'ChannelMember.ReadWrite.All',
-      // Chat operations
       'Chat.ReadWrite',
       'Chat.Create',
       'ChatMember.ReadWrite',
-      // Messages
       'ChatMessage.Send',
       'ChatMessage.Read',
       'ChannelMessage.Send',
       'ChannelMessage.Read.All',
-      // Reactions and advanced features
       'TeamsActivity.Send',
-    ],
-    supportsRefresh: true,
-    docsUrl: 'https://docs.microsoft.com/en-us/graph/api/resources/teams-api-overview',
-    category: 'communication',
-  },
-
-  // Microsoft OneDrive
-  microsoft_onedrive: {
-    id: 'microsoft_onedrive',
-    name: 'Microsoft OneDrive',
-    description: 'Access OneDrive for file storage and management',
-    icon: 'HardDrive',
-    authorizationUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
-    tokenUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
-    defaultScopes: [
-      'openid',
-      'offline_access',
+      // OneDrive / Files
       'Files.Read',
       'Files.Read.All',
       'Files.ReadWrite',
       'Files.ReadWrite.All',
     ],
     supportsRefresh: true,
-    docsUrl: 'https://docs.microsoft.com/en-us/onedrive/developer/rest-api/',
-    category: 'storage',
+    docsUrl:
+      'https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-auth-code-flow',
+    category: 'productivity',
   },
 
   // =============================================================================
@@ -774,6 +645,20 @@ export const OAUTH2_PROVIDERS: Record<string, OAuth2ProviderDefinition> = {
     supportsRefresh: true,
     docsUrl: 'https://developer.paypal.com/docs/log-in-with-paypal/integrate/',
     category: 'payments',
+  },
+
+  // Sentry
+  sentry: {
+    id: 'sentry',
+    name: 'Sentry',
+    description: 'Access Sentry for error monitoring, issue tracking, and project management',
+    icon: 'Bug',
+    authorizationUrl: 'https://sentry.io/oauth/authorize/',
+    tokenUrl: 'https://sentry.io/oauth/token/',
+    defaultScopes: ['org:read', 'project:read', 'event:read', 'event:write'],
+    supportsRefresh: true,
+    docsUrl: 'https://docs.sentry.io/api/auth/',
+    category: 'development',
   },
 };
 

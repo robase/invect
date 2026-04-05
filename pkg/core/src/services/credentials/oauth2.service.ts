@@ -65,6 +65,10 @@ export interface OAuth2PendingState {
   returnUrl?: string;
   /** Custom credential name */
   credentialName?: string;
+  /** If set, update this credential instead of creating a new one */
+  existingCredentialId?: string;
+  /** App credentials stored from the start flow, so the callback doesn't need them from the client */
+  appConfig?: { clientId: string; clientSecret: string; redirectUri: string };
   /** Timestamp when this state was created */
   createdAt: number;
 }
@@ -122,6 +126,7 @@ export class OAuth2Service {
       scopes?: string[];
       returnUrl?: string;
       credentialName?: string;
+      existingCredentialId?: string;
     } = {},
   ): OAuth2StartResult {
     const provider = getOAuth2Provider(providerId);
@@ -169,6 +174,12 @@ export class OAuth2Service {
       codeVerifier,
       returnUrl: options.returnUrl,
       credentialName: options.credentialName,
+      existingCredentialId: options.existingCredentialId,
+      appConfig: {
+        clientId: appConfig.clientId,
+        clientSecret: appConfig.clientSecret,
+        redirectUri: appConfig.redirectUri,
+      },
       createdAt: Date.now(),
     };
     pendingStates.set(state, pendingState);

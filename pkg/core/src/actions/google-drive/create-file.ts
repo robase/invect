@@ -31,7 +31,7 @@ export const googleDriveCreateFileAction = defineAction({
   credential: {
     required: true,
     type: 'oauth2',
-    oauth2Provider: 'google_drive',
+    oauth2Provider: 'google',
     description: 'Google Drive OAuth2 credential',
   },
 

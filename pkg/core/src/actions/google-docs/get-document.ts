@@ -47,7 +47,7 @@ export const googleDocsGetDocumentAction = defineAction({
   credential: {
     required: true,
     type: 'oauth2',
-    oauth2Provider: 'google_docs',
+    oauth2Provider: 'google',
     description: 'Google Docs OAuth2 credential',
   },
 

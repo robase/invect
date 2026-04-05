@@ -1,11 +1,8 @@
 import type { Credential } from '../api/types';
 
 const OAUTH2_TO_ICON_ID: Record<string, string> = {
-  google_gmail: 'gmail',
-  google_docs: 'google_docs',
-  google_sheets: 'google_sheets',
-  google_drive: 'google_drive',
-  google_calendar: 'google_calendar',
+  google: 'google',
+  microsoft: 'microsoft',
   github: 'github',
   slack: 'slack',
   linear: 'linear',
@@ -15,14 +12,11 @@ const NAME_HINTS: Array<[RegExp, string, string]> = [
   [/openai|gpt/i, 'openai', 'Zap'],
   [/anthropic|claude/i, 'anthropic', 'Zap'],
   [/openrouter/i, 'openrouter', 'Bot'],
-  [/gmail/i, 'gmail', 'Mail'],
+  [/gmail/i, 'google', 'Mail'],
   [/github/i, 'github', 'Github'],
   [/slack/i, 'slack', 'MessageSquare'],
   [/linear/i, 'linear', 'CheckSquare'],
-  [/google\s*doc/i, 'google_docs', 'FileText'],
-  [/google\s*sheet/i, 'google_sheets', 'Table'],
-  [/google\s*drive/i, 'google_drive', 'HardDrive'],
-  [/google\s*calendar/i, 'google_calendar', 'Calendar'],
+  [/google/i, 'google', 'Globe'],
   [/postgres/i, 'postgres', 'Database'],
 ];
 

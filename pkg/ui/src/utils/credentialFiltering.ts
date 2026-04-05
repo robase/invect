@@ -1,7 +1,7 @@
 import type { Credential } from '../api/types';
 
 interface CredentialFieldHints {
-  /** OAuth2 provider IDs to match (e.g., ["google_gmail"]) */
+  /** OAuth2 provider IDs to match (e.g., ["google"]) */
   oauth2Providers?: string[];
   /** Credential types to match (e.g., ["oauth2", "api_key"]) */
   credentialTypes?: string[];
@@ -34,8 +34,11 @@ export function filterCredentialsForField(
   if (field.oauth2Providers && field.oauth2Providers.length > 0) {
     const providers = field.oauth2Providers;
     return credentials.filter((cred) => {
-      // Match by OAuth2 provider stored in metadata
-      const credProvider = cred.metadata?.oauth2Provider as string | undefined;
+      // Match by OAuth2 provider stored in metadata or config
+      const credProvider =
+        (cred.metadata?.oauth2Provider as string | undefined) ??
+        (cred.config?.oauth2Provider as string | undefined) ??
+        (cred.metadata?.provider as string | undefined);
       if (credProvider && providers.includes(credProvider)) {
         return true;
       }

@@ -166,13 +166,14 @@ export function useStartOAuth2Flow() {
 
   return useMutation({
     mutationFn: (params: {
-      providerId: string;
-      clientId: string;
-      clientSecret: string;
+      providerId?: string;
+      clientId?: string;
+      clientSecret?: string;
       redirectUri: string;
       scopes?: string[];
       returnUrl?: string;
       credentialName?: string;
+      existingCredentialId?: string;
     }) => apiClient.startOAuth2Flow(params),
     onError: (error) => {
       console.error('Error starting OAuth2 flow:', getErrorMessage(error));
@@ -188,11 +189,13 @@ export function useHandleOAuth2Callback() {
     mutationFn: (params: {
       code: string;
       state: string;
-      clientId: string;
-      clientSecret: string;
-      redirectUri: string;
+      clientId?: string;
+      clientSecret?: string;
+      redirectUri?: string;
     }) => apiClient.handleOAuth2Callback(params),
     onSuccess: () => {
+      // Invalidate both the list and all individual credential queries
+      // so the detail dialog picks up the new tokens
       queryClient.invalidateQueries({ queryKey: ['credentials'] });
     },
     onError: (error) => {

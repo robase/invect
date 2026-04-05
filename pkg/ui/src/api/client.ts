@@ -730,13 +730,14 @@ class ApiClient {
   }
 
   async startOAuth2Flow(params: {
-    providerId: string;
-    clientId: string;
-    clientSecret: string;
+    providerId?: string;
+    clientId?: string;
+    clientSecret?: string;
     redirectUri: string;
     scopes?: string[];
     returnUrl?: string;
     credentialName?: string;
+    existingCredentialId?: string;
   }): Promise<OAuth2StartResult> {
     return this.request<OAuth2StartResult>('/credentials/oauth2/start', {
       method: 'POST',
@@ -750,9 +751,9 @@ class ApiClient {
   async handleOAuth2Callback(params: {
     code: string;
     state: string;
-    clientId: string;
-    clientSecret: string;
-    redirectUri: string;
+    clientId?: string;
+    clientSecret?: string;
+    redirectUri?: string;
   }): Promise<Credential> {
     return this.request<Credential>('/credentials/oauth2/callback', {
       method: 'POST',

@@ -78,7 +78,7 @@ export interface CredentialConfig {
   scope?: string;
   clientId?: string;
   clientSecret?: string;
-  /** OAuth2 provider ID (e.g., "google_docs", "github") */
+  /** OAuth2 provider ID (e.g., "google", "github") */
   oauth2Provider?: string;
   /** Authorization URL (for custom OAuth2 providers) */
   authorizationUrl?: string;

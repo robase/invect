@@ -22,6 +22,11 @@ export function createCredentialsAPI(sf: ServiceFactory, logger: Logger): Creden
       return svc.get(id);
     },
 
+    getSanitized(id) {
+      logger.debug('getCredentialSanitized called', { id });
+      return svc.getSanitized(id);
+    },
+
     update(id, input) {
       logger.debug('updateCredential called', { id });
       return svc.update(id, input);
@@ -73,16 +78,47 @@ export function createCredentialsAPI(sf: ServiceFactory, logger: Logger): Creden
       return svc.getOAuth2Service().startAuthorizationFlow(providerId, appConfig, options);
     },
 
+    async startOAuth2FlowForCredential(existingCredentialId, redirectUri, options) {
+      const credential = await svc.get(existingCredentialId);
+      const providerId =
+        (credential.config?.oauth2Provider as string) ||
+        (credential.metadata?.oauth2Provider as string);
+      if (!providerId) {
+        throw new Error('Credential does not have an oauth2Provider configured');
+      }
+      const clientId = credential.config?.clientId as string;
+      const clientSecret = credential.config?.clientSecret as string;
+      if (!clientId || !clientSecret) {
+        throw new Error('Credential is missing clientId or clientSecret');
+      }
+      return svc.getOAuth2Service().startAuthorizationFlow(
+        providerId,
+        { clientId, clientSecret, redirectUri },
+        {
+          ...options,
+          existingCredentialId,
+        },
+      );
+    },
+
     getOAuth2PendingState(state) {
       return svc.getOAuth2Service().getPendingState(state);
     },
 
     async handleOAuth2Callback(code, state, appConfig): Promise<Credential> {
       const oauth2Service = svc.getOAuth2Service();
+
+      // Resolve appConfig from pending state if not provided by the caller
+      const pending = oauth2Service.getPendingState(state);
+      const resolvedAppConfig = appConfig ?? pending?.appConfig;
+      if (!resolvedAppConfig) {
+        throw new Error('Missing app credentials — cannot exchange OAuth code');
+      }
+
       const { tokens, pendingState } = await oauth2Service.exchangeCodeForTokens(
         code,
         state,
-        appConfig,
+        resolvedAppConfig,
       );
       const provider = oauth2Service.getProvider(pendingState.providerId);
       if (!provider) {
@@ -91,8 +127,20 @@ export function createCredentialsAPI(sf: ServiceFactory, logger: Logger): Creden
       const config = oauth2Service.buildCredentialConfig(
         tokens,
         pendingState.providerId,
-        appConfig,
+        resolvedAppConfig,
       );
+
+      // If we have an existing credential ID, update it instead of creating a new one
+      if (pendingState.existingCredentialId) {
+        return svc.update(pendingState.existingCredentialId, {
+          config,
+          metadata: {
+            oauth2Provider: pendingState.providerId,
+            scopes: tokens.scope?.split(' ') || provider.defaultScopes,
+          },
+        });
+      }
+
       return svc.create({
         name: pendingState.credentialName || provider.name,
         type: 'http-api',

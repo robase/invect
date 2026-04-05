@@ -62,7 +62,7 @@ interface OAuth2ProviderSelectorProps {
   onCredentialCreated?: (credential: Credential) => void;
   /** Portal container for modals */
   portalContainer?: HTMLElement | null;
-  /** Filter to only show specific providers by ID (e.g., ["google_gmail"]) */
+  /** Filter to only show specific providers by ID (e.g., ["google"]) */
   filterProviders?: string[];
 }
 
@@ -217,7 +217,7 @@ export function OAuth2ProviderSelector({
                   onChange={(e) => setClientId(e.target.value)}
                   placeholder="Enter OAuth2 Client ID"
                   className="h-8 text-xs"
-                  autoComplete="off"
+                  autoComplete="one-time-code"
                   data-1p-ignore
                   data-lpignore="true"
                 />
@@ -229,12 +229,13 @@ export function OAuth2ProviderSelector({
                 </Label>
                 <Input
                   id="clientSecret"
-                  type="password"
+                  type="text"
+                  style={{ WebkitTextSecurity: 'disc' }}
                   value={clientSecret}
                   onChange={(e) => setClientSecret(e.target.value)}
                   placeholder="Enter OAuth2 Client Secret"
                   className="h-8 text-xs"
-                  autoComplete="off"
+                  autoComplete="one-time-code"
                   data-1p-ignore
                   data-lpignore="true"
                 />

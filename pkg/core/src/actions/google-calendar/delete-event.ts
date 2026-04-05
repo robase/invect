@@ -29,7 +29,7 @@ export const googleCalendarDeleteEventAction = defineAction({
   credential: {
     required: true,
     type: 'oauth2',
-    oauth2Provider: 'google_calendar',
+    oauth2Provider: 'google',
     description: 'Google Calendar OAuth2 credential',
   },
 

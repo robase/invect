@@ -30,7 +30,7 @@ export const googleSheetsUpdateValuesAction = defineAction({
   credential: {
     required: true,
     type: 'oauth2',
-    oauth2Provider: 'google_sheets',
+    oauth2Provider: 'google',
     description: 'Google Sheets OAuth2 credential',
   },
 

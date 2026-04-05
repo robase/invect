@@ -41,6 +41,8 @@ export {
   POSTGRES_PROVIDER,
   TRIGGERS_PROVIDER,
   MICROSOFT_PROVIDER,
+  MICROSOFT_TEAMS_PROVIDER,
+  SENTRY_PROVIDER,
 } from './providers';
 
 // Registry
@@ -74,6 +76,8 @@ export { linearActions } from './linear';
 export { postgresActions } from './postgres';
 export { triggerActions } from './triggers';
 export { microsoftActions } from './microsoft';
+export { sentryActions } from './sentry';
+export { microsoftTeamsActions } from './microsoft-teams';
 
 // ── Convenience: all built-in actions ───────────────────────────────────
 
@@ -91,6 +95,8 @@ import { linearActions } from './linear';
 import { postgresActions } from './postgres';
 import { triggerActions } from './triggers';
 import { microsoftActions } from './microsoft';
+import { microsoftTeamsActions } from './microsoft-teams';
+import { sentryActions } from './sentry';
 
 /** Every built-in action across all providers. */
 export const allBuiltinActions: ActionDefinition[] = [
@@ -107,6 +113,8 @@ export const allBuiltinActions: ActionDefinition[] = [
   ...postgresActions,
   ...triggerActions,
   ...microsoftActions,
+  ...microsoftTeamsActions,
+  ...sentryActions,
 ];
 
 // ── Registration helper ─────────────────────────────────────────────────

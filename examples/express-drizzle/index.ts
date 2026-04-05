@@ -3,16 +3,12 @@ import express from 'express';
 import type { ErrorRequestHandler } from 'express';
 import cors from 'cors';
 import { createInvectRouter } from '@invect/express';
-import { userAuth } from '@invect/user-auth';
-import { rbacPlugin } from '@invect/rbac';
-import { webhooksPlugin } from '@invect/webhooks';
 import { startExternalApiMocks, stopExternalApiMocks } from './mock-external-apis';
+import { invectConfig } from './invect.config';
 
 // Create Express app
 const app = express();
 const port = process.env.PORT || 3000;
-const sqliteConnectionString = process.env.DB_FILE_NAME || 'file:./dev.db';
-const webhookBaseUrl = process.env.INVECT_WEBHOOK_BASE_URL || `http://localhost:${port}/invect`;
 
 if (process.env.INVECT_MOCK_EXTERNAL_APIS === 'true') {
   startExternalApiMocks();
@@ -32,73 +28,7 @@ app.options('*', cors(corsOptions));
 app.use(express.json());
 
 // Mount Invect routes under /invect (or a path of your choice)
-const invectRouter = await createInvectRouter({
-  database: {
-    type: 'sqlite', // Example, adjust based on your setup
-    connectionString: sqliteConnectionString,
-  },
-  logging: {
-    level: 'debug', // Default to info level, use 'debug' for verbose logging
-    scopes: {
-      // Uncomment to enable debug logging for specific areas:
-      execution: 'debug',
-      node: 'debug',
-      ai: 'debug',
-    },
-  },
-  defaultCredentials: [
-    ...(process.env.SEED_ANTHROPIC_API_KEY
-      ? [
-          {
-            name: 'Anthropic API Key',
-            type: 'llm' as const,
-            provider: 'anthropic',
-            authType: 'apiKey',
-            config: { apiKey: process.env.SEED_ANTHROPIC_API_KEY },
-            description: 'Anthropic Claude API credential for AI model nodes',
-            isShared: true,
-            metadata: { provider: 'anthropic' },
-          },
-        ]
-      : []),
-    ...(process.env.SEED_LINEAR_CLIENT_ID && process.env.SEED_LINEAR_CLIENT_SECRET
-      ? [
-          {
-            name: 'Linear OAuth2',
-            type: 'http-api' as const,
-            provider: 'linear',
-            authType: 'oauth2',
-            config: {
-              clientId: process.env.SEED_LINEAR_CLIENT_ID,
-              clientSecret: process.env.SEED_LINEAR_CLIENT_SECRET,
-              oauth2Provider: 'linear',
-            },
-            description: 'Linear OAuth2 credential for issue tracking',
-            isShared: true,
-            metadata: { provider: 'linear' },
-          },
-        ]
-      : []),
-  ],
-  // Note: Don't pass `logger: console` - use the built-in scoped logger
-  // which respects log levels. The console logger ignores log levels.
-  plugins: [
-    userAuth({
-      onSessionError: 'continue',
-      globalAdmins: [
-        {
-          email: process.env.INVECT_ADMIN_EMAIL,
-          pw: process.env.INVECT_ADMIN_PASSWORD,
-          name: 'Admin',
-        },
-      ],
-    }),
-    rbacPlugin(),
-    webhooksPlugin({
-      webhookBaseUrl,
-    }),
-  ],
-});
+const invectRouter = await createInvectRouter(invectConfig);
 app.use('/invect', invectRouter);
 
 // Health check endpoint

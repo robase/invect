@@ -94,7 +94,7 @@ export const gmailListMessagesAction = defineAction({
   credential: {
     required: true,
     type: 'oauth2',
-    oauth2Provider: 'google_gmail',
+    oauth2Provider: 'google',
     description: 'Gmail OAuth2 credential for authentication',
   },
 

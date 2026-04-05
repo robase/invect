@@ -132,3 +132,43 @@ export const MICROSOFT_PROVIDER: ProviderDef = {
   description: 'Microsoft Graph API — calendars, email, meetings, transcripts and more',
   docsUrl: 'https://learn.microsoft.com/en-us/graph/api/overview',
 };
+
+export const MICROSOFT_TEAMS_PROVIDER: ProviderDef = {
+  id: 'microsoft_teams',
+  name: 'Microsoft Teams',
+  icon: 'Users',
+  category: 'messaging',
+  nodeCategory: 'Integrations',
+  description: 'Microsoft Teams messaging and collaboration via Graph API',
+  docsUrl: 'https://learn.microsoft.com/en-us/graph/api/resources/teams-api-overview',
+};
+
+export const SENTRY_PROVIDER: ProviderDef = {
+  id: 'sentry',
+  name: 'Sentry',
+  icon: 'Bug',
+  category: 'development',
+  nodeCategory: 'Integrations',
+  description: 'Sentry error monitoring — issues, projects, and event tracking',
+  docsUrl: 'https://docs.sentry.io/api/',
+};
+
+export const SALESFORCE_PROVIDER: ProviderDef = {
+  id: 'salesforce',
+  name: 'Salesforce',
+  icon: 'Cloud',
+  category: 'custom',
+  nodeCategory: 'Integrations',
+  description: 'Salesforce CRM — accounts, contacts, leads, and opportunities',
+  docsUrl: 'https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/',
+};
+
+export const HUBSPOT_PROVIDER: ProviderDef = {
+  id: 'hubspot',
+  name: 'HubSpot',
+  icon: 'Users',
+  category: 'custom',
+  nodeCategory: 'Integrations',
+  description: 'HubSpot CRM — contacts, companies, deals, and tickets',
+  docsUrl: 'https://developers.hubspot.com/docs/api/overview',
+};

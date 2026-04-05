@@ -2323,7 +2323,12 @@ export class Invect {
   startOAuth2Flow(
     providerId: string,
     appConfig: { clientId: string; clientSecret: string; redirectUri: string },
-    options?: { scopes?: string[]; returnUrl?: string; credentialName?: string },
+    options?: {
+      scopes?: string[];
+      returnUrl?: string;
+      credentialName?: string;
+      existingCredentialId?: string;
+    },
   ) {
     this.ensureInitialized();
     return this.serviceFactory
@@ -2341,23 +2346,30 @@ export class Invect {
   }
 
   /**
-   * Handle OAuth2 callback - exchange code for tokens and create credential
+   * Handle OAuth2 callback - exchange code for tokens and create or update credential
    */
   async handleOAuth2Callback(
     code: string,
     state: string,
-    appConfig: { clientId: string; clientSecret: string; redirectUri: string },
+    appConfig?: { clientId: string; clientSecret: string; redirectUri: string },
   ): Promise<Credential> {
     this.ensureInitialized();
 
     const credentialsService = this.serviceFactory.getCredentialsService();
     const oauth2Service = credentialsService.getOAuth2Service();
 
+    // Resolve appConfig from pending state if not provided by the caller
+    const pending = oauth2Service.getPendingState(state);
+    const resolvedAppConfig = appConfig ?? pending?.appConfig;
+    if (!resolvedAppConfig) {
+      throw new Error('Missing app credentials — cannot exchange OAuth code');
+    }
+
     // Exchange code for tokens
     const { tokens, pendingState } = await oauth2Service.exchangeCodeForTokens(
       code,
       state,
-      appConfig,
+      resolvedAppConfig,
     );
 
     // Get provider info
@@ -2367,9 +2379,31 @@ export class Invect {
     }
 
     // Build credential config
-    const config = oauth2Service.buildCredentialConfig(tokens, pendingState.providerId, appConfig);
+    const config = oauth2Service.buildCredentialConfig(
+      tokens,
+      pendingState.providerId,
+      resolvedAppConfig,
+    );
 
-    // Create credential
+    // If we have an existing credential ID, update it instead of creating a new one
+    if (pendingState.existingCredentialId) {
+      const credential = await credentialsService.update(pendingState.existingCredentialId, {
+        config,
+        metadata: {
+          oauth2Provider: pendingState.providerId,
+          scopes: tokens.scope?.split(' ') || provider.defaultScopes,
+        },
+      });
+
+      this.loggerManager.getBasicLogger().info('Updated OAuth2 credential with tokens', {
+        credentialId: credential.id,
+        providerId: pendingState.providerId,
+      });
+
+      return credential;
+    }
+
+    // Create new credential
     const credential = await credentialsService.create({
       name: pendingState.credentialName || provider.name,
       type: 'http-api',

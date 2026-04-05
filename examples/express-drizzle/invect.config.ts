@@ -18,7 +18,7 @@ export const invectConfig = defineConfig({
     connectionString: process.env.DB_FILE_NAME || 'file:./dev.db',
   },
   logging: {
-    level: 'info',
+    level: 'debug',
   },
   defaultCredentials: [
     ...(process.env.SEED_ANTHROPIC_API_KEY
@@ -57,12 +57,12 @@ export const invectConfig = defineConfig({
           {
             name: 'Gmail OAuth2',
             type: 'http-api' as const,
-            provider: 'google_gmail',
+            provider: 'google',
             authType: 'oauth2',
             config: {
               clientId: process.env.SEED_GMAIL_CLIENT_ID,
               clientSecret: process.env.SEED_GMAIL_CLIENT_SECRET,
-              oauth2Provider: 'google_gmail',
+              oauth2Provider: 'google',
             },
             description: 'Gmail OAuth2 credential',
             isShared: true,

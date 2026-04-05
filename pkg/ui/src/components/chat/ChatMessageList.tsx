@@ -65,7 +65,9 @@ export function ChatMessageList({
   // Capture ref to the ScrollArea viewport for scroll tracking
   const scrollAreaRef = useCallback((node: HTMLDivElement | null) => {
     if (!node) return;
-    const viewport = node.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
+    const viewport = node.querySelector(
+      '[data-radix-scroll-area-viewport]',
+    ) as HTMLDivElement | null;
     if (viewport) {
       viewportRef.current = viewport;
     }

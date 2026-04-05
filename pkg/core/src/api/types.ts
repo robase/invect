@@ -132,6 +132,7 @@ export interface CredentialsAPI {
   create(input: CreateCredentialInput): Promise<Credential>;
   list(filters?: CredentialFilters): Promise<Array<Omit<Credential, 'config'>>>;
   get(id: string): Promise<Credential>;
+  getSanitized(id: string): Promise<Credential>;
   update(id: string, input: UpdateCredentialInput): Promise<Credential>;
   delete(id: string): Promise<void>;
   test(id: string): Promise<{ success: boolean; error?: string }>;
@@ -149,13 +150,24 @@ export interface CredentialsAPI {
   startOAuth2Flow(
     providerId: string,
     appConfig: { clientId: string; clientSecret: string; redirectUri: string },
-    options?: { scopes?: string[]; returnUrl?: string; credentialName?: string },
+    options?: {
+      scopes?: string[];
+      returnUrl?: string;
+      credentialName?: string;
+      existingCredentialId?: string;
+    },
   ): { authorizationUrl: string; state: string };
+  /** Start OAuth2 flow using secrets already stored on an existing credential */
+  startOAuth2FlowForCredential(
+    existingCredentialId: string,
+    redirectUri: string,
+    options?: { scopes?: string[]; returnUrl?: string },
+  ): Promise<{ authorizationUrl: string; state: string }>;
   getOAuth2PendingState(state: string): OAuth2PendingState | undefined;
   handleOAuth2Callback(
     code: string,
     state: string,
-    appConfig: { clientId: string; clientSecret: string; redirectUri: string },
+    appConfig?: { clientId: string; clientSecret: string; redirectUri: string },
   ): Promise<Credential>;
   refreshOAuth2Credential(credentialId: string): Promise<Credential>;
 }

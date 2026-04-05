@@ -176,7 +176,12 @@ export const CreateCredentialModal: React.FC<CreateCredentialModalProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-3 text-xs">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-3 text-xs"
+          autoComplete="one-time-code"
+          data-lpignore="true"
+        >
           {/* Name */}
           <div className="space-y-1.5">
             <Label htmlFor="name" className="text-xs">
@@ -189,7 +194,7 @@ export const CreateCredentialModal: React.FC<CreateCredentialModalProps> = ({
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="My Stripe Production"
               required
-              autoComplete="off"
+              autoComplete="one-time-code"
               data-1p-ignore
               data-lpignore="true"
               className="h-8 text-xs"
@@ -207,7 +212,7 @@ export const CreateCredentialModal: React.FC<CreateCredentialModalProps> = ({
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Optional description for this credential"
               rows={2}
-              autoComplete="off"
+              autoComplete="one-time-code"
               className="text-xs"
             />
           </div>
@@ -301,12 +306,13 @@ export const CreateCredentialModal: React.FC<CreateCredentialModalProps> = ({
                 </Label>
                 <Input
                   id="apiKey"
-                  type="password"
+                  type="text"
+                  style={{ WebkitTextSecurity: 'disc' }}
                   value={(formData.config.apiKey as string) || ''}
                   onChange={(e) => updateConfig('apiKey', e.target.value)}
                   placeholder="Enter your API key"
                   required
-                  autoComplete="off"
+                  autoComplete="one-time-code"
                   data-1p-ignore
                   data-lpignore="true"
                   className="h-8 text-xs"
@@ -321,12 +327,13 @@ export const CreateCredentialModal: React.FC<CreateCredentialModalProps> = ({
                 </Label>
                 <Input
                   id="token"
-                  type="password"
+                  type="text"
+                  style={{ WebkitTextSecurity: 'disc' }}
                   value={(formData.config.token as string) || ''}
                   onChange={(e) => updateConfig('token', e.target.value)}
                   placeholder="Enter bearer token"
                   required
-                  autoComplete="off"
+                  autoComplete="one-time-code"
                   data-1p-ignore
                   data-lpignore="true"
                   className="h-8 text-xs"
@@ -342,12 +349,13 @@ export const CreateCredentialModal: React.FC<CreateCredentialModalProps> = ({
                   </Label>
                   <Input
                     id="apiKey"
-                    type="password"
+                    type="text"
+                    style={{ WebkitTextSecurity: 'disc' }}
                     value={(formData.config.apiKey as string) || ''}
                     onChange={(e) => updateConfig('apiKey', e.target.value)}
                     placeholder="Enter API key"
                     required
-                    autoComplete="off"
+                    autoComplete="one-time-code"
                     data-1p-ignore
                     data-lpignore="true"
                     className="h-8 text-xs"
@@ -376,7 +384,7 @@ export const CreateCredentialModal: React.FC<CreateCredentialModalProps> = ({
                     value={(formData.config.paramName as string) || ''}
                     onChange={(e) => updateConfig('paramName', e.target.value)}
                     placeholder="X-API-Key"
-                    autoComplete="off"
+                    autoComplete="one-time-code"
                     data-1p-ignore
                     data-lpignore="true"
                     className="h-8 text-xs"
@@ -392,12 +400,13 @@ export const CreateCredentialModal: React.FC<CreateCredentialModalProps> = ({
                 </Label>
                 <Input
                   id="connectionString"
-                  type="password"
+                  type="text"
+                  style={{ WebkitTextSecurity: 'disc' }}
                   value={(formData.config.connectionString as string) || ''}
                   onChange={(e) => updateConfig('connectionString', e.target.value)}
                   placeholder="postgres://user:pass@host:5432/dbname?sslmode=require"
                   required
-                  autoComplete="off"
+                  autoComplete="one-time-code"
                   data-1p-ignore
                   data-lpignore="true"
                   className="h-8 text-xs"
@@ -417,7 +426,7 @@ export const CreateCredentialModal: React.FC<CreateCredentialModalProps> = ({
                     onChange={(e) => updateConfig('username', e.target.value)}
                     placeholder="Enter username"
                     required
-                    autoComplete="off"
+                    autoComplete="one-time-code"
                     data-1p-ignore
                     data-lpignore="true"
                     className="h-8 text-xs"
@@ -429,12 +438,13 @@ export const CreateCredentialModal: React.FC<CreateCredentialModalProps> = ({
                   </Label>
                   <Input
                     id="password"
-                    type="password"
+                    type="text"
+                    style={{ WebkitTextSecurity: 'disc' }}
                     value={(formData.config.password as string) || ''}
                     onChange={(e) => updateConfig('password', e.target.value)}
                     placeholder="Enter password"
                     required
-                    autoComplete="off"
+                    autoComplete="one-time-code"
                     data-1p-ignore
                     data-lpignore="true"
                     className="h-8 text-xs"
@@ -446,33 +456,34 @@ export const CreateCredentialModal: React.FC<CreateCredentialModalProps> = ({
             {formData.authType === 'oauth2' && (
               <>
                 <div className="space-y-1.5">
-                  <Label htmlFor="accessToken" className="text-xs">
-                    Access Token*
+                  <Label htmlFor="clientId" className="text-xs">
+                    Client ID*
                   </Label>
                   <Input
-                    id="accessToken"
-                    type="password"
-                    value={(formData.config.accessToken as string) || ''}
-                    onChange={(e) => updateConfig('accessToken', e.target.value)}
-                    placeholder="Enter access token"
+                    id="clientId"
+                    value={(formData.config.clientId as string) || ''}
+                    onChange={(e) => updateConfig('clientId', e.target.value)}
+                    placeholder="Enter client ID"
                     required
-                    autoComplete="off"
+                    autoComplete="one-time-code"
                     data-1p-ignore
                     data-lpignore="true"
                     className="h-8 text-xs"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="refreshToken" className="text-xs">
-                    Refresh Token
+                  <Label htmlFor="clientSecret" className="text-xs">
+                    Client Secret*
                   </Label>
                   <Input
-                    id="refreshToken"
-                    type="password"
-                    value={(formData.config.refreshToken as string) || ''}
-                    onChange={(e) => updateConfig('refreshToken', e.target.value)}
-                    placeholder="Enter refresh token"
-                    autoComplete="off"
+                    id="clientSecret"
+                    type="text"
+                    style={{ WebkitTextSecurity: 'disc' }}
+                    value={(formData.config.clientSecret as string) || ''}
+                    onChange={(e) => updateConfig('clientSecret', e.target.value)}
+                    placeholder="Enter client secret"
+                    required
+                    autoComplete="one-time-code"
                     data-1p-ignore
                     data-lpignore="true"
                     className="h-8 text-xs"
@@ -518,7 +529,7 @@ export const CreateCredentialModal: React.FC<CreateCredentialModalProps> = ({
                     }}
                     placeholder="https://api.example.com/health"
                     className="flex-1 h-8 text-xs"
-                    autoComplete="off"
+                    autoComplete="one-time-code"
                   />
                   <Button
                     type="button"
@@ -551,7 +562,7 @@ export const CreateCredentialModal: React.FC<CreateCredentialModalProps> = ({
                       placeholder='{"key": "value"}'
                       rows={3}
                       className="font-mono text-xs"
-                      autoComplete="off"
+                      autoComplete="one-time-code"
                     />
                   </div>
                 )}

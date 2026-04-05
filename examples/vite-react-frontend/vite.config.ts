@@ -17,6 +17,9 @@ export default defineConfig({
     exclude: [
       '@invect/ui',
       '@invect/core',
+      '@invect/user-auth',
+      '@invect/rbac',
+      '@invect/webhooks',
       'perf_hooks',
       'crypto',
       'stream',

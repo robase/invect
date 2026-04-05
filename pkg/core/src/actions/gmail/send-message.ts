@@ -88,7 +88,7 @@ export const gmailSendMessageAction = defineAction({
   credential: {
     required: true,
     type: 'oauth2',
-    oauth2Provider: 'google_gmail',
+    oauth2Provider: 'google',
     description: 'Gmail OAuth2 credential with send permissions',
   },
 

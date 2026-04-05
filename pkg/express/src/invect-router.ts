@@ -836,7 +836,7 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
     '/credentials/:id',
     requirePermission('credential:read', (req) => req.params.id),
     asyncHandler(async (req: Request, res: Response) => {
-      const credential = await invect.credentials.get(req.params.id);
+      const credential = await invect.credentials.getSanitized(req.params.id);
       res.json(credential);
     }),
   );
@@ -1112,13 +1112,33 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
   /**
    * POST /credentials/oauth2/start - Start OAuth2 authorization flow
    * Body: { providerId, clientId, clientSecret, redirectUri, scopes?, returnUrl?, credentialName? }
+   *   OR  { existingCredentialId, redirectUri, scopes?, returnUrl? } — secrets read from stored credential
    * Returns: { authorizationUrl, state }
    */
   router.post(
     '/credentials/oauth2/start',
     asyncHandler(async (req: Request, res: Response) => {
-      const { providerId, clientId, clientSecret, redirectUri, scopes, returnUrl, credentialName } =
-        req.body;
+      const {
+        providerId,
+        clientId,
+        clientSecret,
+        redirectUri,
+        scopes,
+        returnUrl,
+        credentialName,
+        existingCredentialId,
+      } = req.body;
+
+      // When reconnecting an existing credential, resolve secrets from the DB
+      if (existingCredentialId && redirectUri) {
+        const result = await invect.credentials.startOAuth2FlowForCredential(
+          existingCredentialId,
+          redirectUri,
+          { scopes, returnUrl },
+        );
+        res.json(result);
+        return;
+      }
 
       if (!providerId || !clientId || !clientSecret || !redirectUri) {
         res.status(400).json({
@@ -1130,7 +1150,7 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
       const result = invect.credentials.startOAuth2Flow(
         providerId,
         { clientId, clientSecret, redirectUri },
-        { scopes, returnUrl, credentialName },
+        { scopes, returnUrl, credentialName, existingCredentialId },
       );
 
       res.json(result);
@@ -1139,26 +1159,28 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
 
   /**
    * POST /credentials/oauth2/callback - Handle OAuth2 callback and exchange code for tokens
-   * Body: { code, state, clientId, clientSecret, redirectUri }
-   * Creates a new credential with the obtained tokens
+   * Body: { code, state, redirectUri, clientId?, clientSecret? }
+   * clientId/clientSecret are optional — resolved from pending state if omitted
    */
   router.post(
     '/credentials/oauth2/callback',
     asyncHandler(async (req: Request, res: Response) => {
       const { code, state, clientId, clientSecret, redirectUri } = req.body;
 
-      if (!code || !state || !clientId || !clientSecret || !redirectUri) {
+      if (!code || !state) {
         res.status(400).json({
-          error: 'Missing required fields: code, state, clientId, clientSecret, redirectUri',
+          error: 'Missing required fields: code, state',
         });
         return;
       }
 
-      const credential = await invect.credentials.handleOAuth2Callback(code, state, {
-        clientId,
-        clientSecret,
-        redirectUri,
-      });
+      // Pass appConfig only if explicitly provided (new flows from OAuth2ProviderSelector)
+      const appConfig =
+        clientId && clientSecret && redirectUri
+          ? { clientId, clientSecret, redirectUri }
+          : undefined;
+
+      const credential = await invect.credentials.handleOAuth2Callback(code, state, appConfig);
 
       res.json(credential);
     }),

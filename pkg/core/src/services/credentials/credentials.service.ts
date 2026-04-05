@@ -135,6 +135,44 @@ export class CredentialsService {
   }
 
   /**
+   * Get a credential by ID with sensitive config fields redacted.
+   * Safe for returning to the frontend — secrets are replaced with a masked placeholder.
+   */
+  async getSanitized(id: string): Promise<Credential> {
+    const credential = await this.get(id);
+    return {
+      ...credential,
+      config: CredentialsService.sanitizeConfig(credential.config),
+    };
+  }
+
+  /**
+   * Replace sensitive values in a credential config with a masked placeholder.
+   * Non-sensitive fields (clientId, oauth2Provider, scope, expiresAt, etc.) are kept.
+   */
+  static sanitizeConfig(config: CredentialConfig): CredentialConfig {
+    const SENSITIVE_FIELDS = [
+      'clientSecret',
+      'accessToken',
+      'refreshToken',
+      'apiKey',
+      'token',
+      'password',
+      'connectionString',
+      'secretAccessKey',
+      'secret',
+    ];
+    const MASK = '••••••••';
+    const sanitized = { ...config };
+    for (const field of SENSITIVE_FIELDS) {
+      if (sanitized[field]) {
+        sanitized[field] = MASK;
+      }
+    }
+    return sanitized;
+  }
+
+  /**
    * Alias for get() - Get a decrypted credential by ID
    */
   async getDecrypted(id: string): Promise<Credential> {
@@ -350,8 +388,10 @@ export class CredentialsService {
       // Test based on auth type
       switch (credential.authType) {
         case 'bearer':
-        case 'oauth2':
           return await this.testBearerToken(credential);
+
+        case 'oauth2':
+          return await this.testOAuth2(credential);
 
         case 'apiKey':
           return await this.testApiKey(credential);
@@ -550,6 +590,42 @@ export class CredentialsService {
         error: error instanceof Error ? error.message : 'Network error',
       };
     }
+  }
+
+  /**
+   * Test OAuth2 credential
+   *
+   * OAuth2 credentials have a lifecycle:
+   * 1. App credentials only (clientId/clientSecret) — not yet authorized
+   * 2. Authorized (has accessToken, possibly refreshToken)
+   *
+   * If the credential has an accessToken, delegate to testBearerToken which
+   * will try to call the provider API. Otherwise, check whether the app
+   * credentials (clientId/clientSecret) are present and report the actual state.
+   */
+  private async testOAuth2(credential: Credential): Promise<{ success: boolean; error?: string }> {
+    const { config } = credential;
+
+    // If we have an access token, test it like a bearer token
+    if (config?.accessToken) {
+      return this.testBearerToken(credential);
+    }
+
+    // No access token — check if app credentials are configured
+    if (config?.clientId && config?.clientSecret) {
+      return {
+        success: false,
+        error:
+          'OAuth2 app credentials are configured but the account has not been authorized yet. ' +
+          'Use the OAuth connect flow to authorize and obtain an access token.',
+      };
+    }
+
+    return {
+      success: false,
+      error:
+        'OAuth2 credential is missing both access token and app credentials (clientId/clientSecret).',
+    };
   }
 
   /**

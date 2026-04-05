@@ -100,7 +100,12 @@ export const EditCredentialModal: React.FC<EditCredentialModalProps> = ({
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-4"
+            autoComplete="one-time-code"
+            data-lpignore="true"
+          >
             {/* Name */}
             <div className="space-y-2">
               <Label htmlFor="name">Name *</Label>
@@ -212,10 +217,14 @@ export const EditCredentialModal: React.FC<EditCredentialModalProps> = ({
                   <Label htmlFor="apiKey">API Key</Label>
                   <Input
                     id="apiKey"
-                    type="password"
+                    type="text"
+                    style={{ WebkitTextSecurity: 'disc' }}
                     value={(formData.config?.apiKey as string) || ''}
                     onChange={(e) => updateConfig('apiKey', e.target.value)}
                     placeholder="Enter API key or leave empty to keep current"
+                    autoComplete="one-time-code"
+                    data-1p-ignore
+                    data-lpignore="true"
                   />
                 </div>
               )}
@@ -225,10 +234,14 @@ export const EditCredentialModal: React.FC<EditCredentialModalProps> = ({
                   <Label htmlFor="token">Token</Label>
                   <Input
                     id="token"
-                    type="password"
+                    type="text"
+                    style={{ WebkitTextSecurity: 'disc' }}
                     value={(formData.config?.token as string) || ''}
                     onChange={(e) => updateConfig('token', e.target.value)}
                     placeholder="Enter new bearer token or leave empty"
+                    autoComplete="one-time-code"
+                    data-1p-ignore
+                    data-lpignore="true"
                   />
                 </div>
               )}
@@ -239,10 +252,14 @@ export const EditCredentialModal: React.FC<EditCredentialModalProps> = ({
                     <Label htmlFor="apiKey">API Key</Label>
                     <Input
                       id="apiKey"
-                      type="password"
+                      type="text"
+                      style={{ WebkitTextSecurity: 'disc' }}
                       value={(formData.config?.apiKey as string) || ''}
                       onChange={(e) => updateConfig('apiKey', e.target.value)}
                       placeholder="Enter new API key or leave empty"
+                      autoComplete="one-time-code"
+                      data-1p-ignore
+                      data-lpignore="true"
                     />
                   </div>
                   <div className="space-y-2">
@@ -264,6 +281,9 @@ export const EditCredentialModal: React.FC<EditCredentialModalProps> = ({
                       value={(formData.config?.paramName as string) || ''}
                       onChange={(e) => updateConfig('paramName', e.target.value)}
                       placeholder="X-API-Key"
+                      autoComplete="one-time-code"
+                      data-1p-ignore
+                      data-lpignore="true"
                     />
                   </div>
                 </>
@@ -274,10 +294,14 @@ export const EditCredentialModal: React.FC<EditCredentialModalProps> = ({
                   <Label htmlFor="connectionString">Connection String</Label>
                   <Input
                     id="connectionString"
-                    type="password"
+                    type="text"
+                    style={{ WebkitTextSecurity: 'disc' }}
                     value={(formData.config?.connectionString as string) || ''}
                     onChange={(e) => updateConfig('connectionString', e.target.value)}
                     placeholder="postgres://user:pass@host:5432/dbname?sslmode=require"
+                    autoComplete="one-time-code"
+                    data-1p-ignore
+                    data-lpignore="true"
                   />
                 </div>
               )}
@@ -291,16 +315,23 @@ export const EditCredentialModal: React.FC<EditCredentialModalProps> = ({
                       value={(formData.config?.username as string) || ''}
                       onChange={(e) => updateConfig('username', e.target.value)}
                       placeholder="Enter new username or leave empty"
+                      autoComplete="one-time-code"
+                      data-1p-ignore
+                      data-lpignore="true"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
                     <Input
                       id="password"
-                      type="password"
+                      type="text"
+                      style={{ WebkitTextSecurity: 'disc' }}
                       value={(formData.config?.password as string) || ''}
                       onChange={(e) => updateConfig('password', e.target.value)}
                       placeholder="Enter new password or leave empty"
+                      autoComplete="one-time-code"
+                      data-1p-ignore
+                      data-lpignore="true"
                     />
                   </div>
                 </>
@@ -309,23 +340,29 @@ export const EditCredentialModal: React.FC<EditCredentialModalProps> = ({
               {formData.authType === 'oauth2' && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="accessToken">Access Token</Label>
+                    <Label htmlFor="clientId">Client ID</Label>
                     <Input
-                      id="accessToken"
-                      type="password"
-                      value={(formData.config?.accessToken as string) || ''}
-                      onChange={(e) => updateConfig('accessToken', e.target.value)}
-                      placeholder="Enter new access token or leave empty"
+                      id="clientId"
+                      value={(formData.config?.clientId as string) || ''}
+                      onChange={(e) => updateConfig('clientId', e.target.value)}
+                      placeholder="Enter client ID or leave empty"
+                      autoComplete="one-time-code"
+                      data-1p-ignore
+                      data-lpignore="true"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="refreshToken">Refresh Token</Label>
+                    <Label htmlFor="clientSecret">Client Secret</Label>
                     <Input
-                      id="refreshToken"
-                      type="password"
-                      value={(formData.config?.refreshToken as string) || ''}
-                      onChange={(e) => updateConfig('refreshToken', e.target.value)}
-                      placeholder="Enter new refresh token or leave empty"
+                      id="clientSecret"
+                      type="text"
+                      style={{ WebkitTextSecurity: 'disc' }}
+                      value={(formData.config?.clientSecret as string) || ''}
+                      onChange={(e) => updateConfig('clientSecret', e.target.value)}
+                      placeholder="Enter client secret or leave empty"
+                      autoComplete="one-time-code"
+                      data-1p-ignore
+                      data-lpignore="true"
                     />
                   </div>
                 </>
