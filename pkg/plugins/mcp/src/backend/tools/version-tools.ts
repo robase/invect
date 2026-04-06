@@ -7,6 +7,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { InvectClient } from '../client/types';
 import { resolveIdentity } from '../auth';
 import { TOOL_IDS } from '../../shared/types';
+import { mapVersionList, mapFlowDefinition } from '../response-mappers';
 
 export function registerVersionTools(server: McpServer, client: InvectClient): void {
   server.tool(
@@ -17,7 +18,7 @@ export function registerVersionTools(server: McpServer, client: InvectClient): v
       const identity = resolveIdentity(extra.authInfo);
       const result = await client.listVersions(identity, flowId);
       return {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        content: [{ type: 'text', text: mapVersionList(result) }],
       };
     },
   );
@@ -33,7 +34,7 @@ export function registerVersionTools(server: McpServer, client: InvectClient): v
       const identity = resolveIdentity(extra.authInfo);
       const v = await client.getVersion(identity, flowId, version);
       return {
-        content: [{ type: 'text', text: JSON.stringify(v, null, 2) }],
+        content: [{ type: 'text', text: mapFlowDefinition(v) }],
       };
     },
   );
@@ -49,7 +50,7 @@ export function registerVersionTools(server: McpServer, client: InvectClient): v
       const identity = resolveIdentity(extra.authInfo);
       const v = await client.publishVersion(identity, flowId, definition);
       return {
-        content: [{ type: 'text', text: JSON.stringify(v, null, 2) }],
+        content: [{ type: 'text', text: mapFlowDefinition(v) }],
       };
     },
   );

@@ -351,7 +351,20 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
       // GET /flow-runs/:flowRunId/node-executions
       if (method === 'GET' && path.match(/^flow-runs\/[^/]+\/node-executions$/)) {
         const flowRunId = path.split('/')[1];
-        const nodeExecutions = await initializedCore.runs.getNodeExecutions(flowRunId);
+        const page = searchParams.get('page');
+        const limit = searchParams.get('limit');
+        const sortBy = searchParams.get('sortBy');
+        const sortOrder = searchParams.get('sortOrder');
+        const options: Record<string, unknown> = {};
+        const p = page ? parseInt(page, 10) : undefined;
+        const l = limit ? parseInt(limit, 10) : undefined;
+        if (p || l) {
+          options.pagination = { page: p && p >= 1 ? p : 1, limit: l && l >= 1 ? Math.min(l, 100) : 50 };
+        }
+        if (sortBy) {
+          options.sort = { sortBy, sortOrder: sortOrder === 'asc' || sortOrder === 'desc' ? sortOrder : 'desc' };
+        }
+        const nodeExecutions = await initializedCore.runs.getNodeExecutions(flowRunId, options);
         return Response.json(nodeExecutions);
       }
 
@@ -394,7 +407,20 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
       // GET /flows/:flowId/flow-runs
       if (method === 'GET' && path.match(/^flows\/[^/]+\/flow-runs$/)) {
         const flowId = path.split('/')[1];
-        const flowRuns = await initializedCore.runs.listByFlowId(flowId);
+        const page = searchParams.get('page');
+        const limit = searchParams.get('limit');
+        const sortBy = searchParams.get('sortBy');
+        const sortOrder = searchParams.get('sortOrder');
+        const options: Record<string, unknown> = {};
+        const p = page ? parseInt(page, 10) : undefined;
+        const l = limit ? parseInt(limit, 10) : undefined;
+        if (p || l) {
+          options.pagination = { page: p && p >= 1 ? p : 1, limit: l && l >= 1 ? Math.min(l, 100) : 20 };
+        }
+        if (sortBy) {
+          options.sort = { sortBy, sortOrder: sortOrder === 'asc' || sortOrder === 'desc' ? sortOrder : 'desc' };
+        }
+        const flowRuns = await initializedCore.runs.listByFlowId(flowId, options);
         return Response.json(flowRuns);
       }
 
@@ -501,7 +527,9 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
 
       // GET /nodes — available node definitions
       if (method === 'GET' && path === 'nodes') {
-        return Response.json(initializedCore.actions.getAvailableNodes());
+        return new Response(JSON.stringify(initializedCore.actions.getAvailableNodes()), {
+          headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600' },
+        });
       }
 
       // GET /actions/:actionId/fields/:fieldName/options — dynamic field options
@@ -791,7 +819,9 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
       // =====================================
 
       if (method === 'GET' && path === 'agent/tools') {
-        return Response.json(initializedCore.agent.getTools());
+        return new Response(JSON.stringify(initializedCore.agent.getTools()), {
+          headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600' },
+        });
       }
 
       // =====================================
@@ -868,7 +898,14 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
 
       if (method === 'GET' && path.match(/^chat\/messages\/[^/]+$/)) {
         const flowId = path.split('/')[2];
-        return Response.json(await initializedCore.chat.getMessages(flowId));
+        const page = searchParams.get('page');
+        const limit = searchParams.get('limit');
+        const p = page ? parseInt(page, 10) : undefined;
+        const l = limit ? parseInt(limit, 10) : undefined;
+        return Response.json(await initializedCore.chat.getMessages(flowId, {
+          ...(p ? { page: p } : {}),
+          ...(l ? { limit: l } : {}),
+        }));
       }
 
       if (method === 'PUT' && path.match(/^chat\/messages\/[^/]+$/)) {

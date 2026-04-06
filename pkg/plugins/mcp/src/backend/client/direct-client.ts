@@ -109,7 +109,8 @@ export class DirectClient implements InvectClient {
   // ===== Debug =====
 
   async getNodeExecutions(_identity: InvectIdentity | null, flowRunId: string) {
-    return await this.invect.runs.getNodeExecutions(flowRunId);
+    const result = await this.invect.runs.getNodeExecutions(flowRunId);
+    return result.data;
   }
 
   async testNode(

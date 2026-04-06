@@ -6,6 +6,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { InvectClient } from '../client/types';
 import { resolveIdentity } from '../auth';
 import { TOOL_IDS } from '../../shared/types';
+import { mapProviderList, mapNodeList } from '../response-mappers';
 
 export function registerNodeTools(server: McpServer, client: InvectClient): void {
   server.tool(
@@ -16,7 +17,7 @@ export function registerNodeTools(server: McpServer, client: InvectClient): void
       const identity = resolveIdentity(extra.authInfo);
       const providers = await client.listProviders(identity);
       return {
-        content: [{ type: 'text', text: JSON.stringify(providers, null, 2) }],
+        content: [{ type: 'text', text: mapProviderList(providers) }],
       };
     },
   );
@@ -29,7 +30,7 @@ export function registerNodeTools(server: McpServer, client: InvectClient): void
       const identity = resolveIdentity(extra.authInfo);
       const nodes = await client.listAvailableNodes(identity);
       return {
-        content: [{ type: 'text', text: JSON.stringify(nodes, null, 2) }],
+        content: [{ type: 'text', text: mapNodeList(nodes) }],
       };
     },
   );

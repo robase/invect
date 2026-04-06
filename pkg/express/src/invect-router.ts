@@ -68,6 +68,28 @@ function coerceQueryValue(value: unknown): unknown {
 }
 
 /**
+ * Parse pagination options from Express query params.
+ * Returns a QueryOptions object suitable for the core API.
+ */
+function parsePaginationFromQuery(query: Record<string, unknown>): { pagination?: { page: number; limit: number }; sort?: { sortBy: string; sortOrder: 'asc' | 'desc' } } {
+  const result: { pagination?: { page: number; limit: number }; sort?: { sortBy: string; sortOrder: 'asc' | 'desc' } } = {};
+  const page = typeof query.page === 'string' ? parseInt(query.page, 10) : undefined;
+  const limit = typeof query.limit === 'string' ? parseInt(query.limit, 10) : undefined;
+  if (page || limit) {
+    result.pagination = {
+      page: page && page >= 1 ? page : 1,
+      limit: limit && limit >= 1 ? Math.min(limit, 100) : 20,
+    };
+  }
+  const sortBy = typeof query.sortBy === 'string' ? query.sortBy : undefined;
+  const sortOrder = query.sortOrder === 'asc' || query.sortOrder === 'desc' ? query.sortOrder : undefined;
+  if (sortBy) {
+    result.sort = { sortBy, sortOrder: sortOrder ?? 'desc' };
+  }
+  return result;
+}
+
+/**
  * Create Invect Express Router
  */
 export async function createInvectRouter(config: InvectConfig): Promise<Router> {
@@ -180,9 +202,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
    * GET /dashboard/stats - Get dashboard statistics
    * Core method: ✅ getDashboardStats()
    * Returns: DashboardStats (flow counts, run counts by status, recent activity)
+   * Permission: flow:read
    */
   router.get(
     '/dashboard/stats',
+    requirePermission('flow:read'),
     asyncHandler(async (_req: Request, res: Response) => {
       const stats = await invect.flows.getDashboardStats();
       res.json(stats);
@@ -297,9 +321,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
    * GET /flows/:flowId/react-flow - Get flow data in React Flow format
    * Core method: ✅ renderToReactFlow(flowId: string, options)
    * Query params: version, flowRunId
+   * Permission: flow:read (with resource check)
    */
   router.get(
     '/flows/:flowId/react-flow',
+    requirePermission('flow:read', (req) => req.params.flowId),
     asyncHandler(async (req: Request, res: Response) => {
       interface ReactFlowQueryParams {
         version?: string | 'latest';
@@ -330,9 +356,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
    * POST /flows/:id/versions/list - Get flow versions with optional filtering and pagination
    * Core method: ✅ listFlowVersions(flowId: string, options?: QueryOptions<FlowVersion>)
    * Body: QueryOptions<FlowVersion>
+   * Permission: flow-version:read (with resource check on flow)
    */
   router.post(
     '/flows/:id/versions/list',
+    requirePermission('flow-version:read', (req) => req.params.id),
     asyncHandler(async (req: Request, res: Response) => {
       const versions = await invect.versions.list(req.params.id, req.body);
       res.json(versions);
@@ -432,9 +460,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
   /**
    * GET /flow-runs/:flowRunId - Get specific flow run by ID
    * Core method: ✅ getFlowRunById(flowRunId: string)
+   * Permission: flow-run:read
    */
   router.get(
     '/flow-runs/:flowRunId',
+    requirePermission('flow-run:read'),
     asyncHandler(async (req: Request, res: Response) => {
       const flowRun = await invect.runs.get(req.params.flowRunId);
       res.json(flowRun);
@@ -443,12 +473,16 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
 
   /**
    * GET /flows/:flowId/flow-runs - Get flow runs for a specific flow
-   * Core method: ✅ listFlowRunsByFlowId(flowId: string)
+   * Core method: ✅ listFlowRunsByFlowId(flowId: string, options?)
+   * Query params: page, limit, sortBy, sortOrder
+   * Permission: flow-run:read (with resource check on flow)
    */
   router.get(
     '/flows/:flowId/flow-runs',
+    requirePermission('flow-run:read', (req) => req.params.flowId),
     asyncHandler(async (req: Request, res: Response) => {
-      const flowRuns = await invect.runs.listByFlowId(req.params.flowId);
+      const paginationOpts = parsePaginationFromQuery(req.query as Record<string, unknown>);
+      const flowRuns = await invect.runs.listByFlowId(req.params.flowId, paginationOpts);
       res.json(flowRuns);
     }),
   );
@@ -456,9 +490,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
   /**
    * POST /flow-runs/:flowRunId/resume - Resume paused flow execution
    * Core method: ✅ resumeExecution(executionId: string)
+   * Permission: flow-run:update
    */
   router.post(
     '/flow-runs/:flowRunId/resume',
+    requirePermission('flow-run:update'),
     asyncHandler(async (req: Request, res: Response) => {
       const result = await invect.runs.resume(req.params.flowRunId);
       res.json(result);
@@ -468,9 +504,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
   /**
    * POST /flow-runs/:flowRunId/cancel - Cancel flow execution
    * Core method: ✅ cancelFlowRun(flowRunId: string)
+   * Permission: flow-run:update
    */
   router.post(
     '/flow-runs/:flowRunId/cancel',
+    requirePermission('flow-run:update'),
     asyncHandler(async (req: Request, res: Response) => {
       const result = await invect.runs.cancel(req.params.flowRunId);
       res.json(result);
@@ -480,9 +518,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
   /**
    * POST /flow-runs/:flowRunId/pause - Pause flow execution
    * Core method: ✅ pauseFlowRun(flowRunId: string, reason?: string)
+   * Permission: flow-run:update
    */
   router.post(
     '/flow-runs/:flowRunId/pause',
+    requirePermission('flow-run:update'),
     asyncHandler(async (req: Request, res: Response) => {
       const { reason } = req.body;
       const result = await invect.runs.pause(req.params.flowRunId, reason);
@@ -496,12 +536,16 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
 
   /**
    * GET /flow-runs/:flowRunId/node-executions - Get node executions for a flow run
-   * Core method: ✅ getNodeExecutionsByRunId(flowRunId: string)
+   * Core method: ✅ getNodeExecutionsByRunId(flowRunId: string, options?)
+   * Query params: page, limit, sortBy, sortOrder
+   * Permission: flow-run:read
    */
   router.get(
     '/flow-runs/:flowRunId/node-executions',
+    requirePermission('flow-run:read'),
     asyncHandler(async (req: Request, res: Response) => {
-      const nodeExecutions = await invect.runs.getNodeExecutions(req.params.flowRunId);
+      const paginationOpts = parsePaginationFromQuery(req.query as Record<string, unknown>);
+      const nodeExecutions = await invect.runs.getNodeExecutions(req.params.flowRunId, paginationOpts);
       res.json(nodeExecutions);
     }),
   );
@@ -512,9 +556,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
    *
    * Streams node-execution and flow-run updates in real time.
    * First event is a "snapshot", then incremental updates, ending with "end".
+   * Permission: flow-run:read
    */
   router.get(
     '/flow-runs/:flowRunId/stream',
+    requirePermission('flow-run:read'),
     asyncHandler(async (req: Request, res: Response) => {
       // SSE headers
       res.setHeader('Content-Type', 'text/event-stream');
@@ -550,9 +596,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
    * POST /node-executions/list - Get all node executions with optional filtering and pagination
    * Core method: ✅ listNodeExecutions(options?: QueryOptions<NodeExecution>)
    * Body: QueryOptions<NodeExecution>
+   * Permission: flow-run:read
    */
   router.post(
     '/node-executions/list',
+    requirePermission('flow-run:read'),
     asyncHandler(async (req: Request, res: Response) => {
       const nodeExecutions = await invect.runs.listNodeExecutions(req.body);
       res.json(nodeExecutions);
@@ -566,9 +614,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
   /**
    * POST /node-data/sql-query - Execute SQL query for testing
    * Core method: ✅ executeSqlQuery(request: SubmitSQLQueryRequest)
+   * Permission: flow:update
    */
   router.post(
     '/node-data/sql-query',
+    requirePermission('flow:update'),
     asyncHandler(async (req: Request, res: Response) => {
       const result = await invect.testing.executeSqlQuery(req.body);
       res.json(result);
@@ -578,9 +628,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
   /**
    * POST /node-data/test-expression - Test a JS expression in the QuickJS sandbox
    * Core method: ✅ testJsExpression({ expression, context })
+   * Permission: flow:update
    */
   router.post(
     '/node-data/test-expression',
+    requirePermission('flow:update'),
     asyncHandler(async (req: Request, res: Response) => {
       const result = await invect.testing.testJsExpression(req.body);
       res.json(result);
@@ -590,9 +642,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
   /**
    * POST /node-data/test-mapper - Test a mapper expression with mode semantics
    * Core method: ✅ testMapper({ expression, incomingData, mode? })
+   * Permission: flow:update
    */
   router.post(
     '/node-data/test-mapper',
+    requirePermission('flow:update'),
     asyncHandler(async (req: Request, res: Response) => {
       const result = await invect.testing.testMapper(req.body);
       res.json(result);
@@ -602,9 +656,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
   /**
    * POST /node-data/model-query - Test model prompt
    * Core method: ✅ testModelPrompt(request: SubmitPromptRequest)
+   * Permission: flow:update
    */
   router.post(
     '/node-data/model-query',
+    requirePermission('flow:update'),
     asyncHandler(async (req: Request, res: Response) => {
       const result = await invect.testing.testModelPrompt(req.body);
       res.json(result);
@@ -614,9 +670,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
   /**
    * GET /node-data/models - Get available AI models
    * Core method: ✅ getAvailableModels()
+   * Permission: flow:read
    */
   router.get(
     '/node-data/models',
+    requirePermission('flow:read'),
     asyncHandler(async (req: Request, res: Response) => {
       const credentialId =
         typeof req.query.credentialId === 'string' ? req.query.credentialId.trim() : '';
@@ -652,9 +710,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
   /**
    * GET /node-data/databases - Get available databases
    * Core method: ✅ getAvailableDatabases()
+   * Permission: flow:read
    */
   router.get(
     '/node-data/databases',
+    requirePermission('flow:read'),
     asyncHandler(async (req: Request, res: Response) => {
       const databases = invect.testing.getAvailableDatabases();
       res.json(databases);
@@ -664,9 +724,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
   /**
    * POST /node-config/update - Generic node configuration updates
    * Core method: ✅ handleNodeConfigUpdate(event: NodeConfigUpdateEvent)
+   * Permission: flow:update
    */
   router.post(
     '/node-config/update',
+    requirePermission('flow:update'),
     asyncHandler(async (req: Request, res: Response) => {
       const response = await invect.actions.handleConfigUpdate(req.body);
       res.json(response);
@@ -675,6 +737,7 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
 
   router.get(
     '/node-definition/:nodeType',
+    requirePermission('flow:read'),
     asyncHandler(async (req: Request, res: Response) => {
       const rawNodeType = req.params.nodeType ?? '';
 
@@ -717,11 +780,14 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
   /**
    * GET /nodes - Get available node definitions
    * Core method: ✅ getAvailableNodes()
+   * Permission: flow:read
    */
   router.get(
     '/nodes',
+    requirePermission('flow:read'),
     asyncHandler(async (req: Request, res: Response) => {
       const nodes = invect.actions.getAvailableNodes();
+      res.setHeader('Cache-Control', 'public, max-age=3600');
       res.json(nodes);
     }),
   );
@@ -732,9 +798,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
    *
    * Query params:
    *   deps - JSON-encoded object of dependency field values
+   * Permission: flow:read
    */
   router.get(
     '/actions/:actionId/fields/:fieldName/options',
+    requirePermission('flow:read'),
     asyncHandler(async (req: Request, res: Response) => {
       const { actionId, fieldName } = req.params;
 
@@ -761,9 +829,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
    * POST /nodes/test - Test/execute a single node in isolation
    * Core method: ✅ testNode(nodeType, params, inputData)
    * Body: { nodeType: string, params: Record<string, unknown>, inputData?: Record<string, unknown> }
+   * Permission: flow:update
    */
   router.post(
     '/nodes/test',
+    requirePermission('flow:update'),
     asyncHandler(async (req: Request, res: Response) => {
       const { nodeType, params, inputData } = req.body;
 
@@ -1257,9 +1327,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
   /**
    * GET /triggers/:triggerId - Get a single trigger by ID
    * Core method: ✅ getTrigger(triggerId)
+   * Permission: flow:read
    */
   router.get(
     '/triggers/:triggerId',
+    requirePermission('flow:read'),
     asyncHandler(async (req: Request, res: Response) => {
       const trigger = await invect.triggers.get(req.params.triggerId);
       if (!trigger) {
@@ -1275,9 +1347,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
   /**
    * PUT /triggers/:triggerId - Update a trigger registration
    * Core method: ✅ updateTrigger(triggerId, input)
+   * Permission: flow:update
    */
   router.put(
     '/triggers/:triggerId',
+    requirePermission('flow:update'),
     asyncHandler(async (req: Request, res: Response) => {
       const trigger = await invect.triggers.update(req.params.triggerId, req.body);
       if (!trigger) {
@@ -1293,9 +1367,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
   /**
    * DELETE /triggers/:triggerId - Delete a trigger registration
    * Core method: ✅ deleteTrigger(triggerId)
+   * Permission: flow:delete
    */
   router.delete(
     '/triggers/:triggerId',
+    requirePermission('flow:delete'),
     asyncHandler(async (req: Request, res: Response) => {
       await invect.triggers.delete(req.params.triggerId);
       res.status(204).send();
@@ -1309,11 +1385,14 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
   /**
    * GET /agent/tools - List all available agent tools
    * Core method: ✅ getAgentTools()
+   * Permission: flow:read
    */
   router.get(
     '/agent/tools',
+    requirePermission('flow:read'),
     asyncHandler(async (_req: Request, res: Response) => {
       const tools = invect.agent.getTools();
+      res.setHeader('Cache-Control', 'public, max-age=3600');
       res.json(tools);
     }),
   );
@@ -1325,9 +1404,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
   /**
    * GET /chat/status - Check if chat assistant is enabled
    * Core method: ✅ isChatEnabled()
+   * Permission: flow:read
    */
   router.get(
     '/chat/status',
+    requirePermission('flow:read'),
     asyncHandler(async (_req: Request, res: Response) => {
       res.json({ enabled: invect.chat.isEnabled() });
     }),
@@ -1344,9 +1425,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
   /**
    * GET /chat/models/:credentialId - List available models for a credential
    * Core method: ✅ listChatModels()
+   * Permission: flow:read
    */
   router.get(
     '/chat/models/:credentialId',
+    requirePermission('flow:read'),
     asyncHandler(async (req: Request, res: Response) => {
       const q = typeof req.query.q === 'string' ? req.query.q : undefined;
       const models = await invect.chat.listModels(req.params.credentialId, q);
@@ -1356,6 +1439,7 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
 
   router.post(
     '/chat',
+    requirePermission('flow:update'),
     asyncHandler(async (req: Request, res: Response) => {
       const { messages, context } = req.body;
 
@@ -1418,11 +1502,19 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
   /**
    * GET /chat/messages/:flowId - Get persisted chat messages for a flow
    * Core method: ✅ getChatMessages()
+   * Query params: page, limit
+   * Permission: flow:read
    */
   router.get(
     '/chat/messages/:flowId',
+    requirePermission('flow:read'),
     asyncHandler(async (req: Request, res: Response) => {
-      const messages = await invect.chat.getMessages(req.params.flowId);
+      const page = typeof req.query.page === 'string' ? parseInt(req.query.page, 10) : undefined;
+      const limit = typeof req.query.limit === 'string' ? parseInt(req.query.limit, 10) : undefined;
+      const messages = await invect.chat.getMessages(req.params.flowId, {
+        ...(page ? { page } : {}),
+        ...(limit ? { limit } : {}),
+      });
       res.json(messages);
     }),
   );
@@ -1432,9 +1524,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
    * Core method: ✅ saveChatMessages()
    *
    * Request body: { messages: Array<{ role, content, toolMeta? }> }
+   * Permission: flow:update
    */
   router.put(
     '/chat/messages/:flowId',
+    requirePermission('flow:update'),
     asyncHandler(async (req: Request, res: Response) => {
       const { messages } = req.body;
       if (!messages || !Array.isArray(messages)) {
@@ -1451,9 +1545,11 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
   /**
    * DELETE /chat/messages/:flowId - Delete all chat messages for a flow
    * Core method: ✅ deleteChatMessages()
+   * Permission: flow:delete
    */
   router.delete(
     '/chat/messages/:flowId',
+    requirePermission('flow:delete'),
     asyncHandler(async (req: Request, res: Response) => {
       await invect.chat.deleteMessages(req.params.flowId);
       res.json({ success: true });

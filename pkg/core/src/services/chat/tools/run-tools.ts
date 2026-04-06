@@ -73,10 +73,10 @@ export const getNodeExecutionResultsTool: ChatToolDefinition = {
     const invect = ctx.invect;
 
     try {
-      const executions = await invect.runs.getNodeExecutions(flowRunId);
+      const executionsResult = await invect.runs.getNodeExecutions(flowRunId);
 
       // Return a compact view — full outputs can be huge
-      const traces = executions.map((ex) => ({
+      const traces = executionsResult.data.map((ex) => ({
         nodeId: ex.nodeId,
         nodeType: ex.nodeType,
         status: ex.status,

@@ -36,10 +36,13 @@ export function createFlowRunsAPI(sf: ServiceFactory, logger: Logger): FlowRunsA
       return flowRunsService.listRuns(options);
     },
 
-    listByFlowId(flowId) {
+    listByFlowId(flowId, options) {
       logger.debug('listFlowRunsByFlowId called', { flowId });
       const { flowId: id } = Schemas.flow.FlowIdParamsSchema.parse({ flowId });
-      return flowRunsService.listRuns({ filter: { flowId: [id] } });
+      return flowRunsService.listRuns({
+        ...options,
+        filter: { ...options?.filter, flowId: [id] },
+      });
     },
 
     get(flowRunId) {
@@ -128,9 +131,12 @@ export function createFlowRunsAPI(sf: ServiceFactory, logger: Logger): FlowRunsA
       }
     },
 
-    getNodeExecutions(flowRunId) {
+    getNodeExecutions(flowRunId, options) {
       logger.debug('getNodeExecutionsByRunId called', { flowRunId });
-      return nodeExecutionsService.listNodeExecutionsByFlowRunId(flowRunId);
+      return nodeExecutionsService.listNodeExecutions({
+        ...options,
+        filter: { ...options?.filter, flowRunId: [flowRunId] },
+      });
     },
 
     listNodeExecutions(options) {

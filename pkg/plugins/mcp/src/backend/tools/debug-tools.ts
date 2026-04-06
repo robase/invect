@@ -7,6 +7,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { InvectClient } from '../client/types';
 import { resolveIdentity } from '../auth';
 import { TOOL_IDS } from '../../shared/types';
+import { mapNodeExecutions, mapTestResult } from '../response-mappers';
 
 export function registerDebugTools(server: McpServer, client: InvectClient): void {
   server.tool(
@@ -19,7 +20,7 @@ export function registerDebugTools(server: McpServer, client: InvectClient): voi
       const identity = resolveIdentity(extra.authInfo);
       const executions = await client.getNodeExecutions(identity, flowRunId);
       return {
-        content: [{ type: 'text', text: JSON.stringify(executions, null, 2) }],
+        content: [{ type: 'text', text: mapNodeExecutions(executions) }],
       };
     },
   );
@@ -39,7 +40,7 @@ export function registerDebugTools(server: McpServer, client: InvectClient): voi
       const identity = resolveIdentity(extra.authInfo);
       const result = await client.testNode(identity, nodeType, params, inputData);
       return {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        content: [{ type: 'text', text: mapTestResult(result) }],
       };
     },
   );
@@ -61,7 +62,7 @@ export function registerDebugTools(server: McpServer, client: InvectClient): voi
       const identity = resolveIdentity(extra.authInfo);
       const result = await client.testJsExpression(identity, expression, context);
       return {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        content: [{ type: 'text', text: mapTestResult(result) }],
       };
     },
   );
@@ -77,7 +78,7 @@ export function registerDebugTools(server: McpServer, client: InvectClient): voi
       const identity = resolveIdentity(extra.authInfo);
       const result = await client.testMapper(identity, expression, incomingData);
       return {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        content: [{ type: 'text', text: mapTestResult(result) }],
       };
     },
   );

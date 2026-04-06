@@ -7,6 +7,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { InvectClient } from '../client/types';
 import { resolveIdentity } from '../auth';
 import { TOOL_IDS } from '../../shared/types';
+import { mapRunStarted, mapRun, mapRunList } from '../response-mappers';
 
 export function registerRunTools(server: McpServer, client: InvectClient): void {
   server.tool(
@@ -23,7 +24,7 @@ export function registerRunTools(server: McpServer, client: InvectClient): void 
       const identity = resolveIdentity(extra.authInfo);
       const result = await client.startRun(identity, flowId, inputs);
       return {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        content: [{ type: 'text', text: mapRunStarted(result) }],
       };
     },
   );
@@ -40,7 +41,7 @@ export function registerRunTools(server: McpServer, client: InvectClient): void 
       const identity = resolveIdentity(extra.authInfo);
       const result = await client.runToNode(identity, flowId, nodeId, inputs);
       return {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        content: [{ type: 'text', text: mapRun(result) }],
       };
     },
   );
@@ -55,7 +56,7 @@ export function registerRunTools(server: McpServer, client: InvectClient): void 
       const identity = resolveIdentity(extra.authInfo);
       const result = await client.listRuns(identity, flowId);
       return {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        content: [{ type: 'text', text: mapRunList(result) }],
       };
     },
   );
@@ -70,7 +71,7 @@ export function registerRunTools(server: McpServer, client: InvectClient): void 
       const identity = resolveIdentity(extra.authInfo);
       const run = await client.getRun(identity, flowRunId);
       return {
-        content: [{ type: 'text', text: JSON.stringify(run, null, 2) }],
+        content: [{ type: 'text', text: mapRun(run) }],
       };
     },
   );
@@ -85,7 +86,7 @@ export function registerRunTools(server: McpServer, client: InvectClient): void 
       const identity = resolveIdentity(extra.authInfo);
       const result = await client.cancelRun(identity, flowRunId);
       return {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        content: [{ type: 'text', text: `Run ${flowRunId} cancelled. ${result.message || ''}` }],
       };
     },
   );
@@ -100,7 +101,7 @@ export function registerRunTools(server: McpServer, client: InvectClient): void 
       const identity = resolveIdentity(extra.authInfo);
       const result = await client.pauseRun(identity, flowRunId);
       return {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        content: [{ type: 'text', text: `Run ${flowRunId} paused. ${result.message || ''}` }],
       };
     },
   );
@@ -115,7 +116,7 @@ export function registerRunTools(server: McpServer, client: InvectClient): void 
       const identity = resolveIdentity(extra.authInfo);
       const result = await client.resumeRun(identity, flowRunId);
       return {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        content: [{ type: 'text', text: `Run ${flowRunId} resumed. ${result.message || ''}` }],
       };
     },
   );

@@ -168,10 +168,11 @@ export class HttpClient implements InvectClient {
   // ===== Debug =====
 
   async getNodeExecutions(_identity: InvectIdentity | null, flowRunId: string) {
-    return await this.request<unknown[]>(
+    const result = await this.request<{ data: unknown[]; pagination: unknown }>(
       'GET',
-      `/flow-runs/${encodeURIComponent(flowRunId)}/node-executions`,
+      `/flow-runs/${encodeURIComponent(flowRunId)}/node-executions?limit=100`,
     );
+    return result.data;
   }
 
   async testNode(

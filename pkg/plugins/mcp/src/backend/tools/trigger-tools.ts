@@ -7,6 +7,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { InvectClient } from '../client/types';
 import { resolveIdentity } from '../auth';
 import { TOOL_IDS } from '../../shared/types';
+import { mapTriggerList, mapTrigger } from '../response-mappers';
 
 export function registerTriggerTools(server: McpServer, client: InvectClient): void {
   server.tool(
@@ -19,7 +20,7 @@ export function registerTriggerTools(server: McpServer, client: InvectClient): v
       const identity = resolveIdentity(extra.authInfo);
       const triggers = await client.listTriggers(identity, flowId);
       return {
-        content: [{ type: 'text', text: JSON.stringify(triggers, null, 2) }],
+        content: [{ type: 'text', text: mapTriggerList(triggers) }],
       };
     },
   );
@@ -34,7 +35,7 @@ export function registerTriggerTools(server: McpServer, client: InvectClient): v
       const identity = resolveIdentity(extra.authInfo);
       const trigger = await client.getTrigger(identity, triggerId);
       return {
-        content: [{ type: 'text', text: JSON.stringify(trigger, null, 2) }],
+        content: [{ type: 'text', text: mapTrigger(trigger) }],
       };
     },
   );
@@ -49,7 +50,7 @@ export function registerTriggerTools(server: McpServer, client: InvectClient): v
       const identity = resolveIdentity(extra.authInfo);
       const trigger = await client.createTrigger(identity, input);
       return {
-        content: [{ type: 'text', text: JSON.stringify(trigger, null, 2) }],
+        content: [{ type: 'text', text: mapTrigger(trigger) }],
       };
     },
   );
@@ -65,7 +66,7 @@ export function registerTriggerTools(server: McpServer, client: InvectClient): v
       const identity = resolveIdentity(extra.authInfo);
       const trigger = await client.updateTrigger(identity, triggerId, input);
       return {
-        content: [{ type: 'text', text: JSON.stringify(trigger, null, 2) }],
+        content: [{ type: 'text', text: mapTrigger(trigger) }],
       };
     },
   );

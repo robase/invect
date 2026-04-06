@@ -113,12 +113,12 @@ export interface FlowRunsAPI {
   ): Promise<FlowRunResult>;
   resume(executionId: string): Promise<{ message: string; timestamp: string }>;
   list(options?: QueryOptions<FlowRun>): Promise<PaginatedResponse<FlowRun>>;
-  listByFlowId(flowId: string): Promise<PaginatedResponse<FlowRun>>;
+  listByFlowId(flowId: string, options?: QueryOptions<FlowRun>): Promise<PaginatedResponse<FlowRun>>;
   get(flowRunId: string): Promise<FlowRun>;
   cancel(flowRunId: string): Promise<{ message: string; timestamp: string }>;
   pause(flowRunId: string, reason?: string): Promise<{ message: string; timestamp: string }>;
   createEventStream(flowRunId: string): AsyncGenerator<ExecutionStreamEvent, void, undefined>;
-  getNodeExecutions(flowRunId: string): Promise<NodeExecution[]>;
+  getNodeExecutions(flowRunId: string, options?: QueryOptions<NodeExecution>): Promise<PaginatedResponse<NodeExecution>>;
   listNodeExecutions(
     options?: QueryOptions<NodeExecution>,
   ): Promise<PaginatedResponse<NodeExecution>>;
@@ -217,7 +217,7 @@ export interface ChatAPI {
     credentialId: string,
     query?: string,
   ): Promise<{ id: string; name?: string; provider?: string }[]>;
-  getMessages(flowId: string): Promise<ChatMessageRecord[]>;
+  getMessages(flowId: string, options?: { limit?: number; page?: number }): Promise<{ data: ChatMessageRecord[]; pagination: { page: number; limit: number; totalPages: number } }>;
   saveMessages(
     flowId: string,
     messages: Array<{

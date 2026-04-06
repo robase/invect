@@ -14,6 +14,7 @@ import {
   BadRequestException,
   NotFoundException,
   HttpCode,
+  Header,
 } from '@nestjs/common';
 import { BatchProvider, FlowValidationResult, createPluginDatabaseApi } from '@invect/core';
 import type {
@@ -304,11 +305,27 @@ export class InvectController {
 
   /**
    * GET /flows/:flowId/flow-runs - Get flow runs for a specific flow
-   * Core method: ✅ listFlowRunsByFlowId(flowId: string)
+   * Core method: ✅ listFlowRunsByFlowId(flowId: string, options?)
+   * Query params: page, limit, sortBy, sortOrder
    */
   @Get('flows/:flowId/flow-runs')
-  async getFlowRunsByFlowId(@Param('flowId') flowId: string) {
-    return await this.invect.runs.listByFlowId(flowId);
+  async getFlowRunsByFlowId(
+    @Param('flowId') flowId: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: 'asc' | 'desc',
+  ) {
+    const options: Record<string, unknown> = {};
+    const p = page ? parseInt(page, 10) : undefined;
+    const l = limit ? parseInt(limit, 10) : undefined;
+    if (p || l) {
+      options.pagination = { page: p && p >= 1 ? p : 1, limit: l && l >= 1 ? Math.min(l, 100) : 20 };
+    }
+    if (sortBy) {
+      options.sort = { sortBy, sortOrder: sortOrder ?? 'desc' };
+    }
+    return await this.invect.runs.listByFlowId(flowId, options as QueryOptions<FlowRun>);
   }
 
   /**
@@ -345,11 +362,27 @@ export class InvectController {
 
   /**
    * GET /flow-runs/:flowRunId/node-executions - Get node executions for a flow run
-   * Core method: ✅ getNodeExecutionsByRunId(flowRunId: string)
+   * Core method: ✅ getNodeExecutionsByRunId(flowRunId: string, options?)
+   * Query params: page, limit, sortBy, sortOrder
    */
   @Get('flow-runs/:flowRunId/node-executions')
-  async getNodeExecutionsByRunId(@Param('flowRunId') flowRunId: string) {
-    return await this.invect.runs.getNodeExecutions(flowRunId);
+  async getNodeExecutionsByRunId(
+    @Param('flowRunId') flowRunId: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: 'asc' | 'desc',
+  ) {
+    const options: Record<string, unknown> = {};
+    const p = page ? parseInt(page, 10) : undefined;
+    const l = limit ? parseInt(limit, 10) : undefined;
+    if (p || l) {
+      options.pagination = { page: p && p >= 1 ? p : 1, limit: l && l >= 1 ? Math.min(l, 100) : 50 };
+    }
+    if (sortBy) {
+      options.sort = { sortBy, sortOrder: sortOrder ?? 'desc' };
+    }
+    return await this.invect.runs.getNodeExecutions(flowRunId, options as QueryOptions<NodeExecution>);
   }
 
   /**
@@ -547,6 +580,7 @@ export class InvectController {
    * Core method: ✅ getAvailableNodes()
    */
   @Get('nodes')
+  @Header('Cache-Control', 'public, max-age=3600')
   getAvailableNodes() {
     return this.invect.actions.getAvailableNodes();
   }
@@ -954,6 +988,7 @@ export class InvectController {
    * GET /agent/tools - List all available agent tools
    */
   @Get('agent/tools')
+  @Header('Cache-Control', 'public, max-age=3600')
   getAgentTools() {
     return this.invect.agent.getTools();
   }
@@ -1023,8 +1058,17 @@ export class InvectController {
   // =====================================
 
   @Get('chat/messages/:flowId')
-  async getChatMessages(@Param('flowId') flowId: string): Promise<unknown> {
-    return await this.invect.chat.getMessages(flowId);
+  async getChatMessages(
+    @Param('flowId') flowId: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ): Promise<unknown> {
+    const p = page ? parseInt(page, 10) : undefined;
+    const l = limit ? parseInt(limit, 10) : undefined;
+    return await this.invect.chat.getMessages(flowId, {
+      ...(p ? { page: p } : {}),
+      ...(l ? { limit: l } : {}),
+    });
   }
 
   @Put('chat/messages/:flowId')

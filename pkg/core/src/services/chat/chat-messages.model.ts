@@ -43,14 +43,28 @@ export class ChatMessagesModel {
   /**
    * Get all messages for a flow, ordered by creation time (oldest first).
    */
-  async getByFlowId(flowId: string): Promise<ChatMessageRecord[]> {
+  async getByFlowId(flowId: string, options?: { limit?: number; page?: number }): Promise<{ data: ChatMessageRecord[]; pagination: { page: number; limit: number; totalPages: number } }> {
+    const limit = Math.min(Math.max(options?.limit ?? 100, 1), 100);
+    const page = Math.max(options?.page ?? 1, 1);
+    const offset = (page - 1) * limit;
+
     try {
-      const results = await this.adapter.findMany<Record<string, unknown>>({
-        model: TABLE,
-        where: [{ field: 'flow_id', value: flowId }],
-        sortBy: { field: 'created_at', direction: 'asc' },
-      });
-      return results.map((r) => this.normalize(r));
+      const where = [{ field: 'flow_id' as const, value: flowId }];
+      const [results, totalCount] = await Promise.all([
+        this.adapter.findMany<Record<string, unknown>>({
+          model: TABLE,
+          where,
+          sortBy: { field: 'created_at', direction: 'asc' },
+          limit,
+          offset,
+        }),
+        this.adapter.count({ model: TABLE, where }),
+      ]);
+      const totalPages = Math.ceil(totalCount / limit);
+      return {
+        data: results.map((r) => this.normalize(r)),
+        pagination: { page, limit, totalPages },
+      };
     } catch (error) {
       this.logger.error('Failed to get chat messages by flowId', { flowId, error });
       throw error;

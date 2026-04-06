@@ -8,6 +8,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { InvectClient } from '../client/types';
 import { resolveIdentity } from '../auth';
 import { TOOL_IDS } from '../../shared/types';
+import { mapCredentialList, mapTestResult } from '../response-mappers';
 
 export function registerCredentialTools(server: McpServer, client: InvectClient): void {
   server.tool(
@@ -18,7 +19,7 @@ export function registerCredentialTools(server: McpServer, client: InvectClient)
       const identity = resolveIdentity(extra.authInfo);
       const creds = await client.listCredentials(identity);
       return {
-        content: [{ type: 'text', text: JSON.stringify(creds, null, 2) }],
+        content: [{ type: 'text', text: mapCredentialList(creds) }],
       };
     },
   );
@@ -33,7 +34,7 @@ export function registerCredentialTools(server: McpServer, client: InvectClient)
       const identity = resolveIdentity(extra.authInfo);
       const result = await client.testCredential(identity, credentialId);
       return {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        content: [{ type: 'text', text: mapTestResult(result) }],
       };
     },
   );

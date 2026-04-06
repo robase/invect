@@ -437,9 +437,9 @@ describe('Flow Execution', () => {
     });
 
     const result = await invect.runs.start(flow.id, {}, { useBatchProcessing: false });
-    const traces = await invect.runs.getNodeExecutions(result.flowRunId);
+    const tracesResult = await invect.runs.getNodeExecutions(result.flowRunId);
 
-    expect(traces.length).toBeGreaterThanOrEqual(2);
+    expect(tracesResult.data.length).toBeGreaterThanOrEqual(2);
   });
 
   // ---------------------------------------------------------------------------

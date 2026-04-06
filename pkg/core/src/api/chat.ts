@@ -20,8 +20,8 @@ export function createChatAPI(sf: ServiceFactory): ChatAPI {
       return sf.getChatStreamService().listModels(credentialId, query);
     },
 
-    getMessages(flowId) {
-      return sf.getDatabaseService().chatMessages.getByFlowId(flowId);
+    getMessages(flowId, options) {
+      return sf.getDatabaseService().chatMessages.getByFlowId(flowId, options);
     },
 
     async saveMessages(flowId, messages) {

@@ -365,7 +365,8 @@ class ApiClient {
 
   // Node execution endpoints
   async getNodeExecutionsByFlowRun(flowRunId: string): Promise<NodeExecution[]> {
-    return this.request<NodeExecution[]>(`/flow-runs/${flowRunId}/node-executions`);
+    const result = await this.request<PaginatedResponse<NodeExecution>>(`/flow-runs/${flowRunId}/node-executions?limit=100`);
+    return result.data;
   }
 
   async getAllNodeExecutions(
@@ -864,7 +865,18 @@ class ApiClient {
       createdAt: string;
     }>
   > {
-    return this.request(`/chat/messages/${flowId}`);
+    const result = await this.request<{
+      data: Array<{
+        id: string;
+        flowId: string;
+        role: 'user' | 'assistant' | 'system' | 'tool';
+        content: string;
+        toolMeta?: Record<string, unknown> | null;
+        createdAt: string;
+      }>;
+      pagination: { page: number; limit: number; totalPages: number };
+    }>(`/chat/messages/${flowId}?limit=100`);
+    return result.data;
   }
 
   async saveChatMessages(

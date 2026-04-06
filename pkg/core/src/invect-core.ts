@@ -2200,13 +2200,14 @@ export class Invect {
   // =====================================
 
   /**
-   * Get all persisted chat messages for a flow (ordered by creation time).
+   * Get persisted chat messages for a flow (paginated, ordered by creation time).
    */
   async getChatMessages(
     flowId: string,
-  ): Promise<import('./services/chat/chat-messages.model').ChatMessageRecord[]> {
+    options?: { limit?: number; page?: number },
+  ): Promise<{ data: import('./services/chat/chat-messages.model').ChatMessageRecord[]; pagination: { page: number; limit: number; totalPages: number } }> {
     this.ensureInitialized();
-    return this.serviceFactory.getDatabaseService().chatMessages.getByFlowId(flowId);
+    return this.serviceFactory.getDatabaseService().chatMessages.getByFlowId(flowId, options);
   }
 
   /**

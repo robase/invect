@@ -403,8 +403,8 @@ export class ChatStreamService {
         try {
           const run = await this.invect.runs.get(selectedRunId);
           if (run) {
-            const nodeExecs = await this.invect.runs.getNodeExecutions(selectedRunId);
-            const failedNodes = nodeExecs
+            const nodeExecsResult = await this.invect.runs.getNodeExecutions(selectedRunId);
+            const failedNodes = nodeExecsResult.data
               .filter((ex) => ex.status === 'FAILED' || ex.error)
               .map((ex) => ({
                 nodeId: ex.nodeId,
