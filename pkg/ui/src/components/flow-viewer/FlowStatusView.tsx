@@ -108,7 +108,12 @@ export function FlowStatusView({
       return;
     }
 
-    const { focusNodeId: fid, selectedNodeId: sid, nodes: n, reactFlowInstance: rf } = recenterStateRef.current;
+    const {
+      focusNodeId: fid,
+      selectedNodeId: sid,
+      nodes: n,
+      reactFlowInstance: rf,
+    } = recenterStateRef.current;
     if (!n.length) {
       return;
     }

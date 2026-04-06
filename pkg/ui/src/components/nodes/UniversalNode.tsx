@@ -249,7 +249,8 @@ export const UniversalNode = memo(({ data, selected }: NodeProps) => {
           !isSkipped &&
           'border-sidebar-ring hover:border-primary/80',
         // Running state - animated gradient border
-        isRunning && 'node-running-border animate-node-border rounded-xl border-y border-r border-transparent',
+        isRunning &&
+          'node-running-border animate-node-border rounded-xl border-y border-r border-transparent',
         // Success state - green border
         isSuccess && 'border-y-2 border-r-2 border-green-500',
         // Error state - red border

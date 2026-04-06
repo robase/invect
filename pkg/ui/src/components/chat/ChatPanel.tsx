@@ -145,7 +145,7 @@ export function ChatPanel({
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
         <div className="flex items-center gap-2">
           <Bot className="size-4 text-primary" />
-          <span className="text-sm font-semibold">Assistant</span>
+          <span className="text-sm font-semibold">Chat</span>
         </div>
         <div className="flex items-center gap-1.5">
           <Button
@@ -217,17 +217,15 @@ export function ChatToggleButton({ className }: { className?: string }) {
       variant="ghost"
       size="sm"
       onClick={togglePanel}
-      title={isOpen ? 'Close AI Assistant' : 'Open AI Assistant'}
+      title={isOpen ? 'Close AI Chat' : 'Open AI Chat'}
       className={cn(
         'gap-1.5 hover:bg-accent',
-        isOpen
-          ? 'bg-accent text-accent-foreground'
-          : 'text-muted-foreground hover:text-foreground',
+        isOpen ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground',
         className,
       )}
     >
       <MessageSquare className="size-4" />
-      <span className="text-xs font-medium">Assistant</span>
+      <span className="text-xs font-medium">Chat</span>
     </Button>
   );
 }

@@ -44,7 +44,7 @@ export function OutputPanel({ value, onChange, error }: OutputPanelProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopyError = useCallback(() => {
-    if (!error) return;
+    if (!error) {return;}
     navigator.clipboard.writeText(error).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);

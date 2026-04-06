@@ -194,7 +194,12 @@ export function FlowRunsView({ flowId, flowVersion, basePath }: FlowRunsViewProp
             </ResizablePanel>
             {isLogsExpanded && (
               <>
-                <ResizableHandle withHandle onDragging={(isDragging) => { if (!isDragging) setRecenterTrigger((c) => c + 1); }} />
+                <ResizableHandle
+                  withHandle
+                  onDragging={(isDragging) => {
+                    if (!isDragging) {setRecenterTrigger((c) => c + 1);}
+                  }}
+                />
                 <ResizablePanel defaultSize={45} minSize={10}>
                   <LogsPanel
                     nodes={executionLogNodes}

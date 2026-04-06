@@ -64,7 +64,7 @@ export const SEED_FLOWS = {
     },
   },
   aiAssistant: {
-    name: 'AI Assistant',
+    name: 'AI Chat',
     definition: {
       nodes: [
         {

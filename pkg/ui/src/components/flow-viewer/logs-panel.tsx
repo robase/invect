@@ -163,7 +163,11 @@ export function LogsPanel({
           <div className="imp-page border-r border-imp-border bg-imp-background text-imp-foreground w-[280px] shrink-0 flex flex-col">
             {runs && onSelectRun && (
               <div className="px-2 pt-2 pb-1 shrink-0">
-                <RunSelector runs={runs} selectedRunId={selectedRunId ?? null} onSelectRun={onSelectRun} />
+                <RunSelector
+                  runs={runs}
+                  selectedRunId={selectedRunId ?? null}
+                  onSelectRun={onSelectRun}
+                />
               </div>
             )}
             <ScrollArea className="h-full min-h-0">
@@ -324,56 +328,36 @@ function ToolCallDetailView({ tool }: { tool: ExecutionLogToolCall }) {
               {tool.toolName}
               <ToolStatusIcon success={tool.success} size={14} />
             </span>
-            <span className="text-xs text-muted-foreground">
-              Iteration {tool.iteration}
-            </span>
+            <span className="text-xs text-muted-foreground">Iteration {tool.iteration}</span>
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <span><span className="text-foreground/70">Duration</span> {formatDuration(tool.executionTimeMs)}</span>
+            <span>
+              <span className="text-foreground/70">Duration</span>{' '}
+              {formatDuration(tool.executionTimeMs)}
+            </span>
           </div>
         </div>
       </div>
 
       <div className="p-4 space-y-4">
-
-      {/* Input */}
-      <div className="max-w-full overflow-hidden">
-        <button
-          type="button"
-          onClick={() => setInputOpen(!inputOpen)}
-          className="flex items-center gap-1.5 mb-2 text-sm font-semibold text-foreground cursor-pointer hover:text-foreground/80 transition-colors"
-        >
-          {inputOpen ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
-          Input
-        </button>
-        {inputOpen && (
-          <div className="max-w-full overflow-hidden border rounded-md border-border">
-            <CodeMirrorJsonEditor
-              value={JSON.stringify(tool.input, null, 2)}
-              readOnly
-              disableLinting
-              minHeight="60px"
-              className="max-w-full"
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Output */}
-      {tool.output !== undefined && (
+        {/* Input */}
         <div className="max-w-full overflow-hidden">
           <button
             type="button"
-            onClick={() => setOutputOpen(!outputOpen)}
+            onClick={() => setInputOpen(!inputOpen)}
             className="flex items-center gap-1.5 mb-2 text-sm font-semibold text-foreground cursor-pointer hover:text-foreground/80 transition-colors"
           >
-            {outputOpen ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
-            Output
+            {inputOpen ? (
+              <ChevronDown className="size-3.5" />
+            ) : (
+              <ChevronRight className="size-3.5" />
+            )}
+            Input
           </button>
-          {outputOpen && (
+          {inputOpen && (
             <div className="max-w-full overflow-hidden border rounded-md border-border">
               <CodeMirrorJsonEditor
-                value={JSON.stringify(tool.output, null, 2)}
+                value={JSON.stringify(tool.input, null, 2)}
                 readOnly
                 disableLinting
                 minHeight="60px"
@@ -382,17 +366,45 @@ function ToolCallDetailView({ tool }: { tool: ExecutionLogToolCall }) {
             </div>
           )}
         </div>
-      )}
 
-      {/* Error */}
-      {tool.error && (
-        <div>
-          <div className="mb-2 text-sm font-semibold text-red-500">Error</div>
-          <pre className="p-3 text-sm font-mono text-red-500 border rounded-md bg-red-500/10 border-red-500/20 whitespace-pre-wrap break-words max-h-60 overflow-auto">
-            {tool.error}
-          </pre>
-        </div>
-      )}
+        {/* Output */}
+        {tool.output !== undefined && (
+          <div className="max-w-full overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setOutputOpen(!outputOpen)}
+              className="flex items-center gap-1.5 mb-2 text-sm font-semibold text-foreground cursor-pointer hover:text-foreground/80 transition-colors"
+            >
+              {outputOpen ? (
+                <ChevronDown className="size-3.5" />
+              ) : (
+                <ChevronRight className="size-3.5" />
+              )}
+              Output
+            </button>
+            {outputOpen && (
+              <div className="max-w-full overflow-hidden border rounded-md border-border">
+                <CodeMirrorJsonEditor
+                  value={JSON.stringify(tool.output, null, 2)}
+                  readOnly
+                  disableLinting
+                  minHeight="60px"
+                  className="max-w-full"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Error */}
+        {tool.error && (
+          <div>
+            <div className="mb-2 text-sm font-semibold text-red-500">Error</div>
+            <pre className="p-3 text-sm font-mono text-red-500 border rounded-md bg-red-500/10 border-red-500/20 whitespace-pre-wrap break-words max-h-60 overflow-auto">
+              {tool.error}
+            </pre>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -420,113 +432,129 @@ function NodeAttemptDetailView({
             <span className="text-sm font-semibold">{nodeName}</span>
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <span><span className="text-foreground/70">Started</span> {formatTimestamp(attempt.startedAt)}</span>
-            <span><span className="text-foreground/70">Duration</span> {formatDuration(attempt.durationMs)}</span>
+            <span>
+              <span className="text-foreground/70">Started</span>{' '}
+              {formatTimestamp(attempt.startedAt)}
+            </span>
+            <span>
+              <span className="text-foreground/70">Duration</span>{' '}
+              {formatDuration(attempt.durationMs)}
+            </span>
           </div>
         </div>
       </div>
 
       <div className="p-4 space-y-4">
-      {/* Agent Summary */}
-      {attempt.agentMetadata && (
-        <div className="p-3 rounded-lg bg-muted/50 border border-border/60">
-          <div className="flex items-center gap-2 mb-2">
-            <Bot className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xs font-medium text-foreground">Agent Summary</span>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-            <div>
-              <span className="text-muted-foreground">Model:</span>{' '}
-              <span className="text-foreground font-medium">
-                {attempt.agentMetadata.model ?? 'Unknown'}
-              </span>
+        {/* Agent Summary */}
+        {attempt.agentMetadata && (
+          <div className="p-3 rounded-lg bg-muted/50 border border-border/60">
+            <div className="flex items-center gap-2 mb-2">
+              <Bot className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs font-medium text-foreground">Agent Summary</span>
             </div>
-            <div>
-              <span className="text-muted-foreground">Iterations:</span>{' '}
-              <span className="text-foreground font-medium">
-                {attempt.agentMetadata.iterations}
-              </span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Tools Used:</span>{' '}
-              <span className="text-foreground font-medium">{attempt.toolCalls?.length ?? 0}</span>
-            </div>
-            {attempt.agentMetadata.tokenUsage && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
               <div>
-                <span className="text-muted-foreground">Tokens:</span>{' '}
+                <span className="text-muted-foreground">Model:</span>{' '}
                 <span className="text-foreground font-medium">
-                  ~{attempt.agentMetadata.tokenUsage.conversationTokensEstimate.toLocaleString()}
+                  {attempt.agentMetadata.model ?? 'Unknown'}
                 </span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Iterations:</span>{' '}
+                <span className="text-foreground font-medium">
+                  {attempt.agentMetadata.iterations}
+                </span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Tools Used:</span>{' '}
+                <span className="text-foreground font-medium">
+                  {attempt.toolCalls?.length ?? 0}
+                </span>
+              </div>
+              {attempt.agentMetadata.tokenUsage && (
+                <div>
+                  <span className="text-muted-foreground">Tokens:</span>{' '}
+                  <span className="text-foreground font-medium">
+                    ~{attempt.agentMetadata.tokenUsage.conversationTokensEstimate.toLocaleString()}
+                  </span>
+                </div>
+              )}
+            </div>
+            {attempt.agentMetadata.finalResponse && (
+              <div className="mt-3 pt-3 border-t border-border/60">
+                <div className="text-xs font-medium text-muted-foreground mb-1">Final Response</div>
+                <div className="text-sm text-foreground whitespace-pre-wrap">
+                  {attempt.agentMetadata.finalResponse}
+                </div>
               </div>
             )}
           </div>
-          {attempt.agentMetadata.finalResponse && (
-            <div className="mt-3 pt-3 border-t border-border/60">
-              <div className="text-xs font-medium text-muted-foreground mb-1">Final Response</div>
-              <div className="text-sm text-foreground whitespace-pre-wrap">
-                {attempt.agentMetadata.finalResponse}
+        )}
+
+        {hasData(attempt.inputs) && (
+          <div className="max-w-full overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setInputsOpen(!inputsOpen)}
+              className="flex items-center gap-1.5 mb-2 text-sm font-semibold text-foreground cursor-pointer hover:text-foreground/80 transition-colors"
+            >
+              {inputsOpen ? (
+                <ChevronDown className="size-3.5" />
+              ) : (
+                <ChevronRight className="size-3.5" />
+              )}
+              Inputs
+            </button>
+            {inputsOpen && (
+              <div className="max-w-full overflow-hidden border rounded-md border-border">
+                <CodeMirrorJsonEditor
+                  value={JSON.stringify(attempt.inputs, null, 2)}
+                  readOnly
+                  disableLinting
+                  minHeight="60px"
+                  className="max-w-full"
+                />
               </div>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
 
-      {hasData(attempt.inputs) && (
-        <div className="max-w-full overflow-hidden">
-          <button
-            type="button"
-            onClick={() => setInputsOpen(!inputsOpen)}
-            className="flex items-center gap-1.5 mb-2 text-sm font-semibold text-foreground cursor-pointer hover:text-foreground/80 transition-colors"
-          >
-            {inputsOpen ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
-            Inputs
-          </button>
-          {inputsOpen && (
-            <div className="max-w-full overflow-hidden border rounded-md border-border">
-              <CodeMirrorJsonEditor
-                value={JSON.stringify(attempt.inputs, null, 2)}
-                readOnly
-                disableLinting
-                minHeight="60px"
-                className="max-w-full"
-              />
-            </div>
-          )}
-        </div>
-      )}
+        {attempt.outputs && (
+          <div className="max-w-full overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setOutputsOpen(!outputsOpen)}
+              className="flex items-center gap-1.5 mb-2 text-sm font-semibold text-foreground cursor-pointer hover:text-foreground/80 transition-colors"
+            >
+              {outputsOpen ? (
+                <ChevronDown className="size-3.5" />
+              ) : (
+                <ChevronRight className="size-3.5" />
+              )}
+              Outputs
+            </button>
+            {outputsOpen && (
+              <div className="max-w-full overflow-hidden border rounded-md border-border">
+                <CodeMirrorJsonEditor
+                  value={JSON.stringify(attempt.outputs, null, 2)}
+                  readOnly
+                  disableLinting
+                  minHeight="60px"
+                  className="max-w-full"
+                />
+              </div>
+            )}
+          </div>
+        )}
 
-      {attempt.outputs && (
-        <div className="max-w-full overflow-hidden">
-          <button
-            type="button"
-            onClick={() => setOutputsOpen(!outputsOpen)}
-            className="flex items-center gap-1.5 mb-2 text-sm font-semibold text-foreground cursor-pointer hover:text-foreground/80 transition-colors"
-          >
-            {outputsOpen ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
-            Outputs
-          </button>
-          {outputsOpen && (
-            <div className="max-w-full overflow-hidden border rounded-md border-border">
-              <CodeMirrorJsonEditor
-                value={JSON.stringify(attempt.outputs, null, 2)}
-                readOnly
-                disableLinting
-                minHeight="60px"
-                className="max-w-full"
-              />
-            </div>
-          )}
-        </div>
-      )}
-
-      {attempt.error && (
-        <div>
-          <div className="mb-2 text-sm font-semibold text-red-500">Error</div>
-          <pre className="p-3 text-sm font-mono text-red-500 border rounded-md bg-red-500/10 border-red-500/20 whitespace-pre-wrap break-words max-h-60 overflow-auto">
-            {attempt.error}
-          </pre>
-        </div>
-      )}
+        {attempt.error && (
+          <div>
+            <div className="mb-2 text-sm font-semibold text-red-500">Error</div>
+            <pre className="p-3 text-sm font-mono text-red-500 border rounded-md bg-red-500/10 border-red-500/20 whitespace-pre-wrap break-words max-h-60 overflow-auto">
+              {attempt.error}
+            </pre>
+          </div>
+        )}
       </div>
     </div>
   );

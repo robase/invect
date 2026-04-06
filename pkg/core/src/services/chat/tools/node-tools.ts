@@ -71,6 +71,17 @@ async function saveNewVersion(
 }
 
 /**
+ * Helper: Find a node by ID, falling back to referenceId.
+ * The LLM may pass either the internal node ID or the referenceId (shown as "ref" in the prompt).
+ */
+function findNodeByIdOrRef<T extends { id: string; referenceId?: string }>(
+  nodes: T[],
+  idOrRef: string,
+): T | undefined {
+  return nodes.find((n) => n.id === idOrRef) ?? nodes.find((n) => n.referenceId === idOrRef);
+}
+
+/**
  * Helper: Convert a label to a snake_case reference ID.
  */
 function labelToReferenceId(label: string): string {
@@ -263,8 +274,8 @@ export const removeNodeTool: ChatToolDefinition = {
     try {
       const { nodes, edges } = await loadLatestDefinition(invect, flowId);
 
-      const nodeIndex = nodes.findIndex((n) => n.id === nodeId);
-      if (nodeIndex === -1) {
+      const removedNode = findNodeByIdOrRef(nodes, nodeId);
+      if (!removedNode) {
         return {
           success: false,
           error: `Node "${nodeId}" not found in flow`,
@@ -272,15 +283,16 @@ export const removeNodeTool: ChatToolDefinition = {
         };
       }
 
-      const removedNode = nodes[nodeIndex];
-      const removedLabel = removedNode.label || removedNode.id;
+      const resolvedId = removedNode.id;
+      const removedLabel = removedNode.label || resolvedId;
 
       // Remove the node
+      const nodeIndex = nodes.findIndex((n) => n.id === resolvedId);
       nodes.splice(nodeIndex, 1);
 
       // Remove all edges connected to this node
       const removedEdgeCount = edges.length;
-      const filteredEdges = edges.filter((e) => e.source !== nodeId && e.target !== nodeId);
+      const filteredEdges = edges.filter((e) => e.source !== resolvedId && e.target !== resolvedId);
       const edgesRemoved = removedEdgeCount - filteredEdges.length;
 
       const version = await saveNewVersion(invect, flowId, nodes, filteredEdges);
@@ -354,7 +366,7 @@ export const updateNodeConfigTool: ChatToolDefinition = {
     try {
       const { nodes, edges } = await loadLatestDefinition(invect, flowId);
 
-      const node = nodes.find((n) => n.id === nodeId);
+      const node = findNodeByIdOrRef(nodes, nodeId);
       if (!node) {
         return {
           success: false,
@@ -438,9 +450,9 @@ export const connectNodesTool: ChatToolDefinition = {
     try {
       const { nodes, edges } = await loadLatestDefinition(invect, flowId);
 
-      // Validate both nodes exist
-      const source = nodes.find((n) => n.id === sourceNodeId);
-      const target = nodes.find((n) => n.id === targetNodeId);
+      // Validate both nodes exist (accept referenceId as well as node ID)
+      const source = findNodeByIdOrRef(nodes, sourceNodeId);
+      const target = findNodeByIdOrRef(nodes, targetNodeId);
 
       if (!source) {
         return {
@@ -457,11 +469,15 @@ export const connectNodesTool: ChatToolDefinition = {
         };
       }
 
+      // Use resolved IDs for edge storage (edges reference node IDs, not referenceIds)
+      const resolvedSourceId = source.id;
+      const resolvedTargetId = target.id;
+
       // Check for duplicate edge
       const exists = edges.some(
         (e) =>
-          e.source === sourceNodeId &&
-          e.target === targetNodeId &&
+          e.source === resolvedSourceId &&
+          e.target === resolvedTargetId &&
           (e.sourceHandle ?? '') === (sourceHandle ?? '') &&
           (e.targetHandle ?? '') === (targetHandle ?? ''),
       );
@@ -474,8 +490,8 @@ export const connectNodesTool: ChatToolDefinition = {
 
       edges.push({
         id: `edge_${genId()}`,
-        source: sourceNodeId,
-        target: targetNodeId,
+        source: resolvedSourceId,
+        target: resolvedTargetId,
         ...(sourceHandle && { sourceHandle }),
         ...(targetHandle && { targetHandle }),
       });

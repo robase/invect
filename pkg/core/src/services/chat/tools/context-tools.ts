@@ -40,7 +40,9 @@ export const getCurrentFlowContextTool: ChatToolDefinition = {
       const definition = version.invectDefinition;
 
       if (nodeId) {
-        const node = definition.nodes.find((n) => n.id === nodeId);
+        const node =
+          definition.nodes.find((n) => n.id === nodeId) ??
+          definition.nodes.find((n) => n.referenceId === nodeId);
         if (!node) {
           return { success: false, error: `Node "${nodeId}" not found in flow` };
         }
@@ -167,25 +169,214 @@ export const listCredentialsTool: ChatToolDefinition = {
   name: 'List Credentials',
   description:
     'List all configured credentials (without sensitive data). ' +
-    'Use this to find credential IDs for nodes that need authentication.',
-  parameters: z.object({}),
-  async execute(_params: unknown, ctx: ChatToolContext): Promise<ChatToolResult> {
+    'Use this to find credential IDs for nodes that need authentication. ' +
+    'For OAuth2 credentials, includes the OAuth2 provider ID and granted scopes. ' +
+    'Optionally filter by OAuth2 provider or required scopes.',
+  parameters: z.object({
+    oauth2Provider: z
+      .string()
+      .optional()
+      .describe('Filter by OAuth2 provider ID (e.g. "google", "github", "slack", "microsoft")'),
+    requiredScopes: z
+      .array(z.string())
+      .optional()
+      .describe(
+        'Filter to credentials that have ALL of these OAuth2 scopes granted ' +
+          '(e.g. ["https://www.googleapis.com/auth/gmail.readonly"])',
+      ),
+  }),
+  async execute(params: unknown, ctx: ChatToolContext): Promise<ChatToolResult> {
+    const { oauth2Provider, requiredScopes } = params as {
+      oauth2Provider?: string;
+      requiredScopes?: string[];
+    };
     const invect = ctx.invect;
 
     try {
-      const credentials = await invect.credentials.list();
+      const credentials = await invect.credentials.list(
+        oauth2Provider ? { authType: 'oauth2' } : undefined,
+      );
+
+      let filtered = credentials;
+
+      // Filter by OAuth2 provider if specified
+      if (oauth2Provider) {
+        filtered = filtered.filter((c) => {
+          const meta = c.metadata as Record<string, unknown> | null;
+          return meta?.oauth2Provider === oauth2Provider;
+        });
+      }
+
+      // Filter by required scopes if specified
+      if (requiredScopes && requiredScopes.length > 0) {
+        filtered = filtered.filter((c) => {
+          const meta = c.metadata as Record<string, unknown> | null;
+          const grantedScopes = Array.isArray(meta?.scopes) ? (meta.scopes as string[]) : [];
+          return requiredScopes.every((scope) => grantedScopes.includes(scope));
+        });
+      }
+
       return {
         success: true,
-        data: credentials.map((c) => ({
-          id: c.id,
-          name: c.name,
-          type: c.type,
-          authType: c.authType,
-          description: c.description,
-        })),
+        data: filtered.map((c) => {
+          const meta = c.metadata as Record<string, unknown> | null;
+          return {
+            id: c.id,
+            name: c.name,
+            type: c.type,
+            authType: c.authType,
+            description: c.description,
+            ...(c.authType === 'oauth2' && meta
+              ? {
+                  oauth2Provider: meta.oauth2Provider,
+                  grantedScopes: meta.scopes,
+                }
+              : {}),
+          };
+        }),
       };
     } catch (error: unknown) {
       return { success: false, error: `Failed to list credentials: ${(error as Error).message}` };
+    }
+  },
+};
+
+// =====================================
+// find_credentials_for_action
+// =====================================
+
+export const findCredentialsForActionTool: ChatToolDefinition = {
+  id: 'find_credentials_for_action',
+  name: 'Find Credentials for Action',
+  description:
+    'Find credentials that are compatible with a specific action (node type). ' +
+    'Checks the action\'s credential requirements (OAuth2 provider and scopes) ' +
+    'against the granted scopes on stored credentials. Returns matching credentials ' +
+    'with compatibility info (full match vs partial scopes). ' +
+    'Use this before configuring a node to find the right credential, or to check ' +
+    'whether the user needs to set up a new credential.',
+  parameters: z.object({
+    actionId: z
+      .string()
+      .describe(
+        'The action ID to find credentials for (e.g. "gmail.send_message", "slack.send_message")',
+      ),
+  }),
+  async execute(params: unknown, ctx: ChatToolContext): Promise<ChatToolResult> {
+    const { actionId } = params as { actionId: string };
+    const invect = ctx.invect;
+
+    try {
+      // Look up the action definition to get credential requirements
+      const registry = invect.actions.getRegistry();
+      const action = registry.get(actionId);
+
+      if (!action) {
+        return {
+          success: false,
+          error: `Action "${actionId}" not found. Use search_actions to find available actions.`,
+        };
+      }
+
+      if (!action.credential) {
+        return {
+          success: true,
+          data: {
+            actionId,
+            requiresCredential: false,
+            message: `Action "${action.name}" does not require a credential.`,
+          },
+        };
+      }
+
+      const { oauth2Provider, requiredScopes, type: credType } = action.credential;
+
+      // Get all credentials
+      const allCredentials = await invect.credentials.list(
+        credType === 'oauth2' ? { authType: 'oauth2' } : undefined,
+      );
+
+      // Match against provider and scopes
+      const results = allCredentials
+        .map((c) => {
+          const meta = c.metadata as Record<string, unknown> | null;
+          const credProvider = meta?.oauth2Provider as string | undefined;
+          const grantedScopes = Array.isArray(meta?.scopes) ? (meta.scopes as string[]) : [];
+
+          // Provider match
+          if (oauth2Provider && credProvider !== oauth2Provider) {
+            return null;
+          }
+
+          // For non-OAuth2, match by type
+          if (credType && credType !== 'oauth2' && c.authType !== credType) {
+            return null;
+          }
+
+          // Scope matching
+          let scopeMatch: 'full' | 'partial' | 'none' = 'full';
+          let missingScopes: string[] = [];
+
+          if (requiredScopes && requiredScopes.length > 0) {
+            missingScopes = requiredScopes.filter((s) => !grantedScopes.includes(s));
+            if (missingScopes.length === 0) {
+              scopeMatch = 'full';
+            } else if (missingScopes.length < requiredScopes.length) {
+              scopeMatch = 'partial';
+            } else {
+              scopeMatch = 'none';
+            }
+          }
+
+          return {
+            id: c.id,
+            name: c.name,
+            authType: c.authType,
+            description: c.description,
+            oauth2Provider: credProvider,
+            grantedScopes,
+            scopeMatch,
+            missingScopes: missingScopes.length > 0 ? missingScopes : undefined,
+          };
+        })
+        .filter(Boolean)
+        // Sort: full match first, then partial, then none
+        .sort((a, b) => {
+          const order = { full: 0, partial: 1, none: 2 };
+          return order[a!.scopeMatch] - order[b!.scopeMatch];
+        });
+
+      const fullMatches = results.filter((r) => r!.scopeMatch === 'full');
+      const partialMatches = results.filter((r) => r!.scopeMatch === 'partial');
+
+      return {
+        success: true,
+        data: {
+          actionId,
+          actionName: action.name,
+          requiresCredential: action.credential.required,
+          credentialType: credType,
+          oauth2Provider,
+          requiredScopes,
+          matches: results,
+          summary: {
+            total: results.length,
+            fullMatch: fullMatches.length,
+            partialMatch: partialMatches.length,
+          },
+          hint:
+            results.length === 0
+              ? `No matching credentials found. Use suggest_credential_setup to guide the user to create one for "${oauth2Provider || credType}".`
+              : fullMatches.length > 0
+                ? `Found ${fullMatches.length} fully compatible credential(s). Use the credential ID to configure the node.`
+                : `Found ${partialMatches.length} credential(s) with partial scope coverage. The user may need to re-authorize with additional scopes.`,
+        },
+      };
+    } catch (error: unknown) {
+      return {
+        success: false,
+        error: `Failed to find credentials: ${(error as Error).message}`,
+      };
     }
   },
 };

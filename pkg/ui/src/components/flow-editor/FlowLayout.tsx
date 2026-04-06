@@ -42,9 +42,7 @@ export function FlowLayout({
         ref={viewportRef as React.RefObject<HTMLDivElement>}
       >
         {/* Mode switcher - top center */}
-        <div className="absolute left-1/2 -translate-x-1/2 top-4 z-10">
-          {modeSwitcher}
-        </div>
+        <div className="absolute left-1/2 -translate-x-1/2 top-4 z-10">{modeSwitcher}</div>
 
         {viewport}
         {chatOverlay}

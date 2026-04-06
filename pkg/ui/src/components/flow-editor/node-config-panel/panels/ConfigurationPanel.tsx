@@ -48,9 +48,7 @@ function ExecutionErrorDisplay({ error }: { error: string }) {
 
   // Extract a short summary: first line, truncated
   const isLong = error.length > 150 || error.includes('\n');
-  const summary = isLong
-    ? error.split('\n')[0].slice(0, 140) + '…'
-    : error;
+  const summary = isLong ? error.split('\n')[0].slice(0, 140) + '…' : error;
 
   return (
     <div className="flex items-start gap-2 p-2.5 rounded-md bg-destructive/5 border border-destructive/20">

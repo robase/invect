@@ -129,19 +129,19 @@ export function ChatMessageList({
               );
 
           return (
-          <ChatMessageBubble
-            key={msg.id}
-            message={msg}
-            isLatestPlan={!!isLatestPlan}
-            onEditAndResend={
-              !isStreaming
-                ? (newContent) => {
-                    useChatStore.getState().truncateFrom(msg.id);
-                    onSendMessage(newContent);
-                  }
-                : undefined
-            }
-          />
+            <ChatMessageBubble
+              key={msg.id}
+              message={msg}
+              isLatestPlan={!!isLatestPlan}
+              onEditAndResend={
+                !isStreaming
+                  ? (newContent) => {
+                      useChatStore.getState().truncateFrom(msg.id);
+                      onSendMessage(newContent);
+                    }
+                  : undefined
+              }
+            />
           );
         })}
 
@@ -381,7 +381,9 @@ function UserMessageBubble({
   const firstNewline = message.content.indexOf('\n');
   const typedPart = isLongContent && firstNewline > 0 ? message.content.slice(0, firstNewline) : '';
   const pastedPart = isLongContent
-    ? (firstNewline > 0 ? message.content.slice(firstNewline + 1) : message.content)
+    ? firstNewline > 0
+      ? message.content.slice(firstNewline + 1)
+      : message.content
     : '';
   const pastedLineCount = isLongContent ? pastedPart.split('\n').length : 0;
   const pastedCharCount = pastedPart.length;
@@ -403,7 +405,9 @@ function UserMessageBubble({
                 <ChevronDown className="size-3 shrink-0" />
               )}
               <span className="font-medium">Pasted text</span>
-              <span className="ml-auto text-foreground/40">{pastedLineCount} lines &middot; {pastedCharCount} chars</span>
+              <span className="ml-auto text-foreground/40">
+                {pastedLineCount} lines &middot; {pastedCharCount} chars
+              </span>
             </button>
             {!collapsed && (
               <div className="overflow-y-auto max-h-48 rounded-md border border-foreground/10 bg-foreground/5 px-2.5 py-2 text-[11px] leading-relaxed whitespace-pre-wrap font-mono overscroll-contain">
@@ -455,7 +459,7 @@ function AssistantMessageBubble({ message }: { message: ChatMessage }) {
         <div className="flex items-center justify-center rounded-full size-4 bg-primary/10">
           <Bot className="size-2.5 text-primary" />
         </div>
-        <span className="text-[10px] text-muted-foreground/50 font-medium">Assistant</span>
+        <span className="text-[10px] text-muted-foreground/50 font-medium">Chat</span>
       </div>
       <div className="relative min-w-0 px-3 py-2 overflow-hidden text-xs border rounded-lg rounded-tl-sm text-foreground bg-muted/30 border-border/40 max-w-[95%]">
         <MarkdownRenderer content={message.content} />

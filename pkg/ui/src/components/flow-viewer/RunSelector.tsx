@@ -219,14 +219,22 @@ export function RunSelector({ runs, selectedRunId, onSelectRun }: RunSelectorPro
           {selectedRun ? (
             <>
               <StatusIcon status={selectedRun.status} />
-              <span className="flex-1 text-left truncate font-medium">{formatSince(selectedRun.startedAt)}</span>
+              <span className="flex-1 text-left truncate font-medium">
+                {formatSince(selectedRun.startedAt)}
+              </span>
               <span
                 className={cn(
                   'rounded-full border px-1.5 py-0 text-[10px] font-medium shrink-0',
-                  selectedRun.status === 'SUCCESS' && 'bg-green-500/10 text-green-600 border-green-500/20',
+                  selectedRun.status === 'SUCCESS' &&
+                    'bg-green-500/10 text-green-600 border-green-500/20',
                   selectedRun.status === 'FAILED' && 'bg-red-500/10 text-red-600 border-red-500/20',
-                  (selectedRun.status === 'RUNNING' || selectedRun.status === 'PENDING' || selectedRun.status === 'PAUSED' || selectedRun.status === 'PAUSED_FOR_BATCH') && 'bg-blue-500/10 text-blue-600 border-blue-500/20',
-                  selectedRun.status === 'CANCELLED' && 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20',
+                  (selectedRun.status === 'RUNNING' ||
+                    selectedRun.status === 'PENDING' ||
+                    selectedRun.status === 'PAUSED' ||
+                    selectedRun.status === 'PAUSED_FOR_BATCH') &&
+                    'bg-blue-500/10 text-blue-600 border-blue-500/20',
+                  selectedRun.status === 'CANCELLED' &&
+                    'bg-yellow-500/10 text-yellow-600 border-yellow-500/20',
                 )}
               >
                 {selectedRun.status}
@@ -281,7 +289,10 @@ export function RunSelector({ runs, selectedRunId, onSelectRun }: RunSelectorPro
                 type="date"
                 value={customFrom}
                 max={customTo || toDateInputValue(new Date())}
-                onChange={(e) => { setCustomFrom(e.target.value); setPage(0); }}
+                onChange={(e) => {
+                  setCustomFrom(e.target.value);
+                  setPage(0);
+                }}
                 className="flex-1 h-7 px-1.5 text-xs rounded-md border border-border bg-background text-foreground"
               />
               <span className="text-xs text-muted-foreground">–</span>
@@ -290,7 +301,10 @@ export function RunSelector({ runs, selectedRunId, onSelectRun }: RunSelectorPro
                 value={customTo}
                 min={customFrom || undefined}
                 max={toDateInputValue(new Date())}
-                onChange={(e) => { setCustomTo(e.target.value); setPage(0); }}
+                onChange={(e) => {
+                  setCustomTo(e.target.value);
+                  setPage(0);
+                }}
                 className="flex-1 h-7 px-1.5 text-xs rounded-md border border-border bg-background text-foreground"
               />
             </div>
@@ -389,7 +403,8 @@ export function RunSelector({ runs, selectedRunId, onSelectRun }: RunSelectorPro
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
               <span className="text-[10px] text-muted-foreground">
-                {safePage * PAGE_SIZE + 1}–{Math.min((safePage + 1) * PAGE_SIZE, filteredRuns.length)} of {filteredRuns.length}
+                {safePage * PAGE_SIZE + 1}–
+                {Math.min((safePage + 1) * PAGE_SIZE, filteredRuns.length)} of {filteredRuns.length}
               </span>
               <button
                 onClick={() => setPage(Math.min(totalPages - 1, safePage + 1))}
