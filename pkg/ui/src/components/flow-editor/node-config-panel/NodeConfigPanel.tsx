@@ -560,6 +560,7 @@ export function NodeConfigPanel({
                   configWarnings={configWarnings}
                   configErrors={configErrors}
                   runError={execution.runError}
+                  fieldErrors={execution.fieldErrors ?? undefined}
                   nodeType={nodeType}
                   modelStatusMessage={modelStatusMessage}
                   portalContainer={portalContainer}

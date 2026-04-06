@@ -332,6 +332,7 @@ export function actionToNodeDefinition<T = unknown>(action: ActionDefinition<T>)
         oauth2Providers: action.credential.oauth2Provider
           ? [action.credential.oauth2Provider]
           : undefined,
+        requiredScopes: action.credential.requiredScopes,
       }
     : undefined;
 

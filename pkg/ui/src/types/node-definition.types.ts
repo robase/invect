@@ -31,6 +31,7 @@ export interface NodeParamField {
   // Credential field options (only used when type="credential")
   credentialTypes?: ('oauth2' | 'api_key' | 'basic_auth' | 'database' | 'llm')[]; // Filter credentials by auth type or credential type
   oauth2Providers?: string[]; // Filter OAuth2 credentials by provider ID (e.g., "google")
+  requiredScopes?: string[]; // OAuth2 scopes this node needs (used instead of provider defaults)
 
   // Dynamic option loading metadata (serialised from action's loadOptions config)
   /** When present, this field's options should be loaded from the server. */

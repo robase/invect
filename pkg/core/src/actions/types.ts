@@ -88,6 +88,8 @@ export interface CredentialRequirement {
   type?: 'oauth2' | 'api_key' | 'basic_auth' | 'database' | 'llm';
   /** OAuth2 provider id from the OAuth2 providers registry */
   oauth2Provider?: string;
+  /** OAuth2 scopes this action needs. Used instead of the provider's defaultScopes when creating/refreshing a credential from this node's context. */
+  requiredScopes?: string[];
   /** Shown to the user explaining what the credential is for */
   description?: string;
 }

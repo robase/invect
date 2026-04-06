@@ -92,6 +92,24 @@ function extractOutputValue(nodeOutput: unknown): unknown {
   return null;
 }
 
+/**
+ * Parse Zod prettifyError output to extract per-field error messages.
+ * Zod v4 errors look like: "✕ Invalid input: expected string, received undefined\n  → at to"
+ * Multiple errors are separated by newlines.
+ */
+function parseFieldErrorsFromString(errorStr: string): Record<string, string> | null {
+  const fieldErrors: Record<string, string> = {};
+  // Match patterns like "message\n  → at fieldName" or "message → at fieldName"
+  const regex = /(.+?)(?:\n\s*)?→\s*at\s+(\w+)/g;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(errorStr)) !== null) {
+    const message = match[1].replace(/^[✕×]\s*/, '').trim();
+    const fieldName = match[2];
+    fieldErrors[fieldName] = message;
+  }
+  return Object.keys(fieldErrors).length > 0 ? fieldErrors : null;
+}
+
 export function useNodeExecution({
   nodeId,
   flowId,
@@ -221,6 +239,11 @@ export function useNodeExecution({
             'Node execution failed';
           setRunError(specificError);
           setOutputError(specificError);
+          // Try to parse field-specific errors from the error string
+          const parsed = parseFieldErrorsFromString(specificError);
+          if (parsed) {
+            setFieldErrors(parsed);
+          }
         }
       }
     } catch (error) {
@@ -248,6 +271,7 @@ export function useNodeExecution({
     isRunning,
     runError,
     outputError,
+    fieldErrors,
     runNode,
     setOutputError,
   };
