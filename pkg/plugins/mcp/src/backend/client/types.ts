@@ -87,7 +87,6 @@ export interface InvectClient {
     expression: string,
     incomingData: Record<string, unknown>,
   ): Promise<{ success: boolean; result?: unknown; error?: string }>;
-  getDashboardStats(identity: InvectIdentity | null): Promise<unknown>;
 
   // ===== Credentials =====
   listCredentials(identity: InvectIdentity | null): Promise<CredentialSummary[]>;

@@ -6,7 +6,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { InvectClient } from '../client/types';
-import { mapAuthInfoToIdentity, requireAuth } from '../auth';
+import { resolveIdentity } from '../auth';
 import { TOOL_IDS } from '../../shared/types';
 
 export function registerCredentialTools(server: McpServer, client: InvectClient): void {
@@ -15,7 +15,7 @@ export function registerCredentialTools(server: McpServer, client: InvectClient)
     'List all credentials with their names, types, and providers. Does NOT expose secrets — only metadata for referencing in flow configs.',
     {},
     async (_params, extra) => {
-      const identity = requireAuth(mapAuthInfoToIdentity(extra.authInfo));
+      const identity = resolveIdentity(extra.authInfo);
       const creds = await client.listCredentials(identity);
       return {
         content: [{ type: 'text', text: JSON.stringify(creds, null, 2) }],
@@ -30,7 +30,7 @@ export function registerCredentialTools(server: McpServer, client: InvectClient)
       credentialId: z.string().describe('The credential ID to test'),
     },
     async ({ credentialId }, extra) => {
-      const identity = requireAuth(mapAuthInfoToIdentity(extra.authInfo));
+      const identity = resolveIdentity(extra.authInfo);
       const result = await client.testCredential(identity, credentialId);
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],

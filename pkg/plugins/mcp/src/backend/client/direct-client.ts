@@ -137,10 +137,6 @@ export class DirectClient implements InvectClient {
     return await this.invect.testing.testMapper({ expression, incomingData });
   }
 
-  async getDashboardStats(_identity: InvectIdentity | null) {
-    return await this.invect.flows.getDashboardStats();
-  }
-
   // ===== Credentials =====
 
   async listCredentials(_identity: InvectIdentity | null): Promise<CredentialSummary[]> {

@@ -36,6 +36,16 @@ export function requireAuth(identity: InvectIdentity | null): InvectIdentity {
 }
 
 /**
+ * Extracts identity if available, returns null otherwise.
+ * Used by tool handlers — the underlying client (HttpClient/DirectClient)
+ * handles auth at its own layer, so a null identity is acceptable for
+ * transports like stdio where auth is pre-established.
+ */
+export function resolveIdentity(authInfo: unknown): InvectIdentity | null {
+  return mapAuthInfoToIdentity(authInfo);
+}
+
+/**
  * Authorize a specific action on a resource.
  * Returns true if authorized, throws if denied.
  */

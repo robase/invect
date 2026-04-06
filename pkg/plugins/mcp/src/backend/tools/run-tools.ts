@@ -5,7 +5,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { InvectClient } from '../client/types';
-import { mapAuthInfoToIdentity, requireAuth } from '../auth';
+import { resolveIdentity } from '../auth';
 import { TOOL_IDS } from '../../shared/types';
 
 export function registerRunTools(server: McpServer, client: InvectClient): void {
@@ -20,7 +20,7 @@ export function registerRunTools(server: McpServer, client: InvectClient): void 
         .describe('Optional key-value input data for the flow'),
     },
     async ({ flowId, inputs }, extra) => {
-      const identity = requireAuth(mapAuthInfoToIdentity(extra.authInfo));
+      const identity = resolveIdentity(extra.authInfo);
       const result = await client.startRun(identity, flowId, inputs);
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
@@ -37,7 +37,7 @@ export function registerRunTools(server: McpServer, client: InvectClient): void 
       inputs: z.record(z.unknown()).optional().describe('Optional input data'),
     },
     async ({ flowId, nodeId, inputs }, extra) => {
-      const identity = requireAuth(mapAuthInfoToIdentity(extra.authInfo));
+      const identity = resolveIdentity(extra.authInfo);
       const result = await client.runToNode(identity, flowId, nodeId, inputs);
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
@@ -52,7 +52,7 @@ export function registerRunTools(server: McpServer, client: InvectClient): void 
       flowId: z.string().describe('The flow ID'),
     },
     async ({ flowId }, extra) => {
-      const identity = requireAuth(mapAuthInfoToIdentity(extra.authInfo));
+      const identity = resolveIdentity(extra.authInfo);
       const result = await client.listRuns(identity, flowId);
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
@@ -67,7 +67,7 @@ export function registerRunTools(server: McpServer, client: InvectClient): void 
       flowRunId: z.string().describe('The flow run ID'),
     },
     async ({ flowRunId }, extra) => {
-      const identity = requireAuth(mapAuthInfoToIdentity(extra.authInfo));
+      const identity = resolveIdentity(extra.authInfo);
       const run = await client.getRun(identity, flowRunId);
       return {
         content: [{ type: 'text', text: JSON.stringify(run, null, 2) }],
@@ -82,7 +82,7 @@ export function registerRunTools(server: McpServer, client: InvectClient): void 
       flowRunId: z.string().describe('The flow run ID to cancel'),
     },
     async ({ flowRunId }, extra) => {
-      const identity = requireAuth(mapAuthInfoToIdentity(extra.authInfo));
+      const identity = resolveIdentity(extra.authInfo);
       const result = await client.cancelRun(identity, flowRunId);
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
@@ -97,7 +97,7 @@ export function registerRunTools(server: McpServer, client: InvectClient): void 
       flowRunId: z.string().describe('The flow run ID to pause'),
     },
     async ({ flowRunId }, extra) => {
-      const identity = requireAuth(mapAuthInfoToIdentity(extra.authInfo));
+      const identity = resolveIdentity(extra.authInfo);
       const result = await client.pauseRun(identity, flowRunId);
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
@@ -112,7 +112,7 @@ export function registerRunTools(server: McpServer, client: InvectClient): void 
       flowRunId: z.string().describe('The flow run ID to resume'),
     },
     async ({ flowRunId }, extra) => {
-      const identity = requireAuth(mapAuthInfoToIdentity(extra.authInfo));
+      const identity = resolveIdentity(extra.authInfo);
       const result = await client.resumeRun(identity, flowRunId);
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],

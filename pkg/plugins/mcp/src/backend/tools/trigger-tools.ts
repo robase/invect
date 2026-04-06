@@ -5,7 +5,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { InvectClient } from '../client/types';
-import { mapAuthInfoToIdentity, requireAuth } from '../auth';
+import { resolveIdentity } from '../auth';
 import { TOOL_IDS } from '../../shared/types';
 
 export function registerTriggerTools(server: McpServer, client: InvectClient): void {
@@ -16,7 +16,7 @@ export function registerTriggerTools(server: McpServer, client: InvectClient): v
       flowId: z.string().describe('The flow ID'),
     },
     async ({ flowId }, extra) => {
-      const identity = requireAuth(mapAuthInfoToIdentity(extra.authInfo));
+      const identity = resolveIdentity(extra.authInfo);
       const triggers = await client.listTriggers(identity, flowId);
       return {
         content: [{ type: 'text', text: JSON.stringify(triggers, null, 2) }],
@@ -31,7 +31,7 @@ export function registerTriggerTools(server: McpServer, client: InvectClient): v
       triggerId: z.string().describe('The trigger ID'),
     },
     async ({ triggerId }, extra) => {
-      const identity = requireAuth(mapAuthInfoToIdentity(extra.authInfo));
+      const identity = resolveIdentity(extra.authInfo);
       const trigger = await client.getTrigger(identity, triggerId);
       return {
         content: [{ type: 'text', text: JSON.stringify(trigger, null, 2) }],
@@ -46,7 +46,7 @@ export function registerTriggerTools(server: McpServer, client: InvectClient): v
       input: z.any().describe('Trigger creation input including flowId, type, and configuration'),
     },
     async ({ input }, extra) => {
-      const identity = requireAuth(mapAuthInfoToIdentity(extra.authInfo));
+      const identity = resolveIdentity(extra.authInfo);
       const trigger = await client.createTrigger(identity, input);
       return {
         content: [{ type: 'text', text: JSON.stringify(trigger, null, 2) }],
@@ -62,7 +62,7 @@ export function registerTriggerTools(server: McpServer, client: InvectClient): v
       input: z.any().describe('Updated trigger configuration'),
     },
     async ({ triggerId, input }, extra) => {
-      const identity = requireAuth(mapAuthInfoToIdentity(extra.authInfo));
+      const identity = resolveIdentity(extra.authInfo);
       const trigger = await client.updateTrigger(identity, triggerId, input);
       return {
         content: [{ type: 'text', text: JSON.stringify(trigger, null, 2) }],
@@ -77,7 +77,7 @@ export function registerTriggerTools(server: McpServer, client: InvectClient): v
       triggerId: z.string().describe('The trigger ID to delete'),
     },
     async ({ triggerId }, extra) => {
-      const identity = requireAuth(mapAuthInfoToIdentity(extra.authInfo));
+      const identity = resolveIdentity(extra.authInfo);
       await client.deleteTrigger(identity, triggerId);
       return {
         content: [{ type: 'text', text: `Trigger ${triggerId} deleted.` }],

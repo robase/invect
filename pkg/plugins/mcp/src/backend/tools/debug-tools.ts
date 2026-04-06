@@ -5,7 +5,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { InvectClient } from '../client/types';
-import { mapAuthInfoToIdentity, requireAuth } from '../auth';
+import { resolveIdentity } from '../auth';
 import { TOOL_IDS } from '../../shared/types';
 
 export function registerDebugTools(server: McpServer, client: InvectClient): void {
@@ -16,7 +16,7 @@ export function registerDebugTools(server: McpServer, client: InvectClient): voi
       flowRunId: z.string().describe('The flow run ID'),
     },
     async ({ flowRunId }, extra) => {
-      const identity = requireAuth(mapAuthInfoToIdentity(extra.authInfo));
+      const identity = resolveIdentity(extra.authInfo);
       const executions = await client.getNodeExecutions(identity, flowRunId);
       return {
         content: [{ type: 'text', text: JSON.stringify(executions, null, 2) }],
@@ -36,7 +36,7 @@ export function registerDebugTools(server: McpServer, client: InvectClient): voi
         .describe('Simulated incoming data from upstream nodes'),
     },
     async ({ nodeType, params, inputData }, extra) => {
-      const identity = requireAuth(mapAuthInfoToIdentity(extra.authInfo));
+      const identity = resolveIdentity(extra.authInfo);
       const result = await client.testNode(identity, nodeType, params, inputData);
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
@@ -58,7 +58,7 @@ export function registerDebugTools(server: McpServer, client: InvectClient): voi
         .describe('Sample data context to evaluate the expression against'),
     },
     async ({ expression, context }, extra) => {
-      const identity = requireAuth(mapAuthInfoToIdentity(extra.authInfo));
+      const identity = resolveIdentity(extra.authInfo);
       const result = await client.testJsExpression(identity, expression, context);
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
@@ -74,23 +74,10 @@ export function registerDebugTools(server: McpServer, client: InvectClient): voi
       incomingData: z.record(z.unknown()).describe('Sample incoming data to map'),
     },
     async ({ expression, incomingData }, extra) => {
-      const identity = requireAuth(mapAuthInfoToIdentity(extra.authInfo));
+      const identity = resolveIdentity(extra.authInfo);
       const result = await client.testMapper(identity, expression, incomingData);
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-      };
-    },
-  );
-
-  server.tool(
-    TOOL_IDS.DEBUG_DASHBOARD_STATS,
-    'Get platform-wide statistics: total flows, runs, success/failure rates, and recent activity',
-    {},
-    async (_params, extra) => {
-      const identity = requireAuth(mapAuthInfoToIdentity(extra.authInfo));
-      const stats = await client.getDashboardStats(identity);
-      return {
-        content: [{ type: 'text', text: JSON.stringify(stats, null, 2) }],
       };
     },
   );

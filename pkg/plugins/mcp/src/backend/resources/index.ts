@@ -4,7 +4,7 @@
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { InvectClient } from '../client/types';
-import { mapAuthInfoToIdentity, requireAuth } from '../auth';
+import { resolveIdentity } from '../auth';
 
 export function registerResources(server: McpServer, client: InvectClient): void {
   // Resource template: individual flow definition
@@ -13,7 +13,7 @@ export function registerResources(server: McpServer, client: InvectClient): void
     'invect://flows/{flowId}/definition',
     { description: 'The current definition of a specific flow (nodes, edges, params)' },
     async (uri, extra) => {
-      const identity = requireAuth(mapAuthInfoToIdentity(extra.authInfo));
+      const identity = resolveIdentity(extra.authInfo);
       // Extract flowId from URI: invect://flows/{flowId}/definition
       const match = uri.href.match(/^invect:\/\/flows\/([^/]+)\/definition$/);
       if (!match?.[1]) {
@@ -39,7 +39,7 @@ export function registerResources(server: McpServer, client: InvectClient): void
     'invect://runs/{flowRunId}',
     { description: 'The result details of a specific flow run' },
     async (uri, extra) => {
-      const identity = requireAuth(mapAuthInfoToIdentity(extra.authInfo));
+      const identity = resolveIdentity(extra.authInfo);
       const match = uri.href.match(/^invect:\/\/runs\/([^/]+)$/);
       if (!match?.[1]) {
         return { contents: [{ uri: uri.href, text: 'Invalid run URI', mimeType: 'text/plain' }] };

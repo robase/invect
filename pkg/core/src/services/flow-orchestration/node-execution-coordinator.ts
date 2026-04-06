@@ -518,17 +518,11 @@ export class NodeExecutionCoordinator {
               logger.warn('Credentials service not available', { credentialId });
               return null;
             }
-            try {
-              // Use getDecryptedWithRefresh for OAuth2 auto-refresh support
-              const credential = await credentialsService.getDecryptedWithRefresh(credentialId);
-              return credential;
-            } catch (error) {
-              logger.error('Failed to retrieve credential', {
-                credentialId,
-                error: error instanceof Error ? error.message : String(error),
-              });
-              return null;
-            }
+            // Let errors (including OAuth2 refresh failures) propagate so the
+            // caller receives a meaningful message instead of a generic
+            // "No valid access token" error.
+            const credential = await credentialsService.getDecryptedWithRefresh(credentialId);
+            return credential;
           },
           submitPrompt: async (request) => {
             logger.debug('Submitting model prompt', {

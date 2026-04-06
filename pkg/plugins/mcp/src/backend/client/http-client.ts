@@ -18,7 +18,7 @@ export class HttpClient implements InvectClient {
   private async request<T = unknown>(method: string, path: string, body?: unknown): Promise<T> {
     const url = `${this.baseUrl}${path}`;
     const headers: Record<string, string> = {
-      Authorization: `Bearer ${this.apiKey}`,
+      'x-api-key': this.apiKey,
       'Content-Type': 'application/json',
     };
 
@@ -48,7 +48,7 @@ export class HttpClient implements InvectClient {
   // ===== Flows =====
 
   async listFlows(_identity: InvectIdentity | null) {
-    return await this.request<{ data: unknown[]; total: number }>('GET', '/flows');
+    return await this.request('GET', '/flows/list');
   }
 
   async getFlow(_identity: InvectIdentity | null, flowId: string) {
@@ -68,7 +68,7 @@ export class HttpClient implements InvectClient {
     flowId: string,
     data: { name?: string; description?: string },
   ) {
-    return await this.request('PATCH', `/flows/${encodeURIComponent(flowId)}`, data);
+    return await this.request('PUT', `/flows/${encodeURIComponent(flowId)}`, data);
   }
 
   async deleteFlow(_identity: InvectIdentity | null, flowId: string) {
@@ -78,17 +78,18 @@ export class HttpClient implements InvectClient {
   async validateFlow(_identity: InvectIdentity | null, flowId: string, definition: unknown) {
     return await this.request<{ valid: boolean; errors?: string[] }>(
       'POST',
-      `/flows/${encodeURIComponent(flowId)}/validate`,
-      definition,
+      '/validate-flow',
+      { flowId, flowDefinition: definition },
     );
   }
 
   // ===== Versions =====
 
   async listVersions(_identity: InvectIdentity | null, flowId: string) {
-    return await this.request<{ data: unknown[]; total: number }>(
-      'GET',
-      `/flows/${encodeURIComponent(flowId)}/versions`,
+    return await this.request(
+      'POST',
+      `/flows/${encodeURIComponent(flowId)}/versions/list`,
+      {},
     );
   }
 
@@ -127,16 +128,15 @@ export class HttpClient implements InvectClient {
     nodeId: string,
     inputs?: Record<string, unknown>,
   ) {
-    return await this.request('POST', `/flows/${encodeURIComponent(flowId)}/run-to-node`, {
-      targetNodeId: nodeId,
+    return await this.request('POST', `/flows/${encodeURIComponent(flowId)}/run-to-node/${encodeURIComponent(nodeId)}`, {
       ...(inputs ? { inputs } : {}),
     });
   }
 
   async listRuns(_identity: InvectIdentity | null, flowId: string) {
-    return await this.request<{ data: unknown[]; total: number }>(
+    return await this.request(
       'GET',
-      `/flows/${encodeURIComponent(flowId)}/runs`,
+      `/flows/${encodeURIComponent(flowId)}/flow-runs`,
     );
   }
 
@@ -182,7 +182,7 @@ export class HttpClient implements InvectClient {
   ) {
     return await this.request<{ success: boolean; output?: unknown; error?: string }>(
       'POST',
-      '/node-data/test-node',
+      '/nodes/test',
       { nodeType, params, inputData },
     );
   }
@@ -211,16 +211,12 @@ export class HttpClient implements InvectClient {
     );
   }
 
-  async getDashboardStats(_identity: InvectIdentity | null) {
-    return await this.request('GET', '/dashboard');
-  }
-
   // ===== Credentials =====
 
   async listCredentials(_identity: InvectIdentity | null): Promise<CredentialSummary[]> {
-    const result = await this.request<unknown[]>('GET', '/credentials');
-    // API returns sanitized list (no config field)
-    return (result as Array<Record<string, unknown>>).map((c) => ({
+    const result = await this.request<{ data: unknown[] }>('GET', '/credentials');
+    const items = Array.isArray(result) ? result : (result as { data: unknown[] }).data ?? [];
+    return (items as Array<Record<string, unknown>>).map((c) => ({
       id: String(c.id),
       name: String(c.name),
       type: String(c.type),
@@ -248,11 +244,13 @@ export class HttpClient implements InvectClient {
   }
 
   async createTrigger(_identity: InvectIdentity | null, input: unknown) {
-    return await this.request('POST', '/triggers', input);
+    const data = input as Record<string, unknown>;
+    const flowId = data.flowId as string;
+    return await this.request('POST', `/flows/${encodeURIComponent(flowId)}/triggers`, data);
   }
 
   async updateTrigger(_identity: InvectIdentity | null, triggerId: string, input: unknown) {
-    return await this.request('PATCH', `/triggers/${encodeURIComponent(triggerId)}`, input);
+    return await this.request('PUT', `/triggers/${encodeURIComponent(triggerId)}`, input);
   }
 
   async deleteTrigger(_identity: InvectIdentity | null, triggerId: string) {
@@ -262,10 +260,20 @@ export class HttpClient implements InvectClient {
   // ===== Node Reference =====
 
   async listProviders(_identity: InvectIdentity | null) {
-    return await this.request<unknown[]>('GET', '/actions/providers');
+    // The /nodes endpoint returns node definitions grouped by provider.
+    // Extract unique providers from the response.
+    const nodes = await this.request<unknown[]>('GET', '/nodes');
+    const providerSet = new Map<string, Record<string, unknown>>();
+    for (const node of nodes as Array<Record<string, unknown>>) {
+      const p = node.provider as Record<string, unknown> | undefined;
+      if (p && typeof p.id === 'string' && !providerSet.has(p.id)) {
+        providerSet.set(p.id, p);
+      }
+    }
+    return Array.from(providerSet.values());
   }
 
   async listAvailableNodes(_identity: InvectIdentity | null) {
-    return await this.request<unknown[]>('GET', '/actions/nodes');
+    return await this.request<unknown[]>('GET', '/nodes');
   }
 }

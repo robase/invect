@@ -243,12 +243,17 @@ export class CredentialsService {
           config: updatedConfig,
         };
       } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
         this.logger.error('Failed to refresh OAuth2 token', {
           credentialId: id,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: errorMsg,
         });
-        // Return original credential - let the caller handle the expired token
-        return credential;
+        // Throw so callers see the real refresh failure instead of a
+        // misleading "No valid access token" error.
+        throw new Error(
+          `OAuth2 token refresh failed for credential ${id} ` +
+            `(provider: ${credential.config.oauth2Provider}): ${errorMsg}`,
+        );
       }
     }
 
@@ -312,7 +317,9 @@ export class CredentialsService {
     // Decrypt config for return
     if (updated.config) {
       const decryptedConfig = this.encryption.decryptObject<CredentialConfig>(
-        JSON.stringify(updated.config),
+        typeof updated.config === 'string'
+          ? updated.config
+          : JSON.stringify(updated.config),
       );
       return {
         ...updated,

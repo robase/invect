@@ -48,7 +48,6 @@ export const TOOL_IDS = {
   DEBUG_TEST_NODE: 'debug_test_node',
   DEBUG_TEST_EXPRESSION: 'debug_test_expression',
   DEBUG_TEST_MAPPER: 'debug_test_mapper',
-  DEBUG_DASHBOARD_STATS: 'debug_dashboard_stats',
 
   // Credentials
   CREDENTIAL_LIST: 'credential_list',
