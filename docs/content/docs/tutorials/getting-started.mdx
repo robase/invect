@@ -1,0 +1,157 @@
+---
+title: Getting Started
+description: Install Invect, run the dev server, and open the visual flow editor.
+---
+
+In this tutorial you will install Invect into a new Express app, generate the database, and open the visual flow editor in your browser.
+
+## What you'll need
+
+- **Node.js** 18 or later
+- **pnpm** (or npm / yarn — adjust commands accordingly)
+
+## Create a new project
+
+Create a folder and initialise it:
+
+```bash
+mkdir my-invect-app && cd my-invect-app
+pnpm init
+```
+
+## Install packages
+
+Install the core library, the Express adapter, and a SQLite driver:
+
+```bash
+pnpm add @invect/core @invect/express better-sqlite3 express cors
+pnpm add -D @types/express @types/cors @types/better-sqlite3 tsx typescript
+```
+
+## Create the config file
+
+Create `invect.config.ts` in the project root:
+
+```ts title="invect.config.ts"
+import { defineConfig } from '@invect/core';
+
+export const invectConfig = defineConfig({
+  database: {
+    type: 'sqlite',
+    connectionString: 'file:./dev.db',
+  },
+});
+```
+
+`defineConfig` gives you full type inference for all configuration options. For now, all you need is a database connection — SQLite is the simplest choice for local development.
+
+## Generate the database schema
+
+Use the Invect CLI to generate Drizzle schema files and push them to your database:
+
+```bash
+pnpm dlx @invect/cli generate
+pnpm dlx @invect/cli migrate --push
+```
+
+The `generate` command creates dialect-specific Drizzle schema files from Invect's core tables. The `migrate --push` command applies them to your SQLite database.
+
+## Create the server
+
+Create `index.ts`:
+
+```ts title="index.ts"
+import express from 'express';
+import cors from 'cors';
+import { createInvectRouter } from '@invect/express';
+import { invectConfig } from './invect.config';
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+const invectRouter = await createInvectRouter(invectConfig);
+app.use('/invect', invectRouter);
+
+app.listen(3000, () => {
+  console.log('Server running at http://localhost:3000');
+  console.log('Invect API at http://localhost:3000/invect');
+});
+```
+
+`createInvectRouter` is an async factory — it initialises the database, registers all built-in actions, and returns a standard Express router. Mount it at whatever path you like.
+
+## Start the server
+
+```bash
+pnpm tsx index.ts
+```
+
+You should see:
+
+```
+Server running at http://localhost:3000
+Invect API at http://localhost:3000/invect
+```
+
+The Invect REST API is now live. You can verify it by visiting `http://localhost:3000/invect/flows` — it should return an empty JSON array.
+
+## Add the visual editor
+
+The flow editor is a React app provided by `@invect/ui`. The simplest way to add it is with a separate Vite frontend.
+
+In a **new terminal**, create a Vite React app alongside your server:
+
+```bash
+pnpm create vite invect-frontend --template react-ts
+cd invect-frontend
+pnpm add @invect/ui react-router
+```
+
+Replace `src/App.tsx` with:
+
+```tsx title="invect-frontend/src/App.tsx"
+import { BrowserRouter, Routes, Route } from 'react-router';
+import { Invect } from '@invect/ui';
+import '@invect/ui/styles';
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route
+          path="/*"
+          element={
+            <div style={{ height: '100vh' }}>
+              <Invect apiBaseUrl="http://localhost:3000/invect" />
+            </div>
+          }
+        />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+```
+
+Start the frontend:
+
+```bash
+pnpm dev
+```
+
+Open `http://localhost:5173` in your browser. You should see the Invect dashboard — an empty canvas ready for your first flow.
+
+## What you've built
+
+You now have:
+
+- An Express server with the Invect REST API mounted at `/invect`
+- A SQLite database for storing flows, credentials, and execution history
+- A React frontend with the visual flow editor
+
+## Next steps
+
+You're ready to build your first workflow. Continue to the next tutorial:
+
+- [Build Your First Flow](/docs/tutorials/build-your-first-flow) — create a multi-step flow using the visual editor
+- [How-to: Set up with Express](/docs/how-to/installation/express) — a more detailed Express installation guide with plugins and credentials

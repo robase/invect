@@ -1,0 +1,23 @@
+{
+  "title": "How-to Guides",
+  "pages": [
+    "---Installation---",
+    "...installation",
+    "---Flows---",
+    "...flows",
+    "---Nodes---",
+    "...nodes",
+    "---Credentials---",
+    "...credentials",
+    "---Agents---",
+    "...agents",
+    "---Plugins---",
+    "...plugins",
+    "---Database---",
+    "...database",
+    "---Frontend---",
+    "...frontend",
+    "---Production---",
+    "...production"
+  ]
+}

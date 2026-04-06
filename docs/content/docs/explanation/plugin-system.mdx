@@ -1,0 +1,172 @@
+---
+title: Plugin System
+description: How plugins compose — schema merging, lifecycle hooks, and endpoint routing.
+---
+
+Invect's plugin system lets you extend every layer of the stack: database tables, API endpoints, flow execution hooks, and frontend components. This page explains how the pieces compose.
+
+## Plugin anatomy
+
+A plugin is a plain object (or factory function returning one) that implements the `InvectPlugin` interface. It can declare any combination of:
+
+- **Actions** — flow nodes and agent tools.
+- **Schema** — database tables (abstract, dialect-agnostic).
+- **Endpoints** — custom API routes.
+- **Hooks** — lifecycle interceptors.
+- **Init/shutdown** — setup and cleanup logic.
+
+No subfield is required except `id`. A plugin that only declares hooks is valid. A plugin that only adds actions is valid. Mix and match.
+
+## Lifecycle
+
+### Initialisation order
+
+During `Invect.initialize()`:
+
+1. The action registry is created and all built-in actions are registered.
+2. For each plugin (in declaration order):
+   - Plugin `actions` are added to the action registry.
+   - Plugin `init(context)` is called with database access, a logger, and a tool registration function.
+3. The node executor registry is created (Agent executor only).
+4. All actions are converted to agent tools.
+5. Services are initialised, including database table verification.
+
+The order matters: a plugin's `init` function can depend on actions registered by earlier plugins.
+
+### Shutdown order
+
+On graceful shutdown, plugin `shutdown()` functions are called in **reverse** order. The last plugin initialised is the first to shut down.
+
+## Schema merging
+
+Plugins declare database tables using an abstract format:
+
+```ts
+schema: {
+  flow_access: {
+    fields: {
+      id: { type: 'string', primaryKey: true },
+      flowId: { type: 'string', references: { table: 'flows', field: 'id' } },
+      userId: { type: 'string', required: true },
+      role: { type: 'string', required: true },
+    },
+  },
+}
+```
+
+When you run `invect-cli generate`, the CLI:
+
+1. Loads your config and discovers all plugins.
+2. Starts with the core schema (flows, flow_versions, flow_runs, etc.).
+3. Merges each plugin's schema on top — new tables are added, existing tables have new fields appended.
+4. Generates dialect-specific Drizzle files for SQLite, PostgreSQL, and MySQL.
+
+Field conflicts (same name, different types) are caught and reported as errors.
+
+### Table extensions
+
+A plugin can add columns to core tables:
+
+```ts
+schema: {
+  flows: {
+    fields: {
+      tenantId: { type: 'string' },  // Adds a column to the core flows table
+    },
+  },
+}
+```
+
+This is additive only — plugins can't remove or modify existing columns.
+
+### Startup verification
+
+During `DatabaseService.initialize()`, Invect checks that all required tables exist:
+
+1. Core tables are verified against `core-schema.ts`.
+2. For each plugin, `requiredTables` (explicit) or table names inferred from `schema` are verified.
+3. Missing tables produce a clear error with the plugin name and setup instructions.
+
+This prevents silent failures where a plugin expects tables that haven't been migrated yet.
+
+## Hook execution
+
+Hooks are the primary way plugins intercept Invect's behaviour. They fire at specific moments in the request and execution lifecycle.
+
+### Request hooks
+
+Every API request passes through `onRequest` hooks before reaching the route handler. Plugins can:
+
+- **Inspect** the request (logging, metrics).
+- **Modify** it (add headers, transform body) by returning `{ request }`.
+- **Short-circuit** it (authentication failure, rate limiting) by returning `{ response }`.
+
+After the route handler responds, `onResponse` hooks can inspect or replace the response.
+
+### Execution hooks
+
+Flow execution has four hook points:
+
+- `beforeFlowRun` — before execution starts. Can cancel the run or modify inputs.
+- `afterFlowRun` — after execution completes (success or failure).
+- `beforeNodeExecute` — before each node. Can skip the node or override params.
+- `afterNodeExecute` — after each node. Can override the output.
+
+### Authorization hooks
+
+The `onAuthorize` hook fires when Invect checks permissions. Plugins like RBAC use this to enforce flow-level access control. The hook receives the action being attempted (e.g., `flow:read`, `flow-run:create`) and the resource, and returns `{ allowed: true/false }`.
+
+### Multiple plugins
+
+When multiple plugins register the same hook, they execute in declaration order. For short-circuit hooks (onRequest, onAuthorize), the first plugin to return a response wins.
+
+## Endpoint routing
+
+Plugin endpoints are mounted under `/plugins/{pluginId}/`:
+
+```ts
+endpoints: [
+  {
+    method: 'GET',
+    path: '/status',  // Becomes /plugins/my-plugin/status
+    handler: async (req, res) => { ... },
+  },
+]
+```
+
+The plugin manager routes requests matching `/plugins/*` to the appropriate plugin's handler. Auth hooks still run unless the endpoint declares `skipAuth: true`.
+
+## Frontend plugins
+
+Frontend plugins contribute UI elements to the Invect editor:
+
+- **Sidebar items** — navigation links.
+- **Routes** — full pages.
+- **Panel tabs** — tabs in the node/flow editor panel.
+- **Header actions** — buttons in the toolbar.
+- **Providers** — React context providers wrapping the app.
+- **API headers** — injected into every API request.
+
+Frontend plugins are passed to the `Invect` component (or `AuthenticatedInvect`) and composed at render time. They don't have access to the backend plugin system — they communicate through the REST API.
+
+## Real-world example: Auth + RBAC
+
+The `@invect/user-auth` and `@invect/rbac` plugins demonstrate all of these concepts working together:
+
+**Auth plugin**:
+- **Schema**: Declares Better Auth tables (users, sessions, accounts).
+- **Init**: Creates a Better Auth instance, seeds admin user.
+- **Hooks**: `onRequest` resolves sessions. `onAuthorize` enforces session-based access.
+- **Endpoints**: Proxies Better Auth routes (sign-in, session, user management).
+- **Frontend**: `AuthProvider`, `SignInPage`, `UserButton`, `AuthGate`.
+
+**RBAC plugin**:
+- **Schema**: Declares `flow_access` table.
+- **Hooks**: `onAuthorize` checks flow-level ACLs (overrides auth plugin's broad allow).
+- **Endpoints**: Flow access management API.
+- **Frontend**: `ShareButton`, `FlowAccessPanel`, access management page.
+
+Together, they create a complete auth + ACL system:
+1. Auth's `onRequest` resolves the session.
+2. Auth's `onAuthorize` verifies the user is logged in.
+3. RBAC's `onAuthorize` checks if the user has access to the specific flow.

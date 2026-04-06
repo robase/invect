@@ -1,0 +1,115 @@
+---
+title: Build Your First Flow
+description: Create a working multi-step flow using the visual editor.
+---
+
+In this tutorial you will create a flow that takes a user's name as input, generates a personalised greeting using a template, and returns it as output. You'll learn how the visual editor works, how nodes connect, and how data flows between them.
+
+## Prerequisites
+
+Complete the [Getting Started](/docs/tutorials/getting-started) tutorial — you need a running Invect server and the visual editor open in your browser.
+
+## Create a new flow
+
+1. Open the Invect dashboard at `http://localhost:5173`.
+2. Click **Create Flow**.
+3. Enter the name `Greeting Flow` and click **Create**.
+
+The flow editor opens with an empty canvas.
+
+## Add an Input node
+
+Input nodes define what data your flow accepts when it runs.
+
+1. Open the **node palette** on the left sidebar (or right-click the canvas).
+2. Find **Input** under the **Core** provider.
+3. Drag it onto the canvas.
+4. Double-click the node to open its config panel.
+5. Add an input field:
+   - **Name**: `name`
+   - **Type**: `string`
+6. Close the config panel.
+
+The Input node is now configured to accept a `name` parameter when the flow runs. This value will be available to downstream nodes.
+
+## Add a Template String node
+
+Template String nodes let you compose text using JavaScript template expressions. Any value from an upstream node can be referenced inside `{{ }}` blocks.
+
+1. Drag a **Template String** node from the Core provider onto the canvas, to the right of the Input node.
+2. Connect the Input node's output handle to the Template String node's input handle by dragging between the small circles on the edge of each node.
+3. Double-click the Template String node to open its config panel.
+4. In the **template** field, enter:
+   ```
+   Hello, {{ input.name }}! Welcome to Invect.
+   ```
+5. Close the config panel.
+
+The `{{ input.name }}` expression references the `name` field from the upstream Input node. The key `input` comes from the Input node's **reference ID** — you can see and edit this in the node's config panel.
+
+## Add an Output node
+
+Output nodes define what the flow returns.
+
+1. Drag an **Output** node onto the canvas, to the right of the Template String node.
+2. Connect the Template String node to the Output node.
+
+The Output node will automatically capture whatever the upstream Template String node produces.
+
+## Your flow so far
+
+You should now have three nodes connected in a chain:
+
+```
+Input → Template String → Output
+```
+
+## Run the flow
+
+1. Click the **Run** button in the top toolbar.
+2. A dialog appears asking for input values. Enter:
+   - **name**: `Alice`
+3. Click **Run**.
+
+The flow executes from left to right. Each node highlights as it runs:
+- The **Input** node captures `{ name: "Alice" }`.
+- The **Template String** node evaluates the template and produces `Hello, Alice! Welcome to Invect.`.
+- The **Output** node returns the result.
+
+You can see the output by clicking on the Output node — the execution result appears in the side panel.
+
+## Inspect node executions
+
+Click on any node after a run to see its execution details:
+
+- **Input data** — what the node received from upstream nodes.
+- **Output data** — what the node produced.
+- **Status** — success, failure, or skipped.
+- **Duration** — how long the node took to execute.
+
+This is useful for debugging flows when something goes wrong.
+
+## Edit and re-run
+
+Try changing the template to something more complex:
+
+```
+Hello, {{ input.name }}! Today is {{ new Date().toLocaleDateString() }}. Welcome to Invect.
+```
+
+Template expressions support full JavaScript — not just variable access. You can call methods, use ternary operators, filter arrays, and more. See the [Template Syntax reference](/docs/reference/template-syntax) for details.
+
+Run the flow again to see the updated output.
+
+## What you've learned
+
+- How to create a flow and add nodes from the palette.
+- How to connect nodes to define the data flow.
+- How to use `{{ }}` template expressions to reference upstream node outputs.
+- How to run a flow and inspect results.
+
+## Next steps
+
+- [Add AI to a Flow](/docs/tutorials/add-ai-to-a-flow) — connect an OpenAI or Anthropic credential and add a Model node.
+- [How-to: Use Templates](/docs/how-to/flows/use-templates) — learn the full template expression syntax.
+- [How-to: Add Conditional Logic](/docs/how-to/flows/add-conditional-logic) — branch your flows with if/else and switch nodes.

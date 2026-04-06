@@ -29,24 +29,20 @@ model Post {
 }
 
 model Credentials {
-  id            String    @id @default(uuid())
-  name          String
-  type          String
-  authType      String    @map("auth_type")
-  config        Json
-  description   String?
-  isActive      Boolean   @default(true) @map("is_active")
-  workspaceId   String?   @map("workspace_id")
-  isShared      Boolean   @default(false) @map("is_shared")
-  metadata      Json?
-  lastUsedAt    DateTime? @map("last_used_at") @db.Timestamptz(3)
-  expiresAt     DateTime? @map("expires_at") @db.Timestamptz(3)
-  webhookPath   String?   @map("webhook_path")
-  webhookSecret String?   @map("webhook_secret")
-  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
-
-  @@unique([webhookPath])
+  id          String    @id @default(uuid())
+  name        String
+  type        String
+  authType    String    @map("auth_type")
+  config      Json
+  description String?
+  isActive    Boolean   @default(true) @map("is_active")
+  workspaceId String?   @map("workspace_id")
+  isShared    Boolean   @default(false) @map("is_shared")
+  metadata    Json?
+  lastUsedAt  DateTime? @map("last_used_at") @db.Timestamptz(3)
+  expiresAt   DateTime? @map("expires_at") @db.Timestamptz(3)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 }
 
 model Flows {

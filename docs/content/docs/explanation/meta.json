@@ -1,0 +1,12 @@
+{
+  "title": "Understanding Invect",
+  "pages": [
+    "architecture",
+    "how-flows-execute",
+    "actions-vs-executors",
+    "plugin-system",
+    "credential-security",
+    "batch-processing",
+    "why-code-first"
+  ]
+}

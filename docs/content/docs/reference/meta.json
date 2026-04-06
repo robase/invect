@@ -1,0 +1,16 @@
+{
+  "title": "Reference",
+  "pages": [
+    "cli",
+    "configuration",
+    "api-endpoints",
+    "built-in-actions",
+    "built-in-agent-tools",
+    "node-types",
+    "plugin-api",
+    "database-schema",
+    "oauth2-providers",
+    "template-syntax",
+    "trigger-types"
+  ]
+}

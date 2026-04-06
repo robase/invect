@@ -1,0 +1,100 @@
+---
+title: Plugin API
+description: The InvectPlugin interface, hooks, schema format, and lifecycle.
+---
+
+## InvectPlugin interface
+
+```ts
+interface InvectPlugin {
+  id: string;                              // Required: unique identifier
+  name?: string;                           // Display name
+  init?: (ctx: InvectPluginContext) => Promise<InvectPluginInitResult | void>;
+  schema?: InvectPluginSchema;            // Abstract DB tables
+  requiredTables?: string[];               // Tables checked at startup
+  actions?: ActionDefinition[];            // Flow nodes + agent tools
+  endpoints?: InvectPluginEndpoint[];     // Custom API routes
+  hooks?: InvectPluginHooks;              // Lifecycle hooks
+  setupInstructions?: string;              // Shown when tables are missing
+  $ERROR_CODES?: Record<string, object>;   // Custom error codes
+  shutdown?: () => Promise<void> | void;   // Cleanup
+}
+```
+
+## Plugin context (`init`)
+
+```ts
+interface InvectPluginContext {
+  db: DatabaseConnection;          // Drizzle database instance
+  logger: Logger;                  // Scoped logger
+  config: InvectConfig;            // Full Invect config
+  registerTool: (def, executor) => void;  // Register standalone agent tools
+}
+```
+
+## Hooks
+
+| Hook | Signature | Can short-circuit? |
+|------|-----------|-------------------|
+| `beforeFlowRun` | `(ctx: { flowId, inputs, config }) => Promise<{ cancel?, inputs? } \| void>` | Yes |
+| `afterFlowRun` | `(ctx: { flowId, flowRunId, status, output }) => Promise<void>` | No |
+| `beforeNodeExecute` | `(ctx: { nodeId, nodeType, params }) => Promise<{ skip?, params? } \| void>` | Yes |
+| `afterNodeExecute` | `(ctx: { nodeId, nodeType, output, status }) => Promise<{ output? } \| void>` | Override output |
+| `onRequest` | `(ctx: { request, method, path }) => Promise<{ response?, request? } \| void>` | Yes |
+| `onResponse` | `(ctx: { request, response }) => Promise<{ response? } \| void>` | Replace response |
+| `onAuthorize` | `(ctx: { action, resource }) => Promise<{ allowed? } \| void>` | Yes |
+
+## Endpoints
+
+```ts
+interface InvectPluginEndpoint {
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  path: string;           // Mounted under /plugins/{pluginId}/
+  handler: (req, res) => Promise<void>;
+  skipAuth?: boolean;      // Skip auth checks for this endpoint
+}
+```
+
+## Schema format
+
+```ts
+interface InvectPluginSchema {
+  [tableName: string]: {
+    fields: {
+      [fieldName: string]: {
+        type: 'string' | 'integer' | 'boolean' | 'timestamp' | 'text' | 'json';
+        primaryKey?: boolean;
+        required?: boolean;
+        default?: unknown;
+        references?: { table: string; field: string };
+      };
+    };
+  };
+}
+```
+
+Schemas can define new tables or extend existing core tables (additive only — new fields are merged in).
+
+## Lifecycle
+
+1. Plugin `actions` are registered in the action registry.
+2. Plugin `init(ctx)` is called (in declaration order).
+3. Core services initialise (database, triggers, batch polling).
+4. On shutdown, `shutdown()` is called in **reverse** order.
+
+## Frontend plugin interface
+
+```ts
+interface InvectFrontendPlugin {
+  id: string;
+  name?: string;
+  sidebar?: PluginSidebarContribution[];
+  routes?: PluginRouteContribution[];
+  panelTabs?: PluginPanelTabContribution[];
+  headerActions?: PluginHeaderActionContribution[];
+  components?: Record<string, ComponentType>;
+  providers?: ComponentType<{ children }>[];
+  apiHeaders?: () => Record<string, string>;
+  checkPermission?: (perm, ctx?) => boolean | undefined;
+}
+```

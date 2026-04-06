@@ -1,0 +1,76 @@
+---
+title: Customise Theming
+description: Configure theme tokens, dark mode, and CSS scoping.
+---
+
+All Invect UI styling is scoped inside the `.invect` CSS class. The theme uses CSS custom properties (tokens) prefixed with `--imp-`.
+
+## Theme modes
+
+The `Invect` and `InvectShell` components accept a `theme` prop:
+
+```tsx
+<Invect apiBaseUrl="/api/invect" theme="dark" />
+// or
+<InvectShell theme="system">
+  {children}
+</InvectShell>
+```
+
+| Value | Behaviour |
+|-------|-----------|
+| `light` | Light theme. |
+| `dark` | Dark theme. |
+| `system` | Follows OS preference. |
+
+## CSS scoping
+
+All Invect styles are scoped to `.invect`. This means:
+- Invect styles don't leak into your app.
+- Your app styles don't break Invect.
+- Multiple Invect instances (nested is fine) just work.
+
+## Theme tokens
+
+Components use `imp-*` Tailwind utilities that map to CSS variables:
+
+| Token | Light | Dark |
+|-------|-------|------|
+| `bg-imp-background` | White | Dark grey |
+| `text-imp-foreground` | Dark text | Light text |
+| `border-imp-border` | Light border | Dark border |
+| `bg-imp-primary` | Brand colour | Brand colour |
+| `bg-imp-muted` | Light grey | Dark grey |
+
+## Customising tokens
+
+Override the CSS variables in your own stylesheet:
+
+```css
+.invect {
+  --imp-primary: 220 90% 56%;
+  --imp-background: 0 0% 100%;
+  --imp-foreground: 222 47% 11%;
+}
+
+.invect.dark {
+  --imp-background: 222 47% 11%;
+  --imp-foreground: 210 40% 98%;
+}
+```
+
+Import your overrides after `@invect/ui/styles`:
+
+```tsx
+import '@invect/ui/styles';
+import './my-invect-overrides.css';
+```
+
+## Plugin components
+
+Frontend plugins should always use `imp-*` tokens — never raw colours. This ensures they integrate with whatever theme the host app provides.
+
+## Next steps
+
+- [Embed the Editor](/docs/how-to/frontend/embed-the-editor) — mounting the editor component.
+- [Use Chat Assistant](/docs/how-to/frontend/use-chat-assistant) — the AI assistant.

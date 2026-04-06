@@ -9,24 +9,20 @@ datasource db {
 }
 
 model Credentials {
-  id            String    @id @default(uuid())
-  name          String
-  type          String
-  authType      String    @map("auth_type")
-  config        String
-  description   String?
-  isActive      Boolean   @default(true) @map("is_active")
-  workspaceId   String?   @map("workspace_id")
-  isShared      Boolean   @default(false) @map("is_shared")
-  metadata      String?
-  lastUsedAt    DateTime? @map("last_used_at")
-  expiresAt     DateTime? @map("expires_at")
-  webhookPath   String?   @map("webhook_path")
-  webhookSecret String?   @map("webhook_secret")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
-
-  @@unique([webhookPath])
+  id          String    @id @default(uuid())
+  name        String
+  type        String
+  authType    String    @map("auth_type")
+  config      String
+  description String?
+  isActive    Boolean   @default(true) @map("is_active")
+  workspaceId String?   @map("workspace_id")
+  isShared    Boolean   @default(false) @map("is_shared")
+  metadata    String?
+  lastUsedAt  DateTime? @map("last_used_at")
+  expiresAt   DateTime? @map("expires_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 }
 
 model Flows {

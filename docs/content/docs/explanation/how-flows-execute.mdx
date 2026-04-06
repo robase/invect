@@ -1,0 +1,140 @@
+---
+title: How Flows Execute
+description: The complete lifecycle of a flow run — from trigger to output.
+---
+
+When you click "Run" in the editor or call the API, a precise sequence of steps turns your flow graph into executed results. This page walks through every stage.
+
+## 1. Initiation
+
+A flow run starts when `Invect.startFlowRun(flowId, inputs)` is called. This can happen from:
+
+- The **Run** button in the visual editor.
+- A **REST API** call to `POST /flows/:flowId/run`.
+- **Programmatic code** in your application.
+- A **cron trigger** firing on schedule.
+- A **webhook** (via the webhooks plugin).
+
+The `FlowOrchestrationService` receives the request and delegates to `FlowRunCoordinator`.
+
+## 2. Flow resolution
+
+The coordinator:
+
+1. Loads the **flow definition** from the database (the latest version, or a specific version if requested).
+2. Creates a **flow run record** with status `RUNNING`.
+3. Fires the `beforeFlowRun` plugin hook — plugins can modify inputs or cancel the run.
+
+## 3. Topological sort
+
+The `GraphService` analyses the flow's nodes and edges to determine execution order. It performs a topological sort on the directed acyclic graph (DAG), producing a list of nodes where every node appears after all of its dependencies.
+
+```
+Input → Template String → Model → Output
+
+Topological order: [Input, Template String, Model, Output]
+```
+
+For flows with branches (if/else, switch), all branches are included in the sort. The actual path taken is determined at runtime — nodes on inactive branches are skipped.
+
+## 4. Node-by-node execution
+
+For each node in topological order, the `NodeExecutionCoordinator` runs these steps:
+
+### a. Build incoming data
+
+The coordinator constructs an **input data object** for the current node. This object contains the outputs of all upstream nodes, keyed by their **reference ID** (or label normalised to `snake_case`).
+
+```json
+{
+  "input": { "name": "Alice", "topic": "machine learning" },
+  "api_response": { "data": [1, 2, 3], "status": 200 }
+}
+```
+
+If two upstream nodes produce the same key, a numeric suffix is appended: `some_key`, `some_key1`.
+
+### b. Resolve template parameters
+
+Each node's configuration parameters may contain `{{ }}` template expressions. The coordinator passes each parameter through the `TemplateService`, which evaluates the JavaScript expressions against the incoming data object using a QuickJS WASM sandbox.
+
+```
+Before: "Hello, {{ input.name }}!"
+After:  "Hello, Alice!"
+```
+
+Pure expressions (where the entire value is a single `{{ }}` block) return the raw JavaScript value. Mixed templates (text + expressions) return an interpolated string.
+
+### c. Validate parameters
+
+If the node's action defines a Zod schema, the resolved parameters are validated against it. Invalid parameters produce a clear error.
+
+### d. Execute the node
+
+The coordinator dispatches to the appropriate executor:
+
+- **Action nodes** (everything except Agent) → `executeActionAsNode()` calls the action's `execute` function with the validated params and an execution context.
+- **Agent nodes** → `AgentNodeExecutor.execute()` runs the iterative prompt-tool loop.
+
+The execution context provides:
+- `incomingData` — the full input data object.
+- `credential` — the decrypted credential (if attached).
+- `logger` — a scoped logger.
+- `functions` — service functions like `submitPrompt`, `getCredential`, `markDownstreamNodesAsSkipped`.
+
+### e. Store output
+
+The node's output is stored in a `node_executions` record and added to the in-memory output map. Downstream nodes will pick it up when building their incoming data.
+
+### f. Handle branching
+
+For flow control nodes (if/else, switch):
+
+- The condition is evaluated.
+- Nodes on the **inactive** branch are marked as `SKIPPED`.
+- The node's **output equals its input** — it's a passthrough. Downstream nodes on the active branch receive the same data that flowed into the conditional node.
+
+## 5. Batch processing (if applicable)
+
+When a node returns `state: "PENDING"` (typically from a batch API call), the flow run transitions to `PAUSED_FOR_BATCH`. The `BatchJobsService` records the batch job, and a polling service periodically checks the provider for completion.
+
+When the batch completes:
+1. The batch result is stored as the node's output.
+2. The flow run resumes from where it left off.
+3. Remaining nodes execute normally.
+
+## 6. Completion
+
+After all nodes have executed (or been skipped), the coordinator:
+
+1. Collects the final output from the Output node (if present).
+2. Updates the flow run record with status `COMPLETED` (or `FAILED` if any node failed).
+3. Fires the `afterFlowRun` plugin hook.
+4. Returns the `FlowRunResult` to the caller.
+
+## Error handling
+
+If any node fails:
+
+1. The error is recorded in the `node_executions` record.
+2. All downstream nodes are marked as `SKIPPED`.
+3. The flow run status becomes `FAILED`.
+4. The error message is included in the flow run result.
+
+The `afterFlowRun` hook still fires for failed runs.
+
+## Execution tracing
+
+When `enableTracing` is true (the default), every node execution creates a detailed trace record containing:
+
+- Input data (what the node received).
+- Resolved parameters (after template evaluation).
+- Output data (what the node produced).
+- Duration (how long the node took).
+- Status (success, failure, skipped).
+
+These traces power the execution inspector in the visual editor — click any node after a run to see exactly what happened.
+
+## Streaming
+
+For real-time execution feedback, the `GET /flow-runs/:flowRunId/stream` endpoint provides Server-Sent Events (SSE). The frontend uses this to show node status changes (running → completed) as they happen.

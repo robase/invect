@@ -1,0 +1,57 @@
+---
+title: Add Conditional Logic
+description: Branch flows with if/else and switch nodes.
+---
+
+## If/Else node
+
+The If/Else node evaluates a JavaScript expression and routes execution to one of two branches: **true** or **false**.
+
+1. Add an **If/Else** node from the Core provider.
+2. Connect an upstream node to its input.
+3. Double-click to open the config panel.
+4. Enter a **condition** — a JavaScript expression that returns a boolean:
+   ```
+   {{ input.age >= 18 }}
+   ```
+5. Connect two downstream nodes — one to the **true** output handle, one to the **false** handle.
+
+The condition is evaluated against the incoming data context, the same as any template expression. Both branches receive the if/else node's input data unchanged — the node acts as a passthrough that controls which branch executes.
+
+### Example conditions
+
+```
+{{ input.status === 'active' }}
+{{ api_response.data.length > 0 }}
+{{ input.email.endsWith('@company.com') }}
+{{ exists(input.optional_field) }}
+```
+
+## Switch node
+
+The Switch node is like if/else with multiple branches. It evaluates multiple conditions in order and routes to the first match.
+
+1. Add a **Switch** node from the Core provider.
+2. Double-click to open the config panel.
+3. Add **cases** — each case has a label and a JavaScript condition:
+   - Case `premium`: `{{ input.plan === 'premium' }}`
+   - Case `standard`: `{{ input.plan === 'standard' }}`
+4. A **default** output handles unmatched cases.
+5. Connect downstream nodes to each output handle.
+
+Cases are evaluated top to bottom. The first matching case is taken. If no case matches, the default branch executes.
+
+## Downstream node behaviour
+
+Nodes on the inactive branch are **skipped** — they don't execute at all. Skipped nodes show a "skipped" status in the execution trace.
+
+Nodes on the active branch receive the conditional node's **input data unchanged**. The if/else and switch nodes are passthrough — their output equals their input.
+
+## Nesting conditionals
+
+You can chain or nest conditional nodes. For example: an if/else that checks authentication, then a switch on the true branch that routes by user role.
+
+## Next steps
+
+- [Use Templates](/docs/how-to/flows/use-templates) — full template expression syntax.
+- [How Flows Execute](/docs/explanation/how-flows-execute) — how branching and node skipping work.

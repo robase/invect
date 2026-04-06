@@ -1,0 +1,101 @@
+---
+title: Embed the Editor
+description: Mount the Invect visual flow editor in your React app.
+---
+
+The visual editor is provided by `@invect/ui`, a React component library.
+
+## Install
+
+```bash
+pnpm add @invect/ui react-router
+```
+
+## Basic mounting
+
+```tsx
+import { Invect } from '@invect/ui';
+import '@invect/ui/styles';
+
+function App() {
+  return (
+    <div style={{ height: '100vh' }}>
+      <Invect apiBaseUrl="http://localhost:3000/invect" />
+    </div>
+  );
+}
+```
+
+The `Invect` component includes a full app shell with sidebar navigation, React Router, and all editor features.
+
+## Props
+
+| Prop | Type | Required | Description |
+|------|------|----------|-------------|
+| `apiBaseUrl` | `string` | Yes | URL of the Invect REST API. |
+| `basePath` | `string` | No | Base path for client-side routing (e.g., `/invect`). |
+| `theme` | `'light' \| 'dark' \| 'system'` | No | Theme mode. |
+
+## With React Router
+
+If your app already uses React Router, mount `Invect` inside a route:
+
+```tsx
+import { BrowserRouter, Routes, Route } from 'react-router';
+import { Invect } from '@invect/ui';
+import '@invect/ui/styles';
+
+<BrowserRouter>
+  <Routes>
+    <Route path="/invect/*" element={<Invect apiBaseUrl="/api/invect" basePath="/invect" />} />
+  </Routes>
+</BrowserRouter>
+```
+
+## With Next.js
+
+Use dynamic import with SSR disabled:
+
+```tsx title="app/invect/[[...slug]]/page.tsx"
+'use client';
+
+import dynamic from 'next/dynamic';
+import '@invect/ui/styles';
+
+const Invect = dynamic(
+  () => import('@invect/ui').then((mod) => ({ default: mod.Invect })),
+  { ssr: false }
+);
+
+export default function InvectPage() {
+  return (
+    <div style={{ height: '100vh' }}>
+      <Invect apiBaseUrl="/api/invect" basePath="/invect" />
+    </div>
+  );
+}
+```
+
+## With authentication
+
+Use `AuthenticatedInvect` from `@invect/user-auth/ui`:
+
+```tsx
+import { Invect, InvectShell } from '@invect/ui';
+import { AuthenticatedInvect, authFrontendPlugin } from '@invect/user-auth/ui';
+import '@invect/ui/styles';
+
+<AuthenticatedInvect
+  apiBaseUrl="/api/invect"
+  InvectComponent={Invect}
+  ShellComponent={InvectShell}
+  plugins={[authFrontendPlugin]}
+/>
+```
+
+`InvectShell` provides the CSS scope (theme tokens, dark mode) without any app logic — this lets the sign-in page render with Invect styling before the full app mounts.
+
+## Next steps
+
+- [Customise Theming](/docs/how-to/frontend/customise-theming) — theme tokens and dark mode.
+- [Add Authentication](/docs/how-to/plugins/add-authentication) — user login.

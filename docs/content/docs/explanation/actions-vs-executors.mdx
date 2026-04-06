@@ -1,0 +1,121 @@
+---
+title: Actions vs. Executors
+description: Why actions replaced legacy node executors and how the dual-purpose design works.
+---
+
+Invect has two systems for defining node behaviour: the modern **action** system and the legacy **executor** system. This page explains why the migration happened and what each system looks like.
+
+## The legacy executor pattern
+
+The original architecture used class-based node executors:
+
+```ts
+class JqNodeExecutor extends BaseNodeExecutor {
+  nodeType = GraphNodeType.JQ;
+  
+  async execute(context: NodeExecutionContext): Promise<NodeExecutionResult> {
+    const query = context.params.query;
+    const result = jq.run(query, context.incomingData);
+    return { success: true, output: result };
+  }
+}
+```
+
+Each executor was:
+- A **class** registered in a `NodeExecutorRegistry`.
+- Tied to a **GraphNodeType enum** value.
+- Node-only — agent tools were defined separately.
+
+This worked for a small set of core nodes. But as integrations grew (Gmail, Slack, GitHub, Google Drive...), problems emerged.
+
+## Why actions replaced executors
+
+### 1. Duplication between nodes and tools
+
+Every integration needed TWO definitions: a node executor for the flow editor AND a tool definition for agents. The Gmail node and the Gmail agent tool did the same thing but were defined independently.
+
+### 2. Rigid enum-based types
+
+Adding a new node type meant extending the `GraphNodeType` enum, updating switch statements across the codebase, and adding special cases in the execution coordinator. String-based action IDs (`gmail.send_message`) are far more flexible.
+
+### 3. Class overhead
+
+Most nodes are simple: validate params, call an API, return the result. A full class with constructor, registry, and execution context interface was more ceremony than necessary.
+
+### 4. No standard validation
+
+Executors had no consistent input validation. Some validated manually, some didn't. Actions require a Zod schema.
+
+## The action system
+
+Actions are defined with `defineAction()` — a single function call that produces both a flow node and an agent tool:
+
+```ts
+export const sendMessageAction = defineAction({
+  id: 'gmail.send_message',
+  name: 'Send Email',
+  description: 'Send an email via Gmail',
+  provider: GMAIL_PROVIDER,
+  
+  params: {
+    schema: z.object({
+      to: z.string().email(),
+      subject: z.string(),
+      body: z.string(),
+    }),
+    fields: [
+      { name: 'to', label: 'To', type: 'text', required: true },
+      { name: 'subject', label: 'Subject', type: 'text', required: true },
+      { name: 'body', label: 'Body', type: 'textarea', required: true },
+    ],
+  },
+  
+  credential: {
+    required: true,
+    oauth2Provider: 'google_gmail',
+  },
+
+  async execute(params, context) {
+    const token = context.credential.config.accessToken;
+    const result = await sendGmailMessage(token, params);
+    return { success: true, output: result };
+  },
+});
+```
+
+One definition, two purposes:
+
+- **As a flow node**: The `params.fields` array generates the config panel UI. The `params.schema` validates input. The `execute` function runs when the node fires.
+- **As an agent tool**: The action ID becomes the tool ID. The description helps the LLM decide when to call it. The Zod schema is converted to JSON Schema for the tool's input definition.
+
+## How the dual-purpose works
+
+During `Invect.initialize()`:
+
+1. `registerBuiltinActions()` registers all 160+ actions in the `ActionRegistry`.
+2. `registerActionsAsTools()` iterates the registry and converts each action to an `AgentToolDefinition` using `toAgentToolDefinition()`.
+3. For each action, a `createToolExecutorForAction()` wrapper is registered that bridges the agent context to the action's `execute` function.
+
+The conversion is mechanical:
+- Action `id` → tool `id`
+- Action `description` → tool `description`
+- Action `params.schema` (Zod) → tool `inputSchema` (JSON Schema)
+- Action `execute` → tool executor (via adapter)
+
+## What still uses executors
+
+Only one node type still uses the legacy executor: **Agent**. The `AgentNodeExecutor` implements the iterative prompt → tool-call → response loop, which involves maintaining conversation state, streaming LLM responses, and managing parallel tool calls. This complexity doesn't fit the simple `execute(params, context) → result` model.
+
+The `GraphNodeType` enum still exists and is referenced in the `NodeExecutionCoordinator` for special-case handling:
+- Template String nodes resolve their template parameter differently from other nodes.
+- If/Else and Switch nodes need branch routing logic after execution.
+
+These special cases could eventually be expressed as action metadata, but the enum references work fine for now.
+
+## Design trade-offs
+
+**Simplicity over flexibility**: Actions have a fixed interface — params in, result out. This makes 95% of integrations trivial to write but means truly complex nodes (like the Agent) can't use the system yet.
+
+**Automatic dual-purpose**: Every action is automatically available as both a node and a tool. You can't create a node-only or tool-only action through `defineAction()`. Standalone tools (with no corresponding node) are registered separately.
+
+**Provider grouping**: Actions belong to a provider (Gmail, Slack, etc.) which controls how they appear in the UI palette. This grouping is cosmetic — it doesn't affect execution.

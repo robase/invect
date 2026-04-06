@@ -1,0 +1,53 @@
+---
+title: Add Version Control
+description: Set up @invect/version-control for Git sync.
+---
+
+The `@invect/version-control` plugin syncs flow definitions to a Git repository. When you publish a flow version, it's serialised as a `.flow.ts` file and pushed to Git.
+
+## Install
+
+```bash
+pnpm add @invect/version-control
+```
+
+## Configure
+
+```ts title="invect.config.ts"
+import { defineConfig } from '@invect/core';
+import { versionControlPlugin } from '@invect/version-control';
+
+export const invectConfig = defineConfig({
+  database: {
+    type: 'sqlite',
+    connectionString: 'file:./dev.db',
+  },
+  plugins: [
+    versionControlPlugin({
+      // Git provider (currently GitHub)
+      provider: 'github',
+      // Sync mode
+      mode: 'pr-per-publish',  // 'pr-per-publish' | 'direct-push' | 'branch-per-version'
+    }),
+  ],
+});
+```
+
+Regenerate schemas:
+
+```bash
+pnpm dlx @invect/cli generate
+pnpm dlx @invect/cli migrate --push
+```
+
+## Sync modes
+
+| Mode | Behaviour |
+|------|-----------|
+| `pr-per-publish` | Creates a pull request for each published flow version. |
+| `direct-push` | Pushes directly to the configured branch. |
+| `branch-per-version` | Creates a new branch for each version. |
+
+## Next steps
+
+- [Build a Plugin](/docs/how-to/plugins/build-a-plugin) — create your own plugin.

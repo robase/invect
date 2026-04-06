@@ -1,0 +1,122 @@
+---
+title: Create Custom Actions
+description: Build your own node types with defineAction().
+---
+
+Actions are the building blocks of Invect flows. Every node type (except Agent) is defined as an action using `defineAction()`. When you create a custom action, it automatically registers as both a flow node and an agent tool.
+
+## Create an action file
+
+```ts title="my-action.ts"
+import { defineAction } from '@invect/core';
+import { z } from 'zod/v4';
+
+export const myAction = defineAction({
+  id: 'custom.greet',
+  name: 'Greeting Generator',
+  description: 'Generates a personalised greeting',
+
+  provider: {
+    id: 'custom',
+    name: 'Custom',
+    description: 'My custom actions',
+    icon: 'Sparkles',
+    category: 'custom',
+  },
+
+  params: {
+    schema: z.object({
+      name: z.string().min(1),
+      style: z.enum(['formal', 'casual']).default('casual'),
+    }),
+    fields: [
+      { name: 'name', label: 'Name', type: 'text', required: true },
+      { name: 'style', label: 'Style', type: 'select', required: false,
+        options: [
+          { label: 'Formal', value: 'formal' },
+          { label: 'Casual', value: 'casual' },
+        ],
+      },
+    ],
+  },
+
+  async execute(params, context) {
+    const greeting = params.style === 'formal'
+      ? `Dear ${params.name}, it is a pleasure to connect with you.`
+      : `Hey ${params.name}! Great to meet you!`;
+
+    return {
+      success: true,
+      output: { greeting, generatedAt: new Date().toISOString() },
+    };
+  },
+});
+```
+
+## Action definition fields
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `id` | Yes | Unique identifier, typically `provider.action_name`. |
+| `name` | Yes | Human-readable name shown in the UI palette. |
+| `description` | Yes | What the action does. Used in the palette and by agents to decide when to use the tool. |
+| `provider` | Yes | Provider grouping. Can reference an existing provider or define inline. |
+| `params.schema` | Yes | Zod schema for input validation. Params are validated before `execute` runs. |
+| `params.fields` | Yes | Field definitions for the UI config panel. |
+| `execute` | Yes | The function that runs when the node executes. |
+| `credential` | No | Credential requirements (see below). |
+
+## The execute function
+
+```ts
+async execute(params, context) {
+  // params — Zod-validated, template-resolved config values
+  // context.incomingData — upstream node outputs
+  // context.credential — attached credential (decrypted)
+  // context.flowInputs — flow-level inputs
+  // context.logger — scoped logger
+  // context.functions — service functions (submitPrompt, getCredential, etc.)
+
+  return {
+    success: true,       // or false for failures
+    output: { ... },     // any serialisable value
+    error: '...',        // optional error message (when success is false)
+  };
+}
+```
+
+## Requiring a credential
+
+```ts
+credential: {
+  required: true,
+  oauth2Provider: 'google',
+  description: 'Google OAuth2 credential for API access',
+},
+```
+
+At runtime, `context.credential` contains the decrypted credential with tokens.
+
+## Register the action
+
+Add your action to the Invect config by including it in a plugin:
+
+```ts title="invect.config.ts"
+import { defineConfig } from '@invect/core';
+import { myAction } from './my-action';
+
+export const invectConfig = defineConfig({
+  database: { type: 'sqlite', connectionString: 'file:./dev.db' },
+  plugins: [{
+    id: 'my-custom-plugin',
+    actions: [myAction],
+  }],
+});
+```
+
+The action now appears in the node palette and is available as an agent tool.
+
+## Next steps
+
+- [Reference: Built-in Actions](/docs/reference/built-in-actions) — see how the 180+ built-in actions are structured.
+- [Reference: Plugin API](/docs/reference/plugin-api) — the full plugin interface.

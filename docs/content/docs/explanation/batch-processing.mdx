@@ -1,0 +1,102 @@
+---
+title: Batch Processing
+description: How Invect handles long-running AI operations with batch APIs.
+---
+
+Some AI operations — like processing large datasets through OpenAI's Batch API — take minutes or hours to complete. Invect handles these with a pause-and-poll model rather than blocking the flow run.
+
+## The problem
+
+A typical flow run takes seconds. But when a node submits a batch job to OpenAI or Anthropic:
+
+1. The provider accepts the request and returns a batch ID.
+2. Processing happens asynchronously on the provider's side.
+3. Results are available minutes or hours later.
+
+Holding a flow run open for that long wastes resources and creates timeout issues.
+
+## How it works
+
+### 1. Node returns PENDING
+
+When a Model node is configured for batch mode (or any action that uses the Batch API), the execution returns a special state:
+
+```ts
+return {
+  success: true,
+  state: 'PENDING',
+  batchId: 'batch_abc123',
+  provider: 'openai',
+};
+```
+
+### 2. Flow pauses
+
+The `FlowRunCoordinator` detects the `PENDING` state and:
+
+1. Creates a `batch_jobs` record linking the batch ID to the flow run and node.
+2. Transitions the flow run status to `PAUSED_FOR_BATCH`.
+3. Stores the current execution state (which nodes have completed, their outputs).
+4. Returns control — the API responds immediately.
+
+### 3. Polling service checks
+
+The `BatchJobsService` runs a background polling loop (configured via `execution.staleRunCheckIntervalMs`). On each tick:
+
+1. Query all batch jobs with status `PENDING` or `PROCESSING`.
+2. For each job, call the provider's API to check status.
+3. If the job is still processing, update the local status and move on.
+4. If the job is complete, fetch the results.
+
+### 4. Flow resumes
+
+When a batch job completes:
+
+1. The result is stored as the node's output in the `batch_jobs` and `node_executions` tables.
+2. The flow run is loaded and resumed from the paused point.
+3. Remaining nodes execute normally with the batch result as input.
+4. The flow run status transitions from `PAUSED_FOR_BATCH` back to `RUNNING`, then to `COMPLETED`.
+
+### 5. Manual resume
+
+You can also resume a paused flow run via the API:
+
+```bash
+POST /flow-runs/:flowRunId/resume
+```
+
+This is useful for testing or when the polling service hasn't picked up the completion yet.
+
+## Flow run states
+
+```
+RUNNING → PAUSED_FOR_BATCH → RUNNING → COMPLETED
+                                     → FAILED
+RUNNING → CANCELLED (manual cancellation)
+```
+
+The `PAUSED_FOR_BATCH` state is visible in the UI — the flow run card shows that it's waiting for an external process.
+
+## What gets stored
+
+The `batch_jobs` table tracks:
+
+| Field | Description |
+|-------|-------------|
+| `flowRunId` | Which flow run this batch belongs to. |
+| `nodeId` | Which node submitted the batch. |
+| `provider` | AI provider (`openai`, `anthropic`). |
+| `batchId` | The provider's batch ID. |
+| `status` | `PENDING` → `PROCESSING` → `COMPLETED` or `FAILED`. |
+| `input` | The batch input (for debugging). |
+| `output` | The batch result (when complete). |
+
+## When to use batch mode
+
+Batch processing is useful for:
+
+- **Cost savings**: OpenAI's Batch API offers 50% discount on some operations.
+- **Large datasets**: Processing thousands of items that would exceed rate limits in real-time.
+- **Non-urgent workflows**: Daily report generation, bulk data enrichment.
+
+For interactive flows where users expect immediate results, use standard (non-batch) model calls.

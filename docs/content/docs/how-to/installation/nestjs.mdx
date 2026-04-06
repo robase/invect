@@ -1,0 +1,91 @@
+---
+title: Set Up with NestJS
+description: Install and configure Invect in a NestJS application.
+---
+
+## Install packages
+
+```bash
+pnpm add @invect/core @invect/nestjs postgres
+```
+
+Use `better-sqlite3` instead of `postgres` for SQLite.
+
+## Generate and migrate the database
+
+Create a minimal `invect.config.ts` for the CLI:
+
+```ts title="invect.config.ts"
+import { defineConfig } from '@invect/core';
+
+export default defineConfig({
+  database: {
+    type: 'postgresql',
+    connectionString: process.env.DATABASE_URL || 'postgresql://invect:invect@localhost:5432/invect',
+  },
+});
+```
+
+Then run:
+
+```bash
+pnpm dlx @invect/cli generate
+pnpm dlx @invect/cli migrate --push
+```
+
+## Import the module
+
+Add `InvectModule` to your app module:
+
+```ts title="src/app.module.ts"
+import { Module } from '@nestjs/common';
+import { InvectModule } from '@invect/nestjs';
+
+@Module({
+  imports: [
+    InvectModule.forRoot({
+      database: {
+        type: 'postgresql',
+        connectionString: process.env.DATABASE_URL || 'postgresql://invect:invect@localhost:5432/invect',
+      },
+      execution: {
+        defaultTimeout: 60000,
+        maxConcurrentExecutions: 10,
+      },
+      logging: {
+        level: 'info',
+      },
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+`InvectModule.forRoot()` registers the Invect core as a singleton provider, mounts all API endpoints as NestJS controllers, and starts the batch polling service.
+
+## Access the core instance
+
+If you need to call Invect methods from your own services, inject `InvectService`:
+
+```ts title="src/my.service.ts"
+import { Injectable } from '@nestjs/common';
+import { InvectService } from '@invect/nestjs';
+
+@Injectable()
+export class MyService {
+  constructor(private readonly invectService: InvectService) {}
+
+  async triggerFlow(flowId: string, inputs: Record<string, unknown>) {
+    const core = this.invectService.getCore();
+    return core.startFlowRun(flowId, inputs);
+  }
+}
+```
+
+## Add the frontend (optional)
+
+See [Embed the Editor](/docs/how-to/frontend/embed-the-editor) for mounting the visual editor in a NestJS app.
+
+## Configuration reference
+
+See [Configuration](/docs/reference/configuration) for all available options.

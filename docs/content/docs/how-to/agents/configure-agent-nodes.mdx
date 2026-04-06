@@ -1,0 +1,61 @@
+---
+title: Configure Agent Nodes
+description: Set up agent nodes, choose tools, and configure stop conditions.
+---
+
+Agent nodes run an iterative prompt → tool-call → response loop using OpenAI or Anthropic. The agent sends a task to the LLM, the LLM requests tools, Invect executes them, and the results are returned for the next iteration.
+
+## Add an Agent node
+
+1. Drag **Agent** onto the canvas (it appears in the node palette).
+2. Double-click to configure.
+
+## Configuration fields
+
+| Field | Required | Default | Description |
+|-------|----------|---------|-------------|
+| **Credential** | Yes | — | LLM API key (OpenAI or Anthropic). |
+| **Model** | Yes | — | Model identifier (e.g., `gpt-4o`, `claude-sonnet-4-20250514`). |
+| **Task Prompt** | Yes | — | The agent's goal. Supports `{{ }}` templates. |
+| **System Prompt** | No | — | Optional system instructions. |
+| **Enabled Tools** | Yes | — | Which tools the agent can call. |
+| **Max Iterations** | No | `10` | Maximum prompt→tool→response cycles (1–50). |
+| **Stop Condition** | No | `explicit_stop` | When to stop iterating. |
+| **Temperature** | No | — | LLM temperature. |
+| **Max Tokens** | No | — | Max response tokens per iteration. |
+| **Enable Parallel Tools** | No | `false` | Allow the LLM to call multiple tools in one turn. |
+
+## Stop conditions
+
+| Condition | Behaviour |
+|-----------|-----------|
+| `explicit_stop` | Agent decides when to stop (sends a final text response with no tool calls). |
+| `tool_result` | Stops after the first tool execution and returns its result. |
+| `max_iterations` | Runs until hitting the iteration limit. |
+
+## Selecting tools
+
+Click the tools area on the Agent node to open the **Tool Selector**. You can:
+
+- Browse all available tools grouped by provider.
+- Search by name or description.
+- Enable/disable individual tools.
+- Customise tool instances (override name, description, or default params).
+
+Every built-in action (180+) is automatically available as an agent tool. Standalone utility tools (math_eval, json_logic) are also available.
+
+## Example: research agent
+
+Configure an Agent node with:
+
+- **Task Prompt**: `Research {{ input.topic }} and provide a summary with key facts.`
+- **Enabled Tools**: HTTP Request, JavaScript
+- **Stop Condition**: `explicit_stop`
+- **Max Iterations**: `10`
+
+The agent will iteratively make HTTP requests and process data until it has enough information to respond.
+
+## Next steps
+
+- [Add Custom Tools](/docs/how-to/agents/add-custom-tools) — register your own tools.
+- [Reference: Built-in Agent Tools](/docs/reference/built-in-agent-tools) — all available tools.

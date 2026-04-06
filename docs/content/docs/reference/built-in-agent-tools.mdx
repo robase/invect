@@ -1,0 +1,36 @@
+---
+title: Built-in Agent Tools
+description: All tools available to agent nodes.
+---
+
+Agent tools come from two sources:
+
+1. **Action-based tools** — every built-in action is automatically available as an agent tool. See [Built-in Actions](/docs/reference/built-in-actions) for the full list (160+ tools).
+2. **Standalone tools** — utility tools that don't have a corresponding flow node.
+
+## Standalone tools
+
+| Tool ID | Name | Description |
+|---------|------|-------------|
+| `math_eval` | Math Evaluate | Evaluate mathematical expressions safely. |
+| `json_logic` | JSON Logic | Apply JSON Logic rules to data. |
+
+## Tool definition shape
+
+All tools (action-based and standalone) share this structure:
+
+```ts
+{
+  id: string;              // Unique identifier (e.g., "gmail.send_message")
+  name: string;            // Human-readable name
+  description: string;     // Used by LLM to decide when to call this tool
+  inputSchema: object;     // JSON Schema for inputs
+  category: string;        // "data" | "web" | "code" | "utility" | "custom"
+  tags?: string[];
+  enabledByDefault?: boolean;
+}
+```
+
+## Custom tools
+
+You can register custom tools via actions or standalone definitions. See [Add Custom Tools](/docs/how-to/agents/add-custom-tools).

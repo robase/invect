@@ -1,0 +1,39 @@
+---
+title: Encryption Keys
+description: Set up INVECT_ENCRYPTION_KEY for secure credential storage.
+---
+
+Invect encrypts all credentials at rest using AES-256-GCM. In production, you must set a persistent encryption key.
+
+## Generate a key
+
+```bash
+pnpm dlx @invect/cli secret
+```
+
+This outputs a cryptographically secure 32-byte base64 key:
+
+```
+INVECT_ENCRYPTION_KEY=aB3dE5fG7hI9jK1lM3nO5pQ7rS9tU1vW3xY5zA7bC9d
+```
+
+## Set the environment variable
+
+Add the key to your environment:
+
+```bash
+# .env
+INVECT_ENCRYPTION_KEY=aB3dE5fG7hI9jK1lM3nO5pQ7rS9tU1vW3xY5zA7bC9d
+```
+
+## Important notes
+
+- **Do not lose this key.** If you change or lose it, all existing encrypted credentials become unreadable.
+- **Do not commit it** to version control. Use environment variables or a secrets manager.
+- **Use a unique key** per environment (dev, staging, production).
+- Without this variable set, Invect uses a default key — this is insecure and only suitable for local development.
+
+## Next steps
+
+- [Environment Variables](/docs/how-to/production/environment-variables) — all production env vars.
+- [Credential Security](/docs/explanation/credential-security) — how encryption works.

@@ -1,0 +1,72 @@
+---
+title: Use the JavaScript Node
+description: Transform and process data with custom JavaScript.
+---
+
+The JavaScript node (`core.javascript`) runs custom JavaScript code in a QuickJS WASM sandbox. It's the primary way to transform, filter, or reshape data between nodes.
+
+## Add a JavaScript node
+
+1. Drag **JavaScript** from the Core provider onto the canvas.
+2. Connect upstream nodes to provide input data.
+3. Double-click to configure.
+
+## Writing code
+
+Enter your JavaScript in the **code** field. Upstream node outputs are available as local variables, keyed by reference ID.
+
+### One-liners
+
+For simple transformations, write a single expression — `return` is auto-prepended:
+
+```js
+input.users.filter(u => u.active)
+```
+
+### Multi-statement code
+
+For complex logic, use explicit `return`:
+
+```js
+const users = input.users;
+const active = users.filter(u => u.active);
+const names = active.map(u => u.name);
+return { count: active.length, names };
+```
+
+## Available context
+
+| Variable | Description |
+|----------|-------------|
+| `$input` | The full context object (all upstream outputs). |
+| `{referenceId}` | Each upstream node's output, keyed by its reference ID. |
+
+For example, with upstream nodes `input` and `api_response`:
+```js
+const name = input.name;
+const data = api_response.data;
+return { greeting: `Hello ${name}`, items: data.length };
+```
+
+## Output
+
+The JavaScript node returns whatever your code returns. Downstream nodes access it via the node's reference ID:
+
+```
+{{ javascript.greeting }}
+{{ javascript.items }}
+```
+
+## Sandbox limitations
+
+The code runs in an isolated QuickJS WASM sandbox. This means:
+
+- No access to Node.js APIs (`fs`, `http`, `process`, etc.).
+- No network access — use an HTTP Request node for API calls.
+- No `setTimeout`, `setInterval`, or async/await.
+- Standard JavaScript built-ins (`JSON`, `Math`, `Date`, `Array`, `Object`, etc.) are available.
+
+## Next steps
+
+- [Use Templates](/docs/how-to/flows/use-templates) — template expressions for simpler transformations.
+- [Create Custom Actions](/docs/how-to/nodes/create-custom-actions) — build reusable node types.

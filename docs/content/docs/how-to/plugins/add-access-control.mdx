@@ -1,0 +1,66 @@
+---
+title: Add Access Control
+description: Set up @invect/rbac for role-based flow access.
+---
+
+The `@invect/rbac` plugin adds role-based access control to your Invect instance. It requires the [auth plugin](/docs/how-to/plugins/add-authentication).
+
+## Install
+
+```bash
+pnpm add @invect/rbac
+```
+
+## Configure
+
+Add `rbacPlugin()` **after** `userAuth()` in the plugins array:
+
+```ts title="invect.config.ts"
+import { defineConfig } from '@invect/core';
+import { userAuth } from '@invect/user-auth';
+import { rbacPlugin } from '@invect/rbac';
+
+export const invectConfig = defineConfig({
+  database: {
+    type: 'sqlite',
+    connectionString: 'file:./dev.db',
+  },
+  plugins: [
+    userAuth({ /* auth config */ }),
+    rbacPlugin(),
+  ],
+});
+```
+
+Regenerate and push the database:
+
+```bash
+pnpm dlx @invect/cli generate
+pnpm dlx @invect/cli migrate --push
+```
+
+## Frontend setup
+
+```tsx
+import { Invect, InvectShell } from '@invect/ui';
+import { AuthenticatedInvect, authFrontendPlugin } from '@invect/user-auth/ui';
+import { rbacFrontendPlugin } from '@invect/rbac/ui';
+import '@invect/ui/styles';
+
+<AuthenticatedInvect
+  apiBaseUrl="/api/invect"
+  InvectComponent={Invect}
+  ShellComponent={InvectShell}
+  plugins={[authFrontendPlugin, rbacFrontendPlugin]}
+/>
+```
+
+The RBAC frontend plugin adds:
+- An **Access** page in the sidebar for managing flow permissions.
+- A **Share** button in the flow editor header.
+- A **Flow Access** tab in the editor panel.
+
+## Next steps
+
+- [Build a Plugin](/docs/how-to/plugins/build-a-plugin) — create your own plugin.
+- [Explanation: Plugin System](/docs/explanation/plugin-system) — how plugins compose and intercept.

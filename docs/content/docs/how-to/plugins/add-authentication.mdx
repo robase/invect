@@ -1,0 +1,89 @@
+---
+title: Add Authentication
+description: Set up @invect/user-auth for user login and session management.
+---
+
+The `@invect/user-auth` plugin wraps [Better Auth](https://better-auth.com) to provide user authentication, session management, and admin user seeding.
+
+## Install
+
+```bash
+pnpm add @invect/user-auth
+```
+
+## Configure
+
+```ts title="invect.config.ts"
+import { defineConfig } from '@invect/core';
+import { userAuth } from '@invect/user-auth';
+
+export const invectConfig = defineConfig({
+  database: {
+    type: 'sqlite',
+    connectionString: 'file:./dev.db',
+  },
+  plugins: [
+    userAuth({
+      betterAuthOptions: {
+        secret: process.env.BETTER_AUTH_SECRET || 'dev-secret-change-in-production',
+      },
+      globalAdmins: [
+        {
+          email: process.env.INVECT_ADMIN_EMAIL || 'admin@example.com',
+          pw: process.env.INVECT_ADMIN_PASSWORD || 'changeme',
+          name: 'Admin',
+        },
+      ],
+      onSessionError: 'continue', // 'continue' = allow unauthenticated in dev
+      trustedOrigins: ['http://localhost:5173', 'http://localhost:3000'],
+    }),
+  ],
+});
+```
+
+## Regenerate the database
+
+The auth plugin adds database tables. Regenerate schemas and push:
+
+```bash
+pnpm dlx @invect/cli generate
+pnpm dlx @invect/cli migrate --push
+```
+
+## Admin user seeding
+
+Sign-up is disabled in the UI. The initial admin user is created automatically on startup from the `globalAdmins` config. Set these via environment variables in production:
+
+```bash
+INVECT_ADMIN_EMAIL=admin@yourcompany.com
+INVECT_ADMIN_PASSWORD=a-strong-password
+```
+
+Additional users are created by admins through the **User Management** UI or the `POST /plugins/auth/users` API endpoint.
+
+## Frontend setup
+
+For the visual editor with authentication:
+
+```tsx
+import { Invect, InvectShell } from '@invect/ui';
+import { AuthenticatedInvect, authFrontendPlugin } from '@invect/user-auth/ui';
+import '@invect/ui/styles';
+
+<AuthenticatedInvect
+  apiBaseUrl="/api/invect"
+  InvectComponent={Invect}
+  ShellComponent={InvectShell}
+  plugins={[authFrontendPlugin]}
+/>
+```
+
+`AuthenticatedInvect` wraps the Invect UI with:
+- A sign-in page shown when unauthenticated.
+- Session management and automatic token handling.
+- The `InvectShell` CSS scope so the sign-in page uses Invect theme tokens.
+
+## Next steps
+
+- [Add Access Control](/docs/how-to/plugins/add-access-control) — restrict flow access by role.
+- [Reference: Plugin API](/docs/reference/plugin-api) — the plugin interface.

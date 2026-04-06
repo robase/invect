@@ -1,0 +1,113 @@
+---
+title: Template Syntax
+description: JavaScript expression syntax via QuickJS sandbox.
+---
+
+Template expressions in Invect use `{{ }}` blocks containing JavaScript. Templates are evaluated in an isolated QuickJS WASM sandbox.
+
+## Syntax
+
+### Variable access
+
+```
+{{ variable }}
+{{ user.name }}
+{{ items[0].id }}
+```
+
+### Full expressions
+
+```
+{{ items.length }}
+{{ items.filter(i => i.active) }}
+{{ price * 1.2 }}
+{{ condition ? 'yes' : 'no' }}
+```
+
+### String interpolation (mixed)
+
+```
+Hello, {{ input.name }}! You have {{ items.length }} items.
+```
+
+When a field value contains both text and `{{ }}` blocks, the result is always a string. When the entire value is a single `{{ }}` block, the raw JavaScript value is returned (object, array, number, etc.).
+
+## Context variables
+
+| Variable | Description |
+|----------|-------------|
+| `{referenceId}` | Each upstream node's output, keyed by its reference ID. |
+| `$input` | The full context object (all upstream outputs). |
+
+### Example
+
+If you have upstream nodes with reference IDs `input` and `api_response`:
+
+```
+{{ input.name }}                    // "Alice"
+{{ api_response.data.items }}       // [{...}, {...}]
+{{ $input }}                        // { input: {...}, api_response: {...} }
+```
+
+## Supported JavaScript
+
+Template expressions run in QuickJS. All standard JavaScript is available:
+
+### Built-in objects
+`JSON`, `Math`, `Date`, `Array`, `Object`, `String`, `Number`, `Boolean`, `RegExp`, `Map`, `Set`, `Promise` (sync only), `Error`
+
+### Common patterns
+
+```
+// String methods
+{{ input.email.toLowerCase() }}
+{{ input.name.split(' ')[0] }}
+
+// Array methods
+{{ items.filter(i => i.active) }}
+{{ items.map(i => i.name).join(', ') }}
+{{ items.reduce((sum, i) => sum + i.amount, 0) }}
+{{ items.find(i => i.id === input.targetId) }}
+
+// Object methods
+{{ Object.keys(data) }}
+{{ Object.entries(config).filter(([k, v]) => v) }}
+
+// JSON
+{{ JSON.stringify(data, null, 2) }}
+{{ JSON.parse(rawString) }}
+
+// Math
+{{ Math.round(price * 100) / 100 }}
+{{ Math.max(...scores) }}
+
+// Date
+{{ new Date().toISOString() }}
+{{ new Date(input.timestamp).toLocaleDateString() }}
+
+// Ternary
+{{ input.role === 'admin' ? 'Full access' : 'Limited access' }}
+
+// Nullish coalescing
+{{ input.nickname ?? input.name ?? 'Anonymous' }}
+
+// Template literals (nested)
+{{ `User ${input.name} (${input.role})` }}
+```
+
+## Limitations
+
+- **No async/await** — expressions are evaluated synchronously.
+- **No Node.js APIs** — `fs`, `http`, `process`, etc. are not available.
+- **No network access** — use HTTP Request nodes for API calls.
+- **No `setTimeout`/`setInterval`** — no timers.
+- **Execution timeout** — expressions that run too long are terminated.
+
+## Where templates work
+
+- Model node `prompt` and `systemPrompt` fields.
+- Template String node `template` field.
+- HTTP Request `url`, `headers`, and `body` fields.
+- If/Else `condition` field.
+- Switch case `condition` fields.
+- Most action node configuration fields.

@@ -1,0 +1,73 @@
+---
+title: Why Code-First
+description: Why Invect is a library you install, not a platform you deploy.
+---
+
+Most workflow orchestration tools are standalone platforms — you deploy them separately and your application calls them over HTTP. Invect takes the opposite approach: it's a library that you install into your existing application.
+
+## The platform approach
+
+Tools like Airflow, Temporal, and n8n run as separate services. Your application communicates with them over HTTP or gRPC. This means:
+
+- **Separate deployment**: Another service to operate, monitor, and scale.
+- **Network boundary**: Your workflows talk to your app over the network, adding latency and failure modes.
+- **Data duplication**: Workflow state lives in the platform's database, separate from your application data.
+- **Auth integration**: You need to bridge your app's auth system with the platform's auth.
+- **Version coupling**: Platform upgrades happen on their own schedule, potentially breaking your workflows.
+
+## The library approach
+
+Invect runs inside your existing Node.js application. It shares your process, your database connection, and your deployment pipeline.
+
+### You own the infrastructure
+
+Invect doesn't require a separate server, separate database, or separate deployment. It's npm packages that you add to your existing app. Your flow data lives in **your** database, managed by **your** ORM, backed up by **your** infrastructure.
+
+### Zero network overhead
+
+When a flow node calls your application logic, it's a function call — not an HTTP request. When your application triggers a flow, it's a method call on a local object. No serialisation, no network latency, no retry logic.
+
+### One auth system
+
+Invect uses your application's authentication. The auth plugin wraps Better Auth, but the session lives in the same database and the same process. There's no federation, no token exchange, no "how do I pass my user's identity to the workflow engine" problem.
+
+### One deployment
+
+When you deploy your application, Invect deploys with it. No Docker Compose with multiple services. No separate scaling. No version matrix between your app and the orchestration platform.
+
+### Framework integration
+
+Because Invect is a library, it integrates naturally with your framework's patterns:
+
+- **Express**: Mount a router.
+- **NestJS**: Import a module. Inject the service.
+- **Next.js**: Export a route handler.
+
+Each of these is 5-10 lines of code, not a separate infrastructure setup.
+
+## The trade-offs
+
+This approach has real trade-offs:
+
+### Single process
+
+Invect runs in your application process. If your app crashes, Invect crashes. If your app is under memory pressure, Invect is too. For most applications, this is fine — your app already needs to be reliable. For extremely high-throughput workflow systems, a dedicated platform with its own scaling might be more appropriate.
+
+### Database sharing
+
+Invect tables live alongside your application tables. This simplifies operations but means Invect's query patterns affect your database's performance profile. For most applications, the additional load is negligible. For high-volume use cases, consider a separate database connection.
+
+### Node.js only
+
+Invect is a TypeScript/JavaScript library. If your backend is Python, Go, or Rust, you can't embed it directly. You'd need to run Invect as a separate Node.js service — at which point you've lost some of the library advantages.
+
+## When to use Invect
+
+Invect works best when:
+
+- Your application is built with Node.js (Express, NestJS, Next.js).
+- You want workflow orchestration without adding infrastructure.
+- Your workflows integrate tightly with your application's data and logic.
+- You prefer controlling your own deployment.
+
+If you need a multi-language orchestration platform with its own scaling, Temporal or Airflow might be a better fit. Invect is for teams that want workflow power without platform complexity.

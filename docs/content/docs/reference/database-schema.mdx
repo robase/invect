@@ -1,0 +1,103 @@
+---
+title: Database Schema
+description: Core database tables and columns.
+---
+
+Invect uses Drizzle ORM and generates dialect-specific schema files for SQLite, PostgreSQL, and MySQL. Below are the core tables.
+
+## `flows`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | string (PK) | UUID. |
+| `name` | string | Flow name. |
+| `description` | text | Optional description. |
+| `status` | string | `active`, `archived`. |
+| `createdAt` | timestamp | Creation time. |
+| `updatedAt` | timestamp | Last update time. |
+
+## `flow_versions`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | string (PK) | UUID. |
+| `flowId` | string (FK → flows) | Parent flow. |
+| `version` | integer | Version number (incrementing). |
+| `definition` | json | Full flow definition (nodes, edges, positions). |
+| `createdAt` | timestamp | Creation time. |
+
+## `flow_runs`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | string (PK) | UUID. |
+| `flowId` | string (FK → flows) | Flow that was run. |
+| `flowVersionId` | string (FK → flow_versions) | Version used. |
+| `status` | string | `RUNNING`, `COMPLETED`, `FAILED`, `PAUSED_FOR_BATCH`, `CANCELLED`. |
+| `inputs` | json | Input values. |
+| `output` | json | Final output. |
+| `error` | text | Error message (if failed). |
+| `startedAt` | timestamp | Start time. |
+| `completedAt` | timestamp | Completion time. |
+
+## `node_executions`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | string (PK) | UUID. |
+| `flowRunId` | string (FK → flow_runs) | Parent run. |
+| `nodeId` | string | Node ID within the flow definition. |
+| `nodeType` | string | Action ID or `AGENT`. |
+| `status` | string | `RUNNING`, `COMPLETED`, `FAILED`, `SKIPPED`. |
+| `input` | json | Input data. |
+| `output` | json | Output data. |
+| `error` | text | Error message (if failed). |
+| `startedAt` | timestamp | Start time. |
+| `completedAt` | timestamp | Completion time. |
+| `durationMs` | integer | Execution duration. |
+
+## `credentials`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | string (PK) | UUID. |
+| `name` | string | Credential name. |
+| `type` | string | `llm`, `http-api`, `database`. |
+| `provider` | string | Provider identifier. |
+| `authType` | string | `apiKey`, `oauth2`, etc. |
+| `config` | text (encrypted) | AES-256-GCM encrypted config. |
+| `description` | text | Optional description. |
+| `isShared` | boolean | Shared across users. |
+| `isActive` | boolean | Whether active. |
+| `lastUsedAt` | timestamp | Last usage time. |
+| `createdAt` | timestamp | Creation time. |
+| `updatedAt` | timestamp | Last update time. |
+
+## `triggers`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | string (PK) | UUID. |
+| `flowId` | string (FK → flows) | Parent flow. |
+| `type` | string | `manual`, `cron`, `webhook`. |
+| `config` | json | Trigger-specific config. |
+| `enabled` | boolean | Whether active. |
+| `createdAt` | timestamp | Creation time. |
+| `updatedAt` | timestamp | Last update time. |
+
+## `batch_jobs`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | string (PK) | UUID. |
+| `flowRunId` | string (FK → flow_runs) | Associated flow run. |
+| `nodeId` | string | Node that requested the batch. |
+| `provider` | string | AI provider (`openai`, `anthropic`). |
+| `batchId` | string | Provider's batch ID. |
+| `status` | string | `PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`. |
+| `input` | json | Batch input. |
+| `output` | json | Batch output (when complete). |
+| `createdAt` | timestamp | Creation time. |
+| `completedAt` | timestamp | Completion time. |
+
+Plugins can add additional tables. See [Plugin API](/docs/reference/plugin-api) for the schema format.

@@ -1,0 +1,59 @@
+---
+title: Environment Variables
+description: All environment variables for Invect in production.
+---
+
+## Core
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `INVECT_ENCRYPTION_KEY` | Yes (production) | Dev default | 32-byte base64 key for AES-256-GCM credential encryption. Generate with `pnpm dlx @invect/cli secret`. |
+| `DATABASE_URL` | Yes | — | Database connection string. |
+
+## Authentication plugin
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `BETTER_AUTH_SECRET` | Yes | — | Secret for Better Auth session tokens. |
+| `INVECT_ADMIN_EMAIL` | Recommended | — | Initial admin user email. |
+| `INVECT_ADMIN_PASSWORD` | Recommended | — | Initial admin user password. |
+
+## Webhooks plugin
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `INVECT_WEBHOOK_BASE_URL` | Yes | — | Public URL for webhook endpoints. |
+
+## AI providers
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `OPENAI_API_KEY` | No | — | OpenAI API key (alternative to storing as a credential). |
+| `ANTHROPIC_API_KEY` | No | — | Anthropic API key (alternative to storing as a credential). |
+
+## Example `.env`
+
+```bash
+# Database
+DATABASE_URL=postgresql://user:password@db.example.com:5432/invect
+
+# Security
+INVECT_ENCRYPTION_KEY=your-32-byte-base64-key
+BETTER_AUTH_SECRET=your-auth-secret
+
+# Admin
+INVECT_ADMIN_EMAIL=admin@yourcompany.com
+INVECT_ADMIN_PASSWORD=a-strong-password
+
+# Webhooks
+INVECT_WEBHOOK_BASE_URL=https://api.yourapp.com/invect
+
+# AI (optional — can also be added as credentials in the UI)
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+## Next steps
+
+- [Encryption Keys](/docs/how-to/production/encryption-keys) — key generation and management.
+- [Configure Database](/docs/how-to/database/configure-database) — database setup.

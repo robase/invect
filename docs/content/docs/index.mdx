@@ -1,62 +1,66 @@
 ---
-title: Introduction
+title: Invect
 description: Drop-in workflow orchestration for any Node.js app.
 ---
 
-## What is Invect?
+import { Card, Cards } from 'fumadocs-ui/components/card';
 
-Invect is an open-source workflow orchestration library that you mount directly into your existing Node.js application. It provides a visual flow editor, AI agent nodes, 50+ built-in integrations, and batch processing — all as a library, not a platform.
+Invect is an open-source workflow orchestration library that you mount directly into your existing Node.js application. It provides a visual flow editor, AI agent nodes, 180+ built-in integrations, and batch processing — all as npm packages, not a separate platform.
 
-Unlike standalone workflow tools that require separate infrastructure, Invect ships as npm packages you install alongside your existing Express, NestJS, or Next.js app. The backend is a router/module you mount, the frontend is a single React component.
+## How it works
 
-## Key Features
+Install the packages. Mount a router. Open the visual editor. Build workflows that connect your AI models, APIs, and data — then trigger them from your code or on a schedule.
 
-- **Visual Flow Editor** — Drag-and-drop workflow builder powered by React Flow with real-time execution monitoring.
-- **AI Agent Nodes** — Built-in agents with iterative tool-calling loops using OpenAI and Anthropic APIs.
-- **50+ Built-in Actions** — Gmail, Slack, GitHub, Google Drive, Linear, Postgres, and more.
-- **Batch Processing** — Cut AI costs 50% with native OpenAI and Anthropic batch APIs. Flows pause and resume automatically.
-- **AI-Assisted Builder** — Describe what you need in plain language and the chat assistant wires up nodes for you.
-- **Multi-Database** — SQLite, PostgreSQL, and MySQL via Drizzle ORM.
-- **OAuth2 Credentials** — Secure AES-256-GCM encrypted credential storage with full OAuth2 flow support.
-- **Framework Agnostic** — One core, thin adapters for Express, NestJS, and Next.js.
+```ts
+import express from 'express';
+import { createInvectRouter } from '@invect/express';
 
-## Architecture
+const app = express();
+const router = await createInvectRouter({
+  database: { type: 'sqlite', connectionString: 'file:./dev.db' },
+});
+app.use('/invect', router);
+app.listen(3000);
+```
 
-<Mermaid
-  chart={`flowchart TB
-    core["@invect/core"]
-    invect["createInvect()<br/>→ InvectInstance<br/>- flows, runs, credentials<br/>- versions, triggers, agent<br/>- 40+ methods"]
-    express["Express<br/>Router"]
-    nestjs["NestJS<br/>Module"]
-    nextjs["Next.js<br/>Actions"]
+That's it. You now have a visual flow editor at `http://localhost:3000/invect` and a full REST API for managing and executing workflows.
 
-    core --> invect
-    express --> core
-    nestjs --> core
-    nextjs --> core
-
-`}
-/>
-
-All business logic lives in `@invect/core`. Framework packages are thin adapters that wrap the core — each under 500 lines.
-
-## Next Steps
+## Start here
 
 <Cards>
   <Card
-    title="Quick Start"
-    href="/docs/quick-start"
-    description="Get Invect running in 5 minutes."
+    title="Getting Started"
+    description="Install Invect, run the dev server, and open the flow editor in 5 minutes."
+    href="/docs/tutorials/getting-started"
   />
   <Card
-    title="Setup Guide"
-    href="/docs/setup"
-    description="Step-by-step guide to adding Invect to your app."
+    title="Build Your First Flow"
+    description="Create a working multi-step flow from scratch using the visual editor."
+    href="/docs/tutorials/build-your-first-flow"
   />
   <Card
-    title="Concepts"
-    href="/docs/concepts"
-    description="Understand flows, nodes, and execution."
+    title="Add AI to a Flow"
+    description="Connect an AI provider and add a Model node to generate intelligent responses."
+    href="/docs/tutorials/add-ai-to-a-flow"
   />
-  <Card title="CLI Reference" href="/docs/cli" description="All CLI commands and options." />
+</Cards>
+
+## Go deeper
+
+<Cards>
+  <Card
+    title="How-to Guides"
+    description="Task-focused recipes: install per framework, manage credentials, configure plugins, and more."
+    href="/docs/how-to/installation/express"
+  />
+  <Card
+    title="Reference"
+    description="Complete API, CLI, configuration, and action reference."
+    href="/docs/reference/configuration"
+  />
+  <Card
+    title="Understanding Invect"
+    description="Architecture, execution model, plugin system, and design decisions."
+    href="/docs/explanation/architecture"
+  />
 </Cards>

@@ -1,0 +1,10 @@
+{
+  "title": "Plugins",
+  "pages": [
+    "add-authentication",
+    "add-access-control",
+    "add-webhooks",
+    "add-version-control",
+    "build-a-plugin"
+  ]
+}

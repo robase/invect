@@ -1,0 +1,59 @@
+---
+title: Run Migrations
+description: Generate database schemas and apply migrations.
+---
+
+Invect uses the CLI to generate Drizzle schema files from core tables and plugin schemas, then applies them to your database.
+
+## Generate schema files
+
+```bash
+pnpm dlx @invect/cli generate
+```
+
+This command:
+1. Loads your `invect.config.ts` (discovers plugins).
+2. Merges core tables with plugin-declared tables.
+3. Generates dialect-specific Drizzle schema files for SQLite, PostgreSQL, and MySQL.
+4. Shows a summary of tables and changes.
+
+Run this whenever you add or update a plugin that declares database tables.
+
+## Apply to database
+
+### Push (development)
+
+For development, push the schema directly:
+
+```bash
+pnpm dlx @invect/cli migrate --push
+```
+
+This uses `drizzle-kit push` to sync the schema to your database without creating migration files. Quick and simple, but doesn't track changes.
+
+### Migrate (production)
+
+For production, generate and apply migration files:
+
+```bash
+pnpm dlx @invect/cli migrate
+```
+
+This uses `drizzle-kit migrate` to create versioned SQL migration files and apply them. Migration files are tracked in your repository.
+
+## Common workflow
+
+```bash
+# After adding a plugin or changing plugin schemas:
+pnpm dlx @invect/cli generate    # Regenerate schema files
+pnpm dlx @invect/cli migrate --push  # Apply to dev database
+
+# For production:
+pnpm dlx @invect/cli generate
+pnpm dlx @invect/cli migrate    # Creates + applies migration files
+```
+
+## Next steps
+
+- [Reference: CLI](/docs/reference/cli) — all CLI commands and flags.
+- [Configure Database](/docs/how-to/database/configure-database) — database setup options.

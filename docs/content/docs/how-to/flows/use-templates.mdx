@@ -1,0 +1,102 @@
+---
+title: Use Templates
+description: Wire data between nodes with JavaScript template expressions.
+---
+
+Template expressions let you reference upstream node outputs inside node configuration fields. Any field that supports templates uses the `{{ expression }}` syntax.
+
+## Basic syntax
+
+Wrap any JavaScript expression in double braces:
+
+```
+{{ variableName }}
+{{ user.name }}
+{{ items.length }}
+{{ items.filter(i => i.active).map(i => i.name).join(', ') }}
+```
+
+## How context works
+
+When a node executes, Invect builds a **context object** from the outputs of all upstream nodes. Each upstream node's output is available as a local variable, keyed by the node's **reference ID**.
+
+For example, if you have:
+- An **Input** node with reference ID `input`
+- An **HTTP Request** node with reference ID `api_response`
+
+Then downstream nodes can access:
+```
+{{ input.name }}           // Input node's "name" field
+{{ api_response.data }}    // HTTP node's response body
+{{ api_response.status }}  // HTTP node's status code
+```
+
+## Pure expressions vs. mixed templates
+
+**Pure expression** — the entire value is a single `{{ }}` block:
+```
+{{ users.filter(u => u.active) }}
+```
+Returns the raw JavaScript value (array, object, number, etc.).
+
+**Mixed template** — text combined with expressions:
+```
+Hello, {{ input.name }}! You have {{ items.length }} items.
+```
+Returns an interpolated string.
+
+## Full JavaScript support
+
+Template expressions run in a QuickJS WASM sandbox. You can use any JavaScript:
+
+```
+{{ new Date().toISOString() }}
+{{ JSON.stringify(data, null, 2) }}
+{{ Math.round(price * 1.2 * 100) / 100 }}
+{{ items.reduce((sum, i) => sum + i.amount, 0) }}
+{{ condition ? 'yes' : 'no' }}
+```
+
+## The `$input` escape hatch
+
+The full context object is always available as `$input`. This is useful when a variable name collides with a JavaScript keyword, or when you need the entire context:
+
+```
+{{ $input }}              // The full context object
+{{ $input.some_node }}    // Same as {{ some_node }}
+```
+
+## Helper functions
+
+For convenience, these helper functions are available in templates:
+
+| Function | Description |
+|----------|-------------|
+| `json(value)` | Stringify to JSON |
+| `first(array)` | First element |
+| `last(array)` | Last element |
+| `keys(object)` | Object keys |
+| `values(object)` | Object values |
+| `exists(value)` | Check if defined and non-null |
+| `isArray(value)` | Array check |
+| `isObject(value)` | Object check |
+
+```
+{{ json(api_response.data) }}
+{{ first(users).name }}
+{{ exists(input.email) ? input.email : 'none' }}
+```
+
+## Where templates are supported
+
+Templates work in:
+- Model node prompts and system prompts.
+- Template String node templates.
+- HTTP Request URLs, headers, and body.
+- JavaScript node code (the code itself runs in the sandbox; use incoming data directly).
+- Most action node configuration fields.
+
+## Next steps
+
+- [Reference: Template Syntax](/docs/reference/template-syntax) — complete syntax reference.
+- [How Flows Execute](/docs/explanation/how-flows-execute) — how input data is constructed from upstream outputs.
