@@ -39,17 +39,17 @@ Services are the real workforce. The `Invect` class is mostly a facade — it de
 
 Key services and their roles:
 
-| Service | Responsibility |
-|---------|---------------|
-| `FlowOrchestrationService` | Orchestrates complete flow execution |
-| `FlowRunCoordinator` | Manages flow run lifecycle (start → execute → complete) |
+| Service                    | Responsibility                                                                  |
+| -------------------------- | ------------------------------------------------------------------------------- |
+| `FlowOrchestrationService` | Orchestrates complete flow execution                                            |
+| `FlowRunCoordinator`       | Manages flow run lifecycle (start → execute → complete)                         |
 | `NodeExecutionCoordinator` | Handles individual node execution, input data construction, template resolution |
-| `FlowsService` | Flow CRUD |
-| `FlowVersionsService` | Flow version management |
-| `CredentialsService` | Credential storage, encryption, OAuth2 token refresh |
-| `TemplateService` | JavaScript expression evaluation in QuickJS sandbox |
-| `GraphService` | Topological sorting, dependency analysis |
-| `BatchJobsService` | Batch API integration and polling |
+| `FlowsService`             | Flow CRUD                                                                       |
+| `FlowVersionsService`      | Flow version management                                                         |
+| `CredentialsService`       | Credential storage, encryption, OAuth2 token refresh                            |
+| `TemplateService`          | JavaScript expression evaluation in QuickJS sandbox                             |
+| `GraphService`             | Topological sorting, dependency analysis                                        |
+| `BatchJobsService`         | Batch API integration and polling                                               |
 
 Services are instantiated by `ServiceFactory`, which handles dependency injection. Each service receives its dependencies through the constructor — no global state, no singletons.
 

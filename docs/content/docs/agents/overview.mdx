@@ -29,13 +29,13 @@ For **deterministic pipelines** where you know the exact flow (call API A, trans
 
 ## Agents vs. Model nodes
 
-| | Model node | Agent node |
-|---|---|---|
-| LLM calls | 1 | 1 to N (iterative) |
-| Tool access | None | Any enabled tool |
-| Deterministic | Yes (same prompt → similar output) | No (LLM chooses its own path) |
-| Use case | Single prompt/response | Multi-step reasoning |
-| Cost | Predictable | Variable (depends on iterations) |
+|               | Model node                         | Agent node                       |
+| ------------- | ---------------------------------- | -------------------------------- |
+| LLM calls     | 1                                  | 1 to N (iterative)               |
+| Tool access   | None                               | Any enabled tool                 |
+| Deterministic | Yes (same prompt → similar output) | No (LLM chooses its own path)    |
+| Use case      | Single prompt/response             | Multi-step reasoning             |
+| Cost          | Predictable                        | Variable (depends on iterations) |
 
 ## Tools
 

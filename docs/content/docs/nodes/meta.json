@@ -1,4 +1,11 @@
 {
   "title": "Nodes",
-  "pages": ["overview", "model-nodes", "http-requests", "javascript", "custom-actions", "built-in-actions"]
+  "pages": [
+    "overview",
+    "model-nodes",
+    "http-requests",
+    "javascript",
+    "custom-actions",
+    "built-in-actions"
+  ]
 }

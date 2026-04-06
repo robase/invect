@@ -24,7 +24,7 @@ export function registerPrompts(server: McpServer, _client: InvectClient): void 
                 '1. Use run_get to fetch the run details (status, error, timing).',
                 '2. Use debug_node_executions to get per-node traces.',
                 '3. Identify which node(s) failed or produced unexpected output.',
-                '4. If a node has an expression error, use debug_test_expression with the failed expression and the node\'s input data.',
+                "4. If a node has an expression error, use debug_test_expression with the failed expression and the node's input data.",
                 '5. Summarize: root cause, which node failed, and suggest a fix.',
               ].join('\n'),
             },

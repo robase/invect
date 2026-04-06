@@ -55,7 +55,9 @@ To access the core from your own services, inject `InvectService`:
 export class MyService {
   constructor(private invect: InvectService) {}
 
-  getCore() { return this.invect.getCore(); }
+  getCore() {
+    return this.invect.getCore();
+  }
 }
 ```
 
@@ -85,10 +87,10 @@ The catch-all route pattern (`[...invect]`) means all sub-paths are handled by t
 
 The adapters are functionally identical — they expose the same API endpoints backed by the same core logic. Choose based on your existing framework:
 
-| Framework | Use when |
-|-----------|----------|
-| Express | Standalone backend, or adding Invect to an existing Express app |
-| NestJS | Existing NestJS application, need DI integration |
-| Next.js | Adding Invect to a Next.js app with App Router |
+| Framework | Use when                                                        |
+| --------- | --------------------------------------------------------------- |
+| Express   | Standalone backend, or adding Invect to an existing Express app |
+| NestJS    | Existing NestJS application, need DI integration                |
+| Next.js   | Adding Invect to a Next.js app with App Router                  |
 
 All three support the same features: flows, credentials, OAuth2, plugins, cron, webhooks, agents.

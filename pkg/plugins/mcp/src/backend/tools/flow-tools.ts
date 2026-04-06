@@ -66,7 +66,7 @@ export function registerFlowTools(server: McpServer, client: InvectClient): void
 
   server.tool(
     TOOL_IDS.FLOW_UPDATE,
-    'Update a flow\'s name or description',
+    "Update a flow's name or description",
     {
       flowId: z.string().describe('The flow ID'),
       name: z.string().optional().describe('New name'),

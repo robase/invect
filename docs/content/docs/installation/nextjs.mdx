@@ -88,7 +88,9 @@ import { rbacPlugin } from '@invect/rbac';
 const handler = createInvectHandler({
   database: { type: 'sqlite', connectionString: 'file:./dev.db' },
   plugins: [
-    authentication({ /* ... */ }),
+    authentication({
+      /* ... */
+    }),
     rbacPlugin(),
   ],
 });

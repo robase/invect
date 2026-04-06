@@ -20,27 +20,27 @@ export const invectConfig = defineConfig({
 
 ## `database` (required)
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `connectionString` | `string` | — | Database URL. SQLite: `file:./dev.db`. PostgreSQL: `postgresql://user:pass@host:port/db`. MySQL: `mysql://user:pass@host:port/db`. |
-| `type` | `'sqlite' \| 'postgresql' \| 'mysql'` | — | Database dialect. |
-| `name` | `string` | — | Optional human-readable name. |
-| `driver` | see below | auto-detected | Database driver. |
+| Field              | Type                                  | Default       | Description                                                                                                                        |
+| ------------------ | ------------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `connectionString` | `string`                              | —             | Database URL. SQLite: `file:./dev.db`. PostgreSQL: `postgresql://user:pass@host:port/db`. MySQL: `mysql://user:pass@host:port/db`. |
+| `type`             | `'sqlite' \| 'postgresql' \| 'mysql'` | —             | Database dialect.                                                                                                                  |
+| `name`             | `string`                              | —             | Optional human-readable name.                                                                                                      |
+| `driver`           | see below                             | auto-detected | Database driver.                                                                                                                   |
 
 ### Supported drivers
 
-| Database | Drivers | Default |
-|----------|---------|---------|
-| PostgreSQL | `postgres`, `pg`, `neon-serverless` | `postgres` |
-| SQLite | `better-sqlite3`, `libsql` | `better-sqlite3` |
-| MySQL | `mysql2` | `mysql2` |
+| Database   | Drivers                             | Default          |
+| ---------- | ----------------------------------- | ---------------- |
+| PostgreSQL | `postgres`, `pg`, `neon-serverless` | `postgres`       |
+| SQLite     | `better-sqlite3`, `libsql`          | `better-sqlite3` |
+| MySQL      | `mysql2`                            | `mysql2`         |
 
 ## `logging` (optional)
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `level` | `'debug' \| 'info' \| 'warn' \| 'error' \| 'silent'` | `'silent'` | Global log level. |
-| `scopes` | `Record<string, LogLevel>` | — | Per-scope overrides. |
+| Field    | Type                                                 | Default    | Description          |
+| -------- | ---------------------------------------------------- | ---------- | -------------------- |
+| `level`  | `'debug' \| 'info' \| 'warn' \| 'error' \| 'silent'` | `'silent'` | Global log level.    |
+| `scopes` | `Record<string, LogLevel>`                           | —          | Per-scope overrides. |
 
 Available scopes: `execution`, `validation`, `batch`, `database`, `node`, `graph`, `credentials`, `ai`, `template`, `renderer`, `flows`, `versions`, `http`
 
@@ -57,21 +57,21 @@ logging: {
 
 ## `execution` (optional)
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `defaultTimeout` | `number` | `60000` | Node execution timeout (ms). |
-| `maxConcurrentExecutions` | `number` | `10` | Maximum parallel flow runs. |
-| `enableTracing` | `boolean` | `true` | Store node-level execution traces. |
-| `flowTimeoutMs` | `number` | `600000` | Flow run timeout (10 min). |
-| `heartbeatIntervalMs` | `number` | `30000` | Status heartbeat interval (ms). |
-| `staleRunCheckIntervalMs` | `number` | `60000` | Batch polling / stale run check interval (ms). |
+| Field                     | Type      | Default  | Description                                    |
+| ------------------------- | --------- | -------- | ---------------------------------------------- |
+| `defaultTimeout`          | `number`  | `60000`  | Node execution timeout (ms).                   |
+| `maxConcurrentExecutions` | `number`  | `10`     | Maximum parallel flow runs.                    |
+| `enableTracing`           | `boolean` | `true`   | Store node-level execution traces.             |
+| `flowTimeoutMs`           | `number`  | `600000` | Flow run timeout (10 min).                     |
+| `heartbeatIntervalMs`     | `number`  | `30000`  | Status heartbeat interval (ms).                |
+| `staleRunCheckIntervalMs` | `number`  | `60000`  | Batch polling / stale run check interval (ms). |
 
 ## `triggers` (optional)
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `webhookBaseUrl` | `string` | — | Public URL prefix for webhook URLs. |
-| `cronEnabled` | `boolean` | `true` | Enable/disable cron scheduler. |
+| Field            | Type      | Default | Description                         |
+| ---------------- | --------- | ------- | ----------------------------------- |
+| `webhookBaseUrl` | `string`  | —       | Public URL prefix for webhook URLs. |
+| `cronEnabled`    | `boolean` | `true`  | Enable/disable cron scheduler.      |
 
 ## `plugins` (optional)
 
@@ -79,31 +79,33 @@ Array of plugin instances, initialised in order:
 
 ```ts
 plugins: [
-  authentication({ /* ... */ }),
+  authentication({
+    /* ... */
+  }),
   rbacPlugin(),
   webhooksPlugin({ webhookBaseUrl: 'https://api.myapp.com/invect' }),
-]
+];
 ```
 
 ## `defaultCredentials` (optional)
 
 Array of credentials to seed on startup. Matched by name — existing credentials not overwritten.
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `name` | `string` | Yes | Unique credential name. |
-| `type` | `'llm' \| 'http-api' \| 'database'` | Yes | Credential category. |
-| `provider` | `string` | For `llm` | Provider ID (`openai`, `anthropic`, `openrouter`). |
-| `authType` | `string` | Yes | Auth method (`apiKey`, `oauth2`). |
-| `config` | `Record<string, unknown>` | Yes | Provider-specific config. |
-| `description` | `string` | No | Human-readable note. |
-| `isShared` | `boolean` | No | Visible to all users. |
+| Field         | Type                                | Required  | Description                                        |
+| ------------- | ----------------------------------- | --------- | -------------------------------------------------- |
+| `name`        | `string`                            | Yes       | Unique credential name.                            |
+| `type`        | `'llm' \| 'http-api' \| 'database'` | Yes       | Credential category.                               |
+| `provider`    | `string`                            | For `llm` | Provider ID (`openai`, `anthropic`, `openrouter`). |
+| `authType`    | `string`                            | Yes       | Auth method (`apiKey`, `oauth2`).                  |
+| `config`      | `Record<string, unknown>`           | Yes       | Provider-specific config.                          |
+| `description` | `string`                            | No        | Human-readable note.                               |
+| `isShared`    | `boolean`                           | No        | Visible to all users.                              |
 
 ## `basePath` (optional)
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `basePath` | `string` | — | Base URL path prefix for all routes. |
+| Field      | Type     | Default | Description                          |
+| ---------- | -------- | ------- | ------------------------------------ |
+| `basePath` | `string` | —       | Base URL path prefix for all routes. |
 
 ## `logger` (optional)
 
@@ -137,7 +139,9 @@ export const invectConfig = defineConfig({
   plugins: [
     authentication({
       betterAuthOptions: { secret: process.env.BETTER_AUTH_SECRET },
-      globalAdmins: [{ email: process.env.ADMIN_EMAIL, pw: process.env.ADMIN_PASSWORD, name: 'Admin' }],
+      globalAdmins: [
+        { email: process.env.ADMIN_EMAIL, pw: process.env.ADMIN_PASSWORD, name: 'Admin' },
+      ],
     }),
     rbacPlugin(),
   ],

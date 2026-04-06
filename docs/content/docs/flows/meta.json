@@ -1,4 +1,10 @@
 {
   "title": "Flows",
-  "pages": ["creating-flows", "templates-and-data", "conditional-logic", "triggers", "running-programmatically"]
+  "pages": [
+    "creating-flows",
+    "templates-and-data",
+    "conditional-logic",
+    "triggers",
+    "running-programmatically"
+  ]
 }

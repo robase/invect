@@ -13,11 +13,11 @@ The node receives the incoming data object (all upstream outputs keyed by refere
 // incoming data: { "api_response": { "users": [...] } }
 
 const users = api_response.users;
-const active = users.filter(u => u.active);
+const active = users.filter((u) => u.active);
 return {
   total: users.length,
   active: active.length,
-  names: active.map(u => u.name),
+  names: active.map((u) => u.name),
 };
 ```
 
@@ -53,7 +53,7 @@ try {
   const parsed = JSON.parse(raw_data.body);
   return { success: true, data: parsed };
 } catch (e) {
-  return { success: false, error: "Invalid JSON" };
+  return { success: false, error: 'Invalid JSON' };
 }
 ```
 

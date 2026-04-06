@@ -37,7 +37,7 @@ export function rateLimiter(): InvectPlugin {
         if (count > 100) {
           return { response: { status: 429, body: { error: 'Rate limited' } } };
         }
-        return {};  // Continue to route handler
+        return {}; // Continue to route handler
       },
     },
   };
@@ -131,7 +131,9 @@ export function myPlugin(): InvectPlugin {
     async init(ctx) {
       // ctx provides: db, logger, registerTool
       ctx.logger.info('My plugin initializing');
-      interval = setInterval(() => { /* background work */ }, 60000);
+      interval = setInterval(() => {
+        /* background work */
+      }, 60000);
     },
     async shutdown() {
       clearInterval(interval);

@@ -27,12 +27,17 @@ export const myAction = defineAction({
       includeHeaders: z.boolean().optional().default(true),
     }),
     fields: [
-      { name: 'format', label: 'Output Format', type: 'select', required: true,
+      {
+        name: 'format',
+        label: 'Output Format',
+        type: 'select',
+        required: true,
         options: [
           { label: 'JSON', value: 'json' },
           { label: 'CSV', value: 'csv' },
           { label: 'XML', value: 'xml' },
-        ]},
+        ],
+      },
       { name: 'includeHeaders', label: 'Include Headers', type: 'boolean' },
     ],
   },

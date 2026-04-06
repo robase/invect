@@ -24,9 +24,7 @@ export const invectConfig = defineConfig({
       betterAuthOptions: {
         secret: process.env.BETTER_AUTH_SECRET,
       },
-      globalAdmins: [
-        { email: 'admin@example.com', pw: 'changeme', name: 'Admin' },
-      ],
+      globalAdmins: [{ email: 'admin@example.com', pw: 'changeme', name: 'Admin' }],
     }),
   ],
 });
@@ -44,12 +42,14 @@ pnpm dlx @invect/cli migrate --push
 ## What it does
 
 **Backend:**
+
 - `onRequest` hook resolves the session from cookies on every API request
 - `onAuthorize` hook enforces that the user is logged in
 - Endpoints for sign-in, sign-out, session management, and user CRUD (proxied to Better Auth)
 - Admin user seeding on startup from `globalAdmins`
 
 **Frontend:**
+
 - `AuthProvider` — React context providing session state
 - `AuthGate` — renders children only when authenticated, shows sign-in page otherwise
 - `SignInPage` — pre-built sign-in form
@@ -71,15 +71,15 @@ import '@invect/ui/styles';
   InvectComponent={Invect}
   ShellComponent={InvectShell}
   theme="light"
-/>
+/>;
 ```
 
 When `ShellComponent` is provided, the sign-in page renders inside the Invect CSS scope — so it uses the same theme tokens and looks consistent with the editor.
 
 ## Environment variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `BETTER_AUTH_SECRET` | Yes | Session encryption secret |
-| `INVECT_ADMIN_EMAIL` | No | Alternative to `globalAdmins` config |
-| `INVECT_ADMIN_PASSWORD` | No | Alternative to `globalAdmins` config |
+| Variable                | Required | Description                          |
+| ----------------------- | -------- | ------------------------------------ |
+| `BETTER_AUTH_SECRET`    | Yes      | Session encryption secret            |
+| `INVECT_ADMIN_EMAIL`    | No       | Alternative to `globalAdmins` config |
+| `INVECT_ADMIN_PASSWORD` | No       | Alternative to `globalAdmins` config |

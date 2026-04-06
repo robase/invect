@@ -43,20 +43,13 @@ export interface InvectClient {
   ): Promise<{ valid: boolean; errors?: string[] }>;
 
   // ===== Versions =====
-  listVersions(
-    identity: InvectIdentity | null,
-    flowId: string,
-  ): Promise<unknown>;
+  listVersions(identity: InvectIdentity | null, flowId: string): Promise<unknown>;
   getVersion(
     identity: InvectIdentity | null,
     flowId: string,
     version: string | number | 'latest',
   ): Promise<unknown>;
-  publishVersion(
-    identity: InvectIdentity | null,
-    flowId: string,
-    data: unknown,
-  ): Promise<unknown>;
+  publishVersion(identity: InvectIdentity | null, flowId: string, data: unknown): Promise<unknown>;
 
   // ===== Runs =====
   startRun(
@@ -70,10 +63,7 @@ export interface InvectClient {
     nodeId: string,
     inputs?: Record<string, unknown>,
   ): Promise<unknown>;
-  listRuns(
-    identity: InvectIdentity | null,
-    flowId: string,
-  ): Promise<unknown>;
+  listRuns(identity: InvectIdentity | null, flowId: string): Promise<unknown>;
   getRun(identity: InvectIdentity | null, flowRunId: string): Promise<unknown>;
   cancelRun(identity: InvectIdentity | null, flowRunId: string): Promise<{ message: string }>;
   pauseRun(identity: InvectIdentity | null, flowRunId: string): Promise<{ message: string }>;

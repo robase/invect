@@ -1245,7 +1245,11 @@ export function authentication(options: AuthenticationPluginOptions): InvectPlug
             };
           }
 
-          const { name, expiresIn, prefix: keyPrefix } = ctx.body as {
+          const {
+            name,
+            expiresIn,
+            prefix: keyPrefix,
+          } = ctx.body as {
             name?: string;
             expiresIn?: number;
             prefix?: string;

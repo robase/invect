@@ -285,11 +285,7 @@ function makeNodeContext(overrides: Partial<NodeExecutionContext> = {}): NodeExe
 
 describe('executeActionAsNode — batch detection', () => {
   it('should return PENDING status when action signals batch submission', async () => {
-    const result = await executeActionAsNode(
-      batchAction,
-      { prompt: 'test' },
-      makeNodeContext(),
-    );
+    const result = await executeActionAsNode(batchAction, { prompt: 'test' }, makeNodeContext());
 
     expect(result.state).toBe(NodeExecutionStatus.PENDING);
     if (result.state === NodeExecutionStatus.PENDING) {
@@ -301,11 +297,7 @@ describe('executeActionAsNode — batch detection', () => {
   });
 
   it('should return SUCCESS status for normal action results', async () => {
-    const result = await executeActionAsNode(
-      normalAction,
-      { prompt: 'test' },
-      makeNodeContext(),
-    );
+    const result = await executeActionAsNode(normalAction, { prompt: 'test' }, makeNodeContext());
 
     expect(result.state).toBe(NodeExecutionStatus.SUCCESS);
   });

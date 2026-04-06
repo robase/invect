@@ -116,7 +116,9 @@ export const InvectConfigSchema = z.object({
    *
    * Generate with: `npx invect-cli secret`
    */
-  encryptionKey: z.string().min(1, 'encryptionKey is required. Generate one with: npx invect-cli secret'),
+  encryptionKey: z
+    .string()
+    .min(1, 'encryptionKey is required. Generate one with: npx invect-cli secret'),
   logging: LoggingConfigSchema.default(() => ({
     level: 'info' as const,
   })).optional(),

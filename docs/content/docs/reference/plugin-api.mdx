@@ -47,7 +47,9 @@ interface InvectPluginContext {
 interface InvectPluginHooks {
   beforeFlowRun?: (ctx: FlowRunHookContext) => Promise<{ cancel?: boolean; inputs?: any } | void>;
   afterFlowRun?: (ctx: FlowRunHookContext) => Promise<void>;
-  beforeNodeExecute?: (ctx: NodeExecuteHookContext) => Promise<{ skip?: boolean; params?: any } | void>;
+  beforeNodeExecute?: (
+    ctx: NodeExecuteHookContext,
+  ) => Promise<{ skip?: boolean; params?: any } | void>;
   afterNodeExecute?: (ctx: NodeExecuteHookContext) => Promise<{ output?: any } | void>;
   onRequest?: (ctx: RequestHookContext) => Promise<{ response?: any; request?: any } | void>;
   onResponse?: (ctx: ResponseHookContext) => Promise<{ response?: any } | void>;
@@ -57,15 +59,15 @@ interface InvectPluginHooks {
 
 ### Hook behaviour
 
-| Hook | Can short-circuit? | Return to modify |
-|------|-------------------|-----------------|
-| `beforeFlowRun` | Yes (`{ cancel: true }`) | `{ inputs }` to modify inputs |
-| `afterFlowRun` | No | — |
-| `beforeNodeExecute` | Yes (`{ skip: true }`) | `{ params }` to override |
-| `afterNodeExecute` | No | `{ output }` to override |
-| `onRequest` | Yes (`{ response }`) | `{ request }` to modify |
-| `onResponse` | No | `{ response }` to replace |
-| `onAuthorize` | Yes (`{ allowed: false }`) | `{ allowed: true }` to allow |
+| Hook                | Can short-circuit?         | Return to modify              |
+| ------------------- | -------------------------- | ----------------------------- |
+| `beforeFlowRun`     | Yes (`{ cancel: true }`)   | `{ inputs }` to modify inputs |
+| `afterFlowRun`      | No                         | —                             |
+| `beforeNodeExecute` | Yes (`{ skip: true }`)     | `{ params }` to override      |
+| `afterNodeExecute`  | No                         | `{ output }` to override      |
+| `onRequest`         | Yes (`{ response }`)       | `{ request }` to modify       |
+| `onResponse`        | No                         | `{ response }` to replace     |
+| `onAuthorize`       | Yes (`{ allowed: false }`) | `{ allowed: true }` to allow  |
 
 ## InvectPluginEndpoint
 
@@ -83,16 +85,22 @@ Endpoints are mounted at `/plugins/{pluginId}{path}`.
 ## InvectPluginSchema
 
 ```ts
-type InvectPluginSchema = Record<string, {
-  fields: Record<string, {
-    type: 'string' | 'number' | 'boolean' | 'text' | 'json';
-    primaryKey?: boolean;
-    required?: boolean;
-    unique?: boolean;
-    default?: any;
-    references?: { table: string; field: string };
-  }>;
-}>;
+type InvectPluginSchema = Record<
+  string,
+  {
+    fields: Record<
+      string,
+      {
+        type: 'string' | 'number' | 'boolean' | 'text' | 'json';
+        primaryKey?: boolean;
+        required?: boolean;
+        unique?: boolean;
+        default?: any;
+        references?: { table: string; field: string };
+      }
+    >;
+  }
+>;
 ```
 
 ## InvectFrontendPlugin

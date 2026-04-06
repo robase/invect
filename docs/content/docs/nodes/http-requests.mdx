@@ -48,12 +48,14 @@ For OAuth2 credentials, the access token is automatically refreshed if expired. 
 ## Common patterns
 
 **Calling your own API:**
+
 ```
 URL: {{ "https://myapp.com/api/users/" + input.user_id }}
 Method: GET
 ```
 
 **Posting to a webhook:**
+
 ```
 URL: https://hooks.slack.com/services/T.../B.../xxx
 Method: POST
@@ -62,6 +64,7 @@ Body: { "text": "New order from {{ input.customer_name}}" }
 
 **Chaining API calls:**
 Connect multiple HTTP nodes in sequence. Each can use the previous one's response:
+
 ```
 Node 1: GET /users/{{ input.id }}  →  Node 2: GET /orders?userId={{ get_user.data.id }}
 ```

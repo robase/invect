@@ -15,11 +15,7 @@ export class HttpClient implements InvectClient {
     this.apiKey = apiKey;
   }
 
-  private async request<T = unknown>(
-    method: string,
-    path: string,
-    body?: unknown,
-  ): Promise<T> {
+  private async request<T = unknown>(method: string, path: string, body?: unknown): Promise<T> {
     const url = `${this.baseUrl}${path}`;
     const headers: Record<string, string> = {
       Authorization: `Bearer ${this.apiKey}`,
@@ -63,10 +59,7 @@ export class HttpClient implements InvectClient {
     return await this.request('GET', `/flows/${encodeURIComponent(flowId)}/versions/latest`);
   }
 
-  async createFlow(
-    _identity: InvectIdentity | null,
-    data: { name: string; description?: string },
-  ) {
+  async createFlow(_identity: InvectIdentity | null, data: { name: string; description?: string }) {
     return await this.request('POST', '/flows', data);
   }
 
@@ -82,11 +75,7 @@ export class HttpClient implements InvectClient {
     await this.request('DELETE', `/flows/${encodeURIComponent(flowId)}`);
   }
 
-  async validateFlow(
-    _identity: InvectIdentity | null,
-    flowId: string,
-    definition: unknown,
-  ) {
+  async validateFlow(_identity: InvectIdentity | null, flowId: string, definition: unknown) {
     return await this.request<{ valid: boolean; errors?: string[] }>(
       'POST',
       `/flows/${encodeURIComponent(flowId)}/validate`,
@@ -114,16 +103,8 @@ export class HttpClient implements InvectClient {
     );
   }
 
-  async publishVersion(
-    _identity: InvectIdentity | null,
-    flowId: string,
-    data: unknown,
-  ) {
-    return await this.request(
-      'POST',
-      `/flows/${encodeURIComponent(flowId)}/versions`,
-      data,
-    );
+  async publishVersion(_identity: InvectIdentity | null, flowId: string, data: unknown) {
+    return await this.request('POST', `/flows/${encodeURIComponent(flowId)}/versions`, data);
   }
 
   // ===== Runs =====
@@ -146,11 +127,10 @@ export class HttpClient implements InvectClient {
     nodeId: string,
     inputs?: Record<string, unknown>,
   ) {
-    return await this.request(
-      'POST',
-      `/flows/${encodeURIComponent(flowId)}/run-to-node`,
-      { targetNodeId: nodeId, ...(inputs ? { inputs } : {}) },
-    );
+    return await this.request('POST', `/flows/${encodeURIComponent(flowId)}/run-to-node`, {
+      targetNodeId: nodeId,
+      ...(inputs ? { inputs } : {}),
+    });
   }
 
   async listRuns(_identity: InvectIdentity | null, flowId: string) {
@@ -260,10 +240,7 @@ export class HttpClient implements InvectClient {
   // ===== Triggers =====
 
   async listTriggers(_identity: InvectIdentity | null, flowId: string) {
-    return await this.request<unknown[]>(
-      'GET',
-      `/flows/${encodeURIComponent(flowId)}/triggers`,
-    );
+    return await this.request<unknown[]>('GET', `/flows/${encodeURIComponent(flowId)}/triggers`);
   }
 
   async getTrigger(_identity: InvectIdentity | null, triggerId: string) {
@@ -274,16 +251,8 @@ export class HttpClient implements InvectClient {
     return await this.request('POST', '/triggers', input);
   }
 
-  async updateTrigger(
-    _identity: InvectIdentity | null,
-    triggerId: string,
-    input: unknown,
-  ) {
-    return await this.request(
-      'PATCH',
-      `/triggers/${encodeURIComponent(triggerId)}`,
-      input,
-    );
+  async updateTrigger(_identity: InvectIdentity | null, triggerId: string, input: unknown) {
+    return await this.request('PATCH', `/triggers/${encodeURIComponent(triggerId)}`, input);
   }
 
   async deleteTrigger(_identity: InvectIdentity | null, triggerId: string) {

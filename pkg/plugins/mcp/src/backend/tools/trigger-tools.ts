@@ -56,7 +56,7 @@ export function registerTriggerTools(server: McpServer, client: InvectClient): v
 
   server.tool(
     TOOL_IDS.TRIGGER_UPDATE,
-    'Update an existing trigger\'s configuration',
+    "Update an existing trigger's configuration",
     {
       triggerId: z.string().describe('The trigger ID to update'),
       input: z.any().describe('Updated trigger configuration'),

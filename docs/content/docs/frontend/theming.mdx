@@ -14,6 +14,7 @@ The `Invect` and `InvectShell` components accept a `theme` prop:
 ```
 
 Options:
+
 - `"light"` — light theme
 - `"dark"` — dark theme
 - `"system"` — follows the OS preference (default)
@@ -24,18 +25,18 @@ The `system` option uses `prefers-color-scheme` and updates automatically when t
 
 All colors in the editor are defined as CSS custom properties. The main tokens:
 
-| Token | Usage |
-|-------|-------|
-| `--imp-background` | Page background |
-| `--imp-foreground` | Primary text |
-| `--imp-muted` | Muted/secondary backgrounds |
-| `--imp-muted-foreground` | Secondary text |
-| `--imp-border` | Borders and dividers |
-| `--imp-primary` | Primary action color |
+| Token                      | Usage                       |
+| -------------------------- | --------------------------- |
+| `--imp-background`         | Page background             |
+| `--imp-foreground`         | Primary text                |
+| `--imp-muted`              | Muted/secondary backgrounds |
+| `--imp-muted-foreground`   | Secondary text              |
+| `--imp-border`             | Borders and dividers        |
+| `--imp-primary`            | Primary action color        |
 | `--imp-primary-foreground` | Text on primary backgrounds |
-| `--imp-accent` | Accent/highlight color |
-| `--imp-card` | Card backgrounds |
-| `--imp-destructive` | Error/danger states |
+| `--imp-accent`             | Accent/highlight color      |
+| `--imp-card`               | Card backgrounds            |
+| `--imp-destructive`        | Error/danger states         |
 
 In Tailwind, these are used as `bg-imp-background`, `text-imp-foreground`, `border-imp-border`, etc.
 

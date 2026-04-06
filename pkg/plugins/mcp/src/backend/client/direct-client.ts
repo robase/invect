@@ -22,10 +22,7 @@ export class DirectClient implements InvectClient {
     return await this.invect.versions.get(flowId, 'latest');
   }
 
-  async createFlow(
-    _identity: InvectIdentity | null,
-    data: { name: string; description?: string },
-  ) {
+  async createFlow(_identity: InvectIdentity | null, data: { name: string; description?: string }) {
     return await this.invect.flows.create(data);
   }
 
@@ -41,11 +38,7 @@ export class DirectClient implements InvectClient {
     await this.invect.flows.delete(flowId);
   }
 
-  async validateFlow(
-    _identity: InvectIdentity | null,
-    flowId: string,
-    definition: unknown,
-  ) {
+  async validateFlow(_identity: InvectIdentity | null, flowId: string, definition: unknown) {
     const result = await this.invect.flows.validate(flowId, definition);
     return {
       valid: result.isValid,
@@ -67,12 +60,11 @@ export class DirectClient implements InvectClient {
     return await this.invect.versions.get(flowId, version);
   }
 
-  async publishVersion(
-    _identity: InvectIdentity | null,
-    flowId: string,
-    data: unknown,
-  ) {
-    return await this.invect.versions.create(flowId, data as Parameters<InvectInstance['versions']['create']>[1]);
+  async publishVersion(_identity: InvectIdentity | null, flowId: string, data: unknown) {
+    return await this.invect.versions.create(
+      flowId,
+      data as Parameters<InvectInstance['versions']['create']>[1],
+    );
   }
 
   // ===== Runs =====
@@ -178,15 +170,16 @@ export class DirectClient implements InvectClient {
   }
 
   async createTrigger(_identity: InvectIdentity | null, input: unknown) {
-    return await this.invect.triggers.create(input as Parameters<InvectInstance['triggers']['create']>[0]);
+    return await this.invect.triggers.create(
+      input as Parameters<InvectInstance['triggers']['create']>[0],
+    );
   }
 
-  async updateTrigger(
-    _identity: InvectIdentity | null,
-    triggerId: string,
-    input: unknown,
-  ) {
-    return await this.invect.triggers.update(triggerId, input as Parameters<InvectInstance['triggers']['update']>[1]);
+  async updateTrigger(_identity: InvectIdentity | null, triggerId: string, input: unknown) {
+    return await this.invect.triggers.update(
+      triggerId,
+      input as Parameters<InvectInstance['triggers']['update']>[1],
+    );
   }
 
   async deleteTrigger(_identity: InvectIdentity | null, triggerId: string) {

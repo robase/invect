@@ -23,11 +23,13 @@ export default defineConfig({
 ```
 
 Install `better-sqlite3`:
+
 ```bash
 pnpm add better-sqlite3
 ```
 
 SQLite is the simplest choice for local development and small deployments. The database is a single file — no server needed.
+
   </Tab>
   <Tab value="PostgreSQL">
 ```ts title="invect.config.ts"
@@ -42,11 +44,13 @@ export default defineConfig({
 ```
 
 Install `postgres`:
+
 ```bash
 pnpm add postgres
 ```
 
 PostgreSQL is recommended for production. Use a managed instance (RDS, Supabase, Neon) or run your own.
+
   </Tab>
   <Tab value="MySQL">
 ```ts title="invect.config.ts"
@@ -61,11 +65,13 @@ export default defineConfig({
 ```
 
 Install `mysql2`:
+
 ```bash
 pnpm add mysql2
 ```
 
 MySQL support follows the same patterns as PostgreSQL.
+
   </Tab>
 </Tabs>
 
@@ -113,14 +119,14 @@ At startup, Invect verifies that all required tables exist. If a plugin's tables
 
 Invect creates these tables:
 
-| Table | Purpose |
-|-------|---------|
-| `flows` | Flow definitions (name, description, metadata) |
-| `flow_versions` | Versioned flow graphs (nodes, edges, config) |
-| `flow_runs` | Execution records (status, inputs, outputs, timing) |
+| Table             | Purpose                                             |
+| ----------------- | --------------------------------------------------- |
+| `flows`           | Flow definitions (name, description, metadata)      |
+| `flow_versions`   | Versioned flow graphs (nodes, edges, config)        |
+| `flow_runs`       | Execution records (status, inputs, outputs, timing) |
 | `node_executions` | Per-node execution traces (input, output, duration) |
-| `credentials` | Encrypted credential storage |
-| `triggers` | Cron and webhook trigger definitions |
-| `batch_jobs` | Batch processing job tracking |
+| `credentials`     | Encrypted credential storage                        |
+| `triggers`        | Cron and webhook trigger definitions                |
+| `batch_jobs`      | Batch processing job tracking                       |
 
 See [Database schema reference](/docs/reference/database-schema) for the full column definitions.

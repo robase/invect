@@ -22,7 +22,9 @@ import { rbacPlugin } from '@invect/rbac';
 export const invectConfig = defineConfig({
   // ...
   plugins: [
-    authentication({ /* ... */ }),
+    authentication({
+      /* ... */
+    }),
     rbacPlugin(),
   ],
 });
@@ -41,11 +43,11 @@ pnpm dlx @invect/cli migrate --push
 
 The RBAC plugin introduces **flow-level access roles**. Each user can be assigned a role on each flow:
 
-| Role | Permissions |
-|------|------------|
-| `owner` | Full access — edit, run, delete, manage access |
-| `editor` | Edit and run the flow |
-| `viewer` | View the flow and its runs |
+| Role     | Permissions                                    |
+| -------- | ---------------------------------------------- |
+| `owner`  | Full access — edit, run, delete, manage access |
+| `editor` | Edit and run the flow                          |
+| `viewer` | View the flow and its runs                     |
 
 The `onAuthorize` hook checks whether the requesting user has the required role for the action they're attempting (e.g., `flow:read`, `flow-run:create`, `flow:delete`). Global admins bypass RBAC checks.
 
@@ -62,9 +64,9 @@ These are registered as frontend plugin contributions and render automatically w
 
 ## API endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/plugins/rbac/flows/:flowId/access` | GET | List access rules for a flow |
-| `/plugins/rbac/flows/:flowId/access` | POST | Grant access to a user |
-| `/plugins/rbac/flows/:flowId/access/:userId` | PUT | Update a user's role |
-| `/plugins/rbac/flows/:flowId/access/:userId` | DELETE | Remove a user's access |
+| Endpoint                                     | Method | Description                  |
+| -------------------------------------------- | ------ | ---------------------------- |
+| `/plugins/rbac/flows/:flowId/access`         | GET    | List access rules for a flow |
+| `/plugins/rbac/flows/:flowId/access`         | POST   | Grant access to a user       |
+| `/plugins/rbac/flows/:flowId/access/:userId` | PUT    | Update a user's role         |
+| `/plugins/rbac/flows/:flowId/access/:userId` | DELETE | Remove a user's access       |

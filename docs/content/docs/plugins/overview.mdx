@@ -22,16 +22,19 @@ Only `id` is required. A plugin that adds just hooks is valid. A plugin that add
 Hooks are the main way plugins intercept and extend behaviour.
 
 **Request hooks:**
+
 - `onRequest` — fires before every API request. Can inspect, modify, or short-circuit (return a response to block the request). Used by the auth plugin to resolve sessions.
 - `onResponse` — fires after the route handler responds. Can inspect or replace the response.
 
 **Execution hooks:**
+
 - `beforeFlowRun` — fires before flow execution. Can cancel the run or modify inputs.
 - `afterFlowRun` — fires after flow execution (success or failure).
 - `beforeNodeExecute` — fires before each node. Can skip the node or override params.
 - `afterNodeExecute` — fires after each node. Can override the output.
 
 **Authorization:**
+
 - `onAuthorize` — fires during permission checks. Returns `{ allowed: true/false }`. Used by the RBAC plugin to enforce flow-level access.
 
 When multiple plugins register the same hook, they execute in declaration order. For short-circuit hooks (`onRequest`, `onAuthorize`), the first plugin to return a response wins.

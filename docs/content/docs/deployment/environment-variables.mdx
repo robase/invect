@@ -7,33 +7,33 @@ Invect reads configuration primarily from `invect.config.ts`, but several settin
 
 ## Core variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `INVECT_ENCRYPTION_KEY` | Production | 32-byte base64 key for credential encryption. Generate with `invect-cli secret`. |
-| `DATABASE_URL` | Depends | Database connection string. Used when `database.connectionString` references `process.env.DATABASE_URL`. |
+| Variable                | Required   | Description                                                                                              |
+| ----------------------- | ---------- | -------------------------------------------------------------------------------------------------------- |
+| `INVECT_ENCRYPTION_KEY` | Production | 32-byte base64 key for credential encryption. Generate with `invect-cli secret`.                         |
+| `DATABASE_URL`          | Depends    | Database connection string. Used when `database.connectionString` references `process.env.DATABASE_URL`. |
 
 ## Auth plugin variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `BETTER_AUTH_SECRET` | With auth plugin | Secret for session token encryption. |
-| `INVECT_ADMIN_EMAIL` | No | Admin user email (alternative to `globalAdmins` config). |
-| `INVECT_ADMIN_PASSWORD` | No | Admin user password (alternative to `globalAdmins` config). |
+| Variable                | Required         | Description                                                 |
+| ----------------------- | ---------------- | ----------------------------------------------------------- |
+| `BETTER_AUTH_SECRET`    | With auth plugin | Secret for session token encryption.                        |
+| `INVECT_ADMIN_EMAIL`    | No               | Admin user email (alternative to `globalAdmins` config).    |
+| `INVECT_ADMIN_PASSWORD` | No               | Admin user password (alternative to `globalAdmins` config). |
 
 ## AI provider variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `OPENAI_API_KEY` | No | OpenAI API key (used in `defaultCredentials` config). |
-| `ANTHROPIC_API_KEY` | No | Anthropic API key (used in `defaultCredentials` config). |
-| `OPENROUTER_API_KEY` | No | OpenRouter API key (used in `defaultCredentials` config). |
+| Variable             | Required | Description                                               |
+| -------------------- | -------- | --------------------------------------------------------- |
+| `OPENAI_API_KEY`     | No       | OpenAI API key (used in `defaultCredentials` config).     |
+| `ANTHROPIC_API_KEY`  | No       | Anthropic API key (used in `defaultCredentials` config).  |
+| `OPENROUTER_API_KEY` | No       | OpenRouter API key (used in `defaultCredentials` config). |
 
 These aren't read by Invect directly — you reference them in your config via `process.env.OPENAI_API_KEY`. Listing them here for completeness.
 
 ## Config variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
+| Variable           | Required             | Description                              |
+| ------------------ | -------------------- | ---------------------------------------- |
 | `WEBHOOK_BASE_URL` | With webhooks plugin | Public URL prefix for webhook endpoints. |
 
 ## Security recommendations

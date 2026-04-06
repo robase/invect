@@ -11,9 +11,7 @@ import type { InvectIdentity, InvectInstance } from '@invect/core';
  * The authInfo is populated by the framework adapter's middleware which resolves
  * the session/API key before routing to the MCP plugin endpoint.
  */
-export function mapAuthInfoToIdentity(
-  authInfo: unknown,
-): InvectIdentity | null {
+export function mapAuthInfoToIdentity(authInfo: unknown): InvectIdentity | null {
   if (!authInfo || typeof authInfo !== 'object') {
     return null;
   }
@@ -50,7 +48,9 @@ export async function authorizeAction(
   const result = await invect.auth.authorize({
     identity,
     action: action as Parameters<InvectInstance['auth']['authorize']>[0]['action'],
-    ...(resource ? { resource: resource as Parameters<InvectInstance['auth']['authorize']>[0]['resource'] } : {}),
+    ...(resource
+      ? { resource: resource as Parameters<InvectInstance['auth']['authorize']>[0]['resource'] }
+      : {}),
   });
 
   if (!result.allowed) {

@@ -34,10 +34,7 @@ export function registerRunTools(server: McpServer, client: InvectClient): void 
     {
       flowId: z.string().describe('The flow ID'),
       nodeId: z.string().describe('Stop execution at this node ID'),
-      inputs: z
-        .record(z.unknown())
-        .optional()
-        .describe('Optional input data'),
+      inputs: z.record(z.unknown()).optional().describe('Optional input data'),
     },
     async ({ flowId, nodeId, inputs }, extra) => {
       const identity = requireAuth(mapAuthInfoToIdentity(extra.authInfo));

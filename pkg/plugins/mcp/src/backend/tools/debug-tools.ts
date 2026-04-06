@@ -11,7 +11,7 @@ import { TOOL_IDS } from '../../shared/types';
 export function registerDebugTools(server: McpServer, client: InvectClient): void {
   server.tool(
     TOOL_IDS.DEBUG_NODE_EXECUTIONS,
-    'Get per-node execution traces for a flow run, including each node\'s input, output, timing, and errors. Essential for debugging failed runs.',
+    "Get per-node execution traces for a flow run, including each node's input, output, timing, and errors. Essential for debugging failed runs.",
     {
       flowRunId: z.string().describe('The flow run ID'),
     },
@@ -48,8 +48,14 @@ export function registerDebugTools(server: McpServer, client: InvectClient): voi
     TOOL_IDS.DEBUG_TEST_EXPRESSION,
     'Test a JavaScript template expression ({{ ... }}) against a sample data context. Uses the QuickJS WASM sandbox.',
     {
-      expression: z.string().describe('JS template expression to test (e.g., "{{ users.filter(u => u.active).length }}")'),
-      context: z.record(z.unknown()).describe('Sample data context to evaluate the expression against'),
+      expression: z
+        .string()
+        .describe(
+          'JS template expression to test (e.g., "{{ users.filter(u => u.active).length }}")',
+        ),
+      context: z
+        .record(z.unknown())
+        .describe('Sample data context to evaluate the expression against'),
     },
     async ({ expression, context }, extra) => {
       const identity = requireAuth(mapAuthInfoToIdentity(extra.authInfo));

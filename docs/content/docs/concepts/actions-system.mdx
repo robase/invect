@@ -67,9 +67,9 @@ Returns:
 ```ts
 interface ActionResult {
   success: boolean;
-  output?: unknown;              // The node's output data
-  error?: string;                // Error message (if success: false)
-  outputVariables?: Record<string, unknown>;  // For multi-output nodes (if/else, switch)
+  output?: unknown; // The node's output data
+  error?: string; // Error message (if success: false)
+  outputVariables?: Record<string, unknown>; // For multi-output nodes (if/else, switch)
 }
 ```
 

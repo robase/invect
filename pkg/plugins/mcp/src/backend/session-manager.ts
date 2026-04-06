@@ -17,10 +17,14 @@ export class SessionManager {
 
   /** Start periodic cleanup of expired sessions */
   startCleanup(intervalMs: number = 60_000): void {
-    if (this.cleanupTimer) return;
+    if (this.cleanupTimer) {return;}
     this.cleanupTimer = setInterval(() => this.cleanupExpired(), intervalMs);
     // Don't block process exit
-    if (this.cleanupTimer && typeof this.cleanupTimer === 'object' && 'unref' in this.cleanupTimer) {
+    if (
+      this.cleanupTimer &&
+      typeof this.cleanupTimer === 'object' &&
+      'unref' in this.cleanupTimer
+    ) {
       this.cleanupTimer.unref();
     }
   }

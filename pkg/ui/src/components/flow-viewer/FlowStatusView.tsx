@@ -126,7 +126,9 @@ export function FlowStatusView({
     const types = new Set<string>();
     for (const node of nodes) {
       const nodeType = (node.data as { type?: string })?.type ?? node.type;
-      if (nodeType) {types.add(nodeType);}
+      if (nodeType) {
+        types.add(nodeType);
+      }
     }
     return [...types].sort().join(',');
   }, [nodes]);

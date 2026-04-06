@@ -35,12 +35,12 @@ The expression follows standard cron syntax with five fields:
 
 Common patterns:
 
-| Expression | Schedule |
-|-----------|----------|
-| `0 9 * * *` | Daily at 9:00 AM |
-| `*/15 * * * *` | Every 15 minutes |
-| `0 0 * * 1` | Every Monday at midnight |
-| `0 8 1 * *` | First of each month at 8:00 AM |
+| Expression     | Schedule                       |
+| -------------- | ------------------------------ |
+| `0 9 * * *`    | Daily at 9:00 AM               |
+| `*/15 * * * *` | Every 15 minutes               |
+| `0 0 * * 1`    | Every Monday at midnight       |
+| `0 8 1 * *`    | First of each month at 8:00 AM |
 
 Cron triggers are managed by the batch polling service, which checks for due triggers on each tick. The `execution.staleRunCheckIntervalMs` config option controls the polling interval.
 

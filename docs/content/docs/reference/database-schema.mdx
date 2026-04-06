@@ -7,105 +7,105 @@ These are the core tables created by `invect-cli generate`. Exact column types v
 
 ## `flows`
 
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | string | Primary key (UUID) |
-| `name` | string | Flow name |
-| `description` | text | Optional description |
-| `category` | string | Optional categorisation |
-| `tags` | text | JSON array of tags |
-| `isActive` | boolean | Whether the flow is active |
-| `metadata` | text | JSON metadata |
-| `latestVersion` | integer | Current version number |
-| `createdAt` | string | ISO timestamp |
-| `updatedAt` | string | ISO timestamp |
+| Column          | Type    | Notes                      |
+| --------------- | ------- | -------------------------- |
+| `id`            | string  | Primary key (UUID)         |
+| `name`          | string  | Flow name                  |
+| `description`   | text    | Optional description       |
+| `category`      | string  | Optional categorisation    |
+| `tags`          | text    | JSON array of tags         |
+| `isActive`      | boolean | Whether the flow is active |
+| `metadata`      | text    | JSON metadata              |
+| `latestVersion` | integer | Current version number     |
+| `createdAt`     | string  | ISO timestamp              |
+| `updatedAt`     | string  | ISO timestamp              |
 
 ## `flow_versions`
 
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | string | Primary key (UUID) |
-| `flowId` | string | Foreign key → `flows.id` |
-| `version` | integer | Version number |
-| `definition` | text | JSON flow definition (nodes, edges) |
-| `createdAt` | string | ISO timestamp |
+| Column       | Type    | Notes                               |
+| ------------ | ------- | ----------------------------------- |
+| `id`         | string  | Primary key (UUID)                  |
+| `flowId`     | string  | Foreign key → `flows.id`            |
+| `version`    | integer | Version number                      |
+| `definition` | text    | JSON flow definition (nodes, edges) |
+| `createdAt`  | string  | ISO timestamp                       |
 
 ## `flow_runs`
 
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | string | Primary key (UUID) |
-| `flowId` | string | Foreign key → `flows.id` |
-| `flowVersionId` | string | Foreign key → `flow_versions.id` |
-| `status` | string | `RUNNING`, `COMPLETED`, `FAILED`, `PAUSED_FOR_BATCH`, `CANCELLED` |
-| `inputs` | text | JSON input data |
-| `outputs` | text | JSON output data |
-| `error` | text | Error message (if failed) |
-| `startedAt` | string | ISO timestamp |
-| `completedAt` | string | ISO timestamp |
-| `metadata` | text | JSON metadata |
+| Column          | Type   | Notes                                                             |
+| --------------- | ------ | ----------------------------------------------------------------- |
+| `id`            | string | Primary key (UUID)                                                |
+| `flowId`        | string | Foreign key → `flows.id`                                          |
+| `flowVersionId` | string | Foreign key → `flow_versions.id`                                  |
+| `status`        | string | `RUNNING`, `COMPLETED`, `FAILED`, `PAUSED_FOR_BATCH`, `CANCELLED` |
+| `inputs`        | text   | JSON input data                                                   |
+| `outputs`       | text   | JSON output data                                                  |
+| `error`         | text   | Error message (if failed)                                         |
+| `startedAt`     | string | ISO timestamp                                                     |
+| `completedAt`   | string | ISO timestamp                                                     |
+| `metadata`      | text   | JSON metadata                                                     |
 
 ## `node_executions`
 
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | string | Primary key (UUID) |
-| `flowRunId` | string | Foreign key → `flow_runs.id` |
-| `nodeId` | string | Node ID within the flow |
-| `nodeType` | string | Action ID or `AGENT` |
-| `status` | string | `RUNNING`, `COMPLETED`, `FAILED`, `SKIPPED`, `PENDING` |
-| `inputData` | text | JSON incoming data |
-| `outputData` | text | JSON output data |
-| `resolvedParams` | text | JSON resolved configuration |
-| `error` | text | Error message (if failed) |
-| `startedAt` | string | ISO timestamp |
-| `completedAt` | string | ISO timestamp |
-| `durationMs` | integer | Execution duration |
-| `metadata` | text | JSON metadata (token usage, etc.) |
+| Column           | Type    | Notes                                                  |
+| ---------------- | ------- | ------------------------------------------------------ |
+| `id`             | string  | Primary key (UUID)                                     |
+| `flowRunId`      | string  | Foreign key → `flow_runs.id`                           |
+| `nodeId`         | string  | Node ID within the flow                                |
+| `nodeType`       | string  | Action ID or `AGENT`                                   |
+| `status`         | string  | `RUNNING`, `COMPLETED`, `FAILED`, `SKIPPED`, `PENDING` |
+| `inputData`      | text    | JSON incoming data                                     |
+| `outputData`     | text    | JSON output data                                       |
+| `resolvedParams` | text    | JSON resolved configuration                            |
+| `error`          | text    | Error message (if failed)                              |
+| `startedAt`      | string  | ISO timestamp                                          |
+| `completedAt`    | string  | ISO timestamp                                          |
+| `durationMs`     | integer | Execution duration                                     |
+| `metadata`       | text    | JSON metadata (token usage, etc.)                      |
 
 ## `credentials`
 
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | string | Primary key (UUID) |
-| `name` | string | Human-readable name |
-| `type` | string | `llm`, `http-api`, `database` |
-| `provider` | string | Provider ID |
-| `authType` | string | `apiKey`, `oauth2`, etc. |
-| `config` | text | Encrypted JSON (AES-256-GCM) |
-| `description` | text | Optional description |
-| `isShared` | boolean | Visible to all users |
-| `isActive` | boolean | Whether the credential is active |
-| `lastUsedAt` | string | Last usage timestamp |
-| `expiresAt` | string | Expiration timestamp (OAuth2) |
-| `metadata` | text | JSON metadata |
-| `createdAt` | string | ISO timestamp |
-| `updatedAt` | string | ISO timestamp |
+| Column        | Type    | Notes                            |
+| ------------- | ------- | -------------------------------- |
+| `id`          | string  | Primary key (UUID)               |
+| `name`        | string  | Human-readable name              |
+| `type`        | string  | `llm`, `http-api`, `database`    |
+| `provider`    | string  | Provider ID                      |
+| `authType`    | string  | `apiKey`, `oauth2`, etc.         |
+| `config`      | text    | Encrypted JSON (AES-256-GCM)     |
+| `description` | text    | Optional description             |
+| `isShared`    | boolean | Visible to all users             |
+| `isActive`    | boolean | Whether the credential is active |
+| `lastUsedAt`  | string  | Last usage timestamp             |
+| `expiresAt`   | string  | Expiration timestamp (OAuth2)    |
+| `metadata`    | text    | JSON metadata                    |
+| `createdAt`   | string  | ISO timestamp                    |
+| `updatedAt`   | string  | ISO timestamp                    |
 
 ## `triggers`
 
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | string | Primary key (UUID) |
-| `flowId` | string | Foreign key → `flows.id` |
-| `type` | string | `manual`, `cron`, `webhook` |
-| `config` | text | JSON trigger config (cron expression, etc.) |
-| `isActive` | boolean | Whether the trigger is active |
-| `lastTriggeredAt` | string | Last execution timestamp |
-| `createdAt` | string | ISO timestamp |
-| `updatedAt` | string | ISO timestamp |
+| Column            | Type    | Notes                                       |
+| ----------------- | ------- | ------------------------------------------- |
+| `id`              | string  | Primary key (UUID)                          |
+| `flowId`          | string  | Foreign key → `flows.id`                    |
+| `type`            | string  | `manual`, `cron`, `webhook`                 |
+| `config`          | text    | JSON trigger config (cron expression, etc.) |
+| `isActive`        | boolean | Whether the trigger is active               |
+| `lastTriggeredAt` | string  | Last execution timestamp                    |
+| `createdAt`       | string  | ISO timestamp                               |
+| `updatedAt`       | string  | ISO timestamp                               |
 
 ## `batch_jobs`
 
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | string | Primary key (UUID) |
-| `flowRunId` | string | Foreign key → `flow_runs.id` |
-| `nodeId` | string | Node ID that submitted the batch |
-| `provider` | string | AI provider (`openai`, `anthropic`) |
-| `batchId` | string | Provider's batch ID |
-| `status` | string | `PENDING`, `PROCESSING`, `COMPLETED`, `FAILED` |
-| `input` | text | JSON batch input |
-| `output` | text | JSON batch result |
-| `createdAt` | string | ISO timestamp |
-| `updatedAt` | string | ISO timestamp |
+| Column      | Type   | Notes                                          |
+| ----------- | ------ | ---------------------------------------------- |
+| `id`        | string | Primary key (UUID)                             |
+| `flowRunId` | string | Foreign key → `flow_runs.id`                   |
+| `nodeId`    | string | Node ID that submitted the batch               |
+| `provider`  | string | AI provider (`openai`, `anthropic`)            |
+| `batchId`   | string | Provider's batch ID                            |
+| `status`    | string | `PENDING`, `PROCESSING`, `COMPLETED`, `FAILED` |
+| `input`     | text   | JSON batch input                               |
+| `output`    | text   | JSON batch result                              |
+| `createdAt` | string | ISO timestamp                                  |
+| `updatedAt` | string | ISO timestamp                                  |
