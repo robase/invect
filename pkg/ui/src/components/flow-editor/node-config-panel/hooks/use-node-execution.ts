@@ -99,13 +99,22 @@ function extractOutputValue(nodeOutput: unknown): unknown {
  */
 function parseFieldErrorsFromString(errorStr: string): Record<string, string> | null {
   const fieldErrors: Record<string, string> = {};
-  // Match patterns like "message\n  → at fieldName" or "message → at fieldName"
-  const regex = /(.+?)(?:\n\s*)?→\s*at\s+(\w+)/g;
-  let match: RegExpExecArray | null;
-  while ((match = regex.exec(errorStr)) !== null) {
-    const message = match[1].replace(/^[✕×]\s*/, '').trim();
-    const fieldName = match[2];
-    fieldErrors[fieldName] = message;
+  // Split on the arrow marker and extract "message → at fieldName" pairs
+  const parts = errorStr.split('→');
+  for (let i = 1; i < parts.length; i++) {
+    const afterArrow = parts[i].match(/^\s*at\s+(\w+)/);
+    if (!afterArrow) {
+      continue;
+    }
+    const fieldName = afterArrow[1];
+    // Message is everything in the previous part (after any prior field match)
+    const rawMessage = (parts[i - 1] ?? '').replace(/\n[ \t]*$/, '');
+    // Take the last line as the message (handles multi-error strings)
+    const lastLine = rawMessage.split('\n').pop() ?? '';
+    const message = lastLine.replace(/^[✕×]\s*/, '').trim();
+    if (fieldName && message) {
+      fieldErrors[fieldName] = message;
+    }
   }
   return Object.keys(fieldErrors).length > 0 ? fieldErrors : null;
 }

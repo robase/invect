@@ -89,8 +89,12 @@ function isNodeDefinition(item: unknown): item is FlowNodeDefinitions {
 }
 
 function isEdgeTuple(item: unknown): item is EdgeInput {
-  if (!Array.isArray(item)) return false;
-  if (item.length < 2 || item.length > 3) return false;
+  if (!Array.isArray(item)) {
+    return false;
+  }
+  if (item.length < 2 || item.length > 3) {
+    return false;
+  }
   return item.every((el) => typeof el === 'string');
 }
 
@@ -150,7 +154,9 @@ export function parseSDKText(text: string): ParsedSDK {
   const edges: EdgeInput[] = [];
 
   for (const item of items) {
-    if (item == null) continue;
+    if (item === null || item === undefined) {
+      continue;
+    }
 
     if (isNodeDefinition(item)) {
       nodes.push(item);

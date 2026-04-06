@@ -34,6 +34,10 @@ export const googleSheetsGetValuesAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'google',
+    requiredScopes: [
+      'https://www.googleapis.com/auth/spreadsheets',
+      'https://www.googleapis.com/auth/drive.file',
+    ],
     description: 'Google Sheets OAuth2 credential',
   },
 

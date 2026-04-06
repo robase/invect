@@ -662,7 +662,7 @@ export class FlowRunCoordinator {
     }
 
     // Remove targets that have incoming edges from OTHER non-skipped nodes
-    for (const targetId of [...inactiveTargets]) {
+    for (const targetId of inactiveTargets) {
       const allIncoming = edges.filter((e) => e.target === targetId);
       const hasNonSkippedSource = allIncoming.some(
         (e) => e.source !== nodeId && !skippedNodeIds.has(e.source),

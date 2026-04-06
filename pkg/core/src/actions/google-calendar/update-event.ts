@@ -35,6 +35,10 @@ export const googleCalendarUpdateEventAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'google',
+    requiredScopes: [
+      'https://www.googleapis.com/auth/calendar',
+      'https://www.googleapis.com/auth/calendar.events',
+    ],
     description: 'Google Calendar OAuth2 credential',
   },
 

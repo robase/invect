@@ -28,7 +28,7 @@ export function serializeFlowToTs(
       if (!providerImports.has(providerNs)) {
         providerImports.set(providerNs, new Set());
       }
-      providerImports.get(providerNs)!.add(helperName);
+      providerImports.get(providerNs)?.add(helperName);
     } else {
       helpers.add(helperName);
     }

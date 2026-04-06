@@ -33,6 +33,10 @@ export const googleAnalyticsRunReportAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'google',
+    requiredScopes: [
+      'https://www.googleapis.com/auth/analytics.readonly',
+      'https://www.googleapis.com/auth/analytics',
+    ],
     description: 'Google OAuth2 credential with Analytics scope',
   },
 

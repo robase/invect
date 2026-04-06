@@ -93,7 +93,9 @@ function ExecutionErrorDisplay({ error }: { error: string }) {
             tabIndex={0}
             onClick={handleCopy}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') handleCopy(e as unknown as React.MouseEvent);
+              if (e.key === 'Enter') {
+                handleCopy(e as unknown as React.MouseEvent);
+              }
             }}
             className="p-0.5 rounded hover:bg-destructive/10 text-destructive/60 hover:text-destructive transition-colors"
             title="Copy error"
@@ -408,7 +410,9 @@ export function ConfigurationPanel({
                 <div className="flex items-start gap-2 p-2.5 rounded-md bg-destructive/5 border border-destructive/20">
                   <AlertCircle className="w-3.5 h-3.5 text-destructive mt-0.5 shrink-0" />
                   <div className="text-xs text-destructive">
-                    <strong>Validation failed:</strong> {Object.keys(fieldErrors).length} field{Object.keys(fieldErrors).length > 1 ? 's have' : ' has'} errors — see highlighted fields above
+                    <strong>Validation failed:</strong> {Object.keys(fieldErrors).length} field
+                    {Object.keys(fieldErrors).length > 1 ? 's have' : ' has'} errors — see
+                    highlighted fields above
                   </div>
                 </div>
               ) : runError ? (

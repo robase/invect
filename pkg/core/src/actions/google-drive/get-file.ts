@@ -27,6 +27,11 @@ export const googleDriveGetFileAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'google',
+    requiredScopes: [
+      'https://www.googleapis.com/auth/drive',
+      'https://www.googleapis.com/auth/drive.file',
+      'https://www.googleapis.com/auth/drive.metadata',
+    ],
     description: 'Google Drive OAuth2 credential',
   },
 

@@ -116,8 +116,8 @@ export function SwitchCasesField({ value, onChange, nodeId, inputData }: SwitchC
       }
       const updated = [...cases];
       const temp = updated[index];
-      updated[index] = updated[newIndex]!;
-      updated[newIndex] = temp!;
+      updated[index] = updated[newIndex] as (typeof updated)[number];
+      updated[newIndex] = temp as (typeof updated)[number];
       onChange(updated);
     },
     [cases, onChange],

@@ -87,10 +87,7 @@ function regenToolInstanceIds(params: Record<string, unknown>): Record<string, u
  * materializePaste can consume. Maps FlowNodeDefinitions → ClipboardNode
  * and edge tuples → ClipboardEdge.
  */
-function sdkResultToClipboard(
-  { nodes, edges }: ParsedSDK,
-  flowId: string,
-): ClipboardData {
+function sdkResultToClipboard({ nodes, edges }: ParsedSDK, flowId: string): ClipboardData {
   const clipboardNodes: ClipboardNode[] = nodes.map((n, i) => {
     const ref = n.referenceId ?? n.id;
     return {
@@ -317,8 +314,25 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
       }
 
       if (newNodes.length > 0) {
-        console.log('[Copy/Paste] materializePaste: adding', newNodes.length, 'nodes,', newEdges.length, 'edges');
-        console.log('[Copy/Paste] newNodes:', newNodes.map(n => ({ id: n.id, type: n.type, pos: n.position, data: { type: (n.data as Record<string,unknown>).type, display_name: (n.data as Record<string,unknown>).display_name } })));
+        console.log(
+          '[Copy/Paste] materializePaste: adding',
+          newNodes.length,
+          'nodes,',
+          newEdges.length,
+          'edges',
+        );
+        console.log(
+          '[Copy/Paste] newNodes:',
+          newNodes.map((n) => ({
+            id: n.id,
+            type: n.type,
+            pos: n.position,
+            data: {
+              type: (n.data as Record<string, unknown>).type,
+              display_name: (n.data as Record<string, unknown>).display_name,
+            },
+          })),
+        );
         useFlowEditorStore.getState().pasteNodesAndEdges(newNodes, newEdges);
         const storeState = useFlowEditorStore.getState();
         console.log('[Copy/Paste] Store after paste: total nodes =', storeState.nodes.length);
@@ -422,7 +436,10 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
       console.log('[Copy/Paste] No clipboard data available');
       return;
     }
-    console.log('[Copy/Paste] Clipboard data:', { nodeCount: clipboard.nodes.length, edgeCount: clipboard.edges.length });
+    console.log('[Copy/Paste] Clipboard data:', {
+      nodeCount: clipboard.nodes.length,
+      edgeCount: clipboard.edges.length,
+    });
     const anchor = getPasteAnchor();
     console.log('[Copy/Paste] Paste anchor:', anchor);
     materializePaste(clipboard, anchor);
@@ -489,11 +506,17 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
       const isOnCanvas = el.closest('.react-flow') !== null;
       const isBodyFocused = el.tagName === 'BODY';
       const isEditing = isEditingContext(el);
-      
+
       if (e.metaKey || e.ctrlKey) {
-        console.log('[Copy/Paste] Keydown:', e.key, { isOnCanvas, isBodyFocused, isEditing, tagName: el.tagName, classList: el.className.substring(0, 80) });
+        console.log('[Copy/Paste] Keydown:', e.key, {
+          isOnCanvas,
+          isBodyFocused,
+          isEditing,
+          tagName: el.tagName,
+          classList: el.className.substring(0, 80),
+        });
       }
-      
+
       if ((!isOnCanvas && !isBodyFocused) || isEditing) {
         return;
       }

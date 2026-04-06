@@ -118,9 +118,13 @@ export function NodeConfigPanel({
   // Listen for OAuth callback message from popup (for credential refresh)
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
+      if (event.origin !== window.location.origin) {
+        return;
+      }
       const { type, code, state, error } = event.data;
-      if (type !== 'oauth2_callback') return;
+      if (type !== 'oauth2_callback') {
+        return;
+      }
 
       if (oauthPopupWindow && !oauthPopupWindow.closed) {
         oauthPopupWindow.close();
@@ -146,7 +150,9 @@ export function NodeConfigPanel({
 
   // Check if popup was closed without completing
   useEffect(() => {
-    if (!oauthPopupWindow) return;
+    if (!oauthPopupWindow) {
+      return;
+    }
     const check = setInterval(() => {
       if (oauthPopupWindow.closed) {
         clearInterval(check);
@@ -231,6 +237,14 @@ export function NodeConfigPanel({
   } = useCredentials({ includeShared: true }, { enabled: open });
 
   const createCredentialMutation = useCreateCredential();
+
+  // Compute required OAuth scopes from the current node's credential field definition
+  const currentNodeRequiredScopes = useMemo(() => {
+    const credField = (activeDefinition?.paramFields ?? []).find(
+      (f) => f.type === 'credential' && f.requiredScopes?.length,
+    );
+    return credField?.requiredScopes;
+  }, [activeDefinition]);
 
   // Derived display values
   const displayName = (nodeData?.display_name as string) || definition?.label || 'Untitled Node';
@@ -339,7 +353,9 @@ export function NodeConfigPanel({
 
   const handleUpdateCredential = useCallback(
     (data: Parameters<typeof updateCredentialMutation.mutate>[0]['data']) => {
-      if (!editingCredential) return;
+      if (!editingCredential) {
+        return;
+      }
       updateCredentialMutation.mutate(
         { id: editingCredential.id, data },
         { onSuccess: () => setEditingCredential(null) },
@@ -373,6 +389,7 @@ export function NodeConfigPanel({
           existingCredentialId: credential.id,
           redirectUri: `${window.location.origin}/oauth/callback`,
           returnUrl: window.location.href,
+          scopes: currentNodeRequiredScopes,
         });
 
         const width = 600;
@@ -396,7 +413,7 @@ export function NodeConfigPanel({
         setRefreshingCredentialId(null);
       }
     },
-    [testCredentialMutation, startOAuth2Flow, refetchCredentials],
+    [testCredentialMutation, startOAuth2Flow, refetchCredentials, currentNodeRequiredScopes],
   );
 
   // ── Agent Tool Handlers (only used when nodeType is AGENT) ──────

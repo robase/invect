@@ -64,6 +64,8 @@ interface OAuth2ProviderSelectorProps {
   portalContainer?: HTMLElement | null;
   /** Filter to only show specific providers by ID (e.g., ["google"]) */
   filterProviders?: string[];
+  /** Override scopes for the OAuth flow (uses provider defaults if not set) */
+  scopes?: string[];
 }
 
 export function OAuth2ProviderSelector({
@@ -72,6 +74,7 @@ export function OAuth2ProviderSelector({
   onCredentialCreated,
   portalContainer,
   filterProviders,
+  scopes,
 }: OAuth2ProviderSelectorProps) {
   const { data: providers, isLoading } = useOAuth2Providers();
   const [searchQuery, setSearchQuery] = useState('');
@@ -277,6 +280,7 @@ export function OAuth2ProviderSelector({
                 clientId={clientId}
                 clientSecret={clientSecret}
                 redirectUri={redirectUri}
+                scopes={scopes}
                 credentialName={credentialName}
                 onSuccess={handleSuccess}
                 disabled={!clientId || !clientSecret}
