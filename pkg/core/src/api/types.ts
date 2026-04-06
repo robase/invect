@@ -125,7 +125,7 @@ export interface FlowRunsAPI {
 }
 
 // =====================================
-// CREDENTIALS (includes OAuth2 + Webhooks)
+// CREDENTIALS (includes OAuth2)
 // =====================================
 
 export interface CredentialsAPI {
@@ -138,11 +138,6 @@ export interface CredentialsAPI {
   test(id: string): Promise<{ success: boolean; error?: string }>;
   updateLastUsed(id: string): Promise<void>;
   getExpiring(daysUntilExpiry?: number): Promise<Credential[]>;
-
-  // Webhooks
-  getWebhookInfo(id: string): Promise<{ webhookPath: string; fullUrl: string } | null>;
-  enableWebhook(id: string): Promise<{ webhookPath: string; fullUrl: string }>;
-  findByWebhookPath(webhookPath: string): Promise<Credential | null>;
 
   // OAuth2
   getOAuth2Providers(): OAuth2ProviderDefinition[];

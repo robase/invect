@@ -102,7 +102,7 @@ export interface CredentialRequirement {
 export interface ParamField {
   name: string;
   label: string;
-  type: 'text' | 'textarea' | 'number' | 'boolean' | 'select' | 'json' | 'code';
+  type: 'text' | 'textarea' | 'number' | 'boolean' | 'select' | 'json' | 'code' | 'switch-cases';
   description?: string;
   placeholder?: string;
   defaultValue?: unknown;
@@ -406,6 +406,15 @@ export interface ActionDefinition<TParams = unknown> {
    * ```
    */
   outputs?: Array<{ id: string; label: string; type: string }>;
+
+  /**
+   * When true, the node's output handles are computed from `params` at render
+   * time rather than using the static `outputs` array. Used by branching nodes
+   * (switch, if_else). The frontend reads handles from the node's params
+   * (e.g. `params.cases` for switch). The static `outputs` array serves only
+   * as a placeholder for registration / palette display.
+   */
+  dynamicOutputs?: boolean;
 
   /**
    * If true, the node has no input handle (entry-point / trigger nodes).

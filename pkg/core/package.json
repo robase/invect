@@ -53,6 +53,11 @@
       "types": "./dist/database/schema-mysql.d.ts",
       "import": "./dist/database/schema-mysql.js",
       "require": "./dist/database/schema-mysql.cjs"
+    },
+    "./sdk": {
+      "types": "./dist/sdk/index.d.ts",
+      "import": "./dist/sdk/index.js",
+      "require": "./dist/sdk/index.cjs"
     }
   },
   "publishConfig": {
@@ -92,6 +97,7 @@
     "@types/node": "^22.10.2",
     "@types/pg": "^8.15.4",
     "@vitest/coverage-v8": "^3.2.4",
+    "dotenv": "^17.4.1",
     "tsdown": "^0.21.1",
     "tsx": "^4.19.2",
     "typescript": "^5.8.3",

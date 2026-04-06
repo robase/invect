@@ -1,6 +1,10 @@
 import { FlowRunStatus, NodeExecutionStatus } from 'src/types/base';
 import { GraphNodeType } from 'src/types.internal';
-import { InvectDefinition, FlowNodeDefinitions } from '../flow-versions/schemas-fresh';
+import {
+  InvectDefinition,
+  FlowNodeDefinitions,
+  type FlowEdge,
+} from '../flow-versions/schemas-fresh';
 import type { FlowRun } from '../flow-runs/flow-runs.model';
 import type { FlowRunResult } from '../flow-runs/flow-runs.service';
 import type { FlowRunsService } from '../flow-runs/flow-runs.service';
@@ -150,6 +154,8 @@ export class FlowRunCoordinator {
     const batchPendingNodeIds = new Set<string>();
     let hasFailure = false;
     let hasBatchSubmission = false;
+    let failedNodeError: string | undefined;
+    let failedNodeId: string | undefined;
 
     for (const nodeId of executionOrder) {
       if (hasFailure || hasBatchSubmission) {
@@ -263,8 +269,12 @@ export class FlowRunCoordinator {
           if (trace.outputs) {
             nodeOutputs.set(nodeId, trace.outputs);
           }
+          // Unified branch-skipping for branching nodes (if_else, switch, etc.)
+          this.handleBranchSkipping(nodeId, trace, edges, skippedNodeIds);
         } else if (trace.status === NodeExecutionStatus.FAILED) {
           hasFailure = true;
+          failedNodeError = trace.error || 'Node execution failed';
+          failedNodeId = nodeId;
           logger.warn('Node execution failed, stopping flow', {
             flowRunId: execution.id,
             nodeId,
@@ -279,6 +289,8 @@ export class FlowRunCoordinator {
           error,
         });
         hasFailure = true;
+        failedNodeError = error instanceof Error ? error.message : String(error);
+        failedNodeId = nodeId;
         break;
       }
     }
@@ -289,7 +301,7 @@ export class FlowRunCoordinator {
     if (success) {
       await this.markExecutionSuccess(execution.id, finalOutputs);
     } else {
-      await this.markExecutionFailed(execution.id, 'One or more nodes failed');
+      await this.markExecutionFailed(execution.id, failedNodeError || 'One or more nodes failed');
     }
 
     const updatedExecution = await this.deps.flowRunsService.getRunById(execution.id);
@@ -319,6 +331,8 @@ export class FlowRunCoordinator {
     return {
       flowRunId: execution.id,
       status: success ? FlowRunStatus.SUCCESS : FlowRunStatus.FAILED,
+      error: failedNodeError,
+      nodeErrors: failedNodeId && failedNodeError ? { [failedNodeId]: failedNodeError } : undefined,
       inputs: execution.inputs,
       outputs: finalOutputs,
       startedAt:
@@ -584,6 +598,91 @@ export class FlowRunCoordinator {
     };
   }
 
+  /**
+   * Unified branch-skipping for branching nodes (if_else, switch, etc.).
+   *
+   * After a branching node executes, inspect its outputVariables. Any outgoing
+   * edge whose sourceHandle is NOT present in outputVariables belongs to an
+   * inactive branch. The first-hop target nodes on inactive branches are
+   * evaluated — a target is only skipped if it has no active-handle edge from
+   * this same node AND no incoming edge from another non-skipped node.
+   */
+  private handleBranchSkipping(
+    nodeId: string,
+    trace: NodeExecution,
+    edges: readonly FlowEdge[],
+    skippedNodeIds: Set<string>,
+  ): void {
+    const { logger, graphService } = this.deps;
+
+    if (trace.status !== NodeExecutionStatus.SUCCESS) {
+      return;
+    }
+
+    const variables = trace.outputs?.data?.variables;
+    if (!variables || typeof variables !== 'object') {
+      return;
+    }
+
+    const outgoingEdges = edges.filter((e) => e.source === nodeId);
+    const connectedHandles = new Set(
+      outgoingEdges.map((e) => e.sourceHandle).filter(Boolean) as string[],
+    );
+
+    // If the node has no handled edges, nothing to skip
+    if (connectedHandles.size === 0) {
+      return;
+    }
+
+    const activeHandles = new Set(
+      [...connectedHandles].filter((h) => (variables as Record<string, unknown>)[h] !== undefined),
+    );
+    const inactiveHandles = new Set(
+      [...connectedHandles].filter((h) => (variables as Record<string, unknown>)[h] === undefined),
+    );
+
+    // Nothing inactive → no skipping needed
+    if (inactiveHandles.size === 0) {
+      return;
+    }
+
+    // Find targets only reachable via inactive handles from this node
+    const inactiveTargets = new Set<string>();
+    for (const handle of inactiveHandles) {
+      for (const edge of outgoingEdges.filter((e) => e.sourceHandle === handle)) {
+        inactiveTargets.add(edge.target);
+      }
+    }
+
+    // Remove targets that also have an active-handle edge from this same node
+    for (const handle of activeHandles) {
+      for (const edge of outgoingEdges.filter((e) => e.sourceHandle === handle)) {
+        inactiveTargets.delete(edge.target);
+      }
+    }
+
+    // Remove targets that have incoming edges from OTHER non-skipped nodes
+    for (const targetId of [...inactiveTargets]) {
+      const allIncoming = edges.filter((e) => e.target === targetId);
+      const hasNonSkippedSource = allIncoming.some(
+        (e) => e.source !== nodeId && !skippedNodeIds.has(e.source),
+      );
+      if (hasNonSkippedSource) {
+        inactiveTargets.delete(targetId);
+      }
+    }
+
+    // Mark remaining targets and propagate downstream
+    for (const targetId of inactiveTargets) {
+      skippedNodeIds.add(targetId);
+      logger.debug('Branch skipping: marked node as skipped', {
+        branchingNodeId: nodeId,
+        skippedTargetId: targetId,
+      });
+      graphService.markDownstreamNodesAsSkipped(targetId, edges, skippedNodeIds, false);
+    }
+  }
+
   private collectFlowOutputs(
     _definition: InvectDefinition,
     nodeOutputs: Map<string, NodeOutput | undefined>,
@@ -772,6 +871,8 @@ export class FlowRunCoordinator {
           if (trace.outputs) {
             nodeOutputs.set(nodeId, trace.outputs);
           }
+          // Unified branch-skipping for branching nodes (if_else, switch, etc.)
+          this.handleBranchSkipping(nodeId, trace, edges, skippedNodeIds);
         } else if (trace.status === NodeExecutionStatus.FAILED) {
           hasFailure = true;
           nodeErrors[nodeId] = trace.error || 'Node execution failed';
@@ -780,28 +881,6 @@ export class FlowRunCoordinator {
             nodeId,
             nodeType: node.type,
           });
-        }
-
-        // Handle if-else node conditional branching
-        if (node.type === GraphNodeType.IF_ELSE && trace.status === NodeExecutionStatus.SUCCESS) {
-          const outputs = trace.outputs?.data?.variables;
-          const executedBranch = (outputs as Record<string, { value: unknown }>)?.executedBranch
-            ?.value;
-
-          if (executedBranch && typeof executedBranch === 'string') {
-            const allBranches = ['true_branch', 'false_branch'];
-            const nonExecutedBranches = allBranches.filter((b) => b !== executedBranch);
-
-            for (const branch of nonExecutedBranches) {
-              const branchEdges = edges.filter(
-                (e) => e.source === nodeId && e.sourceHandle === branch,
-              );
-
-              for (const edge of branchEdges) {
-                graphService.markDownstreamNodesAsSkipped(edge.target, edges, skippedNodeIds, true);
-              }
-            }
-          }
         }
       } catch (error) {
         hasFailure = true;
@@ -825,7 +904,8 @@ export class FlowRunCoordinator {
     if (success) {
       await this.markExecutionSuccess(execution.id, finalOutputs);
     } else {
-      await this.markExecutionFailed(execution.id, 'One or more nodes failed');
+      const firstError = Object.values(nodeErrors)[0];
+      await this.markExecutionFailed(execution.id, firstError || 'One or more nodes failed');
     }
 
     const updatedExecution = await this.deps.flowRunsService.getRunById(execution.id);
@@ -833,6 +913,7 @@ export class FlowRunCoordinator {
     return {
       flowRunId: execution.id,
       status: success ? FlowRunStatus.SUCCESS : FlowRunStatus.FAILED,
+      error: Object.values(nodeErrors)[0],
       inputs: execution.inputs,
       outputs: finalOutputs,
       nodeErrors: Object.keys(nodeErrors).length > 0 ? nodeErrors : undefined,

@@ -1,6 +1,11 @@
 import 'dotenv/config';
 import path from 'node:path';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import Database from 'better-sqlite3';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { sql } from 'drizzle-orm';
+import * as schema from '../../src/database/schema-sqlite';
 import { createInvect } from '../../src/api/create-invect';
 import type { FlowExample } from './example-types';
 import { inputTemplateModelExample } from './input-template-model';

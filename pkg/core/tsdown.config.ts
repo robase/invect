@@ -7,6 +7,7 @@ export default defineConfig({
     'src/database/schema-postgres.ts',
     'src/database/schema-mysql.ts',
     'src/types.frontend.ts',
+    'src/sdk/index.ts',
   ],
   format: ['cjs', 'esm'],
   // bundle: true, // deprecated

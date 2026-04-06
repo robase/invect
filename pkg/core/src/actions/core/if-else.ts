@@ -1,34 +1,34 @@
 /**
  * core.if_else — Conditional branching action
  *
- * Evaluates a JSON Logic expression against incoming data and routes
+ * Evaluates a JavaScript expression against incoming data and routes
  * execution to the true or false branch.
  *
- * This is a flow-control node — it requires `markDownstreamNodesAsSkipped`
- * and access to the edges/skippedNodeIds from the flow run state.
+ * Branch skipping is handled by the execution coordinator — this action
+ * only returns outputVariables indicating which branch was taken.
  */
 
 import { defineAction } from '../define-action';
 import { CORE_PROVIDER } from '../providers';
-import jsonLogic from 'json-logic-js';
 import { z } from 'zod/v4';
+import {
+  getJsExpressionService,
+  JsExpressionError,
+} from 'src/services/templating/js-expression.service';
 
 const paramsSchema = z.object({
-  condition: z.record(z.string(), z.unknown()).default({ '==': [true, true] }),
+  expression: z.string().min(1, 'A JavaScript expression is required'),
 });
 
 export const ifElseAction = defineAction({
   id: 'core.if_else',
   name: 'If / Else',
-  description: 'Conditional branching using JSON Logic',
+  description: 'Conditional branching — evaluates a JavaScript expression',
   provider: CORE_PROVIDER,
   icon: 'GitBranch',
   excludeFromTools: true,
   tags: ['if', 'else', 'condition', 'branch', 'logic', 'switch', 'conditional', 'filter', 'route'],
 
-  // IMPORTANT: These handle IDs MUST match the sourceHandle values used in flow
-  // edges AND the outputVariables keys returned by execute() below. If they
-  // don't match, React Flow will fail to render the edges with error #008.
   outputs: [
     { id: 'true_output', label: 'True', type: 'any' },
     { id: 'false_output', label: 'False', type: 'any' },
@@ -38,24 +38,22 @@ export const ifElseAction = defineAction({
     schema: paramsSchema,
     fields: [
       {
-        name: 'condition',
-        label: 'Condition (JSON Logic)',
-        type: 'json',
+        name: 'expression',
+        label: 'Condition',
+        type: 'code',
         required: true,
         description:
-          'JSON Logic expression evaluated against incoming data. Example: { ">": [{ "var": "user_data.age" }, 18] }',
-        placeholder: '{ "==": [{ "var": "some_node.value" }, true] }',
+          'JavaScript expression evaluated against incoming data. Upstream node outputs are available as variables by their reference ID.',
+        placeholder: 'user_data.age >= 18',
       },
     ],
   },
 
   async execute(params, context) {
-    const { condition } = params;
-    const evaluationData = context.incomingData ?? {};
-    const nodeId = context.flowContext?.nodeId;
+    const evaluationData = (context.incomingData as Record<string, unknown>) ?? {};
 
     context.logger.debug('If-Else evaluating condition', {
-      condition,
+      expression: params.expression,
       incomingDataKeys: Object.keys(evaluationData),
     });
 
@@ -63,48 +61,32 @@ export const ifElseAction = defineAction({
       context.logger.warn('No incoming data available for condition evaluation');
     }
 
-    // Evaluate JSON Logic
     let evaluationResult: boolean;
     let evaluationError: string | undefined;
 
     try {
-      const result = jsonLogic.apply(condition as Record<string, unknown>, evaluationData);
+      const jsService = await getJsExpressionService(context.logger);
+      const result = jsService.evaluate(params.expression, evaluationData);
       evaluationResult = Boolean(result);
     } catch (error) {
-      evaluationError = error instanceof Error ? error.message : String(error);
+      evaluationError =
+        error instanceof JsExpressionError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : String(error);
       evaluationResult = false;
       context.logger.warn('Condition evaluation failed, defaulting to false', {
-        condition,
+        expression: params.expression,
         error: evaluationError,
       });
     }
 
-    // Mark the skipped branch's downstream nodes
-    const mark = context.functions?.markDownstreamNodesAsSkipped;
-    const edges = context.flowRunState?.edges;
-    const skippedNodeIds = context.flowRunState?.skippedNodeIds;
-
-    if (mark && edges && skippedNodeIds && nodeId) {
-      const skipOutputHandle = evaluationResult ? 'false_output' : 'true_output';
-
-      // Find edges from this node on the skipped branch
-      const edgesToSkip = edges.filter(
-        (edge) =>
-          edge.source === nodeId &&
-          edge.sourceHandle &&
-          edge.sourceHandle.endsWith(skipOutputHandle),
-      );
-
-      for (const edge of edgesToSkip) {
-        mark(edge.target, edges, skippedNodeIds, true);
-      }
-    }
-
-    // Pass through incoming data as the output (flow-control nodes are passthrough)
+    // Passthrough — if/else output equals input
     const passthroughData = JSON.stringify(evaluationData);
 
-    // Build branch-specific output variables so the coordinator can resolve
-    // edges with sourceHandle "true_output" / "false_output" correctly.
+    // Only the active branch handle gets an entry in outputVariables.
+    // The coordinator uses the absence of a handle key to skip branches.
     const outputVariables: Record<string, { value: unknown; type: 'string' | 'object' }> = {};
     if (evaluationResult) {
       outputVariables.true_output = { type: 'object', value: passthroughData };
@@ -117,7 +99,7 @@ export const ifElseAction = defineAction({
       output: passthroughData,
       outputVariables,
       metadata: {
-        condition,
+        expression: params.expression,
         evaluationError,
         conditionResult: evaluationResult,
         branchTaken: evaluationResult ? 'true_branch' : 'false_branch',

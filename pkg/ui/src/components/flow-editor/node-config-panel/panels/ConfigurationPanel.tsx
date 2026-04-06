@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { GraphNodeType } from '@invect/core/types';
 import { ResizablePanel } from '../../../ui/resizable';
 import { ScrollArea } from '../../../ui/scroll-area';
@@ -7,7 +7,19 @@ import { ParametersSection } from '../ParametersSection';
 import { InlineEdit } from '../../inline-edit';
 import { Button } from '../../../ui/button';
 import { Badge } from '../../../ui/badge';
-import { Settings, Key, AlertTriangle, AlertCircle, Loader2, Play, Wrench } from 'lucide-react';
+import {
+  Settings,
+  Key,
+  AlertTriangle,
+  AlertCircle,
+  Loader2,
+  Play,
+  Wrench,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Check,
+} from 'lucide-react';
 import { cn } from '../../../../lib/utils';
 import { AgentToolsPanel } from './AgentToolsPanel';
 import type { AgentToolsPanelProps } from './AgentToolsPanel';
@@ -16,6 +28,94 @@ import type { NodeParamField } from '../../../../types/node-definition.types';
 
 interface NodeDefinition {
   paramFields?: NodeParamField[];
+}
+
+/**
+ * Collapsible error display for node execution errors.
+ * Shows a summary line and expands to show the full error with copy support.
+ */
+function ExecutionErrorDisplay({ error }: { error: string }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // Determine if the error is long enough to warrant collapsing
+  const isLongError = error.length > 120 || error.includes('\n');
+
+  const handleCopy = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      navigator.clipboard.writeText(error).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      });
+    },
+    [error],
+  );
+
+  // Short error: single-line with copy
+  if (!isLongError) {
+    return (
+      <div className="flex items-start gap-2 p-2.5 rounded-md bg-destructive/5 border border-destructive/20">
+        <AlertCircle className="w-3.5 h-3.5 text-destructive mt-0.5 shrink-0" />
+        <div className="flex-1 min-w-0 text-xs text-destructive">
+          <strong>Execution Error:</strong> {error}
+        </div>
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="shrink-0 p-0.5 rounded hover:bg-destructive/10 text-destructive/60 hover:text-destructive transition-colors"
+          title="Copy error"
+        >
+          {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+        </button>
+      </div>
+    );
+  }
+
+  // Long error: collapsible with full error in scrollable pre block
+  const summaryLine =
+    error.split('\n')[0].slice(0, 120) + (error.length > 120 || error.includes('\n') ? '...' : '');
+
+  return (
+    <div className="rounded-md bg-destructive/5 border border-destructive/20 overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-start gap-2 p-2.5 text-left hover:bg-destructive/10 transition-colors"
+      >
+        <AlertCircle className="w-3.5 h-3.5 text-destructive mt-0.5 shrink-0" />
+        <div className="flex-1 min-w-0 text-xs text-destructive">
+          <strong>Execution Error:</strong> {isExpanded ? 'Click to collapse' : summaryLine}
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={handleCopy}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleCopy(e as unknown as React.MouseEvent);
+            }}
+            className="p-0.5 rounded hover:bg-destructive/10 text-destructive/60 hover:text-destructive transition-colors"
+            title="Copy error"
+          >
+            {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+          </span>
+          {isExpanded ? (
+            <ChevronUp className="w-3.5 h-3.5 text-destructive/60" />
+          ) : (
+            <ChevronDown className="w-3.5 h-3.5 text-destructive/60" />
+          )}
+        </div>
+      </button>
+      {isExpanded && (
+        <div className="px-2.5 pb-2.5">
+          <pre className="text-xs text-destructive whitespace-pre-wrap wrap-break-word font-mono bg-destructive/5 rounded p-2 max-h-48 overflow-auto">
+            {error}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface ConfigurationPanelProps {
@@ -291,14 +391,7 @@ export function ConfigurationPanel({
               )}
 
               {/* Run error */}
-              {runError && (
-                <div className="flex items-start gap-2 p-2.5 rounded-md bg-destructive/5 border border-destructive/20">
-                  <AlertCircle className="w-3.5 h-3.5 text-destructive mt-0.5 shrink-0" />
-                  <div className="text-xs text-destructive">
-                    <strong>Execution Error:</strong> {runError}
-                  </div>
-                </div>
-              )}
+              {runError && <ExecutionErrorDisplay error={runError} />}
 
               {/* Model status message */}
               {nodeType === GraphNodeType.MODEL && modelStatusMessage && (

@@ -1,16 +1,17 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig, mergeConfig } from 'vitest/config';
 import { resolve } from 'path';
+import baseConfig from '../../vitest.base';
 
-export default defineConfig({
-  test: {
-    globals: true,
-    environment: 'node',
-    testTimeout: 30000,
-    include: ['test/**/*.test.ts'],
-  },
-  resolve: {
-    alias: {
-      src: resolve(__dirname, './src'),
+export default mergeConfig(
+  baseConfig,
+  defineConfig({
+    test: {
+      include: ['test/**/*.test.ts'],
     },
-  },
-});
+    resolve: {
+      alias: {
+        src: resolve(__dirname, './src'),
+      },
+    },
+  }),
+);

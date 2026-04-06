@@ -689,26 +689,6 @@ class ApiClient {
     });
   }
 
-  async getCredentialWebhookInfo(
-    id: string,
-  ): Promise<{ webhookPath: string; fullUrl?: string } | null> {
-    try {
-      return await this.request<{ webhookPath: string; fullUrl?: string }>(
-        `/credentials/${id}/webhook`,
-        { headers: { ...this.getUserHeaders() } },
-      );
-    } catch {
-      return null;
-    }
-  }
-
-  async enableCredentialWebhook(id: string): Promise<{ webhookPath: string; fullUrl?: string }> {
-    return this.request<{ webhookPath: string; fullUrl?: string }>(`/credentials/${id}/webhook`, {
-      method: 'POST',
-      headers: { ...this.getUserHeaders() },
-    });
-  }
-
   // =====================================
   // OAUTH2
   // =====================================

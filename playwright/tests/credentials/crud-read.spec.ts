@@ -102,7 +102,7 @@ test.describe('Credential CRUD — Read & Detail View', () => {
     await expect(page.getByText('Linear OAuth2')).toBeVisible();
   });
 
-  test('detail dialog has Overview, Edit, and Webhook tabs', async ({ page }) => {
+  test('detail dialog has Overview and Edit tabs', async ({ page }) => {
     // 1. Navigate and click on a credential row
     await goToCredentials(page);
     const row = page.getByRole('button').filter({ hasText: 'Anthropic API Key' });
@@ -111,13 +111,11 @@ test.describe('Credential CRUD — Read & Detail View', () => {
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible({ timeout: 5_000 });
 
-    // Three tabs should be visible
+    // Two tabs should be visible
     const overviewTab = dialog.getByRole('button', { name: 'Overview' });
     const editTab = dialog.getByRole('button', { name: 'Edit', exact: true });
-    const webhookTab = dialog.getByRole('button', { name: 'Webhook' });
     await expect(overviewTab).toBeVisible();
     await expect(editTab).toBeVisible();
-    await expect(webhookTab).toBeVisible();
 
     // 2. Click the 'Edit' tab
     await editTab.click();
@@ -125,14 +123,7 @@ test.describe('Credential CRUD — Read & Detail View', () => {
     // Edit form is shown with pre-populated Name field
     await expect(dialog.getByLabel('Name *')).toBeVisible();
 
-    // 3. Click the 'Webhook' tab
-    await webhookTab.click();
-
-    // Webhook section is displayed — shows either 'Enable Webhook' button or webhook URL
-    const webhookContent = dialog.getByText(/webhook/i);
-    await expect(webhookContent.first()).toBeVisible();
-
-    // 4. Click the 'Overview' tab to return
+    // 3. Click the 'Overview' tab to return
     await overviewTab.click();
 
     // Overview section with Test Connection is shown again

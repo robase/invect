@@ -5,15 +5,11 @@
  *
  * Flow structure:
  *
- *   ┌─────────────────────────────────────────────────────────────────────┐
- *   │                                                                     │
- *   │  Input (user_question)                                              │
- *   │       ↓                                                             │
- *   │  Agent (answer with math calculations)                              │
- *   │       ↓                                                             │
- *   │  Output (final_answer)                                              │
- *   │                                                                     │
- *   └─────────────────────────────────────────────────────────────────────┘
+ *   Input (user_question)
+ *       ↓
+ *   Agent (answer with math calculations)
+ *       ↓
+ *   Output (final_answer)
  *
  * Tests:
  * - AGENT node with math_eval tool enabled
@@ -21,7 +17,8 @@
  * - Agent producing final response
  */
 import { strict as assert } from 'node:assert';
-import { GraphNodeType, FlowRunStatus, type InvectDefinition } from '../../src';
+import { FlowRunStatus } from '../../src';
+import { defineFlow, input, output, agent } from '../../src/sdk';
 import type { InvectInstance } from '../../src/api/types';
 import { getOutputVariable, type AgentOutputLike, type FlowExample } from './example-types';
 
@@ -61,73 +58,42 @@ async function ensureAICredential(
 /**
  * Build a simple agent flow that uses the math tool
  */
-function buildSimpleAgentFlowDefinition(credentialId: string, isOpenAI: boolean): InvectDefinition {
+function buildSimpleAgentFlowDefinition(credentialId: string, isOpenAI: boolean) {
   const modelName = isOpenAI ? 'gpt-4o-mini' : 'claude-3-haiku-20240307';
 
-  return {
+  return defineFlow({
+    name: 'Simple Agent Flow',
     nodes: [
-      // Input: A question requiring calculation
-      {
-        id: 'input-question',
-        type: 'core.input',
-        label: 'User Question',
-        referenceId: 'user_question',
-        params: {
-          variableName: 'question',
-          defaultValue: 'What is 15% of 847? Please calculate the exact value.',
-        },
-        position: { x: 100, y: 200 },
-      },
+      input('user_question', {
+        variableName: 'question',
+        defaultValue: 'What is 15% of 847? Please calculate the exact value.',
+      }),
 
-      // Agent: Uses math tool to answer the question
-      {
-        id: 'agent-calculator',
-        type: GraphNodeType.AGENT,
-        label: 'Calculator Agent',
-        referenceId: 'calculator_agent',
-        params: {
-          credentialId,
-          model: modelName,
-          provider: isOpenAI ? 'OPENAI' : 'ANTHROPIC',
-          taskPrompt: `Answer the following question: {{ user_question }}
+      agent('calculator_agent', {
+        credentialId,
+        model: modelName,
+        provider: isOpenAI ? 'OPENAI' : 'ANTHROPIC',
+        taskPrompt: `Answer the following question: {{ user_question }}
 
 Use the math_eval tool if you need to perform any calculations. Be precise and show your work.`,
-          systemPrompt:
-            'You are a helpful math assistant. Use the math_eval tool to perform accurate calculations. Always show your reasoning.',
-          enabledTools: ['math_eval'],
-          maxIterations: 5,
-          stopCondition: 'explicit_stop',
-          temperature: 0.1,
-        },
-        position: { x: 400, y: 200 },
-      },
+        systemPrompt:
+          'You are a helpful math assistant. Use the math_eval tool to perform accurate calculations. Always show your reasoning.',
+        enabledTools: ['math_eval'],
+        maxIterations: 5,
+        stopCondition: 'explicit_stop',
+        temperature: 0.1,
+      }),
 
-      // Output: The agent's final answer
-      {
-        id: 'output-answer',
-        type: 'core.output',
-        label: 'Final Answer',
-        referenceId: 'final_answer',
-        params: {
-          outputName: 'result',
-          outputValue: '{{ calculator_agent.finalResponse }}',
-        },
-        position: { x: 700, y: 200 },
-      },
+      output('final_answer', {
+        outputName: 'result',
+        outputValue: '{{ calculator_agent.finalResponse }}',
+      }),
     ],
     edges: [
-      {
-        id: 'edge-input-to-agent',
-        source: 'input-question',
-        target: 'agent-calculator',
-      },
-      {
-        id: 'edge-agent-to-output',
-        source: 'agent-calculator',
-        target: 'output-answer',
-      },
+      ['user_question', 'calculator_agent'],
+      ['calculator_agent', 'final_answer'],
     ],
-  };
+  });
 }
 
 /**
@@ -138,21 +104,16 @@ export const simpleAgentFlowExample: FlowExample = {
   description: 'Tests AI Agent node with math_eval tool to perform calculations',
 
   async execute(invect: InvectInstance) {
-    // Create credential
     const { id: credentialId, isOpenAI } = await ensureAICredential(invect);
 
-    // Build flow definition
     const definition = buildSimpleAgentFlowDefinition(credentialId, isOpenAI);
 
-    // Create flow
     const flow = await invect.flows.create({
       name: 'E2E Simple Agent Flow',
     });
 
-    // Create flow version with definition
     await invect.versions.create(flow.id, { invectDefinition: definition });
 
-    // Execute flow
     const result = await invect.runs.start(
       flow.id,
       {},
@@ -165,15 +126,14 @@ export const simpleAgentFlowExample: FlowExample = {
     console.log(`   Status: ${result.status}`);
     console.log(`   Duration: ${result.duration}ms`);
 
-    // Get agent trace for detailed output analysis
-    const agentTrace = result.traces?.find((t) => t.nodeId === 'agent-calculator');
+    const agentTrace = result.traces?.find((t) => t.nodeId === 'node-calculator_agent');
     if (agentTrace?.outputs) {
       const agentOutput = getOutputVariable(agentTrace.outputs) as AgentOutputLike | undefined;
       if (agentOutput) {
         console.log(`   Iterations: ${agentOutput.iterations || 'N/A'}`);
         console.log(`   Finish Reason: ${agentOutput.finishReason || 'N/A'}`);
         console.log(`   Tools Used: ${agentOutput.toolResults?.length || 0}`);
-        if (agentOutput.toolResults?.length > 0) {
+        if (agentOutput.toolResults && agentOutput.toolResults.length > 0) {
           for (const toolResult of agentOutput.toolResults) {
             console.log(
               `     - ${toolResult.toolName}: ${toolResult.success ? 'success' : 'failed'}`,
@@ -200,25 +160,18 @@ export const simpleAgentFlowExample: FlowExample = {
   },
 
   expected(result) {
-    // Verify flow completed successfully
     assert.equal(result.status, FlowRunStatus.SUCCESS, 'Flow should complete successfully');
-
-    // Verify we have outputs
     assert.ok(result.outputs, 'Flow should have outputs');
 
-    // Get agent trace for detailed assertions
-    const agentTrace = result.traces?.find((t) => t.nodeId === 'agent-calculator');
+    const agentTrace = result.traces?.find((t) => t.nodeId === 'node-calculator_agent');
     assert.ok(agentTrace, 'Should have agent node trace');
 
     const agentOutput = getOutputVariable(agentTrace!.outputs) as AgentOutputLike | undefined;
     assert.ok(agentOutput, 'Agent should have output');
 
-    // Verify agent output structure
     assert.ok(agentOutput.finalResponse, 'Agent should have a final response');
     assert.ok(typeof agentOutput.iterations === 'number', 'Agent should track iterations');
     assert.ok(agentOutput.finishReason, 'Agent should have a finish reason');
-
-    // Verify tool usage - agent should have used math_eval tool
     assert.ok(Array.isArray(agentOutput.toolResults), 'Agent should have tool results array');
 
     // The agent should have used the math tool at least once
@@ -227,7 +180,7 @@ export const simpleAgentFlowExample: FlowExample = {
     );
     assert.ok(mathToolUsed, 'Agent should have successfully used the math_eval tool');
 
-    const finalResult = getOutputVariable(result.outputs?.['output-answer']);
+    const finalResult = getOutputVariable(result.outputs?.['node-final_answer']);
     assert.ok(finalResult, 'Output node should have result value');
 
     // Verify the calculation result is somewhere in the output

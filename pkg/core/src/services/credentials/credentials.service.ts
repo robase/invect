@@ -6,7 +6,6 @@
  * Handles encryption/decryption transparently
  */
 
-import { randomUUID } from 'node:crypto';
 import { CredentialsModel } from './credentials.model';
 import { EncryptionService } from './encryption.service';
 import type { InvectAdapter } from '../../database/adapter';
@@ -57,11 +56,6 @@ interface CredentialUsage {
   flowsCount: number;
   nodesCount: number;
   lastUsedAt: string | null;
-}
-
-interface CredentialWebhookInfo {
-  webhookPath: string;
-  fullUrl: string;
 }
 
 // Import OAuth2 service for token refresh
@@ -163,8 +157,6 @@ export class CredentialsService {
       'secret',
       'secretKey',
       'consumerSecret',
-      'key',
-      'webhookSecret',
     ];
     const MASK = '••••••••';
     const sanitized = { ...config };
@@ -450,43 +442,6 @@ export class CredentialsService {
         config: CredentialsService.sanitizeConfig(decryptedConfig),
       };
     });
-  }
-
-  async getWebhookInfo(id: string): Promise<CredentialWebhookInfo | null> {
-    const credential = await this.get(id);
-
-    if (!credential.webhookPath) {
-      return null;
-    }
-
-    return {
-      webhookPath: credential.webhookPath,
-      fullUrl: `/webhooks/credentials/${credential.webhookPath}`,
-    };
-  }
-
-  async enableWebhook(id: string): Promise<CredentialWebhookInfo> {
-    const existing = await this.getWebhookInfo(id);
-    if (existing) {
-      return existing;
-    }
-
-    const webhookPath = randomUUID().replace(/-/g, '').slice(0, 24);
-    const webhookSecret = randomUUID().replace(/-/g, '');
-    const updated = await this.model.enableWebhook(id, webhookPath, webhookSecret);
-
-    if (!updated.webhookPath) {
-      throw new Error('Failed to enable webhook for credential');
-    }
-
-    return {
-      webhookPath: updated.webhookPath,
-      fullUrl: `/webhooks/credentials/${updated.webhookPath}`,
-    };
-  }
-
-  async findByWebhookPath(webhookPath: string): Promise<Credential | null> {
-    return this.model.findByWebhookPath(webhookPath);
   }
 
   // ========================================================================

@@ -224,9 +224,6 @@ export const credentials = mysqlTable('credentials', {
   metadata: json('metadata').$type<Record<string, unknown>>(),
   lastUsedAt: timestamp('last_used_at'),
   expiresAt: timestamp('expires_at'),
-  // Webhook: a unique path so external services can POST to this credential's webhook URL
-  webhookPath: varchar('webhook_path', { length: 64 }).unique(),
-  webhookSecret: varchar('webhook_secret', { length: 64 }),
   createdAt: timestamp('created_at')
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

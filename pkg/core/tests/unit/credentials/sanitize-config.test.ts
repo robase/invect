@@ -23,8 +23,6 @@ describe('CredentialsService.sanitizeConfig', () => {
       'secret',
       'secretKey',
       'consumerSecret',
-      'key',
-      'webhookSecret',
     ];
 
     for (const field of SENSITIVE_FIELDS) {
@@ -84,17 +82,6 @@ describe('CredentialsService.sanitizeConfig', () => {
       expect(sanitized.consumerSecret).toBe(MASK);
       expect(sanitized.consumerKey).toBe('ck_abc123');
       expect(sanitized.siteUrl).toBe('https://shop.example.com');
-    });
-
-    it('should mask webhookSecret', () => {
-      const config = {
-        webhookSecret: 'whsec_abc123',
-        webhookUrl: 'https://example.com/webhook',
-      };
-
-      const sanitized = CredentialsService.sanitizeConfig(config);
-      expect(sanitized.webhookSecret).toBe(MASK);
-      expect(sanitized.webhookUrl).toBe('https://example.com/webhook');
     });
 
     it('should mask password and connectionString in basic/db creds', () => {

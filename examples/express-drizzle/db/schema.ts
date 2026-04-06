@@ -126,8 +126,6 @@ export const credentials = sqliteTable('credentials', {
   metadata: text('metadata', { mode: 'json' }).$type<Record<string, unknown>>(),
   lastUsedAt: text('last_used_at'),
   expiresAt: text('expires_at'),
-  webhookPath: text('webhook_path').unique(),
-  webhookSecret: text('webhook_secret'),
   createdAt: text('created_at')
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

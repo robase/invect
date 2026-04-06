@@ -363,6 +363,7 @@ export function actionToNodeDefinition<T = unknown>(action: ActionDefinition<T>)
     },
     input: action.noInput ? undefined : { id: 'input', label: 'Input', type: 'object' },
     outputs: action.outputs ?? [{ id: 'output', label: 'Output', type: 'object' }],
+    dynamicOutputs: action.dynamicOutputs,
     paramFields: [
       ...(credentialField ? [credentialField] : []),
       ...action.params.fields

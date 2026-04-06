@@ -9,7 +9,16 @@ export interface NodeHandleDefinition {
 export interface NodeParamField {
   name: string;
   label: string;
-  type: 'text' | 'textarea' | 'select' | 'number' | 'boolean' | 'json' | 'code' | 'credential';
+  type:
+    | 'text'
+    | 'textarea'
+    | 'select'
+    | 'number'
+    | 'boolean'
+    | 'json'
+    | 'code'
+    | 'credential'
+    | 'switch-cases';
   description?: string;
   placeholder?: string;
   defaultValue?: unknown;
@@ -60,8 +69,16 @@ export interface NodeDefinition {
 
   /**
    * Fixed output handles.
+   * For nodes with `dynamicOutputs`, these are placeholders —
+   * the frontend derives actual handles from the node's params.
    */
   outputs: NodeHandleDefinition[];
+
+  /**
+   * When true, output handles are derived from the node's params at render
+   * time (e.g. switch node cases) instead of using the static `outputs` array.
+   */
+  dynamicOutputs?: boolean;
 
   /**
    * Configuration fields for the node (displayed in the sidebar/form).

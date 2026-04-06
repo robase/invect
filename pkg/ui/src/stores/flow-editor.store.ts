@@ -100,6 +100,7 @@ export interface FlowEditorActions {
   addEdge: (edge: Edge) => void;
   onConnect: (connection: Connection) => void;
   removeEdge: (edgeId: string) => void;
+  removeEdgesBySourceHandle: (nodeId: string, handleId: string) => void;
   setEdgesReady: (ready: boolean) => void;
 
   // Edge readiness tracking
@@ -300,6 +301,14 @@ export const useFlowEditorStore: UseBoundStore<StoreApi<FlowEditorStore>> =
           removeEdge: (edgeId) =>
             set((state) => {
               state.edges = state.edges.filter((e) => e.id !== edgeId);
+              state.isDirty = true;
+            }),
+
+          removeEdgesBySourceHandle: (nodeId: string, handleId: string) =>
+            set((state) => {
+              state.edges = state.edges.filter(
+                (e) => !(e.source === nodeId && e.sourceHandle === handleId),
+              );
               state.isDirty = true;
             }),
 

@@ -1,0 +1,53 @@
+{
+  "name": "@invect/version-control",
+  "version": "0.0.1",
+  "description": "Version control plugin for Invect — sync flows to GitHub/GitLab/Bitbucket as .flow.ts files",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "type": "module",
+  "main": "dist/backend/index.cjs",
+  "module": "dist/backend/index.mjs",
+  "types": "dist/backend/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/backend/index.d.mts",
+      "import": "./dist/backend/index.mjs",
+      "require": "./dist/backend/index.cjs"
+    },
+    "./ui": {
+      "types": "./dist/frontend/index.d.mts",
+      "import": "./dist/frontend/index.mjs",
+      "require": "./dist/frontend/index.cjs"
+    },
+    "./types": {
+      "types": "./dist/shared/types.d.mts",
+      "import": "./dist/shared/types.mjs",
+      "require": "./dist/shared/types.cjs"
+    },
+    "./providers/github": {
+      "types": "./dist/providers/github.d.mts",
+      "import": "./dist/providers/github.mjs",
+      "require": "./dist/providers/github.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsdown && tsc --emitDeclarationOnly --outDir dist",
+    "build:w": "tsdown --watch",
+    "dev": "tsdown --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@invect/core": "workspace:*",
+    "jiti": "^2.4.2"
+  },
+  "devDependencies": {
+    "tsdown": "^0.21.1",
+    "typescript": "^5.3.3",
+    "vitest": "^3.2.4"
+  }
+}

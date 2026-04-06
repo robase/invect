@@ -136,8 +136,6 @@ export interface Credential {
   expiresAt?: string;
   createdAt: string;
   updatedAt: string;
-  webhookPath?: string | null;
-  webhookSecret?: string | null;
 }
 
 export interface CreateCredentialInput {

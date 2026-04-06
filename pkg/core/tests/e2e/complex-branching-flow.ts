@@ -6,7 +6,7 @@
  * Flow structure:
  *   Input (user_data)
  *       ↓
- *   JQ (extract/transform data)
+ *   JavaScript (extract/transform data)
  *       ↓
  *   If-Else (age >= 18?)
  *      ↓ True          ↓ False
@@ -15,150 +15,80 @@
  *
  * This tests:
  * - Input node with JSON data
- * - JQ node operating on incomingData (no inputData param)
+ * - JavaScript node for data transformation
  * - If-Else conditional branching using incomingData for condition evaluation
  * - Template String nodes on different branches
  * - Proper branch execution (only one path should execute)
- *
- * The new execution model:
- * - incomingData = { upstream_ref: outputValue, ... }
- * - Nodes like JQ and If-Else use context.incomingData directly
- * - No more separate "inputData" params with Nunjucks templates
  */
 import { strict as assert } from 'node:assert';
-import { FlowRunStatus, type InvectDefinition, type NodeOutput } from '../../src';
+import { FlowRunStatus, type NodeOutput } from '../../src';
+import { defineFlow, input, javascript, ifElse, template } from '../../src/sdk';
 import type { FlowExample } from './example-types';
 
 /**
- * Build the complex branching flow definition
+ * Build the complex branching flow definition using the SDK
  */
-function buildFlowDefinition(isAdult: boolean): InvectDefinition {
+function buildFlowDefinition(isAdult: boolean) {
   const userData = {
     name: isAdult ? 'Alice' : 'Bobby',
     age: isAdult ? 25 : 15,
     email: isAdult ? 'alice@example.com' : 'bobby@example.com',
   };
 
-  return {
+  return defineFlow({
+    name: 'Complex Branching Flow',
+    description: 'Tests JavaScript transformation and If-Else branching',
     nodes: [
-      // INPUT NODE: User data as JSON
-      {
-        id: 'input-user',
-        type: 'core.input',
-        label: 'User Data',
-        referenceId: 'user_data',
-        params: {
-          variableName: 'user',
-          defaultValue: JSON.stringify(userData),
+      input('user_data', {
+        variableName: 'user',
+        defaultValue: JSON.stringify(userData),
+      }),
+
+      javascript(
+        'user_info',
+        {
+          code: 'const d = user_data; return { name: d.name, age: d.age, isAdult: d.age >= 18 }',
         },
-        position: { x: 100, y: 200 },
-      },
-      // JQ NODE: Extract and transform user data
-      // Uses incomingData directly: { "user_data": { name, age, email } }
-      // JQ query accesses .user_data to get the input node's output
-      {
-        id: 'jq-extract',
-        type: 'core.jq',
-        label: 'Extract User Info',
-        referenceId: 'user_info',
-        params: {
-          // JQ query operates on incomingData object
-          // .user_data accesses the "user_data" key (from Input node's referenceId)
-          query: '.user_data | { name: .name, age: .age, isAdult: (.age >= 18) }',
-        },
-        position: { x: 300, y: 200 },
-      },
-      // IF-ELSE NODE: Check if user is adult
-      // Uses incomingData directly for JSON Logic evaluation
-      // incomingData = { "user_info": { name, age, isAdult } }
-      {
-        id: 'if-adult',
-        type: 'core.if_else',
-        label: 'Is Adult?',
-        referenceId: 'age_check',
-        params: {
-          // JSON Logic condition evaluated against incomingData
-          // { "var": "user_info.isAdult" } accesses incomingData.user_info.isAdult
+        { label: 'Extract User Info' },
+      ),
+
+      ifElse(
+        'age_check',
+        {
           condition: { '==': [{ var: 'user_info.isAdult' }, true] },
         },
-        position: { x: 500, y: 200 },
-      },
-      // TEMPLATE STRING NODE (True branch): Adult message
-      // incomingData = { "age_check": <passthrough data> }
-      // The Template String uses context.incomingData for template resolution
-      {
-        id: 'template-adult',
-        type: 'core.template_string',
-        label: 'Adult Message',
-        referenceId: 'adult_message',
-        params: {
-          // Template accesses incomingData keys
-          // age_check is the If-Else passthrough (contains original data)
-          template: 'Welcome {{ age_check.user_info.name }}! You have full access to all features.',
-        },
-        position: { x: 700, y: 100 },
-      },
-      // TEMPLATE STRING NODE (False branch): Minor message
-      {
-        id: 'template-minor',
-        type: 'core.template_string',
-        label: 'Minor Message',
-        referenceId: 'minor_message',
-        params: {
-          template:
-            'Hi {{ age_check.user_info.name }}! Some features are restricted for users under 18.',
-        },
-        position: { x: 700, y: 300 },
-      },
+        { label: 'Is Adult?' },
+      ),
+
+      template('adult_message', {
+        template: 'Welcome {{ age_check.user_info.name }}! You have full access to all features.',
+      }),
+
+      template('minor_message', {
+        template:
+          'Hi {{ age_check.user_info.name }}! Some features are restricted for users under 18.',
+      }),
     ],
     edges: [
-      // Input → JQ
-      {
-        id: 'edge-input-to-jq',
-        source: 'input-user',
-        target: 'jq-extract',
-      },
-      // JQ → If-Else
-      {
-        id: 'edge-jq-to-ifelse',
-        source: 'jq-extract',
-        target: 'if-adult',
-      },
-      // If-Else (True) → Adult Template
-      {
-        id: 'edge-ifelse-true',
-        source: 'if-adult',
-        target: 'template-adult',
-        sourceHandle: 'true_output',
-      },
-      // If-Else (False) → Minor Template
-      {
-        id: 'edge-ifelse-false',
-        source: 'if-adult',
-        target: 'template-minor',
-        sourceHandle: 'false_output',
-      },
+      ['user_data', 'user_info'],
+      ['user_info', 'age_check'],
+      ['age_check', 'adult_message', 'true_output'],
+      ['age_check', 'minor_message', 'false_output'],
     ],
-    metadata: {
-      name: 'Complex Branching Flow',
-      description: 'Tests JQ transformation and If-Else branching with new execution model',
-      created: new Date().toISOString(),
-    },
-  };
+  });
 }
 
 export const complexBranchingFlowExample: FlowExample = {
   name: 'Complex Branching Flow (Adult Path)',
-  description: 'Tests Input → JQ → If-Else → Template with conditional branching (adult user).',
+  description: 'Tests Input → JS → If-Else → Template with conditional branching (adult user).',
 
   async execute(invect) {
-    // Create flow for adult user (age 25)
     const flow = await invect.flows.create({
       name: `e2e-complex-branching-adult-${Date.now()}`,
     });
     console.log(`  📁 Created flow: ${flow.name} (${flow.id})`);
 
-    const flowDefinition = buildFlowDefinition(true); // isAdult = true
+    const flowDefinition = buildFlowDefinition(true);
     await invect.versions.create(flow.id, {
       invectDefinition: flowDefinition,
     });
@@ -172,7 +102,6 @@ export const complexBranchingFlowExample: FlowExample = {
   },
 
   expected(result) {
-    // Verify flow succeeded
     assert.equal(
       result.status,
       FlowRunStatus.SUCCESS,
@@ -180,40 +109,37 @@ export const complexBranchingFlowExample: FlowExample = {
     );
 
     // Verify Input node executed
-    const inputNode = result.outputs?.['input-user'] as NodeOutput | undefined;
+    const inputNode = result.outputs?.['node-user_data'] as NodeOutput | undefined;
     assert(inputNode, 'Input node outputs should be present');
     const inputVars = inputNode.data.variables as Record<string, { value?: unknown }>;
     const inputValue = inputVars.output?.value;
     assert(inputValue, 'Input node should have output value');
 
-    // Parse and verify input data
     const userData = typeof inputValue === 'string' ? JSON.parse(inputValue) : inputValue;
     assert.equal(userData.name, 'Alice', 'User name should be Alice');
     assert.equal(userData.age, 25, 'User age should be 25');
     console.log(`  📄 Input: ${JSON.stringify(userData)}`);
 
-    // Verify JQ node executed
-    const jqNode = result.outputs?.['jq-extract'] as NodeOutput | undefined;
-    assert(jqNode, 'JQ node outputs should be present');
-    const jqVars = jqNode.data.variables as Record<string, { value?: unknown }>;
-    const jqOutputRaw = jqVars.output?.value;
-    assert(jqOutputRaw, 'JQ node should have output');
-    // JQ returns stringified JSON, parse it
-    const jqOutput = typeof jqOutputRaw === 'string' ? JSON.parse(jqOutputRaw) : jqOutputRaw;
-    assert.equal(jqOutput.isAdult, true, 'JQ should identify user as adult');
-    console.log(`  📄 JQ output: ${JSON.stringify(jqOutput)}`);
+    // Verify JavaScript node executed
+    const jsNode = result.outputs?.['node-user_info'] as NodeOutput | undefined;
+    assert(jsNode, 'JavaScript node outputs should be present');
+    const jsVars = jsNode.data.variables as Record<string, { value?: unknown }>;
+    const jsOutputRaw = jsVars.output?.value;
+    assert(jsOutputRaw, 'JavaScript node should have output');
+    const jsOutput = typeof jsOutputRaw === 'string' ? JSON.parse(jsOutputRaw) : jsOutputRaw;
+    assert.equal(jsOutput.isAdult, true, 'JavaScript should identify user as adult');
+    console.log(`  📄 JS output: ${JSON.stringify(jsOutput)}`);
 
     // Verify If-Else node executed
-    const ifElseNode = result.outputs?.['if-adult'] as NodeOutput | undefined;
+    const ifElseNode = result.outputs?.['node-age_check'] as NodeOutput | undefined;
     assert(ifElseNode, 'If-Else node outputs should be present');
     const ifElseVars = ifElseNode.data.variables as Record<string, { value?: unknown }>;
-    // The If-Else outputs via true_output or false_output
     const trueBranchTaken = ifElseVars.true_output?.value !== undefined;
     assert(trueBranchTaken, 'If-Else should have executed True branch (true_output)');
     console.log(`  📄 If-Else result: True branch taken`);
 
     // Verify Adult Template executed (True branch)
-    const adultTemplate = result.outputs?.['template-adult'] as NodeOutput | undefined;
+    const adultTemplate = result.outputs?.['node-adult_message'] as NodeOutput | undefined;
     assert(adultTemplate, 'Adult template node should have executed');
     const adultVars = adultTemplate.data.variables as Record<string, { value?: unknown }>;
     const adultMessage = adultVars.output?.value as string;
@@ -225,7 +151,7 @@ export const complexBranchingFlowExample: FlowExample = {
     console.log(`  📄 Adult message: "${adultMessage}"`);
 
     // Verify Minor Template did NOT execute (False branch should be skipped)
-    const minorTemplate = result.outputs?.['template-minor'] as NodeOutput | undefined;
+    const minorTemplate = result.outputs?.['node-minor_message'] as NodeOutput | undefined;
     if (minorTemplate) {
       const minorVars = minorTemplate.data.variables as Record<string, { value?: unknown }>;
       const minorExecuted = minorVars.output?.value !== undefined;
@@ -237,16 +163,15 @@ export const complexBranchingFlowExample: FlowExample = {
 
 export const complexBranchingFlowMinorExample: FlowExample = {
   name: 'Complex Branching Flow (Minor Path)',
-  description: 'Tests Input → JQ → If-Else → Template with conditional branching (minor user).',
+  description: 'Tests Input → JS → If-Else → Template with conditional branching (minor user).',
 
   async execute(invect) {
-    // Create flow for minor user (age 15)
     const flow = await invect.flows.create({
       name: `e2e-complex-branching-minor-${Date.now()}`,
     });
     console.log(`  📁 Created flow: ${flow.name} (${flow.id})`);
 
-    const flowDefinition = buildFlowDefinition(false); // isAdult = false
+    const flowDefinition = buildFlowDefinition(false);
     await invect.versions.create(flow.id, {
       invectDefinition: flowDefinition,
     });
@@ -260,7 +185,6 @@ export const complexBranchingFlowMinorExample: FlowExample = {
   },
 
   expected(result) {
-    // Verify flow succeeded
     assert.equal(
       result.status,
       FlowRunStatus.SUCCESS,
@@ -268,7 +192,7 @@ export const complexBranchingFlowMinorExample: FlowExample = {
     );
 
     // Verify Input node executed
-    const inputNode = result.outputs?.['input-user'] as NodeOutput | undefined;
+    const inputNode = result.outputs?.['node-user_data'] as NodeOutput | undefined;
     assert(inputNode, 'Input node outputs should be present');
     const inputVars = inputNode.data.variables as Record<string, { value?: unknown }>;
     const inputValue = inputVars.output?.value;
@@ -277,18 +201,18 @@ export const complexBranchingFlowMinorExample: FlowExample = {
     assert.equal(userData.age, 15, 'User age should be 15');
     console.log(`  📄 Input: ${JSON.stringify(userData)}`);
 
-    // Verify JQ node executed
-    const jqNode = result.outputs?.['jq-extract'] as NodeOutput | undefined;
-    assert(jqNode, 'JQ node outputs should be present');
-    const jqVars = jqNode.data.variables as Record<string, { value?: unknown }>;
-    const jqOutputRaw = jqVars.output?.value;
-    assert(jqOutputRaw, 'JQ node should have output');
-    const jqOutput = typeof jqOutputRaw === 'string' ? JSON.parse(jqOutputRaw) : jqOutputRaw;
-    assert.equal(jqOutput.isAdult, false, 'JQ should identify user as minor');
-    console.log(`  📄 JQ output: ${JSON.stringify(jqOutput)}`);
+    // Verify JavaScript node executed
+    const jsNode = result.outputs?.['node-user_info'] as NodeOutput | undefined;
+    assert(jsNode, 'JavaScript node outputs should be present');
+    const jsVars = jsNode.data.variables as Record<string, { value?: unknown }>;
+    const jsOutputRaw = jsVars.output?.value;
+    assert(jsOutputRaw, 'JavaScript node should have output');
+    const jsOutput = typeof jsOutputRaw === 'string' ? JSON.parse(jsOutputRaw) : jsOutputRaw;
+    assert.equal(jsOutput.isAdult, false, 'JavaScript should identify user as minor');
+    console.log(`  📄 JS output: ${JSON.stringify(jsOutput)}`);
 
     // Verify If-Else node took false branch
-    const ifElseNode = result.outputs?.['if-adult'] as NodeOutput | undefined;
+    const ifElseNode = result.outputs?.['node-age_check'] as NodeOutput | undefined;
     assert(ifElseNode, 'If-Else node outputs should be present');
     const ifElseVars = ifElseNode.data.variables as Record<string, { value?: unknown }>;
     const falseBranchTaken = ifElseVars.false_output?.value !== undefined;
@@ -296,7 +220,7 @@ export const complexBranchingFlowMinorExample: FlowExample = {
     console.log(`  📄 If-Else result: False branch taken`);
 
     // Verify Minor Template executed (False branch)
-    const minorTemplate = result.outputs?.['template-minor'] as NodeOutput | undefined;
+    const minorTemplate = result.outputs?.['node-minor_message'] as NodeOutput | undefined;
     assert(minorTemplate, 'Minor template node should have executed');
     const minorVars = minorTemplate.data.variables as Record<string, { value?: unknown }>;
     const minorMessage = minorVars.output?.value as string;
@@ -308,7 +232,7 @@ export const complexBranchingFlowMinorExample: FlowExample = {
     console.log(`  📄 Minor message: "${minorMessage}"`);
 
     // Verify Adult Template did NOT execute (True branch should be skipped)
-    const adultTemplate = result.outputs?.['template-adult'] as NodeOutput | undefined;
+    const adultTemplate = result.outputs?.['node-adult_message'] as NodeOutput | undefined;
     if (adultTemplate) {
       const adultVars = adultTemplate.data.variables as Record<string, { value?: unknown }>;
       const adultExecuted = adultVars.output?.value !== undefined;

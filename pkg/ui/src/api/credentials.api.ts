@@ -97,30 +97,6 @@ export function useTestCredential() {
   });
 }
 
-// Credential Webhook Queries
-export function useCredentialWebhookInfo(credentialId: string) {
-  const apiClient = useApiClient();
-
-  return useQuery({
-    queryKey: ['credential-webhook', credentialId],
-    queryFn: () => apiClient.getCredentialWebhookInfo(credentialId),
-    enabled: Boolean(credentialId),
-    staleTime: 1000 * 60,
-  });
-}
-
-export function useEnableCredentialWebhook() {
-  const apiClient = useApiClient();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (credentialId: string) => apiClient.enableCredentialWebhook(credentialId),
-    onSuccess: (_, credentialId) => {
-      queryClient.invalidateQueries({ queryKey: ['credential-webhook', credentialId] });
-    },
-  });
-}
-
 // Test Credential Request Mutation (for testing API connections)
 export function useTestCredentialRequest() {
   const apiClient = useApiClient();

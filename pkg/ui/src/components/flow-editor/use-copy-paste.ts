@@ -4,40 +4,13 @@ import { nanoid } from 'nanoid';
 import { useFlowEditorStore } from './flow-editor.store';
 import { useNodeRegistry } from '~/contexts/NodeRegistryContext';
 import { generateUniqueDisplayName, generateUniqueReferenceId } from '~/utils/nodeReferenceUtils';
+import type { ClipboardData, ClipboardNode, ClipboardEdge } from './use-copy-paste.types';
+import { serializeToSDK } from './serialize-to-sdk';
+import { parseSDKText, type ParsedSDK } from '@invect/core/sdk';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-interface ClipboardData {
-  _type: 'invect-flow-clipboard';
-  version: 1;
-  sourceFlowId: string;
-  nodes: ClipboardNode[];
-  edges: ClipboardEdge[];
-  copyTime: number;
-}
-
-interface ClipboardNode {
-  originalId: string;
-  type: string;
-  relativePosition: { x: number; y: number };
-  data: {
-    display_name: string;
-    reference_id: string;
-    params: Record<string, unknown>;
-    mapper?: unknown;
-    _loop?: unknown;
-  };
-}
-
-interface ClipboardEdge {
-  originalId: string;
-  source: string;
-  target: string;
-  sourceHandle?: string | null;
-  targetHandle?: string | null;
-}
 
 interface UseCopyPasteOptions {
   flowId: string;
@@ -47,16 +20,6 @@ interface UseCopyPasteOptions {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-const CLIPBOARD_DISCRIMINATOR = 'invect-flow-clipboard' as const;
-
-function isInvectClipboard(data: unknown): data is ClipboardData {
-  return (
-    typeof data === 'object' &&
-    data !== null &&
-    (data as Record<string, unknown>)._type === CLIPBOARD_DISCRIMINATOR
-  );
-}
 
 /** Deep clone JSON-safe data */
 function cloneData<T>(data: T): T {
@@ -116,6 +79,68 @@ function regenToolInstanceIds(params: Record<string, unknown>): Record<string, u
       ...tool,
       instanceId: nanoid(),
     })),
+  };
+}
+
+/**
+ * Convert parseSDKText output into a ClipboardData structure that
+ * materializePaste can consume. Maps FlowNodeDefinitions → ClipboardNode
+ * and edge tuples → ClipboardEdge.
+ */
+function sdkResultToClipboard(
+  { nodes, edges }: ParsedSDK,
+  flowId: string,
+): ClipboardData {
+  const clipboardNodes: ClipboardNode[] = nodes.map((n, i) => {
+    const ref = n.referenceId ?? n.id;
+    return {
+      originalId: n.id,
+      type: n.type,
+      relativePosition: n.position ?? { x: i * 250, y: 0 },
+      data: {
+        display_name: n.label ?? ref,
+        reference_id: ref,
+        params: n.params ?? {},
+        ...(n.mapper !== undefined && { mapper: n.mapper }),
+      },
+    };
+  });
+
+  // Build referenceId → node id mapping for edge resolution
+  const refToId = new Map<string, string>();
+  for (const n of nodes) {
+    const ref = n.referenceId ?? n.id;
+    refToId.set(ref, n.id);
+  }
+
+  const clipboardEdges: ClipboardEdge[] = [];
+  for (const e of edges) {
+    if (Array.isArray(e)) {
+      const sourceId = refToId.get(e[0]) ?? `node-${e[0]}`;
+      const targetId = refToId.get(e[1]) ?? `node-${e[1]}`;
+      clipboardEdges.push({
+        originalId: `edge-${nanoid()}`,
+        source: sourceId,
+        target: targetId,
+        ...(e[2] ? { sourceHandle: e[2] } : {}),
+      });
+    } else {
+      const sourceId = refToId.get(e.from) ?? `node-${e.from}`;
+      const targetId = refToId.get(e.to) ?? `node-${e.to}`;
+      clipboardEdges.push({
+        originalId: `edge-${nanoid()}`,
+        source: sourceId,
+        target: targetId,
+        ...(e.handle ? { sourceHandle: e.handle } : {}),
+      });
+    }
+  }
+
+  return {
+    sourceFlowId: flowId,
+    nodes: clipboardNodes,
+    edges: clipboardEdges,
+    copyTime: Date.now(),
   };
 }
 
@@ -188,8 +213,6 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
     }));
 
     return {
-      _type: CLIPBOARD_DISCRIMINATOR,
-      version: 1,
       sourceFlowId: flowId,
       nodes: clipboardNodes,
       edges: clipboardEdges,
@@ -334,23 +357,23 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
   );
 
   // -------------------------------------------------------------------------
-  // Read clipboard (system first, then fallback)
+  // Read clipboard (system → SDK parse → in-memory fallback)
   // -------------------------------------------------------------------------
   const readClipboard = useCallback(async (): Promise<ClipboardData | null> => {
-    // Try system clipboard first
+    // Try system clipboard — contains SDK text from our copy or external paste
     try {
       const text = await navigator.clipboard.readText();
-      const parsed = JSON.parse(text);
-      if (isInvectClipboard(parsed)) {
-        return parsed;
+      const parsed = parseSDKText(text);
+      if (parsed.nodes.length > 0) {
+        return sdkResultToClipboard(parsed, flowId);
       }
     } catch {
-      // Permission denied, iframe restriction, or invalid JSON — fall through
+      // Permission denied, parse failed, or empty — fall through
     }
 
-    // Fall back to in-memory ref
+    // Fall back to in-memory ref (same-session copy/paste)
     return clipboardRef.current;
-  }, []);
+  }, [flowId]);
 
   // -------------------------------------------------------------------------
   // Write to clipboard (system + in-memory)
@@ -358,7 +381,11 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
   const writeClipboard = useCallback(async (data: ClipboardData) => {
     clipboardRef.current = data;
     try {
-      await navigator.clipboard.writeText(JSON.stringify(data));
+      // Write SDK code to the system clipboard so pasting into a text editor
+      // (VS Code, etc.) produces importable TypeScript helper calls.
+      // Internal paste always reads from clipboardRef (in-memory).
+      const sdkText = serializeToSDK(data.nodes, data.edges);
+      await navigator.clipboard.writeText(sdkText);
     } catch {
       // System clipboard write failed — in-memory ref is still set
     }

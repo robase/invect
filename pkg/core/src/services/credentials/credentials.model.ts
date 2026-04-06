@@ -25,8 +25,6 @@ export interface Credential {
   metadata?: Record<string, unknown> | null;
   lastUsedAt?: string | null;
   expiresAt?: string | null;
-  webhookPath?: string | null;
-  webhookSecret?: string | null;
   createdAt: string | Date;
   updatedAt: string | Date;
 }
@@ -295,42 +293,6 @@ export class CredentialsModel {
     }
   }
 
-  /**
-   * Find a credential by its webhook path.
-   */
-  async findByWebhookPath(webhookPath: string): Promise<Credential | null> {
-    try {
-      const result = await this.adapter.findOne<Record<string, unknown>>({
-        model: TABLE,
-        where: [{ field: 'webhook_path', value: webhookPath }],
-      });
-      return result ? this.normalize(result) : null;
-    } catch (error) {
-      this.logger.error('Failed to find credential by webhook path', { webhookPath, error });
-      throw new DatabaseError('Failed to find credential by webhook path', { error });
-    }
-  }
-
-  /**
-   * Enable webhooks for a credential.
-   */
-  async enableWebhook(id: string, webhookPath: string, webhookSecret: string): Promise<Credential> {
-    try {
-      const result = await this.adapter.update<Record<string, unknown>>({
-        model: TABLE,
-        where: [{ field: 'id', value: id }],
-        update: { webhook_path: webhookPath, webhook_secret: webhookSecret },
-      });
-      if (!result) {
-        throw new DatabaseError('Credential not found');
-      }
-      return this.normalize(result);
-    } catch (error) {
-      this.logger.error('Failed to enable webhook for credential', { id, error });
-      throw new DatabaseError('Failed to enable webhook for credential', { error });
-    }
-  }
-
   // =========================================================================
   // Private helpers
   // =========================================================================
@@ -366,8 +328,6 @@ export class CredentialsModel {
       metadata: (raw.metadata || null) as Record<string, unknown> | null,
       lastUsedAt: (raw.last_used_at ?? raw.lastUsedAt ?? null) as string | null,
       expiresAt: (raw.expires_at ?? raw.expiresAt ?? null) as string | null,
-      webhookPath: (raw.webhook_path ?? raw.webhookPath ?? null) as string | null,
-      webhookSecret: (raw.webhook_secret ?? raw.webhookSecret ?? null) as string | null,
       createdAt: (raw.created_at ?? raw.createdAt) as string | Date,
       updatedAt: (raw.updated_at ?? raw.updatedAt) as string | Date,
     };

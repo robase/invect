@@ -214,8 +214,6 @@ export const CORE_SCHEMA: InvectPluginSchema = {
       metadata: { type: 'json', required: false, typeAnnotation: 'Record<string, unknown>' },
       lastUsedAt: { type: 'date', required: false },
       expiresAt: { type: 'date', required: false },
-      webhookPath: { type: 'string', required: false, unique: true },
-      webhookSecret: { type: 'string', required: false },
       createdAt: { type: 'date', required: true, defaultValue: 'now()' },
       updatedAt: { type: 'date', required: true, defaultValue: 'now()' },
     },

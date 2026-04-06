@@ -248,10 +248,6 @@ export const credentials = sqliteTable('credentials', {
   // When the credential expires (for tokens with expiration)
   expiresAt: text('expires_at'),
 
-  // Webhook: a unique path so external services can POST to this credential's webhook URL
-  webhookPath: text('webhook_path').unique(),
-  webhookSecret: text('webhook_secret'),
-
   // Timestamps
   createdAt: text('created_at')
     .notNull()

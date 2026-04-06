@@ -9,6 +9,8 @@ import { cn } from '../../../lib/utils';
 import { DroppableInput } from './DroppableInput';
 import { DynamicSelectField } from './DynamicSelectField';
 import { CodeMirrorJsEditor } from '../../ui/codemirror-js-editor';
+import { SwitchCasesField } from './SwitchCasesField';
+import { useFlowEditorStore } from '../flow-editor.store';
 
 interface ConfigFieldWithTemplateProps {
   field: NodeParamField;
@@ -58,6 +60,19 @@ export const ConfigFieldWithTemplate = ({
 }: ConfigFieldWithTemplateProps) => {
   if (field.hidden) {
     return null;
+  }
+
+  // Switch cases: custom field with its own rendering
+  if (field.type === 'switch-cases') {
+    const selectedNodeId = useFlowEditorStore.getState().selectedNodeId;
+    return (
+      <SwitchCasesField
+        value={value}
+        onChange={onChange as (value: unknown) => void}
+        nodeId={selectedNodeId}
+        inputData={inputData}
+      />
+    );
   }
 
   // Check if this field type is always in template mode

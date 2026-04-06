@@ -165,7 +165,8 @@ export function useNodeExecution({
         })) as {
           status: string;
           error?: string;
-          traces?: Array<{ nodeId: string; inputs: unknown; outputs: unknown }>;
+          nodeErrors?: Record<string, string>;
+          traces?: Array<{ nodeId: string; inputs: unknown; outputs: unknown; error?: string }>;
           outputs?: Record<string, unknown>;
         };
 
@@ -202,8 +203,18 @@ export function useNodeExecution({
           setRunError('Execution paused for batch processing. Check the Runs view for status.');
           setOutputError('Waiting for batch processing...');
         } else {
-          setRunError(result.error || 'Node execution failed');
-          setOutputError(result.error || 'Node execution failed');
+          // Extract the most specific error available:
+          // 1. Error for this specific node from nodeErrors
+          // 2. Top-level error from the result
+          // 3. Error from the failed trace
+          // 4. Generic fallback
+          const specificError =
+            result.nodeErrors?.[nodeId] ||
+            result.error ||
+            result.traces?.find((t) => t.error)?.error ||
+            'Node execution failed';
+          setRunError(specificError);
+          setOutputError(specificError);
         }
       }
     } catch (error) {

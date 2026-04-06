@@ -108,7 +108,12 @@ export function useRunNode({
             'Execution paused for batch processing. Check the Runs view for status.',
           );
         } else {
-          handleExecutionError(result.error || 'Node execution failed');
+          // Extract the most specific error available
+          const specificError =
+            (result as { nodeErrors?: Record<string, string> }).nodeErrors?.[nodeId] ||
+            result.error ||
+            'Node execution failed';
+          handleExecutionError(specificError);
         }
       }
     } catch (error) {

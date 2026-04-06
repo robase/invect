@@ -52,7 +52,7 @@ export function withNodeContext<
 
     // In view or readonly mode with execution status, wrap with status indicator
     if ((mode === 'view' || mode === 'readonly') && executionStatus) {
-      const uiStatus = mapExecutionStatusToNodeStatus(executionStatus);
+      const uiStatus = mapExecutionStatusToNodeStatus(executionStatus as string);
       const indicatorStatus = mapToIndicatorStatus(uiStatus);
 
       return (

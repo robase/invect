@@ -66,7 +66,7 @@ describe('Branching Flows', () => {
           label: 'Check Value',
           referenceId: 'check',
           params: {
-            condition: { '>': [{ var: 'data.value' }, 50] },
+            expression: 'data.value > 50',
           },
           position: { x: 200, y: 0 },
         },
@@ -145,7 +145,7 @@ describe('Branching Flows', () => {
           label: 'Enabled?',
           referenceId: 'enabled_check',
           params: {
-            condition: { '==': [{ var: 'flags.isEnabled' }, true] },
+            expression: 'flags.isEnabled === true',
           },
           position: { x: 200, y: 0 },
         },
@@ -199,7 +199,7 @@ describe('Branching Flows', () => {
           label: 'Is Adult?',
           referenceId: 'adult_check',
           params: {
-            condition: { '>=': [{ var: 'user.age' }, 18] },
+            expression: 'user.age >= 18',
           },
           position: { x: 200, y: 0 },
         },
@@ -227,5 +227,214 @@ describe('Branching Flows', () => {
 
     expect(result.status).toBe(FlowRunStatus.SUCCESS);
     expect(getNodeOutput(result, 'tmpl-greeting')).toContain('Alice');
+  });
+
+  // ------- core.switch tests -------
+
+  function buildSwitchFlow(priority: string): InvectDefinition {
+    return {
+      nodes: [
+        {
+          id: 'input-1',
+          type: 'core.input',
+          label: 'Input',
+          referenceId: 'data',
+          params: {
+            variableName: 'data',
+            defaultValue: JSON.stringify({ priority }),
+          },
+          position: { x: 0, y: 0 },
+        },
+        {
+          id: 'switch-1',
+          type: 'core.switch',
+          label: 'Route',
+          referenceId: 'route',
+          params: {
+            cases: [
+              { slug: 'high', label: 'High', expression: 'data.priority === "high"' },
+              { slug: 'medium', label: 'Medium', expression: 'data.priority === "medium"' },
+              { slug: 'low', label: 'Low', expression: 'data.priority === "low"' },
+            ],
+          },
+          position: { x: 200, y: 0 },
+        },
+        {
+          id: 'tmpl-high',
+          type: 'core.template_string',
+          label: 'High',
+          referenceId: 'high_out',
+          params: { template: 'HIGH' },
+          position: { x: 400, y: -150 },
+        },
+        {
+          id: 'tmpl-medium',
+          type: 'core.template_string',
+          label: 'Medium',
+          referenceId: 'medium_out',
+          params: { template: 'MEDIUM' },
+          position: { x: 400, y: 0 },
+        },
+        {
+          id: 'tmpl-low',
+          type: 'core.template_string',
+          label: 'Low',
+          referenceId: 'low_out',
+          params: { template: 'LOW' },
+          position: { x: 400, y: 150 },
+        },
+        {
+          id: 'tmpl-default',
+          type: 'core.template_string',
+          label: 'Default',
+          referenceId: 'default_out',
+          params: { template: 'DEFAULT' },
+          position: { x: 400, y: 300 },
+        },
+      ],
+      edges: [
+        { id: 'e1', source: 'input-1', target: 'switch-1' },
+        { id: 'e-high', source: 'switch-1', target: 'tmpl-high', sourceHandle: 'high' },
+        { id: 'e-medium', source: 'switch-1', target: 'tmpl-medium', sourceHandle: 'medium' },
+        { id: 'e-low', source: 'switch-1', target: 'tmpl-low', sourceHandle: 'low' },
+        { id: 'e-default', source: 'switch-1', target: 'tmpl-default', sourceHandle: 'default' },
+      ],
+    };
+  }
+
+  it('switch: should route to the matching case (high)', async () => {
+    const result = await runFlow('switch-high', buildSwitchFlow('high'));
+    expect(result.status).toBe(FlowRunStatus.SUCCESS);
+    expect(getNodeOutput(result, 'tmpl-high')).toBe('HIGH');
+  });
+
+  it('switch: should route to the matching case (medium)', async () => {
+    const result = await runFlow('switch-medium', buildSwitchFlow('medium'));
+    expect(result.status).toBe(FlowRunStatus.SUCCESS);
+    expect(getNodeOutput(result, 'tmpl-medium')).toBe('MEDIUM');
+  });
+
+  it('switch: should fall through to default when no case matches', async () => {
+    const result = await runFlow('switch-default', buildSwitchFlow('critical'));
+    expect(result.status).toBe(FlowRunStatus.SUCCESS);
+    expect(getNodeOutput(result, 'tmpl-default')).toBe('DEFAULT');
+  });
+
+  it('switch: should skip inactive branches', async () => {
+    const result = await runFlow('switch-skip', buildSwitchFlow('low'));
+    expect(result.status).toBe(FlowRunStatus.SUCCESS);
+    expect(getNodeOutput(result, 'tmpl-low')).toBe('LOW');
+
+    // Non-matched branches should be skipped (no output)
+    const highNode = result.outputs?.['tmpl-high'] as NodeOutput | undefined;
+    if (highNode) {
+      const vars = highNode.data.variables as Record<string, { value?: unknown }>;
+      expect(vars.output?.value).toBeUndefined();
+    }
+  });
+
+  // ------- Diamond merge: multiple switch branches → same node -------
+
+  it('diamond merge: node reachable via active and inactive branches should execute', async () => {
+    const result = await runFlow('diamond-merge', {
+      nodes: [
+        {
+          id: 'input-1',
+          type: 'core.input',
+          label: 'Input',
+          referenceId: 'data',
+          params: {
+            variableName: 'data',
+            defaultValue: JSON.stringify({ value: 'A' }),
+          },
+          position: { x: 0, y: 0 },
+        },
+        {
+          id: 'switch-1',
+          type: 'core.switch',
+          label: 'Route',
+          referenceId: 'route',
+          params: {
+            cases: [
+              { slug: 'case_a', label: 'A', expression: 'data.value === "A"' },
+              { slug: 'case_b', label: 'B', expression: 'data.value === "B"' },
+            ],
+          },
+          position: { x: 200, y: 0 },
+        },
+        {
+          id: 'merge-node',
+          type: 'core.template_string',
+          label: 'Merge',
+          referenceId: 'merge',
+          params: { template: 'MERGED' },
+          position: { x: 400, y: 0 },
+        },
+      ],
+      edges: [
+        { id: 'e1', source: 'input-1', target: 'switch-1' },
+        // Both branches point to the same merge node
+        { id: 'e-a', source: 'switch-1', target: 'merge-node', sourceHandle: 'case_a' },
+        { id: 'e-b', source: 'switch-1', target: 'merge-node', sourceHandle: 'case_b' },
+      ],
+    });
+
+    expect(result.status).toBe(FlowRunStatus.SUCCESS);
+    // Merge node should execute because case_a (active) feeds into it
+    expect(getNodeOutput(result, 'merge-node')).toBe('MERGED');
+  });
+
+  // ------- if_else with JS expression (new format) -------
+
+  it('if_else with JS expression: should evaluate correctly', async () => {
+    const result = await runFlow('if-else-js-expr', {
+      nodes: [
+        {
+          id: 'input-1',
+          type: 'core.input',
+          label: 'Input',
+          referenceId: 'data',
+          params: {
+            variableName: 'data',
+            defaultValue: JSON.stringify({ score: 85 }),
+          },
+          position: { x: 0, y: 0 },
+        },
+        {
+          id: 'if-1',
+          type: 'core.if_else',
+          label: 'Check Score',
+          referenceId: 'check',
+          params: {
+            expression: 'data.score >= 70',
+          },
+          position: { x: 200, y: 0 },
+        },
+        {
+          id: 'tmpl-pass',
+          type: 'core.template_string',
+          label: 'Pass',
+          referenceId: 'pass',
+          params: { template: 'PASS' },
+          position: { x: 400, y: -100 },
+        },
+        {
+          id: 'tmpl-fail',
+          type: 'core.template_string',
+          label: 'Fail',
+          referenceId: 'fail',
+          params: { template: 'FAIL' },
+          position: { x: 400, y: 100 },
+        },
+      ],
+      edges: [
+        { id: 'e1', source: 'input-1', target: 'if-1' },
+        { id: 'e-true', source: 'if-1', target: 'tmpl-pass', sourceHandle: 'true_output' },
+        { id: 'e-false', source: 'if-1', target: 'tmpl-fail', sourceHandle: 'false_output' },
+      ],
+    });
+
+    expect(result.status).toBe(FlowRunStatus.SUCCESS);
+    expect(getNodeOutput(result, 'tmpl-pass')).toBe('PASS');
   });
 });

@@ -56,19 +56,6 @@ export function createCredentialsAPI(sf: ServiceFactory, logger: Logger): Creden
       return svc.getExpiringCredentials(daysUntilExpiry);
     },
 
-    // Webhooks
-    getWebhookInfo(id) {
-      return svc.getWebhookInfo(id);
-    },
-
-    enableWebhook(id) {
-      return svc.enableWebhook(id);
-    },
-
-    findByWebhookPath(webhookPath) {
-      return svc.findByWebhookPath(webhookPath);
-    },
-
     // OAuth2
     getOAuth2Providers() {
       return svc.getOAuth2Service().getProviders();

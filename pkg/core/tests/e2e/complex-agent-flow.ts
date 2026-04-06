@@ -5,19 +5,15 @@
  *
  * Flow structure:
  *
- *   ┌─────────────────────────────────────────────────────────────────────┐
- *   │                                                                     │
- *   │  Input (analysis_request)                                           │
- *   │       ↓                                                             │
- *   │  HTTP Request (fetch sample data)                                   │
- *   │       ↓                                                             │
- *   │  Agent (data analyst with JQ, Math, JSON Logic tools)               │
- *   │       ↓                                                             │
- *   │  Template (format final report)                                     │
- *   │       ↓                                                             │
- *   │  Output (analysis_report)                                           │
- *   │                                                                     │
- *   └─────────────────────────────────────────────────────────────────────┘
+ *   Input (analysis_request)
+ *       ↓
+ *   HTTP Request (fetch sample data)
+ *       ↓
+ *   Agent (data analyst with JQ, Math, JSON Logic tools)
+ *       ↓
+ *   Template (format final report)
+ *       ↓
+ *   Output (analysis_report)
  *
  * Tests:
  * - AGENT node with multiple tools: jq_query, math_eval, json_logic
@@ -26,7 +22,8 @@
  * - Template node formatting agent output
  */
 import { strict as assert } from 'node:assert';
-import { GraphNodeType, FlowRunStatus, type InvectDefinition, BatchProvider } from '../../src';
+import { FlowRunStatus, BatchProvider } from '../../src';
+import { defineFlow, input, output, agent, template, httpRequest } from '../../src/sdk';
 import type { InvectInstance } from '../../src/api/types';
 import { getOutputVariable, type AgentOutputLike, type FlowExample } from './example-types';
 
@@ -66,13 +63,9 @@ async function ensureAICredential(
 /**
  * Build a complex agent flow that uses multiple tools for data analysis
  */
-function buildComplexAgentFlowDefinition(
-  credentialId: string,
-  isOpenAI: boolean,
-): InvectDefinition {
+function buildComplexAgentFlowDefinition(credentialId: string, isOpenAI: boolean) {
   const modelName = isOpenAI ? 'gpt-4o-mini' : 'claude-3-haiku-20240307';
 
-  // Sample sales data to analyze (sent to httpbin.org/post which echoes it back)
   const sampleSalesData = {
     company: 'TechCorp',
     quarter: 'Q4 2025',
@@ -90,53 +83,32 @@ function buildComplexAgentFlowDefinition(
     },
   };
 
-  return {
+  return defineFlow({
+    name: 'Complex Agent Flow',
     nodes: [
-      // Input: Analysis request
-      {
-        id: 'input-request',
-        type: 'core.input',
-        label: 'Analysis Request',
-        referenceId: 'analysis_request',
-        params: {
-          variableName: 'request',
-          defaultValue: JSON.stringify({
-            analysisType: 'quarterly_sales',
-            focus: 'revenue_by_product',
-            includeTargetComparison: true,
-          }),
-        },
-        position: { x: 100, y: 200 },
-      },
+      input('analysis_request', {
+        variableName: 'request',
+        defaultValue: JSON.stringify({
+          analysisType: 'quarterly_sales',
+          focus: 'revenue_by_product',
+          includeTargetComparison: true,
+        }),
+      }),
 
-      // HTTP: Fetch sales data (using httpbin.org to echo our sample data)
-      {
-        id: 'http-fetch-data',
-        type: 'http.request',
-        label: 'Fetch Sales Data',
-        referenceId: 'sales_data',
-        params: {
-          method: 'POST',
-          url: 'https://httpbin.org/post',
-          body: JSON.stringify(sampleSalesData),
-          headers: {
-            'Content-Type': 'application/json',
-          },
+      httpRequest('sales_data', {
+        method: 'POST',
+        url: 'https://httpbin.org/post',
+        body: JSON.stringify(sampleSalesData),
+        headers: {
+          'Content-Type': 'application/json',
         },
-        position: { x: 350, y: 200 },
-      },
+      }),
 
-      // Agent: Data analyst with multiple tools
-      {
-        id: 'agent-analyst',
-        type: GraphNodeType.AGENT,
-        label: 'Data Analyst Agent',
-        referenceId: 'analyst_agent',
-        params: {
-          credentialId,
-          model: modelName,
-          provider: isOpenAI ? BatchProvider.OPENAI : BatchProvider.ANTHROPIC,
-          taskPrompt: `Analyze the sales data and provide insights.
+      agent('analyst_agent', {
+        credentialId,
+        model: modelName,
+        provider: isOpenAI ? BatchProvider.OPENAI : BatchProvider.ANTHROPIC,
+        taskPrompt: `Analyze the sales data and provide insights.
 
 Sales Data (from API response):
 {{ sales_data.data.json | dump }}
@@ -155,28 +127,20 @@ Your task:
    - Which products are below the minimum units threshold
 
 Provide a comprehensive analysis with specific numbers and insights.`,
-          systemPrompt: `You are a data analyst assistant. You have access to these tools:
+        systemPrompt: `You are a data analyst assistant. You have access to these tools:
 - jq_query: For extracting and filtering JSON data
 - math_eval: For precise mathematical calculations
 - json_logic: For conditional checks and rule evaluation
 
 Always use tools for data operations rather than estimating. Show your analysis step by step.`,
-          enabledTools: ['jq_query', 'math_eval', 'json_logic'],
-          maxIterations: 15,
-          stopCondition: 'explicit_stop',
-          temperature: 0.2,
-        },
-        position: { x: 600, y: 200 },
-      },
+        enabledTools: ['jq_query', 'math_eval', 'json_logic'],
+        maxIterations: 15,
+        stopCondition: 'explicit_stop',
+        temperature: 0.2,
+      }),
 
-      // Template: Format the final report
-      {
-        id: 'template-report',
-        type: 'core.template_string',
-        label: 'Format Report',
-        referenceId: 'formatted_report',
-        params: {
-          template: `# Sales Analysis Report
+      template('formatted_report', {
+        template: `# Sales Analysis Report
 
 ## Analysis Summary
 {{ analyst_agent.finalResponse }}
@@ -188,51 +152,21 @@ Always use tools for data operations rather than estimating. Show your analysis 
 
 ---
 *Generated by Invect AI Agent*`,
-        },
-        position: { x: 850, y: 200 },
-      },
+      }),
 
-      // Output: Final report
-      {
-        id: 'output-report',
-        type: 'core.output',
-        label: 'Analysis Report',
-        referenceId: 'analysis_report',
-        params: {
-          outputName: 'report',
-          outputValue: '{{ formatted_report.output }}',
-        },
-        position: { x: 1100, y: 200 },
-      },
+      output('analysis_report', {
+        outputName: 'report',
+        outputValue: '{{ formatted_report.output }}',
+      }),
     ],
     edges: [
-      {
-        id: 'edge-input-to-http',
-        source: 'input-request',
-        target: 'http-fetch-data',
-      },
-      {
-        id: 'edge-http-to-agent',
-        source: 'http-fetch-data',
-        target: 'agent-analyst',
-      },
-      {
-        id: 'edge-request-to-agent',
-        source: 'input-request',
-        target: 'agent-analyst',
-      },
-      {
-        id: 'edge-agent-to-template',
-        source: 'agent-analyst',
-        target: 'template-report',
-      },
-      {
-        id: 'edge-template-to-output',
-        source: 'template-report',
-        target: 'output-report',
-      },
+      ['analysis_request', 'sales_data'],
+      ['sales_data', 'analyst_agent'],
+      ['analysis_request', 'analyst_agent'],
+      ['analyst_agent', 'formatted_report'],
+      ['formatted_report', 'analysis_report'],
     ],
-  };
+  });
 }
 
 /**
@@ -243,21 +177,16 @@ export const complexAgentFlowExample: FlowExample = {
   description: 'Tests AI Agent node with multiple tools (JQ, Math, JSON Logic) for data analysis',
 
   async execute(invect: InvectInstance) {
-    // Create credential
     const { id: credentialId, isOpenAI } = await ensureAICredential(invect);
 
-    // Build flow definition
     const definition = buildComplexAgentFlowDefinition(credentialId, isOpenAI);
 
-    // Create flow
     const flow = await invect.flows.create({
       name: 'E2E Complex Agent Flow',
     });
 
-    // Create flow version with definition
     await invect.versions.create(flow.id, { invectDefinition: definition });
 
-    // Execute flow
     const result = await invect.runs.start(
       flow.id,
       {},
@@ -270,8 +199,7 @@ export const complexAgentFlowExample: FlowExample = {
     console.log(`   Status: ${result.status}`);
     console.log(`   Duration: ${result.duration}ms`);
 
-    // Find the agent node trace
-    const agentTrace = result.traces?.find((t) => t.nodeId === 'agent-analyst');
+    const agentTrace = result.traces?.find((t) => t.nodeId === 'node-analyst_agent');
     if (agentTrace?.outputs) {
       const agentOutput = getOutputVariable(agentTrace.outputs) as AgentOutputLike | undefined;
       if (agentOutput) {
@@ -279,7 +207,6 @@ export const complexAgentFlowExample: FlowExample = {
         console.log(`   Finish Reason: ${agentOutput.finishReason || 'N/A'}`);
         console.log(`   Total Tool Calls: ${agentOutput.toolResults?.length || 0}`);
 
-        // Group tool calls by tool ID
         const toolCounts: Record<string, number> = {};
         for (const toolResult of agentOutput.toolResults || []) {
           const id = toolResult.toolId ?? 'unknown';
@@ -305,20 +232,15 @@ export const complexAgentFlowExample: FlowExample = {
   },
 
   expected(result) {
-    // Verify flow completed successfully
     assert.equal(result.status, FlowRunStatus.SUCCESS, 'Flow should complete successfully');
-
-    // Verify we have outputs
     assert.ok(result.outputs, 'Flow should have outputs');
 
-    // Find agent trace and verify outputs
-    const agentTrace = result.traces?.find((t) => t.nodeId === 'agent-analyst');
+    const agentTrace = result.traces?.find((t) => t.nodeId === 'node-analyst_agent');
     assert.ok(agentTrace, 'Should have agent node trace');
 
     const agentOutput = getOutputVariable(agentTrace!.outputs) as AgentOutputLike | undefined;
     assert.ok(agentOutput, 'Agent should have output');
 
-    // Verify agent output structure
     assert.ok(agentOutput.finalResponse, 'Agent should have a final response');
     assert.ok(typeof agentOutput.iterations === 'number', 'Agent should track iterations');
     assert.ok(agentOutput.finishReason, 'Agent should have a finish reason');
@@ -328,17 +250,14 @@ export const complexAgentFlowExample: FlowExample = {
     const toolIds = new Set(agentOutput.toolResults.map((resultItem) => resultItem.toolId));
     console.log(`   Tools actually used: ${Array.from(toolIds).join(', ')}`);
 
-    // Agent should have used at least 1 tool
     assert.ok(
       toolIds.size >= 1,
       `Agent should use tools, but used: ${Array.from(toolIds).join(', ')}`,
     );
 
-    // Get the output node's result - outputs are keyed by node ID
-    const report = getOutputVariable(result.outputs?.['output-report']);
+    const report = getOutputVariable(result.outputs?.['node-analysis_report']);
     if (report) {
       const reportStr = String(report);
-      // Just verify we got some content
       assert.ok(reportStr.length > 0, 'Report should have content');
     }
 

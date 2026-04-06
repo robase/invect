@@ -222,9 +222,6 @@ export const credentials = pgTable('credentials', {
   metadata: json('metadata').$type<Record<string, unknown>>(),
   lastUsedAt: timestamp('last_used_at'),
   expiresAt: timestamp('expires_at'),
-  // Webhook: a unique path so external services can POST to this credential's webhook URL
-  webhookPath: text('webhook_path').unique(),
-  webhookSecret: text('webhook_secret'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

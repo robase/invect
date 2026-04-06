@@ -1,26 +1,24 @@
-import { defineConfig } from 'vitest/config';
-import { resolve } from 'path';
-import swc from 'unplugin-swc';
+import { defineConfig, mergeConfig } from "vitest/config";
+import { resolve } from "path";
+import swc from "unplugin-swc";
+import baseConfig from "../../vitest.base";
 
-export default defineConfig({
-  plugins: [
-    swc.vite({
-      module: { type: 'es6' },
-    }),
-  ],
-
-  test: {
-    environment: 'node',
-    root: './src',
-    globals: true,
-    setupFiles: ['./test/setup.ts'],
-    alias: {
-      '@': resolve(__dirname, './src'),
+export default mergeConfig(
+  baseConfig,
+  defineConfig({
+    plugins: [
+      swc.vite({
+        module: { type: "es6" },
+      }),
+    ],
+    test: {
+      root: "./src",
+      setupFiles: ["./test/setup.ts"],
     },
-  },
-  resolve: {
-    alias: {
-      '@': resolve(__dirname, './src'),
+    resolve: {
+      alias: {
+        "@": resolve(__dirname, "./src"),
+      },
     },
-  },
-});
+  }),
+);

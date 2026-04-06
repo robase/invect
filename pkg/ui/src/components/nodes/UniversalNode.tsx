@@ -5,6 +5,7 @@ import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { Card } from '../ui/card';
 import { useNodeRegistry } from '../../contexts/NodeRegistryContext';
 import { GraphNodeType, NodeExecutionStatus } from '@invect/core/types';
+import type { NodeDefinition, NodeHandleDefinition } from '../../types/node-definition.types';
 import { cn } from '../../lib/utils';
 import { Loader2 } from 'lucide-react';
 import { ProviderIcon } from '../shared/ProviderIcon';
@@ -74,6 +75,31 @@ interface UniversalNodeData extends Record<string, unknown> {
 }
 
 /**
+ * Resolve output handles for a node. For nodes with `dynamicOutputs`, handles
+ * are derived from the node's params (e.g. switch cases) instead of the static
+ * definition. Falls back to the definition's `outputs` array.
+ */
+function resolveOutputHandles(
+  definition: NodeDefinition,
+  params: Record<string, unknown> | undefined,
+): NodeHandleDefinition[] {
+  if (!definition.dynamicOutputs) {
+    return definition.outputs ?? [];
+  }
+
+  // Switch node: derive handles from params.cases + default
+  if (definition.type === 'core.switch') {
+    const cases = (params?.cases as Array<{ slug: string; label: string }>) ?? [];
+    return [
+      ...cases.map((c) => ({ id: c.slug, label: c.label, type: 'any' })),
+      { id: 'default', label: 'Default', type: 'any' },
+    ];
+  }
+
+  return definition.outputs ?? [];
+}
+
+/**
  * Loading placeholder shown while node definition is being fetched.
  * Renders a minimal node card with a spinner.
  * IMPORTANT: Must render Handle components to prevent React Flow edge errors.
@@ -138,6 +164,27 @@ const NodeLoadingPlaceholder = memo(
           position={Position.Right}
           style={HIDDEN_HANDLE_STYLE_FALSE}
         />
+
+        {/* Switch node handles - derived from params.cases */}
+        {data.type === 'core.switch' &&
+          Array.isArray(data.params?.cases) &&
+          (data.params.cases as Array<{ slug: string }>).map((c) => (
+            <Handle
+              key={c.slug}
+              id={c.slug}
+              type="source"
+              position={Position.Right}
+              style={{ ...HIDDEN_HANDLE_STYLE_TRUE, opacity: 0, width: 1, height: 1 }}
+            />
+          ))}
+        {data.type === 'core.switch' && (
+          <Handle
+            id="default"
+            type="source"
+            position={Position.Right}
+            style={{ ...HIDDEN_HANDLE_STYLE_FALSE, opacity: 0, width: 1, height: 1 }}
+          />
+        )}
       </Card>
     );
   },
@@ -165,9 +212,9 @@ export const UniversalNode = memo(({ data, selected }: NodeProps) => {
       ? 'bg-accent text-primary'
       : DEFAULT_CATEGORY_COLOR;
 
-  // Get handle definitions from the node definition (source of truth)
+  // Get handle definitions — for dynamicOutputs nodes, derive from params
   const inputHandle = definition.input;
-  const outputs = definition.outputs || [];
+  const outputs = resolveOutputHandles(definition, typedData.params);
 
   const hasIncomingHandle = !!inputHandle;
 

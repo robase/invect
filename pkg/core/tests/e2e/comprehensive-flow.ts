@@ -5,39 +5,26 @@
  *
  * Flow structure:
  *
- *   ┌─────────────────────────────────────────────────────────────────────┐
- *   │                                                                     │
- *   │  Input (user_request)                                               │
- *   │       ↓                                                             │
- *   │  HTTP Request (fetch user profile from API)                         │
- *   │       ↓                                                             │
- *   │  JQ (extract user data + determine tier)                            │
- *   │       ↓                                                             │
- *   │  If-Else (premium user?)                                            │
- *   │     ↓ True                    ↓ False                               │
- *   │  Template (premium prompt)    Template (basic prompt)               │
- *   │     ↓                              ↓                                │
- *   │  Model (detailed analysis)   Model (brief summary)                  │
- *   │     ↓                              ↓                                │
- *   │  JQ (format premium)         JQ (format basic)                      │
- *   │     └──────────┬───────────────────┘                                │
- *   │                ↓                                                    │
- *   │  Template (combine results)                                         │
- *   │       ↓                                                             │
- *   │  Model (final polish/review)                                        │
- *   │       ↓                                                             │
- *   │  Output (final result)                                              │
- *   │                                                                     │
- *   └─────────────────────────────────────────────────────────────────────┘
- *
- * Tests:
- * - INPUT: User request with topic and user_id
- * - HTTP_REQUEST: Fetch user data (mocked via httpbin.org)
- * - JQ: Transform API response, extract fields, compute derived values
- * - IF_ELSE: Branch based on user tier (premium vs basic)
- * - TEMPLATE_STRING: Build prompts dynamically with data from multiple sources
- * - MODEL: Multiple LLM calls with different prompts/parameters
- * - OUTPUT: Collect final structured result
+ *   Input (user_request)
+ *       ↓
+ *   HTTP Request (fetch user profile from API)
+ *       ↓
+ *   JavaScript (extract user data + determine tier)
+ *       ↓
+ *   If-Else (premium user?)
+ *     ↓ True                    ↓ False
+ *   Template (premium prompt)    Template (basic prompt)
+ *     ↓                              ↓
+ *   Model (detailed analysis)   Model (brief summary)
+ *     ↓                              ↓
+ *   JavaScript (format premium)  JavaScript (format basic)
+ *     └──────────┬───────────────────┘
+ *                ↓
+ *   Template (combine results)
+ *       ↓
+ *   Model (final polish/review)
+ *       ↓
+ *   Output (final result)
  *
  * This demonstrates:
  * - Multiple LLM calls in sequence
@@ -47,7 +34,17 @@
  * - Complex template interpolation
  */
 import { strict as assert } from 'node:assert';
-import { FlowRunStatus, type InvectDefinition, type NodeOutput } from '../../src';
+import { FlowRunStatus, type NodeOutput } from '../../src';
+import {
+  defineFlow,
+  input,
+  output,
+  model,
+  javascript,
+  ifElse,
+  template,
+  httpRequest,
+} from '../../src/sdk';
 import type { InvectInstance } from '../../src/api/types';
 import type { FlowExample } from './example-types';
 
@@ -86,20 +83,14 @@ async function ensureAICredential(
 
 /**
  * Build the comprehensive flow definition
- *
- * @param credentialId - AI credential for Model nodes
- * @param isOpenAI - Whether using OpenAI (vs Anthropic)
- * @param isPremiumUser - Whether to simulate a premium user (affects branching)
  */
 function buildComprehensiveFlowDefinition(
   credentialId: string,
   isOpenAI: boolean,
   isPremiumUser: boolean,
-): InvectDefinition {
+) {
   const modelName = isOpenAI ? 'gpt-4o-mini' : 'claude-3-haiku-20240307';
 
-  // Simulate user data that would come from an API
-  // We use httpbin.org to echo back JSON we send it
   const mockUserData = {
     userId: isPremiumUser ? 'user_premium_123' : 'user_basic_456',
     name: isPremiumUser ? 'Alice Premium' : 'Bob Basic',
@@ -111,101 +102,60 @@ function buildComprehensiveFlowDefinition(
     },
   };
 
-  return {
+  return defineFlow({
+    name: 'Comprehensive Multi-Stage Flow',
+    description:
+      'Tests all node types with complex branching, multiple LLM calls, and data transformation',
     nodes: [
-      // =========================================
-      // STAGE 1: Input Collection
-      // =========================================
-      {
-        id: 'input-request',
-        type: 'core.input',
-        label: 'User Request',
-        referenceId: 'user_request',
-        params: {
-          variableName: 'request',
-          defaultValue: JSON.stringify({
-            topic: 'artificial intelligence in healthcare',
-            analysisType: 'trends',
-          }),
-        },
-        position: { x: 100, y: 300 },
-      },
+      // Stage 1: Input
+      input('user_request', {
+        variableName: 'request',
+        defaultValue: JSON.stringify({
+          topic: 'artificial intelligence in healthcare',
+          analysisType: 'trends',
+        }),
+      }),
 
-      // =========================================
-      // STAGE 2: Fetch User Profile via HTTP
-      // =========================================
-      // Using httpbin.org/post to simulate an API that returns user data
-      // In a real scenario, this would hit your user service
-      {
-        id: 'http-fetch-user',
-        type: 'http.request',
-        label: 'Fetch User Profile',
-        referenceId: 'user_profile_response',
-        params: {
-          method: 'POST',
-          // httpbin.org/post echoes back JSON we send
-          url: 'https://httpbin.org/post',
-          body: JSON.stringify(mockUserData),
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Request-ID': 'e2e-test-comprehensive',
-          },
+      // Stage 2: Fetch User Profile via HTTP
+      httpRequest('user_profile_response', {
+        method: 'POST',
+        url: 'https://httpbin.org/post',
+        body: JSON.stringify(mockUserData),
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Request-ID': 'e2e-test-comprehensive',
         },
-        position: { x: 300, y: 300 },
-      },
+      }),
 
-      // =========================================
-      // STAGE 3: Extract & Transform User Data
-      // =========================================
-      // JQ parses the httpbin response and extracts user info
-      // httpbin.org/post returns: { json: <our data>, headers: {...}, ... }
-      // The HTTP node wraps this in: { data: <httpbin response>, status: 200, headers: {...}, ok: true }
-      {
-        id: 'jq-extract-user',
-        type: 'core.jq',
-        label: 'Extract User Data',
-        referenceId: 'user_data',
-        params: {
-          // .user_profile_response is the HTTP node's output (incoming data key from referenceId)
-          // .data is the response body (httpbin's JSON response)
-          // .json is where httpbin echoes back the posted JSON body
-          query: `.user_profile_response.data.json | {
-            userId: .userId,
-            name: .name,
-            tier: .tier,
-            credits: .credits,
-            isPremium: (.tier == "premium"),
-            detailLevel: .preferences.detailLevel
-          }`,
+      // Stage 3: Extract & Transform User Data
+      javascript(
+        'user_data',
+        {
+          code: `const r = user_profile_response.data.json;
+return {
+  userId: r.userId,
+  name: r.name,
+  tier: r.tier,
+  credits: r.credits,
+  isPremium: r.tier === "premium",
+  detailLevel: r.preferences.detailLevel
+}`,
         },
-        position: { x: 500, y: 300 },
-      },
+        { label: 'Extract User Data' },
+      ),
 
-      // =========================================
-      // STAGE 4: Branch on User Tier
-      // =========================================
-      {
-        id: 'if-premium',
-        type: 'core.if_else',
-        label: 'Is Premium User?',
-        referenceId: 'tier_check',
-        params: {
-          // JSON Logic: check if user is premium
+      // Stage 4: Branch on User Tier
+      ifElse(
+        'tier_check',
+        {
           condition: { '==': [{ var: 'user_data.isPremium' }, true] },
         },
-        position: { x: 700, y: 300 },
-      },
+        { label: 'Is Premium User?' },
+      ),
 
-      // =========================================
-      // STAGE 5A: Premium Branch - Detailed Analysis
-      // =========================================
-      {
-        id: 'template-premium-prompt',
-        type: 'core.template_string',
-        label: 'Premium Prompt',
-        referenceId: 'premium_prompt',
-        params: {
-          template: `You are providing a PREMIUM analysis for {{ tier_check.user_data.name }}.
+      // Stage 5A: Premium Branch
+      template('premium_prompt', {
+        template: `You are providing a PREMIUM analysis for {{ tier_check.user_data.name }}.
 
 Topic: {{ user_request.topic }}
 Analysis Type: {{ user_request.analysisType }}
@@ -219,108 +169,68 @@ Please provide a comprehensive analysis including:
 5. Recommendations
 
 Be thorough and detailed - this is for a premium subscriber with {{ tier_check.user_data.credits }} credits.`,
-        },
-        position: { x: 900, y: 150 },
-      },
+      }),
 
-      {
-        id: 'model-premium-analysis',
-        type: 'core.model',
-        label: 'Premium AI Analysis',
-        referenceId: 'premium_analysis',
-        params: {
-          credentialId: credentialId,
-          model: modelName,
-          prompt: '{{ premium_prompt }}',
-          systemPrompt:
-            'You are an expert analyst providing premium-tier, comprehensive research reports. Be detailed and thorough.',
-          temperature: 0.7,
-          maxTokens: 800,
-        },
-        position: { x: 1100, y: 150 },
-      },
+      model('premium_analysis', {
+        credentialId,
+        model: modelName,
+        prompt: '{{ premium_prompt }}',
+        systemPrompt:
+          'You are an expert analyst providing premium-tier, comprehensive research reports. Be detailed and thorough.',
+        temperature: 0.7,
+        maxTokens: 800,
+      }),
 
-      {
-        id: 'jq-format-premium',
-        type: 'core.jq',
-        label: 'Format Premium Result',
-        referenceId: 'formatted_premium',
-        params: {
-          query: `{
-            tier: "premium",
-            userName: .tier_check.user_data.name,
-            analysis: .premium_analysis,
-            wordCount: (.premium_analysis | tostring | split(" ") | length),
-            quality: "comprehensive"
-          }`,
+      javascript(
+        'formatted_premium',
+        {
+          code: `return {
+  tier: "premium",
+  userName: tier_check.user_data.name,
+  analysis: premium_analysis,
+  wordCount: String(premium_analysis).split(" ").length,
+  quality: "comprehensive"
+}`,
         },
-        position: { x: 1300, y: 150 },
-      },
+        { label: 'Format Premium Result' },
+      ),
 
-      // =========================================
-      // STAGE 5B: Basic Branch - Brief Summary
-      // =========================================
-      {
-        id: 'template-basic-prompt',
-        type: 'core.template_string',
-        label: 'Basic Prompt',
-        referenceId: 'basic_prompt',
-        params: {
-          template: `Provide a brief summary for {{ tier_check.user_data.name }}.
+      // Stage 5B: Basic Branch
+      template('basic_prompt', {
+        template: `Provide a brief summary for {{ tier_check.user_data.name }}.
 
 Topic: {{ user_request.topic }}
 
 Give a concise 2-3 sentence overview. Keep it simple - this user has limited credits ({{ tier_check.user_data.credits }}).`,
-        },
-        position: { x: 900, y: 450 },
-      },
+      }),
 
-      {
-        id: 'model-basic-summary',
-        type: 'core.model',
-        label: 'Basic AI Summary',
-        referenceId: 'basic_summary',
-        params: {
-          credentialId: credentialId,
-          model: modelName,
-          prompt: '{{ basic_prompt }}',
-          systemPrompt:
-            'You are a helpful assistant providing brief, easy-to-understand summaries. Be concise.',
-          temperature: 0.5,
-          maxTokens: 200,
-        },
-        position: { x: 1100, y: 450 },
-      },
+      model('basic_summary', {
+        credentialId,
+        model: modelName,
+        prompt: '{{ basic_prompt }}',
+        systemPrompt:
+          'You are a helpful assistant providing brief, easy-to-understand summaries. Be concise.',
+        temperature: 0.5,
+        maxTokens: 200,
+      }),
 
-      {
-        id: 'jq-format-basic',
-        type: 'core.jq',
-        label: 'Format Basic Result',
-        referenceId: 'formatted_basic',
-        params: {
-          query: `{
-            tier: "basic",
-            userName: .tier_check.user_data.name,
-            analysis: .basic_summary,
-            wordCount: (.basic_summary | tostring | split(" ") | length),
-            quality: "brief"
-          }`,
+      javascript(
+        'formatted_basic',
+        {
+          code: `return {
+  tier: "basic",
+  userName: tier_check.user_data.name,
+  analysis: basic_summary,
+  wordCount: String(basic_summary).split(" ").length,
+  quality: "brief"
+}`,
         },
-        position: { x: 1300, y: 450 },
-      },
+        { label: 'Format Basic Result' },
+      ),
 
-      // =========================================
-      // STAGE 6: Merge & Final Processing
-      // =========================================
-      // This template receives data from whichever branch executed
-      {
-        id: 'template-final-combine',
-        type: 'core.template_string',
-        label: 'Combine Results',
-        referenceId: 'combined_result',
-        params: {
-          // Use conditional to get data from whichever branch ran
-          template: `{% if formatted_premium %}
+      // Stage 6: Merge & Final Processing
+      template('combined_result', {
+        template: `{% if formatted_premium %}
 PREMIUM REPORT
 ==============
 User: {{ formatted_premium.userName }}
@@ -340,142 +250,50 @@ Word Count: {{ formatted_basic.wordCount }}
 
 ---
 Generated by Invect E2E Test`,
-        },
-        position: { x: 1500, y: 300 },
-      },
+      }),
 
-      // =========================================
-      // STAGE 7: Final Polish with Second LLM Call
-      // =========================================
-      {
-        id: 'model-final-polish',
-        type: 'core.model',
-        label: 'Final Polish',
-        referenceId: 'polished_result',
-        params: {
-          credentialId: credentialId,
-          model: modelName,
-          prompt: `Review and add a brief closing thought to this report. Keep the original content but add a 1-2 sentence professional closing:
+      // Stage 7: Final Polish
+      model('polished_result', {
+        credentialId,
+        model: modelName,
+        prompt: `Review and add a brief closing thought to this report. Keep the original content but add a 1-2 sentence professional closing:
 
 {{ combined_result }}`,
-          systemPrompt:
-            'You are an editor adding a professional touch to reports. Add a brief, insightful closing thought.',
-          temperature: 0.6,
-          maxTokens: 400,
-        },
-        position: { x: 1700, y: 300 },
-      },
+        systemPrompt:
+          'You are an editor adding a professional touch to reports. Add a brief, insightful closing thought.',
+        temperature: 0.6,
+        maxTokens: 400,
+      }),
 
-      // =========================================
-      // STAGE 8: Final Output
-      // =========================================
-      {
-        id: 'output-final',
-        type: 'core.output',
-        label: 'Final Report',
-        referenceId: 'final_report',
-        params: {
-          outputValue: '{{ polished_result }}',
-          outputName: 'report',
-        },
-        position: { x: 1900, y: 300 },
-      },
+      // Stage 8: Output
+      output('final_report', {
+        outputValue: '{{ polished_result }}',
+        outputName: 'report',
+      }),
     ],
     edges: [
-      // Input → HTTP
-      {
-        id: 'edge-input-to-http',
-        source: 'input-request',
-        target: 'http-fetch-user',
-      },
-      // HTTP → JQ Extract
-      {
-        id: 'edge-http-to-jq',
-        source: 'http-fetch-user',
-        target: 'jq-extract-user',
-      },
-      // JQ Extract → If-Else
-      {
-        id: 'edge-jq-to-ifelse',
-        source: 'jq-extract-user',
-        target: 'if-premium',
-      },
+      // Main pipeline
+      ['user_request', 'user_profile_response'],
+      ['user_profile_response', 'user_data'],
+      ['user_data', 'tier_check'],
 
-      // === Premium Branch ===
-      // If-Else (True) → Premium Template
-      {
-        id: 'edge-ifelse-to-premium-template',
-        source: 'if-premium',
-        target: 'template-premium-prompt',
-        sourceHandle: 'true_output',
-      },
-      // Premium Template → Premium Model
-      {
-        id: 'edge-premium-template-to-model',
-        source: 'template-premium-prompt',
-        target: 'model-premium-analysis',
-      },
-      // Premium Model → Premium JQ Format
-      {
-        id: 'edge-premium-model-to-jq',
-        source: 'model-premium-analysis',
-        target: 'jq-format-premium',
-      },
-      // Premium JQ → Final Combine
-      {
-        id: 'edge-premium-jq-to-combine',
-        source: 'jq-format-premium',
-        target: 'template-final-combine',
-      },
+      // Premium branch
+      ['tier_check', 'premium_prompt', 'true_output'],
+      ['premium_prompt', 'premium_analysis'],
+      ['premium_analysis', 'formatted_premium'],
+      ['formatted_premium', 'combined_result'],
 
-      // === Basic Branch ===
-      // If-Else (False) → Basic Template
-      {
-        id: 'edge-ifelse-to-basic-template',
-        source: 'if-premium',
-        target: 'template-basic-prompt',
-        sourceHandle: 'false_output',
-      },
-      // Basic Template → Basic Model
-      {
-        id: 'edge-basic-template-to-model',
-        source: 'template-basic-prompt',
-        target: 'model-basic-summary',
-      },
-      // Basic Model → Basic JQ Format
-      {
-        id: 'edge-basic-model-to-jq',
-        source: 'model-basic-summary',
-        target: 'jq-format-basic',
-      },
-      // Basic JQ → Final Combine
-      {
-        id: 'edge-basic-jq-to-combine',
-        source: 'jq-format-basic',
-        target: 'template-final-combine',
-      },
+      // Basic branch
+      ['tier_check', 'basic_prompt', 'false_output'],
+      ['basic_prompt', 'basic_summary'],
+      ['basic_summary', 'formatted_basic'],
+      ['formatted_basic', 'combined_result'],
 
-      // === Final Stage ===
-      // Final Combine → Final Polish
-      {
-        id: 'edge-combine-to-polish',
-        source: 'template-final-combine',
-        target: 'model-final-polish',
-      },
-      // Final Polish → Output
-      {
-        id: 'edge-polish-to-output',
-        source: 'model-final-polish',
-        target: 'output-final',
-      },
+      // Final stage
+      ['combined_result', 'polished_result'],
+      ['polished_result', 'final_report'],
     ],
-    metadata: {
-      name: 'Comprehensive Multi-Stage Flow',
-      description:
-        'Tests all node types with complex branching, multiple LLM calls, and data transformation',
-      created: new Date().toISOString(),
-    },
-  };
+  });
 }
 
 // =========================================
@@ -483,7 +301,7 @@ Generated by Invect E2E Test`,
 // =========================================
 export const comprehensiveFlowPremiumExample: FlowExample = {
   name: 'Comprehensive Flow (Premium User)',
-  description: 'Full flow with HTTP→JQ→If-Else→Model(x2)→Output, testing premium user branch.',
+  description: 'Full flow with HTTP→JS→If-Else→Model(x2)→Output, testing premium user branch.',
 
   async execute(invect) {
     const credential = await ensureAICredential(invect);
@@ -498,7 +316,7 @@ export const comprehensiveFlowPremiumExample: FlowExample = {
     const flowDefinition = buildComprehensiveFlowDefinition(
       credential.id,
       credential.isOpenAI,
-      true, // Premium user
+      true,
     );
     await invect.versions.create(flow.id, {
       invectDefinition: flowDefinition,
@@ -517,7 +335,6 @@ export const comprehensiveFlowPremiumExample: FlowExample = {
   },
 
   expected(result) {
-    // Verify flow succeeded
     assert.equal(
       result.status,
       FlowRunStatus.SUCCESS,
@@ -525,12 +342,12 @@ export const comprehensiveFlowPremiumExample: FlowExample = {
     );
 
     // Verify INPUT node
-    const inputNode = result.outputs?.['input-request'] as NodeOutput | undefined;
+    const inputNode = result.outputs?.['node-user_request'] as NodeOutput | undefined;
     assert(inputNode, 'Input node should have executed');
     console.log(`  ✓ Input node executed`);
 
     // Verify HTTP_REQUEST node
-    const httpNode = result.outputs?.['http-fetch-user'] as NodeOutput | undefined;
+    const httpNode = result.outputs?.['node-user_profile_response'] as NodeOutput | undefined;
     assert(httpNode, 'HTTP node should have executed');
     const httpVars = httpNode.data.variables as Record<
       string,
@@ -540,13 +357,13 @@ export const comprehensiveFlowPremiumExample: FlowExample = {
     assert(httpOutput?.ok === true, `HTTP request should succeed, got ok: ${httpOutput?.ok}`);
     console.log(`  ✓ HTTP request executed (status: ${httpOutput?.status})`);
 
-    // Verify JQ Extract node
-    const jqExtractNode = result.outputs?.['jq-extract-user'] as NodeOutput | undefined;
-    assert(jqExtractNode, 'JQ extract node should have executed');
-    console.log(`  ✓ JQ extract node executed`);
+    // Verify JS Extract node
+    const jsExtractNode = result.outputs?.['node-user_data'] as NodeOutput | undefined;
+    assert(jsExtractNode, 'JS extract node should have executed');
+    console.log(`  ✓ JS extract node executed`);
 
     // Verify If-Else took the premium (true) branch
-    const ifElseNode = result.outputs?.['if-premium'] as NodeOutput | undefined;
+    const ifElseNode = result.outputs?.['node-tier_check'] as NodeOutput | undefined;
     assert(ifElseNode, 'If-Else node should have executed');
     const ifElseVars = ifElseNode.data.variables as Record<string, { value?: unknown }>;
     const trueBranchTaken = ifElseVars.true_output?.value !== undefined;
@@ -554,13 +371,11 @@ export const comprehensiveFlowPremiumExample: FlowExample = {
     console.log(`  ✓ If-Else branched to premium path`);
 
     // Verify Premium branch nodes executed
-    const premiumTemplateNode = result.outputs?.['template-premium-prompt'] as
-      | NodeOutput
-      | undefined;
+    const premiumTemplateNode = result.outputs?.['node-premium_prompt'] as NodeOutput | undefined;
     assert(premiumTemplateNode, 'Premium template should have executed');
     console.log(`  ✓ Premium template executed`);
 
-    const premiumModelNode = result.outputs?.['model-premium-analysis'] as NodeOutput | undefined;
+    const premiumModelNode = result.outputs?.['node-premium_analysis'] as NodeOutput | undefined;
     assert(premiumModelNode, 'Premium model should have executed');
     const premiumModelVars = premiumModelNode.data.variables as Record<string, { value?: unknown }>;
     const premiumAnalysis = premiumModelVars.output?.value as string;
@@ -570,12 +385,12 @@ export const comprehensiveFlowPremiumExample: FlowExample = {
     );
     console.log(`  ✓ Premium model executed (${premiumAnalysis.length} chars)`);
 
-    const premiumJqNode = result.outputs?.['jq-format-premium'] as NodeOutput | undefined;
-    assert(premiumJqNode, 'Premium JQ format should have executed');
-    console.log(`  ✓ Premium JQ format executed`);
+    const premiumJsNode = result.outputs?.['node-formatted_premium'] as NodeOutput | undefined;
+    assert(premiumJsNode, 'Premium JS format should have executed');
+    console.log(`  ✓ Premium JS format executed`);
 
     // Verify Basic branch did NOT execute
-    const basicModelNode = result.outputs?.['model-basic-summary'] as NodeOutput | undefined;
+    const basicModelNode = result.outputs?.['node-basic_summary'] as NodeOutput | undefined;
     if (basicModelNode) {
       const basicVars = basicModelNode.data.variables as Record<string, { value?: unknown }>;
       assert(!basicVars.output?.value, 'Basic model should NOT have executed for premium user');
@@ -583,11 +398,11 @@ export const comprehensiveFlowPremiumExample: FlowExample = {
     console.log(`  ✓ Basic branch correctly skipped`);
 
     // Verify Final stages
-    const combineNode = result.outputs?.['template-final-combine'] as NodeOutput | undefined;
+    const combineNode = result.outputs?.['node-combined_result'] as NodeOutput | undefined;
     assert(combineNode, 'Combine template should have executed');
     console.log(`  ✓ Final combine template executed`);
 
-    const polishNode = result.outputs?.['model-final-polish'] as NodeOutput | undefined;
+    const polishNode = result.outputs?.['node-polished_result'] as NodeOutput | undefined;
     assert(polishNode, 'Final polish model should have executed');
     const polishVars = polishNode.data.variables as Record<string, { value?: unknown }>;
     const polishedResult = polishVars.output?.value as string;
@@ -595,14 +410,13 @@ export const comprehensiveFlowPremiumExample: FlowExample = {
     console.log(`  ✓ Final polish model executed (${polishedResult.length} chars)`);
 
     // Verify OUTPUT node
-    const outputNode = result.outputs?.['output-final'] as NodeOutput | undefined;
+    const outputNode = result.outputs?.['node-final_report'] as NodeOutput | undefined;
     assert(outputNode, 'Output node should have executed');
     const outputVars = outputNode.data.variables as Record<string, { value?: unknown }>;
     const finalReport = outputVars.report?.value || outputVars.output?.value;
     assert(finalReport, 'Final report should have content');
     console.log(`  ✓ Output node executed`);
 
-    // Preview the final result
     const preview = String(finalReport).substring(0, 200);
     console.log(`\n  📄 Final Report Preview:\n  "${preview}..."`);
   },
@@ -613,7 +427,7 @@ export const comprehensiveFlowPremiumExample: FlowExample = {
 // =========================================
 export const comprehensiveFlowBasicExample: FlowExample = {
   name: 'Comprehensive Flow (Basic User)',
-  description: 'Full flow with HTTP→JQ→If-Else→Model(x2)→Output, testing basic user branch.',
+  description: 'Full flow with HTTP→JS→If-Else→Model(x2)→Output, testing basic user branch.',
 
   async execute(invect) {
     const credential = await ensureAICredential(invect);
@@ -628,7 +442,7 @@ export const comprehensiveFlowBasicExample: FlowExample = {
     const flowDefinition = buildComprehensiveFlowDefinition(
       credential.id,
       credential.isOpenAI,
-      false, // Basic user
+      false,
     );
     await invect.versions.create(flow.id, {
       invectDefinition: flowDefinition,
@@ -647,7 +461,6 @@ export const comprehensiveFlowBasicExample: FlowExample = {
   },
 
   expected(result) {
-    // Verify flow succeeded
     assert.equal(
       result.status,
       FlowRunStatus.SUCCESS,
@@ -655,22 +468,22 @@ export const comprehensiveFlowBasicExample: FlowExample = {
     );
 
     // Verify INPUT node
-    const inputNode = result.outputs?.['input-request'] as NodeOutput | undefined;
+    const inputNode = result.outputs?.['node-user_request'] as NodeOutput | undefined;
     assert(inputNode, 'Input node should have executed');
     console.log(`  ✓ Input node executed`);
 
     // Verify HTTP_REQUEST node
-    const httpNode = result.outputs?.['http-fetch-user'] as NodeOutput | undefined;
+    const httpNode = result.outputs?.['node-user_profile_response'] as NodeOutput | undefined;
     assert(httpNode, 'HTTP node should have executed');
     console.log(`  ✓ HTTP request executed`);
 
-    // Verify JQ Extract node
-    const jqExtractNode = result.outputs?.['jq-extract-user'] as NodeOutput | undefined;
-    assert(jqExtractNode, 'JQ extract node should have executed');
-    console.log(`  ✓ JQ extract node executed`);
+    // Verify JS Extract node
+    const jsExtractNode = result.outputs?.['node-user_data'] as NodeOutput | undefined;
+    assert(jsExtractNode, 'JS extract node should have executed');
+    console.log(`  ✓ JS extract node executed`);
 
     // Verify If-Else took the basic (false) branch
-    const ifElseNode = result.outputs?.['if-premium'] as NodeOutput | undefined;
+    const ifElseNode = result.outputs?.['node-tier_check'] as NodeOutput | undefined;
     assert(ifElseNode, 'If-Else node should have executed');
     const ifElseVars = ifElseNode.data.variables as Record<string, { value?: unknown }>;
     const falseBranchTaken = ifElseVars.false_output?.value !== undefined;
@@ -678,23 +491,23 @@ export const comprehensiveFlowBasicExample: FlowExample = {
     console.log(`  ✓ If-Else branched to basic path`);
 
     // Verify Basic branch nodes executed
-    const basicTemplateNode = result.outputs?.['template-basic-prompt'] as NodeOutput | undefined;
+    const basicTemplateNode = result.outputs?.['node-basic_prompt'] as NodeOutput | undefined;
     assert(basicTemplateNode, 'Basic template should have executed');
     console.log(`  ✓ Basic template executed`);
 
-    const basicModelNode = result.outputs?.['model-basic-summary'] as NodeOutput | undefined;
+    const basicModelNode = result.outputs?.['node-basic_summary'] as NodeOutput | undefined;
     assert(basicModelNode, 'Basic model should have executed');
     const basicModelVars = basicModelNode.data.variables as Record<string, { value?: unknown }>;
     const basicSummary = basicModelVars.output?.value as string;
     assert(basicSummary && basicSummary.length > 20, 'Basic summary should have content');
     console.log(`  ✓ Basic model executed (${basicSummary.length} chars)`);
 
-    const basicJqNode = result.outputs?.['jq-format-basic'] as NodeOutput | undefined;
-    assert(basicJqNode, 'Basic JQ format should have executed');
-    console.log(`  ✓ Basic JQ format executed`);
+    const basicJsNode = result.outputs?.['node-formatted_basic'] as NodeOutput | undefined;
+    assert(basicJsNode, 'Basic JS format should have executed');
+    console.log(`  ✓ Basic JS format executed`);
 
     // Verify Premium branch did NOT execute
-    const premiumModelNode = result.outputs?.['model-premium-analysis'] as NodeOutput | undefined;
+    const premiumModelNode = result.outputs?.['node-premium_analysis'] as NodeOutput | undefined;
     if (premiumModelNode) {
       const premiumVars = premiumModelNode.data.variables as Record<string, { value?: unknown }>;
       assert(!premiumVars.output?.value, 'Premium model should NOT have executed for basic user');
@@ -702,23 +515,22 @@ export const comprehensiveFlowBasicExample: FlowExample = {
     console.log(`  ✓ Premium branch correctly skipped`);
 
     // Verify Final stages
-    const combineNode = result.outputs?.['template-final-combine'] as NodeOutput | undefined;
+    const combineNode = result.outputs?.['node-combined_result'] as NodeOutput | undefined;
     assert(combineNode, 'Combine template should have executed');
     console.log(`  ✓ Final combine template executed`);
 
-    const polishNode = result.outputs?.['model-final-polish'] as NodeOutput | undefined;
+    const polishNode = result.outputs?.['node-polished_result'] as NodeOutput | undefined;
     assert(polishNode, 'Final polish model should have executed');
     console.log(`  ✓ Final polish model executed`);
 
     // Verify OUTPUT node
-    const outputNode = result.outputs?.['output-final'] as NodeOutput | undefined;
+    const outputNode = result.outputs?.['node-final_report'] as NodeOutput | undefined;
     assert(outputNode, 'Output node should have executed');
     const outputVars = outputNode.data.variables as Record<string, { value?: unknown }>;
     const finalReport = outputVars.report?.value || outputVars.output?.value;
     assert(finalReport, 'Final report should have content');
     console.log(`  ✓ Output node executed`);
 
-    // Verify basic report characteristics
     const reportStr = String(finalReport);
     assert(
       reportStr.includes('BASIC') || reportStr.includes('basic') || reportStr.length < 2000,

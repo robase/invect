@@ -59,9 +59,6 @@ function createMockServiceFactory(): {
     test: vi.fn().mockResolvedValue({ success: true }),
     updateLastUsed: vi.fn().mockResolvedValue(undefined),
     getExpiringCredentials: vi.fn().mockResolvedValue([]),
-    getWebhookInfo: vi.fn().mockResolvedValue(null),
-    enableWebhook: vi.fn().mockResolvedValue({ webhookPath: 'abc', fullUrl: 'http://x/abc' }),
-    findByWebhookPath: vi.fn().mockResolvedValue(null),
     getDecryptedWithRefresh: vi.fn().mockResolvedValue(fullCred),
     getOAuth2Service: vi.fn().mockReturnValue({
       getProviders: vi.fn().mockReturnValue([]),
