@@ -142,6 +142,11 @@ export interface FlowEditorActions {
   ) => void;
   clearAllExecutionStatus: () => void;
 
+  // Run data population (from runs view "Edit" button)
+  populateFromRunData: (
+    nodeExecutionMap: Record<string, { inputs?: unknown; outputs?: unknown }>,
+  ) => void;
+
   // Reset
   reset: () => void;
 }
@@ -509,6 +514,26 @@ export const useFlowEditorStore: UseBoundStore<StoreApi<FlowEditorStore>> =
                 },
               }));
               state.activeFlowRunId = null;
+            }),
+
+          // Run data population — fills preview data from a past flow run
+          // without marking the flow as dirty (no structural changes).
+          populateFromRunData: (nodeExecutionMap) =>
+            set((state) => {
+              state.nodes = state.nodes.map((node) => {
+                const exec = nodeExecutionMap[node.id];
+                if (!exec) {
+                  return node;
+                }
+                return {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    ...(exec.inputs !== undefined && { previewInput: exec.inputs }),
+                    ...(exec.outputs !== undefined && { previewOutput: exec.outputs }),
+                  },
+                };
+              });
             }),
 
           // Reset

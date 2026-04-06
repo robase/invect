@@ -121,7 +121,12 @@ export function FlowRunsView({ flowId, flowVersion, basePath }: FlowRunsViewProp
     const editPath = flowVersion
       ? `${basePath}/flow/${flowId}/version/${flowVersion}`
       : `${basePath}/flow/${flowId}`;
-    navigate(`${editPath}?openNode=${encodeURIComponent(nodeId)}`);
+    const params = new URLSearchParams();
+    params.set('openNode', nodeId);
+    if (selectedRunId) {
+      params.set('fromRunId', selectedRunId);
+    }
+    navigate(`${editPath}?${params.toString()}`);
   };
 
   // Handle node click in the flow graph - expand logs and select the node

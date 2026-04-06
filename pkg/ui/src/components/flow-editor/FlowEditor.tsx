@@ -35,6 +35,8 @@ import {
 } from '~/contexts/AgentToolCallbacksContext';
 import { InvectLoader } from '../shared/InvectLoader';
 import { useAgentTools } from '~/api/agent-tools.api';
+import { useNodeExecutions } from '~/api/executions.api';
+import { extractOutputValue } from './node-config-panel/utils';
 import { nanoid } from 'nanoid';
 import { useCopyPaste } from './use-copy-paste';
 
@@ -223,6 +225,7 @@ export function FlowWorkbenchView({
   const setAllNodesHaveDefinitions = useFlowEditorStore((s) => s.setAllNodesHaveDefinitions);
   const updateNodeData = useFlowEditorStore((s) => s.updateNodeData);
   const addNodeToStore = useFlowEditorStore((s) => s.addNode);
+  const populateFromRunData = useFlowEditorStore((s) => s.populateFromRunData);
 
   const { getNodeDefinition, isLoading: registryLoading } = useNodeRegistry();
   const reactFlowInstance = useReactFlow();
@@ -259,8 +262,14 @@ export function FlowWorkbenchView({
     setAllNodesHaveDefinitions(allNodesHaveDefinitions);
   }, [allNodesHaveDefinitions, setAllNodesHaveDefinitions]);
 
-  // Handle openNode query param (e.g. navigated from runs view "Edit" button)
+  // Handle openNode + fromRunId query params (e.g. navigated from runs view "Edit" button)
   const [searchParams, setSearchParams] = useSearchParams();
+  // Capture fromRunId in a ref so it survives URL param cleanup
+  const fromRunIdRef = useRef<string | null>(null);
+  if (searchParams.get('fromRunId') && !fromRunIdRef.current) {
+    fromRunIdRef.current = searchParams.get('fromRunId');
+  }
+
   React.useEffect(() => {
     const openNodeId = searchParams.get('openNode');
     if (openNodeId && storeNodes.length > 0) {
@@ -268,17 +277,43 @@ export function FlowWorkbenchView({
       if (nodeExists) {
         openConfigPanel(openNodeId);
       }
-      // Clear the param to avoid re-opening on subsequent renders
+      // Clear the params to avoid re-opening on subsequent renders
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev);
           next.delete('openNode');
+          next.delete('fromRunId');
           return next;
         },
         { replace: true },
       );
     }
   }, [searchParams, storeNodes, openConfigPanel, setSearchParams]);
+
+  // Populate node preview data from a specific flow run (when navigating from runs view)
+  const { data: fromRunNodeExecutions } = useNodeExecutions(fromRunIdRef.current ?? '');
+  const fromRunPopulatedRef = useRef(false);
+  React.useEffect(() => {
+    if (
+      !fromRunIdRef.current ||
+      !fromRunNodeExecutions?.length ||
+      storeNodes.length === 0 ||
+      fromRunPopulatedRef.current
+    ) {
+      return;
+    }
+    fromRunPopulatedRef.current = true;
+
+    const nodeExecutionMap: Record<string, { inputs?: unknown; outputs?: unknown }> = {};
+    for (const exec of fromRunNodeExecutions) {
+      const extracted = extractOutputValue(exec.outputs);
+      nodeExecutionMap[exec.nodeId] = {
+        inputs: exec.inputs,
+        outputs: extracted ?? undefined,
+      };
+    }
+    populateFromRunData(nodeExecutionMap);
+  }, [fromRunNodeExecutions, storeNodes, populateFromRunData]);
 
   const dialogContainerRef = useRef<HTMLDivElement | null>(null);
   const isDraggingNodeRef = useRef(false);

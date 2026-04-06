@@ -152,7 +152,7 @@ export function useUpstreamSlots({ nodeId, flowId }: UseUpstreamSlotsOptions) {
     for (const slot of slots) {
       obj[slot.key] = slot.status === 'resolved' ? slot.output : null;
     }
-    return stringifyJson(obj);
+    return stringifyJson({ previous_nodes: obj });
   }, [slots]);
 
   // Run a single upstream slot

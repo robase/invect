@@ -23,6 +23,8 @@ interface JsonPreviewPanelProps {
   icon?: React.ReactElement;
   /** Extra toolbar content (e.g. "Run All" button) */
   toolbarExtra?: React.ReactNode;
+  /** JSON keys to auto-fold when content is set (e.g. ['previous_nodes']) */
+  defaultFoldKeys?: string[];
 }
 
 export const JsonPreviewPanel = ({
@@ -37,6 +39,7 @@ export const JsonPreviewPanel = ({
   onRunSlot,
   icon,
   toolbarExtra,
+  defaultFoldKeys,
 }: JsonPreviewPanelProps) => {
   const isReadOnly = !onChange;
 
@@ -117,6 +120,7 @@ export const JsonPreviewPanel = ({
           disableLinting={disableLinting}
           upstreamSlots={upstreamSlots}
           onRunSlot={onRunSlot}
+          defaultFoldKeys={defaultFoldKeys}
         />
       </div>
 

@@ -186,6 +186,7 @@ export function InputPanel({
               upstreamSlots={upstreamSlots}
               onRunSlot={onRunSlot}
               icon={<LogIn className="w-3.5 h-3.5 text-muted-foreground" />}
+              defaultFoldKeys={['previous_nodes']}
               toolbarExtra={
                 onRunAll ? (
                   <Button
@@ -306,6 +307,7 @@ export function InputPanel({
           upstreamSlots={upstreamSlots}
           onRunSlot={onRunSlot}
           icon={<LogIn className="w-3.5 h-3.5 text-muted-foreground" />}
+          defaultFoldKeys={['previous_nodes']}
           toolbarExtra={
             onRunAll ? (
               <Button

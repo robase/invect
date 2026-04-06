@@ -77,20 +77,41 @@ export function mapFlowDefinition(raw: unknown): string {
   const nodes = Array.isArray(def.nodes) ? def.nodes : [];
   const edges = Array.isArray(def.edges) ? def.edges : [];
 
-  const parts = [
+  const parts: (string | null)[] = [
     v.version != null ? `**Version ${v.version}**` : null,
     v.flowId ? `Flow: \`${v.flowId}\`` : null,
     `**${nodes.length} node(s), ${edges.length} edge(s)**`,
-    '',
-    'Nodes:',
-    ...nodes.map((n: Record<string, unknown>) => {
-      const label = n.label || n.referenceId || n.id;
-      return `- \`${label}\` (type: ${n.type})`;
-    }),
   ];
 
-  if (edges.length > 0 && edges.length <= 20) {
-    parts.push('', 'Edges:');
+  // Nodes with full configuration
+  if (nodes.length > 0) {
+    parts.push('', '## Nodes');
+    for (const n of nodes as Array<Record<string, unknown>>) {
+      const label = n.label || n.referenceId || n.id;
+      parts.push(`\n### \`${label}\``);
+      parts.push(`- **type:** ${n.type}`);
+      parts.push(`- **id:** \`${n.id}\``);
+      if (n.referenceId) parts.push(`- **referenceId:** \`${n.referenceId}\``);
+
+      const params = n.params as Record<string, unknown> | undefined;
+      if (params && Object.keys(params).length > 0) {
+        parts.push('- **params:**');
+        for (const [key, val] of Object.entries(params)) {
+          const valStr =
+            typeof val === 'string'
+              ? val.includes('\n')
+                ? `\n  \`\`\`\n  ${val.replace(/\n/g, '\n  ')}\n  \`\`\``
+                : val
+              : JSON.stringify(val);
+          parts.push(`  - \`${key}\`: ${valStr}`);
+        }
+      }
+    }
+  }
+
+  // Edges
+  if (edges.length > 0) {
+    parts.push('', '## Edges');
     const nodeMap = new Map(
       nodes.map((n: Record<string, unknown>) => [n.id, n.label || n.referenceId || n.id]),
     );
@@ -174,13 +195,13 @@ export function mapNodeExecutions(raw: unknown): string {
     ];
 
     if (n.error) {
-      parts.push(`**Error:** ${truncate(String(n.error), 300)}`);
+      parts.push(`**Error:** ${String(n.error)}`);
     }
     if (n.inputs && Object.keys(n.inputs as object).length > 0) {
-      parts.push(`**Input:** ${jsonCompact(n.inputs, 300)}`);
+      parts.push(`**Input:**\n\`\`\`json\n${JSON.stringify(n.inputs, null, 2)}\n\`\`\``);
     }
     if (n.outputs) {
-      parts.push(`**Output:** ${jsonCompact(n.outputs, 300)}`);
+      parts.push(`**Output:**\n\`\`\`json\n${JSON.stringify(n.outputs, null, 2)}\n\`\`\``);
     }
     return parts.join('\n');
   });

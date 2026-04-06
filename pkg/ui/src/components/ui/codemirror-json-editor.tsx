@@ -21,7 +21,7 @@ import {
 } from '@codemirror/state';
 import { json, jsonParseLinter } from '@codemirror/lang-json';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
-import { bracketMatching, foldGutter, foldKeymap } from '@codemirror/language';
+import { bracketMatching, foldGutter, foldKeymap, foldEffect, foldable } from '@codemirror/language';
 import {
   closeBrackets,
   closeBracketsKeymap,
@@ -53,6 +53,8 @@ interface CodeMirrorJsonEditorProps {
   upstreamSlots?: UpstreamSlot[];
   /** Called when user clicks the run/retry button for a slot */
   onRunSlot?: (slot: UpstreamSlot) => void;
+  /** JSON keys to auto-fold when content is set (e.g. ['previous_nodes']) */
+  defaultFoldKeys?: string[];
 }
 
 // Theme extension for styling
@@ -473,6 +475,29 @@ function injectSlotStyles() {
   slotStylesInjected = true;
 }
 
+/**
+ * Programmatically fold JSON keys matching the given list.
+ * Finds lines starting with `"key":` and folds the value region.
+ */
+function foldMatchingKeys(view: EditorView, keys: string[]) {
+  const effects: Array<ReturnType<typeof foldEffect.of>> = [];
+  for (let i = 1; i <= view.state.doc.lines; i++) {
+    const line = view.state.doc.line(i);
+    const trimmed = line.text.trimStart();
+    for (const key of keys) {
+      if (trimmed.startsWith(`"${key}"`)) {
+        const range = foldable(view.state, line.from, line.to);
+        if (range) {
+          effects.push(foldEffect.of(range));
+        }
+      }
+    }
+  }
+  if (effects.length > 0) {
+    view.dispatch({ effects });
+  }
+}
+
 export function CodeMirrorJsonEditor({
   value,
   onChange,
@@ -482,6 +507,7 @@ export function CodeMirrorJsonEditor({
   disableLinting = false,
   upstreamSlots,
   onRunSlot,
+  defaultFoldKeys,
 }: CodeMirrorJsonEditorProps) {
   const vscodePalette = useCodeMirrorVscodePalette();
   const vscodeTheme = useCodeMirrorVscodeTheme();
@@ -614,6 +640,15 @@ export function CodeMirrorJsonEditor({
 
     viewRef.current = view;
 
+    // Auto-fold specified keys after creation
+    if (defaultFoldKeys?.length) {
+      requestAnimationFrame(() => {
+        if (viewRef.current) {
+          foldMatchingKeys(viewRef.current, defaultFoldKeys);
+        }
+      });
+    }
+
     return () => {
       view.destroy();
       viewRef.current = null;
@@ -636,6 +671,14 @@ export function CodeMirrorJsonEditor({
           insert: value,
         },
       });
+      // Re-fold specified keys after content update
+      if (defaultFoldKeys?.length) {
+        requestAnimationFrame(() => {
+          if (viewRef.current) {
+            foldMatchingKeys(viewRef.current, defaultFoldKeys);
+          }
+        });
+      }
     }
   }, [value]);
 

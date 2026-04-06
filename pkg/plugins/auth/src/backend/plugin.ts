@@ -736,6 +736,11 @@ async function createInternalBetterAuth(
 
     const apiKeyConfig: Record<string, unknown> =
       typeof apiKeyOpt === 'object' ? { ...apiKeyOpt } : {};
+    // Ensure getSession() can resolve API keys to sessions.
+    // Without this, auth.api.getSession() only checks cookies/tokens.
+    if (apiKeyConfig.enableSessionForAPIKeys === undefined) {
+      apiKeyConfig.enableSessionForAPIKeys = true;
+    }
     betterAuthPlugins.push(apiKeyPluginFn(apiKeyConfig));
     logger.info?.('Better Auth API Key plugin enabled');
   }
