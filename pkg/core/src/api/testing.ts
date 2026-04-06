@@ -175,7 +175,11 @@ export function createTestingAPI(
             }
             return { success: true, output };
           } else if (result.state === NodeExecutionStatus.FAILED) {
-            return { success: false, error: result.errors?.join(', ') || 'Node execution failed' };
+            return {
+              success: false,
+              error: result.errors?.join(', ') || 'Node execution failed',
+              ...(result.fieldErrors && { fieldErrors: result.fieldErrors }),
+            };
           } else {
             return { success: true, output: { status: 'pending' } };
           }

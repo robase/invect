@@ -3,7 +3,7 @@ import { Input } from '../../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { Switch } from '../../ui/switch';
 import { Button } from '../../ui/button';
-import { Code2, Type } from 'lucide-react';
+import { Code2, Type, AlertCircle } from 'lucide-react';
 import type { NodeParamField } from '../../../types/node-definition.types';
 import { cn } from '../../../lib/utils';
 import { DroppableInput } from './DroppableInput';
@@ -25,6 +25,8 @@ interface ConfigFieldWithTemplateProps {
   formValues?: Record<string, unknown>;
   /** Input data from upstream nodes — used for autocomplete in code fields. */
   inputData?: Record<string, unknown>;
+  /** Validation error message for this field (from execution errors). */
+  error?: string;
 }
 
 /**
@@ -57,10 +59,18 @@ export const ConfigFieldWithTemplate = ({
   nodeType,
   formValues,
   inputData,
+  error,
 }: ConfigFieldWithTemplateProps) => {
   if (field.hidden) {
     return null;
   }
+
+  const fieldError = error ? (
+    <div className="flex items-center gap-1 text-[11px] text-destructive mt-0.5">
+      <AlertCircle className="w-3 h-3 shrink-0" />
+      <span>{error}</span>
+    </div>
+  ) : null;
 
   // Switch cases: custom field with its own rendering
   if (field.type === 'switch-cases') {
@@ -107,7 +117,7 @@ export const ConfigFieldWithTemplate = ({
   // Header with or without toggle based on field type
   const fieldHeader = (
     <div className="flex items-center justify-between">
-      <Label htmlFor={field.name} className="text-xs">
+      <Label htmlFor={field.name} className={cn('text-xs', error && 'text-destructive')}>
         {field.label}
       </Label>
       {/* Only show toggle for non-text fields */}
@@ -132,6 +142,7 @@ export const ConfigFieldWithTemplate = ({
           placeholder={field.placeholder}
           inputData={inputData}
         />
+        {fieldError}
       </div>
     );
   }
@@ -162,6 +173,7 @@ export const ConfigFieldWithTemplate = ({
           onChange={(newValue) => onChange(newValue)}
           disabled={field.disabled}
         />
+        {fieldError}
       </div>
     );
   }
@@ -183,6 +195,7 @@ export const ConfigFieldWithTemplate = ({
               formValues={formValues}
               portalContainer={portalContainer}
             />
+            {fieldError}
           </div>
         );
       }
@@ -221,6 +234,7 @@ export const ConfigFieldWithTemplate = ({
                 ))}
             </SelectContent>
           </Select>
+          {fieldError}
         </div>
       );
     }
@@ -240,6 +254,7 @@ export const ConfigFieldWithTemplate = ({
             }}
             disabled={field.disabled}
           />
+          {fieldError}
         </div>
       );
     case 'boolean':
@@ -257,6 +272,7 @@ export const ConfigFieldWithTemplate = ({
             />
             <span className="text-xs">{value ? 'Enabled' : 'Disabled'}</span>
           </div>
+          {fieldError}
         </div>
       );
     case 'credential':
@@ -275,6 +291,7 @@ export const ConfigFieldWithTemplate = ({
             disabled={field.disabled}
             className="font-mono text-xs"
           />
+          {fieldError}
         </div>
       );
   }

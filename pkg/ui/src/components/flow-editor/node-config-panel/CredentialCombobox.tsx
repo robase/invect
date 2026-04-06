@@ -1,5 +1,13 @@
 import { useMemo, useState } from 'react';
-import { ChevronsUpDown, Check, Loader2, Plus, RefreshCw, XCircle } from 'lucide-react';
+import {
+  ChevronsUpDown,
+  Check,
+  Loader2,
+  Plus,
+  RefreshCw,
+  XCircle,
+  Pencil,
+} from 'lucide-react';
 import { Button } from '../../ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '../../ui/popover';
 import {
@@ -26,6 +34,10 @@ interface Props {
   isError: boolean;
   onRetry: () => void;
   onAddNew: () => void;
+  onEditCredential?: (credential: Credential) => void;
+  onRefreshOAuthCredential?: (credential: Credential) => void;
+  /** ID of the credential currently being refreshed */
+  refreshingCredentialId?: string | null;
   container?: HTMLElement | null;
   disablePortal?: boolean;
   /** Custom label for the add button (default: "Add new credential") */
@@ -41,6 +53,9 @@ export function CredentialCombobox({
   isError,
   onRetry,
   onAddNew,
+  onEditCredential,
+  onRefreshOAuthCredential,
+  refreshingCredentialId,
   container,
   disablePortal = true,
   addButtonLabel = 'Add new credential',
@@ -130,17 +145,19 @@ export function CredentialCombobox({
                   </CommandItem>
                   {credentials.map((credential) => {
                     const branding = getCredentialBranding(credential);
+                    const isOAuth = credential.authType === 'oauth2';
+                    const isRefreshing = refreshingCredentialId === credential.id;
 
                     return (
                       <CommandItem
                         key={credential.id}
                         value={credential.id}
                         onSelect={handleSelect}
-                        className="flex items-center gap-2 font-mono text-xs"
+                        className="flex items-center gap-2 font-mono text-xs group"
                       >
                         <Check
                           className={cn(
-                            'h-4 w-4',
+                            'h-4 w-4 shrink-0',
                             credential.id === value ? 'opacity-100' : 'opacity-0',
                           )}
                         />
@@ -149,7 +166,39 @@ export function CredentialCombobox({
                           icon={branding.icon}
                           className="w-3.5 h-3.5 shrink-0 text-muted-foreground"
                         />
-                        <span className="truncate">{credential.name}</span>
+                        <span className="truncate flex-1">{credential.name}</span>
+                        <span className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {isOAuth && (
+                            <button
+                              type="button"
+                              className={cn(
+                                'p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground',
+                                isRefreshing && 'pointer-events-none',
+                              )}
+                              title="Re-authorize OAuth credential"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onRefreshOAuthCredential?.(credential);
+                              }}
+                            >
+                              <RefreshCw
+                                className={cn('h-3 w-3', isRefreshing && 'animate-spin')}
+                              />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground"
+                            title="Edit credential"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpen(false);
+                              onEditCredential?.(credential);
+                            }}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </button>
+                        </span>
                       </CommandItem>
                     );
                   })}

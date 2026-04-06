@@ -838,27 +838,19 @@ export function FlowWorkbenchView({
     onRightPanelRender,
   ]);
 
-  // Node types registry — built dynamically from fetched node definitions.
-  // Every node type maps to UniversalNode except AGENT which has a custom component.
-  // This ensures provider-action nodes (e.g. "gmail.list_messages") are renderable.
+  // Node types registry — AGENT gets a custom component, everything else
+  // renders as UniversalNode. Known action types are registered explicitly
+  // from nodeDefinitions to avoid ReactFlow's fallback CSS class
+  // (.react-flow__node-default) which adds unwanted border/padding.
+  // The "default" key catches any truly unknown types (e.g. pasted from SDK).
   const { nodeDefinitions } = useNodeRegistry();
   const nodeTypes: NodeTypes = useMemo(() => {
     // @ts-ignore React 19 vs 18 type mismatch in @xyflow/react
     // eslint-disable-next-line typescript/no-explicit-any -- React node components require generic any props
     const mapping: Record<string, React.ComponentType<any>> = {
-      // Ensure all GraphNodeType enum values are always present
-      [GraphNodeType.TEMPLATE_STRING]: UniversalNode,
-      [GraphNodeType.MODEL]: UniversalNode,
-      [GraphNodeType.SQL_QUERY]: UniversalNode,
-      [GraphNodeType.IF_ELSE]: UniversalNode,
-      [GraphNodeType.INPUT]: UniversalNode,
-      [GraphNodeType.OUTPUT]: UniversalNode,
-      [GraphNodeType.JQ]: UniversalNode,
-      [GraphNodeType.HTTP_REQUEST]: UniversalNode,
-      [GraphNodeType.GMAIL]: UniversalNode,
       [GraphNodeType.AGENT]: AgentNode,
+      default: UniversalNode,
     };
-    // Add entries for every fetched node definition (covers action-based nodes)
     for (const def of nodeDefinitions) {
       if (!(def.type in mapping)) {
         mapping[def.type] = UniversalNode;

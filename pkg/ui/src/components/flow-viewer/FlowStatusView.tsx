@@ -67,8 +67,9 @@ export function FlowStatusView({
     selectedRunId || undefined,
   );
 
-  // Build nodeTypes dynamically: start from the base (enum-based) mapping,
-  // then add entries for any action-based types present in the current flow.
+  // nodeTypes: AGENT gets a custom component, everything else renders as
+  // UniversalNode. Register action types from current flow nodes to avoid
+  // ReactFlow's fallback CSS class; "default" catches unknown types.
   const nodeTypes = useMemo(() => {
     const mapping = { ...baseNodeTypes };
     for (const node of nodes) {

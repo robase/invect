@@ -317,7 +317,13 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
       }
 
       if (newNodes.length > 0) {
+        console.log('[Copy/Paste] materializePaste: adding', newNodes.length, 'nodes,', newEdges.length, 'edges');
+        console.log('[Copy/Paste] newNodes:', newNodes.map(n => ({ id: n.id, type: n.type, pos: n.position, data: { type: (n.data as Record<string,unknown>).type, display_name: (n.data as Record<string,unknown>).display_name } })));
         useFlowEditorStore.getState().pasteNodesAndEdges(newNodes, newEdges);
+        const storeState = useFlowEditorStore.getState();
+        console.log('[Copy/Paste] Store after paste: total nodes =', storeState.nodes.length);
+      } else {
+        console.log('[Copy/Paste] materializePaste: no nodes to add (all skipped?)');
       }
 
       if (skippedNodeIds.size > 0) {
@@ -357,10 +363,17 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
   );
 
   // -------------------------------------------------------------------------
-  // Read clipboard (system → SDK parse → in-memory fallback)
+  // Read clipboard (in-memory first → system SDK parse fallback)
   // -------------------------------------------------------------------------
   const readClipboard = useCallback(async (): Promise<ClipboardData | null> => {
-    // Try system clipboard — contains SDK text from our copy or external paste
+    // Prefer in-memory ref — has correct relative positions from serializeSelection.
+    // This covers same-session copy/paste (the common case).
+    if (clipboardRef.current) {
+      return clipboardRef.current;
+    }
+
+    // Fall back to system clipboard — handles cross-app paste (SDK text from
+    // a text editor, another browser tab, etc.)
     try {
       const text = await navigator.clipboard.readText();
       const parsed = parseSDKText(text);
@@ -368,11 +381,10 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
         return sdkResultToClipboard(parsed, flowId);
       }
     } catch {
-      // Permission denied, parse failed, or empty — fall through
+      // Permission denied, parse failed, or empty
     }
 
-    // Fall back to in-memory ref (same-session copy/paste)
-    return clipboardRef.current;
+    return null;
   }, [flowId]);
 
   // -------------------------------------------------------------------------
@@ -404,11 +416,15 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
   }, [serializeSelection, writeClipboard]);
 
   const paste = useCallback(async () => {
+    console.log('[Copy/Paste] Paste triggered');
     const clipboard = await readClipboard();
     if (!clipboard) {
+      console.log('[Copy/Paste] No clipboard data available');
       return;
     }
+    console.log('[Copy/Paste] Clipboard data:', { nodeCount: clipboard.nodes.length, edgeCount: clipboard.edges.length });
     const anchor = getPasteAnchor();
+    console.log('[Copy/Paste] Paste anchor:', anchor);
     materializePaste(clipboard, anchor);
   }, [readClipboard, getPasteAnchor, materializePaste]);
 
@@ -471,7 +487,14 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
 
       // Only handle when focus is on the ReactFlow canvas, not on editable elements
       const isOnCanvas = el.closest('.react-flow') !== null;
-      if (!isOnCanvas || isEditingContext(el)) {
+      const isBodyFocused = el.tagName === 'BODY';
+      const isEditing = isEditingContext(el);
+      
+      if (e.metaKey || e.ctrlKey) {
+        console.log('[Copy/Paste] Keydown:', e.key, { isOnCanvas, isBodyFocused, isEditing, tagName: el.tagName, classList: el.className.substring(0, 80) });
+      }
+      
+      if ((!isOnCanvas && !isBodyFocused) || isEditing) {
         return;
       }
 

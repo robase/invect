@@ -20,6 +20,7 @@ interface ExecutionResult {
   success: boolean;
   output?: unknown;
   error?: string;
+  fieldErrors?: Record<string, string>;
   traces?: Array<{
     nodeId: string;
     inputs: unknown;
@@ -107,6 +108,7 @@ export function useNodeExecution({
   const [isRunning, setIsRunning] = useState(false);
   const [runError, setRunError] = useState<string | null>(null);
   const [outputError, setOutputError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string> | null>(null);
 
   const runNode = useCallback(async () => {
     if (!nodeId || !flowId) {
@@ -116,6 +118,7 @@ export function useNodeExecution({
     setIsRunning(true);
     setRunError(null);
     setOutputError(null);
+    setFieldErrors(null);
 
     try {
       // Auto-save flow before running
@@ -154,6 +157,9 @@ export function useNodeExecution({
         } else {
           setRunError(result.error || 'Test execution failed');
           setOutputError(result.error || 'Test execution failed');
+          if (result.fieldErrors) {
+            setFieldErrors(result.fieldErrors);
+          }
         }
       } else {
         // Normal mode: run flow up to this node

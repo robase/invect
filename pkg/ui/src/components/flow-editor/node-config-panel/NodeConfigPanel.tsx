@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useState } from 'react';
+import { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { GraphNodeType, type ReactFlowNodeData } from '@invect/core/types';
 import {
   Dialog,
@@ -12,10 +12,19 @@ import { nanoid } from 'nanoid';
 import { ResizablePanelGroup, ResizableHandle } from '../../ui/resizable';
 import { cn } from '../../../lib/utils';
 import { useNodeRegistry } from '../../../contexts/NodeRegistryContext';
-import { useCredentials, useCreateCredential } from '../../../api/credentials.api';
+import {
+  useCredentials,
+  useCreateCredential,
+  useUpdateCredential,
+  useTestCredential,
+  useStartOAuth2Flow,
+  useHandleOAuth2Callback,
+} from '../../../api/credentials.api';
 import { useExecuteFlowToNode, useTestNode } from '../../../api/executions.api';
 import { useTestMapper } from '../../../api/node-data.api';
 import { CreateCredentialModal } from '../../credentials/CreateCredentialModal';
+import { EditCredentialModal } from '../../credentials/EditCredentialModal';
+import type { Credential } from '../../../api/types';
 
 import { formatNodeTypeLabel, getIconComponent } from './utils';
 import { useNodeConfigState } from './use-node-config-state';
@@ -93,6 +102,60 @@ export function NodeConfigPanel({
   // Credential modal state
   const [isCreateCredentialOpen, setIsCreateCredentialOpen] = useState(false);
   const [activeCredentialField, setActiveCredentialField] = useState<string | null>(null);
+
+  // Edit credential state
+  const [editingCredential, setEditingCredential] = useState<Credential | null>(null);
+  const updateCredentialMutation = useUpdateCredential();
+
+  // OAuth refresh state
+  const testCredentialMutation = useTestCredential();
+  const startOAuth2Flow = useStartOAuth2Flow();
+  const handleOAuth2Callback = useHandleOAuth2Callback();
+  const [refreshingCredentialId, setRefreshingCredentialId] = useState<string | null>(null);
+  const [oauthPopupWindow, setOAuthPopupWindow] = useState<Window | null>(null);
+  const oauthCallbackParamsRef = useRef<{ credentialId: string } | null>(null);
+
+  // Listen for OAuth callback message from popup (for credential refresh)
+  useEffect(() => {
+    const handleMessage = async (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      const { type, code, state, error } = event.data;
+      if (type !== 'oauth2_callback') return;
+
+      if (oauthPopupWindow && !oauthPopupWindow.closed) {
+        oauthPopupWindow.close();
+      }
+      setOAuthPopupWindow(null);
+
+      if (error || !code || !state) {
+        setRefreshingCredentialId(null);
+        return;
+      }
+
+      try {
+        await handleOAuth2Callback.mutateAsync({ code, state });
+      } catch {
+        // Credential cache is invalidated by the mutation hook on success
+      }
+      setRefreshingCredentialId(null);
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [oauthPopupWindow, handleOAuth2Callback]);
+
+  // Check if popup was closed without completing
+  useEffect(() => {
+    if (!oauthPopupWindow) return;
+    const check = setInterval(() => {
+      if (oauthPopupWindow.closed) {
+        clearInterval(check);
+        setOAuthPopupWindow(null);
+        setRefreshingCredentialId(null);
+      }
+    }, 500);
+    return () => clearInterval(check);
+  }, [oauthPopupWindow]);
 
   // Mapper config state — stored in node data as `mapper`
   const mapperConfig = (nodeData as Record<string, unknown> | undefined)?.mapper as
@@ -265,6 +328,77 @@ export function NodeConfigPanel({
     ],
   );
 
+  // Edit credential handler
+  const handleEditCredential = useCallback((credential: Credential) => {
+    setEditingCredential(credential);
+  }, []);
+
+  const handleCloseEditCredential = useCallback(() => {
+    setEditingCredential(null);
+  }, []);
+
+  const handleUpdateCredential = useCallback(
+    (data: Parameters<typeof updateCredentialMutation.mutate>[0]['data']) => {
+      if (!editingCredential) return;
+      updateCredentialMutation.mutate(
+        { id: editingCredential.id, data },
+        { onSuccess: () => setEditingCredential(null) },
+      );
+    },
+    [editingCredential, updateCredentialMutation],
+  );
+
+  // OAuth refresh handler: test credential → if fails → start re-auth flow
+  const handleRefreshOAuthCredential = useCallback(
+    async (credential: Credential) => {
+      setRefreshingCredentialId(credential.id);
+      oauthCallbackParamsRef.current = { credentialId: credential.id };
+
+      try {
+        // First test the credential
+        const testResult = await testCredentialMutation.mutateAsync(credential.id);
+        if (testResult.success) {
+          // Credential is valid, just refresh credentials list
+          setRefreshingCredentialId(null);
+          refetchCredentials();
+          return;
+        }
+      } catch {
+        // Test failed — proceed to re-authorize
+      }
+
+      // Start OAuth re-auth flow
+      try {
+        const result = await startOAuth2Flow.mutateAsync({
+          existingCredentialId: credential.id,
+          redirectUri: `${window.location.origin}/oauth/callback`,
+          returnUrl: window.location.href,
+        });
+
+        const width = 600;
+        const height = 700;
+        const left = window.screenX + (window.outerWidth - width) / 2;
+        const top = window.screenY + (window.outerHeight - height) / 2;
+
+        const popup = window.open(
+          result.authorizationUrl,
+          `oauth2_refresh_${credential.id}`,
+          `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`,
+        );
+
+        if (!popup) {
+          setRefreshingCredentialId(null);
+          return;
+        }
+
+        setOAuthPopupWindow(popup);
+      } catch {
+        setRefreshingCredentialId(null);
+      }
+    },
+    [testCredentialMutation, startOAuth2Flow, refetchCredentials],
+  );
+
   // ── Agent Tool Handlers (only used when nodeType is AGENT) ──────
 
   const addedTools = useMemo<AddedToolInstance[]>(() => {
@@ -420,6 +554,9 @@ export function NodeConfigPanel({
                   credentialsError={credentialsError}
                   onRefreshCredentials={() => refetchCredentials()}
                   onAddNewCredential={handleAddNewCredential}
+                  onEditCredential={handleEditCredential}
+                  onRefreshOAuthCredential={handleRefreshOAuthCredential}
+                  refreshingCredentialId={refreshingCredentialId}
                   configWarnings={configWarnings}
                   configErrors={configErrors}
                   runError={execution.runError}
@@ -464,6 +601,16 @@ export function NodeConfigPanel({
         isLoading={createCredentialMutation.isPending}
         portalContainer={portalContainer}
       />
+
+      {editingCredential && (
+        <EditCredentialModal
+          credential={editingCredential}
+          open={true}
+          onClose={handleCloseEditCredential}
+          onSubmit={handleUpdateCredential}
+          isLoading={updateCredentialMutation.isPending}
+        />
+      )}
     </>
   );
 }

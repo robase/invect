@@ -127,9 +127,14 @@ interface ConfigurationPanelProps {
   credentialsError: boolean;
   onRefreshCredentials: () => void;
   onAddNewCredential: (fieldName: string) => void;
+  onEditCredential?: (credential: Credential) => void;
+  onRefreshOAuthCredential?: (credential: Credential) => void;
+  refreshingCredentialId?: string | null;
   configWarnings: string[];
   configErrors: string[];
   runError: string | null;
+  /** Per-field validation errors keyed by field name (from execution errors). */
+  fieldErrors?: Record<string, string>;
   nodeType: string;
   modelStatusMessage: string;
   portalContainer?: HTMLElement | null;
@@ -162,9 +167,13 @@ export function ConfigurationPanel({
   credentialsError,
   onRefreshCredentials,
   onAddNewCredential,
+  onEditCredential,
+  onRefreshOAuthCredential,
+  refreshingCredentialId,
   configWarnings,
   configErrors,
   runError,
+  fieldErrors,
   nodeType,
   modelStatusMessage,
   portalContainer,
@@ -336,6 +345,9 @@ export function ConfigurationPanel({
                     isError={credentialsError}
                     onRefresh={onRefreshCredentials}
                     onAddNewCredential={onAddNewCredential}
+                    onEditCredential={onEditCredential}
+                    onRefreshOAuthCredential={onRefreshOAuthCredential}
+                    refreshingCredentialId={refreshingCredentialId}
                     portalContainer={portalContainer}
                     disablePortal
                   />
@@ -363,6 +375,7 @@ export function ConfigurationPanel({
                   portalContainer={portalContainer}
                   nodeType={nodeType}
                   inputData={inputData}
+                  fieldErrors={fieldErrors}
                 />
               </div>
 

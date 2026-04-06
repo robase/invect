@@ -18,6 +18,9 @@ interface CredentialsSectionProps {
   isError: boolean;
   onRefresh: () => void;
   onAddNewCredential: (fieldName: string) => void;
+  onEditCredential?: (credential: Credential) => void;
+  onRefreshOAuthCredential?: (credential: Credential) => void;
+  refreshingCredentialId?: string | null;
   portalContainer?: HTMLElement | null;
   disablePortal?: boolean;
 }
@@ -42,6 +45,9 @@ export const CredentialsSection = ({
   isError,
   onRefresh,
   onAddNewCredential,
+  onEditCredential,
+  onRefreshOAuthCredential,
+  refreshingCredentialId,
   portalContainer,
   disablePortal = true,
 }: CredentialsSectionProps) => {
@@ -133,6 +139,9 @@ export const CredentialsSection = ({
                 isError={isError}
                 onRetry={onRefresh}
                 onAddNew={() => onAddNewCredential(field.name)}
+                onEditCredential={onEditCredential}
+                onRefreshOAuthCredential={onRefreshOAuthCredential}
+                refreshingCredentialId={refreshingCredentialId}
                 container={portalContainer}
                 disablePortal={disablePortal}
               />

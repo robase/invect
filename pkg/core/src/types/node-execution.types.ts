@@ -13,6 +13,8 @@ import type { NodeOutput } from 'src/types/node-io-types';
 export interface NodeExecutionFailedResult {
   state: NodeExecutionStatus.FAILED;
   errors: string[];
+  /** Per-field validation errors keyed by field name */
+  fieldErrors?: Record<string, string>;
   metadata?: Record<string, unknown>;
 }
 

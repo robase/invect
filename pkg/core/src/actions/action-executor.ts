@@ -46,9 +46,20 @@ export async function executeActionAsNode(
   const parseResult = action.params.schema.safeParse(params);
   if (!parseResult.success) {
     const { prettifyError } = await import('zod/v4');
+
+    // Extract per-field errors from Zod issues
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parseResult.error.issues) {
+      if (issue.path && issue.path.length > 0) {
+        const fieldName = String(issue.path[0]);
+        fieldErrors[fieldName] = issue.message;
+      }
+    }
+
     return {
       state: NodeExecutionStatus.FAILED,
       errors: [prettifyError(parseResult.error)],
+      ...(Object.keys(fieldErrors).length > 0 && { fieldErrors }),
     } satisfies NodeExecutionFailedResult;
   }
 

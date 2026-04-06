@@ -455,6 +455,21 @@
       font-family: var(--font-sans);
     }
 
+    /* Reset ReactFlow's built-in default node styles — our UniversalNode
+       component provides its own Card wrapper with all needed styling.
+       This prevents a double-border when nodes fall back to the "default"
+       type (e.g. pasted SDK nodes with unknown action types). */
+    .react-flow__node-default {
+      padding: 0;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+      font-size: inherit;
+      color: inherit;
+      text-align: inherit;
+      width: auto;
+    }
+
     /* Node hover and selection states */
     .node-hover-bg:hover {
       background-color: var(--node-hover-bg) !important;

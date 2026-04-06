@@ -15,6 +15,8 @@ interface ParametersSectionProps {
   nodeType?: string;
   /** Input data from upstream nodes — passed through for autocomplete in code fields. */
   inputData?: Record<string, unknown>;
+  /** Per-field validation errors keyed by field name. */
+  fieldErrors?: Record<string, string>;
 }
 
 /**
@@ -37,6 +39,7 @@ export const ParametersSection = ({
   portalContainer,
   nodeType,
   inputData,
+  fieldErrors,
 }: ParametersSectionProps) => {
   const templateModes = getTemplateModes(formValues);
   const [showExtended, setShowExtended] = useState(false);
@@ -89,6 +92,7 @@ export const ParametersSection = ({
       nodeType={nodeType}
       formValues={formValues}
       inputData={inputData}
+      error={fieldErrors?.[field.name]}
     />
   );
 
