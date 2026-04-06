@@ -17,6 +17,10 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { HttpClient } from '../backend/client/http-client';
 import { createMcpServer } from '../backend/mcp-server';
 
+// Re-export building blocks so @invect/cli can import them
+export { HttpClient } from '../backend/client/http-client';
+export { createMcpServer } from '../backend/mcp-server';
+
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
 
@@ -53,7 +57,9 @@ function parseArgs(argv: string[]): Record<string, string> {
   const result: Record<string, string> = {};
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if (!arg) {continue;}
+    if (!arg) {
+      continue;
+    }
     if (arg.startsWith('--')) {
       const key = arg.slice(2);
       const next = argv[i + 1];

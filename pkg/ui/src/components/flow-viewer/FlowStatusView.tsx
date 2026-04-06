@@ -86,37 +86,6 @@ export function FlowStatusView({
   const updateNodeInternals = useUpdateNodeInternals();
   const [edgesReady, setEdgesReady] = useState(false);
 
-  // Build a fingerprint of execution statuses so we can detect when node
-  // borders change (1px → 2px) and handle positions shift in the DOM.
-  const executionFingerprint = useMemo(
-    () =>
-      nodes
-        .map((n) => {
-          const d = n.data as { executionStatus?: string } | undefined;
-          return `${n.id}:${d?.executionStatus ?? ''}`;
-        })
-        .join(','),
-    [nodes],
-  );
-
-  useEffect(() => {
-    if (nodesInitialized && nodes.length > 0) {
-      // Force React Flow to re-measure handle positions for all nodes.
-      // Border changes from execution status (e.g. 1px → 2px on success)
-      // shift handle DOM elements, but React Flow caches stale positions.
-      const nodeIds = nodes.map((n) => n.id);
-      updateNodeInternals(nodeIds);
-
-      setEdgesReady(false);
-      const timeout = setTimeout(() => setEdgesReady(true), 80);
-      return () => clearTimeout(timeout);
-    }
-    setEdgesReady(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodesInitialized, nodes.length, executionFingerprint, updateNodeInternals]);
-
-  const readyEdges = edgesReady ? edges : [];
-
   // nodeTypes: AGENT gets a custom component, everything else renders as
   // UniversalNode. Register action types from current flow nodes to avoid
   // ReactFlow's fallback CSS class; "default" catches unknown types.
@@ -280,6 +249,43 @@ export function FlowStatusView({
     });
   };
 
+  const renderedNodes = useMemo(
+    () => processNodesForBatchExecution(nodes),
+    [nodes, selectedRun],
+  );
+
+  // Build a fingerprint of execution statuses for the exact node set rendered
+  // into React Flow. This includes temporary run-state decoration applied in
+  // `processNodesForBatchExecution`, not just the raw fetched node data.
+  const executionFingerprint = useMemo(
+    () =>
+      renderedNodes
+        .map((n) => {
+          const d = n.data as { executionStatus?: string } | undefined;
+          return `${n.id}:${d?.executionStatus ?? ''}`;
+        })
+        .join(','),
+    [renderedNodes],
+  );
+
+  useEffect(() => {
+    if (nodesInitialized && renderedNodes.length > 0) {
+      // Force React Flow to re-measure handle positions for all rendered nodes.
+      // Execution status styling changes node borders and shifts handle DOM
+      // positions, but React Flow caches stale coordinates until internals are
+      // refreshed.
+      updateNodeInternals(renderedNodes.map((n) => n.id));
+
+      setEdgesReady(false);
+      const timeout = setTimeout(() => setEdgesReady(true), 80);
+      return () => clearTimeout(timeout);
+    }
+    setEdgesReady(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodesInitialized, renderedNodes.length, executionFingerprint, updateNodeInternals]);
+
+  const readyEdges = edgesReady ? edges : [];
+
   // Get current version's validation status (versions don't have isValid anymore)
   // const isValidFlow = displayVersion?.isValid;
 
@@ -312,7 +318,7 @@ export function FlowStatusView({
     <NodeViewProvider mode="view" onEditNode={onEditNode}>
       <div style={{ width: '100%', height: '100%', background: 'var(--canvas-background)' }}>
         <ReactFlow
-          nodes={processNodesForBatchExecution(nodes)}
+          nodes={renderedNodes}
           edges={readyEdges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}

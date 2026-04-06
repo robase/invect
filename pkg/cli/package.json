@@ -57,6 +57,10 @@
     "picocolors": "^1.1.1",
     "prompts": "^2.4.2"
   },
+  "optionalDependencies": {
+    "@invect/mcp": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.12.1"
+  },
   "devDependencies": {
     "@types/prompts": "^2.4.9",
     "tsup": "^8.3.5",

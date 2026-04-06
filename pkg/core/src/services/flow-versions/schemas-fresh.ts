@@ -41,7 +41,7 @@ export const mapperConfigSchema = z.object({
    * // Reshape into object → single run:
    * "return { total: orders.reduce((s, o) => s + o.amount, 0), count: orders.length }"
    */
-  expression: z.string().min(1),
+  expression: z.string(),
 
   /**
    * Explicit intent declaration — prevents accidental iteration.
@@ -73,7 +73,12 @@ export const mapperConfigSchema = z.object({
    * - "error":  fail the node
    */
   onEmpty: z.enum(['error', 'skip']).default('skip'),
-});
+}).check(
+  z.refine((data) => !data.enabled || data.expression.length >= 1, {
+    message: 'Expression is required when mapper is enabled',
+    path: ['expression'],
+  }),
+);
 
 export type MapperConfig = z.infer<typeof mapperConfigSchema>;
 

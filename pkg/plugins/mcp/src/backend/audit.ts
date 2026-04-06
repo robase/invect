@@ -23,7 +23,9 @@ export class AuditLogger {
   }
 
   log(entry: AuditEntry): void {
-    if (!this.enabled) {return;}
+    if (!this.enabled) {
+      return;
+    }
 
     const msg = `[MCP Audit] ${entry.tool} ${entry.status} (${entry.durationMs}ms) user=${entry.userId ?? 'unknown'}`;
     const meta = {

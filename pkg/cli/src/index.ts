@@ -16,6 +16,7 @@
  *   npx invect-cli migrate
  *   npx invect-cli info
  *   npx invect-cli secret
+ *   npx invect-cli mcp --url http://localhost:3000/invect --api-key YOUR_KEY
  */
 
 import { Command } from 'commander';
@@ -24,6 +25,7 @@ import { generateCommand } from './commands/generate.js';
 import { migrateCommand } from './commands/migrate.js';
 import { infoCommand } from './commands/info.js';
 import { secretCommand } from './commands/secret.js';
+import { mcpCommand } from './commands/mcp.js';
 
 import 'dotenv/config';
 
@@ -45,6 +47,7 @@ async function main() {
     .addCommand(initCommand)
     .addCommand(infoCommand)
     .addCommand(secretCommand)
+    .addCommand(mcpCommand)
     .action(() => program.help());
 
   await program.parseAsync(process.argv);

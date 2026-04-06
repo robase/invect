@@ -149,12 +149,20 @@ export const updateFlowDefinitionTool: ChatToolDefinition = {
         };
       }
 
-      // Assign positions and referenceIds if missing
-      const positionedNodes = nodes.map((n, i) => ({
-        ...n,
-        referenceId: n.referenceId || labelToReferenceId(n.label),
-        position: n.position ?? { x: 250, y: i * 150 },
-      }));
+      // Assign positions and referenceIds if missing; strip disabled mappers
+      const positionedNodes = nodes.map((n, i) => {
+        const { mapper, ...rest } = n;
+        const node = {
+          ...rest,
+          referenceId: n.referenceId || labelToReferenceId(n.label),
+          position: n.position ?? { x: 250, y: i * 150 },
+        };
+        // Only include mapper when enabled with a non-empty expression
+        if (mapper?.enabled && mapper.expression?.trim()) {
+          (node as Record<string, unknown>).mapper = mapper;
+        }
+        return node;
+      });
 
       const version = await invect.versions.create(flowId, {
         invectDefinition: {

@@ -381,9 +381,13 @@ export const updateNodeConfigTool: ChatToolDefinition = {
         node.params = { ...existingParams, ...newParams };
       }
 
-      // Set mapper if provided
+      // Set mapper if provided — strip entirely when disabled
       if (mapper) {
-        (node as Record<string, unknown>).mapper = mapper;
+        if (mapper.enabled && mapper.expression?.trim()) {
+          (node as Record<string, unknown>).mapper = mapper;
+        } else {
+          delete (node as Record<string, unknown>).mapper;
+        }
       }
 
       // Update label if provided
