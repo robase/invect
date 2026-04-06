@@ -1,8 +1,10 @@
 'use client';
 
+import { useState } from 'react';
 import {
   ChevronUp,
   ChevronDown,
+  ChevronRight,
   Terminal,
   Clock,
   CheckCircle2,
@@ -23,6 +25,7 @@ import {
 } from './use-execution-log-data';
 import { NodeExecutionStatus, GraphNodeType } from '@invect/core/types';
 import { CodeMirrorJsonEditor } from '../ui/codemirror-json-editor';
+import { RunSelector, RunSelectorItem } from './RunSelector';
 
 interface LogsPanelProps {
   nodes: ExecutionLogNode[];
@@ -31,6 +34,12 @@ interface LogsPanelProps {
   isExpanded: boolean;
   onToggle: () => void;
   loading?: boolean;
+  /** Runs list for the run selector dropdown */
+  runs?: RunSelectorItem[];
+  /** Currently selected run ID */
+  selectedRunId?: string | null;
+  /** Callback when a run is selected from the dropdown */
+  onSelectRun?: (runId: string) => void;
 }
 
 function StatusIcon({ status, size = 14 }: { status: NodeExecutionStatus; size?: number }) {
@@ -102,6 +111,9 @@ export function LogsPanel({
   isExpanded,
   onToggle,
   loading,
+  runs,
+  selectedRunId,
+  onSelectRun,
 }: LogsPanelProps) {
   const selectedNode = nodes.find((node) => node.nodeId === selectedAttempt?.nodeId) ?? nodes[0];
   const selectedAttemptData =
@@ -124,13 +136,13 @@ export function LogsPanel({
   return (
     <div
       className={cn(
-        'border-t border-border bg-imp-background text-card-foreground',
-        isExpanded ? 'h-[420px]' : 'h-8',
+        'border-t border-border bg-imp-background text-card-foreground flex flex-col',
+        isExpanded ? 'h-full' : 'h-8',
       )}
     >
       <button
         onClick={onToggle}
-        className="flex items-center justify-between w-full px-4 py-1 transition-colors cursor-pointer hover:bg-accent/50"
+        className="flex items-center justify-between w-full px-4 py-1 transition-colors cursor-pointer hover:bg-accent/50 shrink-0"
       >
         <div className="flex items-center gap-2">
           <Terminal className="w-4 h-4 text-muted-foreground" />
@@ -147,9 +159,14 @@ export function LogsPanel({
       </button>
 
       {isExpanded && (
-        <div className="flex h-[calc(100%-48px)] border-t border-border">
-          <div className="imp-page border-r border-imp-border bg-imp-background text-imp-foreground w-[280px] flex-shrink-0">
-            <ScrollArea className="h-full">
+        <div className="flex flex-1 min-h-0 border-t border-border">
+          <div className="imp-page border-r border-imp-border bg-imp-background text-imp-foreground w-[280px] shrink-0 flex flex-col">
+            {runs && onSelectRun && (
+              <div className="px-2 pt-2 pb-1 shrink-0">
+                <RunSelector runs={runs} selectedRunId={selectedRunId ?? null} onSelectRun={onSelectRun} />
+              </div>
+            )}
+            <ScrollArea className="h-full min-h-0">
               <div className="p-2 space-y-2">
                 {loading && nodes.length === 0 && (
                   <div className="px-3 py-2 text-sm text-muted-foreground">
@@ -265,7 +282,7 @@ export function LogsPanel({
             </ScrollArea>
           </div>
 
-          <div className="flex-1 min-w-0 overflow-hidden bg-background text-foreground">
+          <div className="flex-1 min-w-0 overflow-hidden bg-imp-background text-imp-foreground">
             <ScrollArea className="h-full">
               {/* Tool Call Detail View */}
               {selectedToolCall ? (
@@ -294,59 +311,76 @@ export function LogsPanel({
  * Detail view for a selected tool call
  */
 function ToolCallDetailView({ tool }: { tool: ExecutionLogToolCall }) {
+  const [inputOpen, setInputOpen] = useState(true);
+  const [outputOpen, setOutputOpen] = useState(true);
+
   return (
-    <div className="max-w-full p-4 space-y-4 overflow-hidden">
-      <div className="flex items-start justify-between gap-4 pb-3 border-b border-border">
-        <div className="flex items-center gap-3">
-          <Wrench className="h-5 w-5 text-muted-foreground" />
-          <div>
-            <div className="text-lg font-semibold flex items-center gap-2">
+    <div className="max-w-full overflow-hidden">
+      <div className="sticky top-0 z-10 bg-imp-background px-4 py-2 border-b border-border">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Wrench className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-semibold flex items-center gap-2">
               {tool.toolName}
-              <ToolStatusIcon success={tool.success} size={16} />
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Iteration {tool.iteration} • Tool ID: {tool.toolId}
-            </div>
+              <ToolStatusIcon success={tool.success} size={14} />
+            </span>
+            <span className="text-xs text-muted-foreground">
+              Iteration {tool.iteration}
+            </span>
           </div>
-          <Badge variant={tool.success ? 'default' : 'destructive'}>
-            {tool.success ? 'success' : 'failed'}
-          </Badge>
-        </div>
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <div className="flex flex-col text-right">
-            <span className="font-medium text-foreground/70">Duration</span>
-            <span className="text-foreground">{formatDuration(tool.executionTimeMs)}</span>
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <span><span className="text-foreground/70">Duration</span> {formatDuration(tool.executionTimeMs)}</span>
           </div>
         </div>
       </div>
+
+      <div className="p-4 space-y-4">
 
       {/* Input */}
       <div className="max-w-full overflow-hidden">
-        <div className="mb-2 text-sm font-semibold text-foreground">Input</div>
-        <div className="max-w-full overflow-hidden border rounded-md border-border">
-          <CodeMirrorJsonEditor
-            value={JSON.stringify(tool.input, null, 2)}
-            readOnly
-            disableLinting
-            minHeight="60px"
-            className="max-w-full"
-          />
-        </div>
-      </div>
-
-      {/* Output */}
-      {tool.output !== undefined && (
-        <div className="max-w-full overflow-hidden">
-          <div className="mb-2 text-sm font-semibold text-foreground">Output</div>
+        <button
+          type="button"
+          onClick={() => setInputOpen(!inputOpen)}
+          className="flex items-center gap-1.5 mb-2 text-sm font-semibold text-foreground cursor-pointer hover:text-foreground/80 transition-colors"
+        >
+          {inputOpen ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+          Input
+        </button>
+        {inputOpen && (
           <div className="max-w-full overflow-hidden border rounded-md border-border">
             <CodeMirrorJsonEditor
-              value={JSON.stringify(tool.output, null, 2)}
+              value={JSON.stringify(tool.input, null, 2)}
               readOnly
               disableLinting
               minHeight="60px"
               className="max-w-full"
             />
           </div>
+        )}
+      </div>
+
+      {/* Output */}
+      {tool.output !== undefined && (
+        <div className="max-w-full overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setOutputOpen(!outputOpen)}
+            className="flex items-center gap-1.5 mb-2 text-sm font-semibold text-foreground cursor-pointer hover:text-foreground/80 transition-colors"
+          >
+            {outputOpen ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+            Output
+          </button>
+          {outputOpen && (
+            <div className="max-w-full overflow-hidden border rounded-md border-border">
+              <CodeMirrorJsonEditor
+                value={JSON.stringify(tool.output, null, 2)}
+                readOnly
+                disableLinting
+                minHeight="60px"
+                className="max-w-full"
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -354,11 +388,12 @@ function ToolCallDetailView({ tool }: { tool: ExecutionLogToolCall }) {
       {tool.error && (
         <div>
           <div className="mb-2 text-sm font-semibold text-red-500">Error</div>
-          <div className="p-3 text-sm text-red-500 border rounded-md bg-red-500/10 border-red-500/20 whitespace-pre-wrap break-words max-h-60 overflow-auto">
+          <pre className="p-3 text-sm font-mono text-red-500 border rounded-md bg-red-500/10 border-red-500/20 whitespace-pre-wrap break-words max-h-60 overflow-auto">
             {tool.error}
-          </div>
+          </pre>
         </div>
       )}
+      </div>
     </div>
   );
 }
@@ -373,39 +408,25 @@ function NodeAttemptDetailView({
   nodeName: string;
   attempt: ExecutionLogAttempt;
 }) {
+  const [inputsOpen, setInputsOpen] = useState(true);
+  const [outputsOpen, setOutputsOpen] = useState(true);
+
   return (
-    <div className="max-w-full p-4 space-y-4 overflow-hidden">
-      <div className="flex items-start justify-between gap-4 pb-3 border-b border-border">
-        <div className="flex items-center gap-3">
-          <StatusIcon status={attempt.status} size={20} />
-          <div>
-            <div className="text-lg font-semibold">{nodeName}</div>
-            <div className="text-xs text-muted-foreground">{attempt.label}</div>
+    <div className="max-w-full overflow-hidden">
+      <div className="sticky top-0 z-10 bg-imp-background px-4 py-2 border-b border-border">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <StatusIcon status={attempt.status} size={16} />
+            <span className="text-sm font-semibold">{nodeName}</span>
           </div>
-          <Badge
-            variant={
-              attempt.status === NodeExecutionStatus.FAILED
-                ? 'destructive'
-                : attempt.status === NodeExecutionStatus.SUCCESS
-                  ? 'default'
-                  : 'secondary'
-            }
-          >
-            {attempt.status.toLowerCase()}
-          </Badge>
-        </div>
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <div className="flex flex-col text-right">
-            <span className="font-medium text-foreground/70">Started</span>
-            <span className="text-foreground">{formatTimestamp(attempt.startedAt)}</span>
-          </div>
-          <div className="flex flex-col text-right">
-            <span className="font-medium text-foreground/70">Duration</span>
-            <span className="text-foreground">{formatDuration(attempt.durationMs)}</span>
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <span><span className="text-foreground/70">Started</span> {formatTimestamp(attempt.startedAt)}</span>
+            <span><span className="text-foreground/70">Duration</span> {formatDuration(attempt.durationMs)}</span>
           </div>
         </div>
       </div>
 
+      <div className="p-4 space-y-4">
       {/* Agent Summary */}
       {attempt.agentMetadata && (
         <div className="p-3 rounded-lg bg-muted/50 border border-border/60">
@@ -452,42 +473,61 @@ function NodeAttemptDetailView({
 
       {hasData(attempt.inputs) && (
         <div className="max-w-full overflow-hidden">
-          <div className="mb-2 text-sm font-semibold text-foreground">Inputs</div>
-          <div className="max-w-full overflow-hidden border rounded-md border-border">
-            <CodeMirrorJsonEditor
-              value={JSON.stringify(attempt.inputs, null, 2)}
-              readOnly
-              disableLinting
-              minHeight="60px"
-              className="max-w-full"
-            />
-          </div>
+          <button
+            type="button"
+            onClick={() => setInputsOpen(!inputsOpen)}
+            className="flex items-center gap-1.5 mb-2 text-sm font-semibold text-foreground cursor-pointer hover:text-foreground/80 transition-colors"
+          >
+            {inputsOpen ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+            Inputs
+          </button>
+          {inputsOpen && (
+            <div className="max-w-full overflow-hidden border rounded-md border-border">
+              <CodeMirrorJsonEditor
+                value={JSON.stringify(attempt.inputs, null, 2)}
+                readOnly
+                disableLinting
+                minHeight="60px"
+                className="max-w-full"
+              />
+            </div>
+          )}
         </div>
       )}
 
       {attempt.outputs && (
         <div className="max-w-full overflow-hidden">
-          <div className="mb-2 text-sm font-semibold text-foreground">Outputs</div>
-          <div className="max-w-full overflow-hidden border rounded-md border-border">
-            <CodeMirrorJsonEditor
-              value={JSON.stringify(attempt.outputs, null, 2)}
-              readOnly
-              disableLinting
-              minHeight="60px"
-              className="max-w-full"
-            />
-          </div>
+          <button
+            type="button"
+            onClick={() => setOutputsOpen(!outputsOpen)}
+            className="flex items-center gap-1.5 mb-2 text-sm font-semibold text-foreground cursor-pointer hover:text-foreground/80 transition-colors"
+          >
+            {outputsOpen ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+            Outputs
+          </button>
+          {outputsOpen && (
+            <div className="max-w-full overflow-hidden border rounded-md border-border">
+              <CodeMirrorJsonEditor
+                value={JSON.stringify(attempt.outputs, null, 2)}
+                readOnly
+                disableLinting
+                minHeight="60px"
+                className="max-w-full"
+              />
+            </div>
+          )}
         </div>
       )}
 
       {attempt.error && (
         <div>
           <div className="mb-2 text-sm font-semibold text-red-500">Error</div>
-          <div className="p-3 text-sm text-red-500 border rounded-md bg-red-500/10 border-red-500/20">
+          <pre className="p-3 text-sm font-mono text-red-500 border rounded-md bg-red-500/10 border-red-500/20 whitespace-pre-wrap break-words max-h-60 overflow-auto">
             {attempt.error}
-          </div>
+          </pre>
         </div>
       )}
+      </div>
     </div>
   );
 }

@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from 'react-router';
 import { FlowLayout } from '../flow-editor/FlowLayout';
 import { ModeSwitcher } from '../flow-editor/ModeSwitcher';
 import { FlowStatusView } from './FlowStatusView';
-import { RunsSidebar } from './RunsSidebar';
 import { LogsPanel } from './logs-panel';
 import { ChatPanel, ChatToggleButton } from '~/components/chat';
 import { useFlowRuns, useFlowRun, useNodeExecutions } from '../../api/executions.api';
@@ -11,6 +10,7 @@ import { useFlowRunStream } from '../../api/use-flow-run-stream';
 import { useFlowReactFlowData } from '../../api/flows.api';
 import { FlowRun } from '@invect/core/types';
 import { useExecutionLogData, SelectedExecutionAttempt } from './use-execution-log-data';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '../ui/resizable';
 
 export interface FlowRunsViewProps {
   flowId: string;
@@ -32,6 +32,7 @@ export function FlowRunsView({ flowId, flowVersion, basePath }: FlowRunsViewProp
   const [selectedAttempt, setSelectedAttempt] = useState<SelectedExecutionAttempt | null>(null);
   // focusNodeId is only set when user explicitly clicks - not on auto-select
   const [focusNodeId, setFocusNodeId] = useState<string | null>(null);
+  const [recenterTrigger, setRecenterTrigger] = useState(0);
 
   // Fetch selected run first to get its status for polling
   const { data: selectedRun } = useFlowRun(selectedRunId || '');
@@ -148,12 +149,18 @@ export function FlowRunsView({ flowId, flowVersion, basePath }: FlowRunsViewProp
     setFocusNodeId(attempt.nodeId);
   };
 
+  const runSelectorItems = runs.map((r: FlowRun) => ({
+    id: r.id,
+    status: r.status,
+    startedAt: r.startedAt,
+    completedAt: r.completedAt,
+  }));
+
   return (
     <div className="imp-page flex flex-col flex-1 h-full min-h-0 bg-imp-background text-imp-foreground">
       <FlowLayout
         modeSwitcher={<ModeSwitcher mode="runs" onModeChange={handleModeChange} />}
         viewportRef={viewportRef}
-        chatToggle={<ChatToggleButton />}
         chatPanel={
           <ChatPanel
             flowId={flowId}
@@ -162,42 +169,63 @@ export function FlowRunsView({ flowId, flowVersion, basePath }: FlowRunsViewProp
             viewMode="runs"
           />
         }
-        sidebar={
-          <RunsSidebar
-            runs={runs.map((r: FlowRun) => ({
-              id: r.id,
-              status: r.status,
-              startedAt: r.startedAt,
-              completedAt: r.completedAt,
-            }))}
-            selectedRunId={selectedRunId}
-            onSelectRun={setSelectedRunId}
-          />
-        }
+        sidebar={<></>}
         viewport={
-          <div className="flex flex-col h-full min-h-0">
-            <div className="flex-1 min-h-0">
-              <FlowStatusView
-                flowId={flowId}
-                flowVersion={flowVersion}
-                basePath={basePath}
-                selectedRunId={selectedRunId}
-                selectedRun={selectedRun}
-                logsExpanded={isLogsExpanded}
-                onNodeClick={handleNodeClick}
-                focusNodeId={focusNodeId}
-                onFocusComplete={() => setFocusNodeId(null)}
-              />
-            </div>
-            <LogsPanel
-              nodes={executionLogNodes}
-              selectedAttempt={selectedAttempt}
-              onSelectAttempt={handleSelectAttempt}
-              isExpanded={isLogsExpanded}
-              loading={nodeExecutionsLoading && !!selectedRunId}
-              onToggle={() => setIsLogsExpanded(!isLogsExpanded)}
-            />
-          </div>
+          <ResizablePanelGroup direction="vertical" className="h-full min-h-0">
+            <ResizablePanel defaultSize={55} minSize={20}>
+              <div className="relative h-full">
+                <FlowStatusView
+                  flowId={flowId}
+                  flowVersion={flowVersion}
+                  basePath={basePath}
+                  selectedRunId={selectedRunId}
+                  selectedRun={selectedRun}
+                  logsExpanded={isLogsExpanded}
+                  onNodeClick={handleNodeClick}
+                  focusNodeId={focusNodeId}
+                  onFocusComplete={() => setFocusNodeId(null)}
+                  recenterTrigger={recenterTrigger}
+                  selectedNodeId={selectedAttempt?.nodeId}
+                />
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 rounded-lg border border-border bg-card/90 backdrop-blur-sm shadow-md p-1">
+                  <ChatToggleButton />
+                </div>
+              </div>
+            </ResizablePanel>
+            {isLogsExpanded && (
+              <>
+                <ResizableHandle withHandle onDragging={(isDragging) => { if (!isDragging) setRecenterTrigger((c) => c + 1); }} />
+                <ResizablePanel defaultSize={45} minSize={10}>
+                  <LogsPanel
+                    nodes={executionLogNodes}
+                    selectedAttempt={selectedAttempt}
+                    onSelectAttempt={handleSelectAttempt}
+                    isExpanded={isLogsExpanded}
+                    loading={nodeExecutionsLoading && !!selectedRunId}
+                    onToggle={() => setIsLogsExpanded(!isLogsExpanded)}
+                    runs={runSelectorItems}
+                    selectedRunId={selectedRunId}
+                    onSelectRun={setSelectedRunId}
+                  />
+                </ResizablePanel>
+              </>
+            )}
+            {!isLogsExpanded && (
+              <div className="shrink-0">
+                <LogsPanel
+                  nodes={executionLogNodes}
+                  selectedAttempt={selectedAttempt}
+                  onSelectAttempt={handleSelectAttempt}
+                  isExpanded={isLogsExpanded}
+                  loading={nodeExecutionsLoading && !!selectedRunId}
+                  onToggle={() => setIsLogsExpanded(!isLogsExpanded)}
+                  runs={runSelectorItems}
+                  selectedRunId={selectedRunId}
+                  onSelectRun={setSelectedRunId}
+                />
+              </div>
+            )}
+          </ResizablePanelGroup>
         }
       />
     </div>

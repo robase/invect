@@ -249,13 +249,13 @@ export const UniversalNode = memo(({ data, selected }: NodeProps) => {
           !isSkipped &&
           'border-sidebar-ring hover:border-primary/80',
         // Running state - animated gradient border
-        isRunning && 'node-running-border animate-node-border rounded-xl',
+        isRunning && 'node-running-border animate-node-border rounded-xl border-y border-r border-transparent',
         // Success state - green border
-        isSuccess && 'border-2 border-green-500',
+        isSuccess && 'border-y-2 border-r-2 border-green-500',
         // Error state - red border
-        isError && 'border-2 border-red-500',
+        isError && 'border-y-2 border-r-2 border-red-500',
         // Skipped state - greyed out with dashed border
-        isSkipped && 'border-2 border-dashed border-muted-foreground/50 opacity-50',
+        isSkipped && 'border-y-2 border-r-2 border-dashed border-muted-foreground/50 opacity-50',
         // Selection state - change existing border color to blue for visibility
         selected && !isRunning && !isSuccess && !isError && !isSkipped && 'node-selected',
       )}

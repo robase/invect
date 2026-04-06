@@ -9,6 +9,7 @@ import {
   Loader2,
   AlertCircle,
   ChevronRight,
+  ChevronDown,
   Check,
   XCircle,
   X,
@@ -110,10 +111,28 @@ export function ChatMessageList({
           </div>
         )}
 
-        {messages.map((msg) => (
+        {messages.map((msg, idx) => {
+          // Determine if this plan tool call is the most recent one
+          const isPlanMsg =
+            msg.role === 'assistant' &&
+            msg.toolMeta &&
+            (msg.toolMeta.toolName === 'set_plan' || msg.toolMeta.toolName === 'update_plan');
+          const isLatestPlan =
+            isPlanMsg &&
+            !messages
+              .slice(idx + 1)
+              .some(
+                (m) =>
+                  m.role === 'assistant' &&
+                  m.toolMeta &&
+                  (m.toolMeta.toolName === 'set_plan' || m.toolMeta.toolName === 'update_plan'),
+              );
+
+          return (
           <ChatMessageBubble
             key={msg.id}
             message={msg}
+            isLatestPlan={!!isLatestPlan}
             onEditAndResend={
               !isStreaming
                 ? (newContent) => {
@@ -123,7 +142,8 @@ export function ChatMessageList({
                 : undefined
             }
           />
-        ))}
+          );
+        })}
 
         {/* Streaming indicator */}
         {isStreaming && streamingText && (
@@ -248,9 +268,11 @@ function ChatSuggestionPrompts({ onSelect }: { onSelect: (text: string) => void 
 
 function ChatMessageBubble({
   message,
+  isLatestPlan,
   onEditAndResend,
 }: {
   message: ChatMessage;
+  isLatestPlan: boolean;
   onEditAndResend?: (content: string) => void;
 }) {
   if (message.role === 'user') {
@@ -258,7 +280,7 @@ function ChatMessageBubble({
   }
 
   if (message.role === 'assistant' && message.toolMeta) {
-    return <ToolCallBubble toolMeta={message.toolMeta} />;
+    return <ToolCallBubble toolMeta={message.toolMeta} isLatestPlan={isLatestPlan} />;
   }
 
   if (message.role === 'assistant' && message.content.trim()) {
@@ -352,16 +374,46 @@ function UserMessageBubble({
     );
   }
 
+  const isLongContent = message.content.length > 300 || message.content.split('\n').length > 8;
+  const [collapsed, setCollapsed] = useState(true);
+
+  // For long content, split into typed text (before first newline) and pasted body (after)
+  const firstNewline = message.content.indexOf('\n');
+  const typedPart = isLongContent && firstNewline > 0 ? message.content.slice(0, firstNewline) : '';
+  const pastedPart = isLongContent
+    ? (firstNewline > 0 ? message.content.slice(firstNewline + 1) : message.content)
+    : '';
+  const pastedLineCount = isLongContent ? pastedPart.split('\n').length : 0;
+  const pastedCharCount = pastedPart.length;
+
   return (
-    <div className="flex justify-end items-end gap-2 py-1.5 group/user">
-      <span className="text-[10px] text-muted-foreground/0 group-hover/user:text-muted-foreground/40 transition-colors shrink-0 pb-1.5">
-        {new Date(message.createdAt).toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-        })}
-      </span>
-      <div className="relative text-xs leading-relaxed whitespace-pre-wrap min-w-0 text-foreground bg-primary/10 rounded-2xl rounded-tr-sm px-3 py-2 max-w-[85%]">
-        {message.content}
+    <div className="flex flex-col items-end py-1.5 group/user">
+      <div className="relative text-xs leading-relaxed min-w-0 text-foreground bg-primary/10 rounded-2xl rounded-tr-sm px-3 py-2 max-w-[95%]">
+        {isLongContent ? (
+          <div className="flex flex-col gap-1.5">
+            {typedPart && <span className="whitespace-pre-wrap">{typedPart}</span>}
+            <button
+              type="button"
+              onClick={() => setCollapsed(!collapsed)}
+              className="flex items-center gap-1.5 w-full rounded-md border border-foreground/10 bg-foreground/5 px-2 py-1.5 text-[10px] text-foreground/70 hover:bg-foreground/10 transition-colors"
+            >
+              {collapsed ? (
+                <ChevronRight className="size-3 shrink-0" />
+              ) : (
+                <ChevronDown className="size-3 shrink-0" />
+              )}
+              <span className="font-medium">Pasted text</span>
+              <span className="ml-auto text-foreground/40">{pastedLineCount} lines &middot; {pastedCharCount} chars</span>
+            </button>
+            {!collapsed && (
+              <div className="overflow-y-auto max-h-48 rounded-md border border-foreground/10 bg-foreground/5 px-2.5 py-2 text-[11px] leading-relaxed whitespace-pre-wrap font-mono overscroll-contain">
+                {pastedPart}
+              </div>
+            )}
+          </div>
+        ) : (
+          <span className="whitespace-pre-wrap">{message.content}</span>
+        )}
         {onEditAndResend && (
           <button
             type="button"
@@ -373,6 +425,12 @@ function UserMessageBubble({
           </button>
         )}
       </div>
+      <span className="text-[10px] mt-0.5 text-muted-foreground/0 group-hover/user:text-muted-foreground/40 transition-colors">
+        {new Date(message.createdAt).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        })}
+      </span>
     </div>
   );
 }
@@ -392,18 +450,19 @@ function AssistantMessageBubble({ message }: { message: ChatMessage }) {
   }, [message.content]);
 
   return (
-    <div className="flex items-end gap-2 py-2 group/assistant">
-      <div className="flex items-start pt-1 shrink-0">
-        <div className="flex items-center justify-center rounded-full size-5 bg-primary/10">
-          <Bot className="size-3 text-primary" />
+    <div className="flex flex-col items-start py-2 group/assistant">
+      <div className="flex items-center gap-1.5 mb-1">
+        <div className="flex items-center justify-center rounded-full size-4 bg-primary/10">
+          <Bot className="size-2.5 text-primary" />
         </div>
+        <span className="text-[10px] text-muted-foreground/50 font-medium">Assistant</span>
       </div>
-      <div className="relative min-w-0 px-3 py-2 overflow-hidden text-xs border rounded-lg rounded-tl-sm text-foreground bg-muted/30 border-border/40">
+      <div className="relative min-w-0 px-3 py-2 overflow-hidden text-xs border rounded-lg rounded-tl-sm text-foreground bg-muted/30 border-border/40 max-w-[95%]">
         <MarkdownRenderer content={message.content} />
         <button
           type="button"
           onClick={handleCopy}
-          className="absolute p-1 transition-opacity rounded opacity-0 right-1 top-1 group-hover/assistant:opacity-100 text-muted-foreground hover:text-foreground hover:bg-muted"
+          className="absolute p-1 transition-opacity rounded opacity-0 right-1 bottom-1 group-hover/assistant:opacity-100 text-muted-foreground hover:text-foreground hover:bg-muted"
           title="Copy message"
         >
           {copied ? (
@@ -413,7 +472,7 @@ function AssistantMessageBubble({ message }: { message: ChatMessage }) {
           )}
         </button>
       </div>
-      <span className="text-[10px] text-muted-foreground/0 group-hover/assistant:text-muted-foreground/40 transition-colors shrink-0 pb-1.5">
+      <span className="text-[10px] mt-0.5 text-muted-foreground/0 group-hover/assistant:text-muted-foreground/40 transition-colors">
         {new Date(message.createdAt).toLocaleTimeString([], {
           hour: '2-digit',
           minute: '2-digit',
@@ -427,7 +486,13 @@ function AssistantMessageBubble({ message }: { message: ChatMessage }) {
 // ToolCallBubble
 // =====================================
 
-function ToolCallBubble({ toolMeta }: { toolMeta: NonNullable<ChatMessage['toolMeta']> }) {
+function ToolCallBubble({
+  toolMeta,
+  isLatestPlan,
+}: {
+  toolMeta: NonNullable<ChatMessage['toolMeta']>;
+  isLatestPlan: boolean;
+}) {
   const [open, setOpen] = useState(false);
 
   const isPending = toolMeta.status === 'pending';
@@ -436,7 +501,12 @@ function ToolCallBubble({ toolMeta }: { toolMeta: NonNullable<ChatMessage['toolM
 
   // Plan tools get a special inline rendering instead of collapsed JSON
   if (isPlanTool && !isPending && !isError && toolMeta.result?.data) {
-    return <PlanStepsBubble data={toolMeta.result.data as Record<string, unknown>} />;
+    return (
+      <PlanStepsBubble
+        data={toolMeta.result.data as Record<string, unknown>}
+        isLatestPlan={isLatestPlan}
+      />
+    );
   }
 
   const statusIcon = isPending ? (
@@ -495,16 +565,15 @@ function ToolCallBubble({ toolMeta }: { toolMeta: NonNullable<ChatMessage['toolM
   }, [isPending, isError, toolMeta.result]);
 
   return (
-    <div className="my-1 ml-6">
+    <div className="my-1">
       <Collapsible open={open} onOpenChange={isExpandable ? setOpen : undefined}>
         <CollapsibleTrigger
           disabled={!isExpandable}
           className={cn(
-            'flex items-center gap-2 w-full rounded-lg border px-2.5 py-1.5 text-[11px] transition-colors',
-            isPending && 'border-primary/20 bg-primary/3',
-            isError && 'border-destructive/25 bg-destructive/4',
-            !isPending && !isError && 'border-border/60 bg-muted/30',
-            isExpandable && 'cursor-pointer hover:bg-accent/50',
+            'flex items-center gap-2 w-full rounded-lg px-2.5 py-0.5 text-[11px] transition-colors',
+            isPending && 'text-primary/80',
+            isError && 'text-destructive/80',
+            isExpandable && 'cursor-pointer hover:bg-muted/40',
             !isExpandable && 'cursor-default',
           )}
         >
@@ -547,7 +616,13 @@ function ToolCallBubble({ toolMeta }: { toolMeta: NonNullable<ChatMessage['toolM
 // PlanStepsBubble — renders set_plan / update_plan as a step list
 // =====================================
 
-function PlanStepsBubble({ data }: { data: Record<string, unknown> }) {
+function PlanStepsBubble({
+  data,
+  isLatestPlan,
+}: {
+  data: Record<string, unknown>;
+  isLatestPlan: boolean;
+}) {
   const steps = (data.steps ?? []) as Array<{
     index: number;
     title: string;
@@ -561,7 +636,12 @@ function PlanStepsBubble({ data }: { data: Record<string, unknown> }) {
       case 'done':
         return <CheckCircle2 className="size-3.5 text-success shrink-0" />;
       case 'in_progress':
-        return <Loader2 className="size-3.5 text-primary animate-spin shrink-0" />;
+        // Only animate spinner for the most recent plan bubble
+        return isLatestPlan ? (
+          <Loader2 className="size-3.5 text-primary animate-spin shrink-0" />
+        ) : (
+          <CheckCircle2 className="size-3.5 text-success shrink-0" />
+        );
       case 'skipped':
         return <SkipForward className="size-3.5 text-muted-foreground/50 shrink-0" />;
       default:
@@ -585,8 +665,12 @@ function PlanStepsBubble({ data }: { data: Record<string, unknown> }) {
                     'text-foreground/60 line-through decoration-foreground/20',
                   step.status === 'skipped' &&
                     'text-muted-foreground/40 line-through decoration-muted-foreground/20',
-                  step.status === 'in_progress' && 'text-foreground/90 font-medium',
-                  step.status === 'pending' && 'text-foreground/70',
+                  step.status === 'in_progress' &&
+                    (isLatestPlan
+                      ? 'text-foreground/90 font-medium'
+                      : 'text-foreground/60 line-through decoration-foreground/20'),
+                  step.status === 'pending' &&
+                    (isLatestPlan ? 'text-foreground/70' : 'text-foreground/60'),
                 )}
               >
                 {step.title}

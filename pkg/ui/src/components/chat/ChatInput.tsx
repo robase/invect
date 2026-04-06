@@ -74,7 +74,7 @@ export function ChatInput({
           </span>
         </div>
       ) : (
-        <div className="overflow-hidden border rounded-lg shadow-none border-border/60 ring-0 focus-within:border-primary/50">
+        <div className="overflow-hidden border rounded-lg border-border/60 bg-card ring-0 shadow-sm focus-within:border-primary/50">
           {/* Textarea */}
           <textarea
             ref={inputRef}

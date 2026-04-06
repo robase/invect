@@ -1,25 +1,5 @@
 import React from 'react';
 import { useNodeViewContext } from './NodeViewContext';
-import { NodeStatusIndicator, type NodeStatusIndicatorStatus } from './NodeStatusIndicator';
-import { mapExecutionStatusToNodeStatus } from '../graph/styleUtils';
-
-/**
- * Map UI node status to NodeStatusIndicator status
- */
-function mapToIndicatorStatus(uiStatus: string | undefined): NodeStatusIndicatorStatus {
-  switch (uiStatus) {
-    case 'success':
-      return 'success';
-    case 'error':
-      return 'error';
-    case 'running':
-      return 'loading';
-    case 'idle':
-    case 'inactive':
-    default:
-      return 'initial';
-  }
-}
 
 export function withNodeContext<
   P extends {
@@ -31,9 +11,6 @@ export function withNodeContext<
 >(Component: React.ComponentType<P>) {
   return (props: P) => {
     const { mode, onEdit, stripExecutionData } = useNodeViewContext();
-
-    // Extract execution status before potentially stripping it
-    const executionStatus = props.data?.executionStatus;
 
     // Process data based on context
     let processedData = props.data;
@@ -50,18 +27,7 @@ export function withNodeContext<
       isStatusView: mode === 'view' || mode === 'readonly',
     } as P;
 
-    // In view or readonly mode with execution status, wrap with status indicator
-    if ((mode === 'view' || mode === 'readonly') && executionStatus) {
-      const uiStatus = mapExecutionStatusToNodeStatus(executionStatus as string);
-      const indicatorStatus = mapToIndicatorStatus(uiStatus);
-
-      return (
-        <NodeStatusIndicator status={indicatorStatus}>
-          <Component {...contextProps} />
-        </NodeStatusIndicator>
-      );
-    }
-
+    // In view or readonly mode, just pass through — UniversalNode handles status borders directly
     return <Component {...contextProps} />;
   };
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import {
   ReactFlow,
@@ -42,6 +42,10 @@ interface FlowStatusViewProps {
   focusNodeId?: string | null;
   /** Callback when focus animation completes */
   onFocusComplete?: () => void;
+  /** Incrementing counter that triggers a recenter (e.g. after panel resize) */
+  recenterTrigger?: number;
+  /** Currently selected node ID in the execution logs (for resize recenter) */
+  selectedNodeId?: string | null;
 }
 
 export function FlowStatusView({
@@ -54,6 +58,8 @@ export function FlowStatusView({
   onNodeClick,
   focusNodeId,
   onFocusComplete,
+  recenterTrigger,
+  selectedNodeId,
 }: FlowStatusViewProps) {
   const _navigate = useNavigate();
   const reactFlowInstance = useReactFlow();
@@ -91,6 +97,41 @@ export function FlowStatusView({
 
     return () => clearTimeout(timeout);
   }, [logsExpanded, reactFlowInstance]);
+
+  // Keep refs for values used by the recenter effect so it only fires on recenterTrigger
+  const recenterStateRef = useRef({ focusNodeId, selectedNodeId, nodes, reactFlowInstance });
+  recenterStateRef.current = { focusNodeId, selectedNodeId, nodes, reactFlowInstance };
+
+  // Recenter after panel resize — center on selected node or fit entire flow
+  React.useEffect(() => {
+    if (!recenterTrigger) {
+      return;
+    }
+
+    const { focusNodeId: fid, selectedNodeId: sid, nodes: n, reactFlowInstance: rf } = recenterStateRef.current;
+    if (!n.length) {
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      const centerId = fid || sid;
+      if (centerId) {
+        const targetNode = n.find((node) => node.id === centerId);
+        if (targetNode) {
+          const nodeWidth = targetNode.measured?.width ?? targetNode.width ?? 200;
+          const nodeHeight = targetNode.measured?.height ?? targetNode.height ?? 60;
+          const x = targetNode.position.x + nodeWidth / 2;
+          const y = targetNode.position.y + nodeHeight / 2;
+          rf.setCenter(x, y, { duration: 200, zoom: rf.getZoom() });
+          return;
+        }
+      }
+      rf.fitView({ padding: 0.5, maxZoom: 1.2, duration: 200 });
+    }, 50);
+
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recenterTrigger]);
 
   // Center on focused node when user explicitly clicks (not on auto-select)
   useEffect(() => {

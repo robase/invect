@@ -18,7 +18,7 @@ export const invectConfig = defineConfig({
     connectionString: process.env.DB_FILE_NAME || 'file:./dev.db',
   },
   logging: {
-    level: 'debug',
+    level: 'info',
   },
   defaultCredentials: process.env.SEED_ANTHROPIC_API_KEY
     ? [
