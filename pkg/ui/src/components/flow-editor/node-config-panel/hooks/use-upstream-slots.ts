@@ -143,7 +143,52 @@ export function useUpstreamSlots({ nodeId, flowId }: UseUpstreamSlotsOptions) {
 
   const isAnyLoading = useMemo(() => slots.some((s) => s.status === 'loading'), [slots]);
 
-  // Derive the input preview JSON from slots
+  // Collect all transitive ancestors that are NOT directly connected
+  const indirectAncestors = useMemo(() => {
+    if (!nodeId) {
+      return {};
+    }
+
+    // Direct parent node IDs
+    const directParentIds = new Set(
+      edges.filter((e) => e.target === nodeId).map((e) => e.source),
+    );
+
+    // BFS to find all transitive ancestors
+    const allAncestorIds = new Set<string>();
+    const queue = [...directParentIds];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      const parentEdges = edges.filter((e) => e.target === current);
+      for (const pe of parentEdges) {
+        if (!allAncestorIds.has(pe.source) && !directParentIds.has(pe.source)) {
+          allAncestorIds.add(pe.source);
+          queue.push(pe.source);
+        }
+      }
+    }
+
+    if (allAncestorIds.size === 0) {
+      return {};
+    }
+
+    const result: Record<string, unknown> = {};
+    for (const ancestorId of allAncestorIds) {
+      const ancestorNode = nodes.find((n) => n.id === ancestorId);
+      if (!ancestorNode) {
+        continue;
+      }
+      const data = ancestorNode.data as ExtendedNodeData;
+      const displayName = data.display_name || ancestorNode.id;
+      const key = data.reference_id || generateSlug(displayName);
+      const output =
+        data.previewOutput ?? data.executionOutput ?? data.mockOutputData ?? data.exampleOutput ?? null;
+      result[key] = output;
+    }
+    return result;
+  }, [nodeId, nodes, edges]);
+
+  // Derive the input preview JSON from slots + indirect ancestors
   const inputPreviewJson = useMemo(() => {
     if (slots.length === 0) {
       return stringifyJson({});
@@ -152,8 +197,11 @@ export function useUpstreamSlots({ nodeId, flowId }: UseUpstreamSlotsOptions) {
     for (const slot of slots) {
       obj[slot.key] = slot.status === 'resolved' ? slot.output : null;
     }
-    return stringifyJson({ previous_nodes: obj });
-  }, [slots]);
+    if (Object.keys(indirectAncestors).length > 0) {
+      obj.previous_nodes = indirectAncestors;
+    }
+    return stringifyJson(obj);
+  }, [slots, indirectAncestors]);
 
   // Run a single upstream slot
   const runSlot = useCallback(

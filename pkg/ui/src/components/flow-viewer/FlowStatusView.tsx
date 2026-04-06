@@ -249,10 +249,7 @@ export function FlowStatusView({
     });
   };
 
-  const renderedNodes = useMemo(
-    () => processNodesForBatchExecution(nodes),
-    [nodes, selectedRun],
-  );
+  const renderedNodes = useMemo(() => processNodesForBatchExecution(nodes), [nodes, selectedRun]);
 
   // Build a fingerprint of execution statuses for the exact node set rendered
   // into React Flow. This includes temporary run-state decoration applied in

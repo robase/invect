@@ -11,7 +11,7 @@ export function withNodeContext<
     id: string;
   },
 >(Component: React.ComponentType<P>) {
-  const Wrapped = React.forwardRef<HTMLDivElement, P>((props, ref) => {
+  const Wrapped = React.forwardRef<HTMLDivElement, P>((props, _ref) => {
     const { mode, onEdit, onEditNode, stripExecutionData } = useNodeViewContext();
 
     // Process data based on context

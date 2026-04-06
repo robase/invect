@@ -117,28 +117,23 @@ export class NodeExecutionCoordinator {
    *
    * Structure:
    * {
-   *   "source_node_slug": {
-   *     nodeId: "abc-123",
-   *     nodeType: GraphNodeType.TEMPLATE_STRING,
-   *     label: "Source Node",
-   *     slug: "source_node_slug",
-   *     output: "the value",        // flattened from data.variables.output.value
-   *     data: { variables: { ... } },
-   *     _rawOutput: { nodeType: ..., data: { ... } },
-   *     toString(): string          // returns primary output value for direct template use
-   *   },
-   *   ...
+   *   "source_node_slug": <output>,        // direct parent outputs (top-level)
+   *   "previous_nodes": {                   // indirect ancestor outputs (collapsed in UI)
+   *     "ancestor_slug": <output>,
+   *     ...
+   *   }
    * }
    *
    * Input data structure matches the execution-process.md documentation:
    * - Keys: upstream node reference_id (or slug from label), normalized to snake_case
    * - Values: direct output value (the node's primary output, JSON-parsed if valid)
    *
-   * Example: { "fetch_user": { "id": 123, "name": "Alice" }, "get_config": "production" }
+   * Example: { "fetch_user": { "id": 123 }, "previous_nodes": { "init": "ok" } }
    *
    * Template usage:
    * - {{ fetch_user }} renders the full output object/value
    * - {{ fetch_user.id }} accesses nested properties directly
+   * - {{ previous_nodes.init }} accesses indirect ancestor output
    */
   buildIncomingDataObject(
     node: FlowNodeDefinitions,
@@ -148,6 +143,7 @@ export class NodeExecutionCoordinator {
   ): NodeIncomingDataObject {
     const incomingData: NodeIncomingDataObject = {};
     const incomingEdges = edges.filter((edge) => edge.target === node.id);
+    const directParentIds = new Set(incomingEdges.map((e) => e.source));
 
     for (const edge of incomingEdges) {
       const sourceNode = nodeMap.get(edge.source);
@@ -157,58 +153,20 @@ export class NodeExecutionCoordinator {
         continue;
       }
 
-      // Generate slug from label or fall back to node ID
-      const nodeLabel = sourceNode.label ?? '';
-      const referenceId = sourceNode.referenceId ?? '';
-      const nodeId = sourceNode.id;
-      const nodeType = sourceNode.type;
-      const label = nodeLabel || nodeType || nodeId;
-      // Prefer referenceId if available, otherwise generate slug from label
-      const slug = referenceId || generateNodeSlug(label, nodeId);
-
-      // Extract the primary output value directly
-      // Most nodes have a single "output" variable - we use that as the direct value
-      let outputValue: unknown = null;
-      const variables = sourceOutput?.data?.variables;
-
-      if (variables && typeof variables === 'object') {
-        // Get the "output" variable's value (primary output)
-        const outputVar = (variables as Record<string, { value?: unknown }>).output;
-        if (outputVar && typeof outputVar === 'object' && 'value' in outputVar) {
-          outputValue = outputVar.value;
-        } else if (outputVar !== undefined) {
-          outputValue = outputVar;
-        } else {
-          // If no "output" key, try to get the first variable's value
-          const firstKey = Object.keys(variables)[0];
-          if (firstKey) {
-            const firstVar = (variables as Record<string, { value?: unknown }>)[firstKey];
-            if (firstVar && typeof firstVar === 'object' && 'value' in firstVar) {
-              outputValue = firstVar.value;
-            } else {
-              outputValue = firstVar;
-            }
-          }
-        }
-      }
-
-      // Per documentation: "JSON-parsed if valid, else string"
-      // If the output is a JSON string, parse it to allow {{ slug.property }} access
-      if (typeof outputValue === 'string') {
-        try {
-          const parsed = JSON.parse(outputValue);
-          // Only use parsed value if it's an object/array (not primitives)
-          if (typeof parsed === 'object' && parsed !== null) {
-            outputValue = parsed;
-          }
-        } catch {
-          // Not valid JSON, keep as string
-        }
-      }
-
-      // Store the direct output value (not a complex wrapper object)
-      // This matches the documentation: { "fetch_user": { "id": 123 } }
+      const slug = this.getNodeSlug(sourceNode);
+      const outputValue = this.extractNodeOutputValue(sourceOutput);
       incomingData[slug] = outputValue;
+    }
+
+    // Collect indirect ancestors (all transitive upstream nodes not directly connected)
+    const indirectAncestors = this.collectIndirectAncestors(
+      directParentIds,
+      edges,
+      nodeMap,
+      nodeOutputs,
+    );
+    if (Object.keys(indirectAncestors).length > 0) {
+      incomingData.previous_nodes = indirectAncestors;
     }
 
     this.deps.logger.debug('Built incoming data object', {
@@ -216,9 +174,95 @@ export class NodeExecutionCoordinator {
       nodeType: node.type,
       incomingNodeCount: Object.keys(incomingData).length,
       incomingKeys: Object.keys(incomingData),
+      previousNodeKeys: Object.keys(indirectAncestors),
     });
 
     return incomingData;
+  }
+
+  /** Extract the slug (referenceId or generated) for a node definition. */
+  private getNodeSlug(sourceNode: FlowNodeDefinitions): string {
+    const nodeLabel = sourceNode.label ?? '';
+    const referenceId = sourceNode.referenceId ?? '';
+    const nodeId = sourceNode.id;
+    const nodeType = sourceNode.type;
+    const label = nodeLabel || nodeType || nodeId;
+    return referenceId || generateNodeSlug(label, nodeId);
+  }
+
+  /** Extract the primary output value from a node's output, JSON-parsing strings when valid. */
+  private extractNodeOutputValue(sourceOutput: NodeOutput | undefined): unknown {
+    let outputValue: unknown = null;
+    const variables = sourceOutput?.data?.variables;
+
+    if (variables && typeof variables === 'object') {
+      const outputVar = (variables as Record<string, { value?: unknown }>).output;
+      if (outputVar && typeof outputVar === 'object' && 'value' in outputVar) {
+        outputValue = outputVar.value;
+      } else if (outputVar !== undefined) {
+        outputValue = outputVar;
+      } else {
+        const firstKey = Object.keys(variables)[0];
+        if (firstKey) {
+          const firstVar = (variables as Record<string, { value?: unknown }>)[firstKey];
+          if (firstVar && typeof firstVar === 'object' && 'value' in firstVar) {
+            outputValue = firstVar.value;
+          } else {
+            outputValue = firstVar;
+          }
+        }
+      }
+    }
+
+    if (typeof outputValue === 'string') {
+      try {
+        const parsed = JSON.parse(outputValue);
+        if (typeof parsed === 'object' && parsed !== null) {
+          outputValue = parsed;
+        }
+      } catch {
+        // Not valid JSON, keep as string
+      }
+    }
+
+    return outputValue;
+  }
+
+  /**
+   * BFS from direct parents to collect all transitive ancestors that are NOT
+   * directly connected to the current node, along with their outputs.
+   */
+  private collectIndirectAncestors(
+    directParentIds: Set<string>,
+    edges: readonly FlowEdge[],
+    nodeMap: Map<string, FlowNodeDefinitions>,
+    nodeOutputs: Map<FlowNodeDefinitions['id'], NodeOutput | undefined>,
+  ): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
+    const visited = new Set<string>();
+    const queue = [...directParentIds];
+
+    while (queue.length > 0) {
+      const currentId = queue.shift()!;
+      const parentEdges = edges.filter((e) => e.target === currentId);
+      for (const pe of parentEdges) {
+        if (visited.has(pe.source) || directParentIds.has(pe.source)) {
+          continue;
+        }
+        visited.add(pe.source);
+        queue.push(pe.source);
+
+        const ancestorNode = nodeMap.get(pe.source);
+        if (!ancestorNode) {
+          continue;
+        }
+        const slug = this.getNodeSlug(ancestorNode);
+        const output = this.extractNodeOutputValue(nodeOutputs.get(pe.source));
+        result[slug] = output;
+      }
+    }
+
+    return result;
   }
 
   /**

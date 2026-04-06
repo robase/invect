@@ -76,21 +76,16 @@ export class HttpClient implements InvectClient {
   }
 
   async validateFlow(_identity: InvectIdentity | null, flowId: string, definition: unknown) {
-    return await this.request<{ valid: boolean; errors?: string[] }>(
-      'POST',
-      '/validate-flow',
-      { flowId, flowDefinition: definition },
-    );
+    return await this.request<{ valid: boolean; errors?: string[] }>('POST', '/validate-flow', {
+      flowId,
+      flowDefinition: definition,
+    });
   }
 
   // ===== Versions =====
 
   async listVersions(_identity: InvectIdentity | null, flowId: string) {
-    return await this.request(
-      'POST',
-      `/flows/${encodeURIComponent(flowId)}/versions/list`,
-      {},
-    );
+    return await this.request('POST', `/flows/${encodeURIComponent(flowId)}/versions/list`, {});
   }
 
   async getVersion(
@@ -128,16 +123,15 @@ export class HttpClient implements InvectClient {
     nodeId: string,
     inputs?: Record<string, unknown>,
   ) {
-    return await this.request('POST', `/flows/${encodeURIComponent(flowId)}/run-to-node/${encodeURIComponent(nodeId)}`, {
-      ...(inputs ? { inputs } : {}),
-    });
+    return await this.request(
+      'POST',
+      `/flows/${encodeURIComponent(flowId)}/run-to-node/${encodeURIComponent(nodeId)}`,
+      inputs ? { inputs } : {},
+    );
   }
 
   async listRuns(_identity: InvectIdentity | null, flowId: string) {
-    return await this.request(
-      'GET',
-      `/flows/${encodeURIComponent(flowId)}/flow-runs`,
-    );
+    return await this.request('GET', `/flows/${encodeURIComponent(flowId)}/flow-runs`);
   }
 
   async getRun(_identity: InvectIdentity | null, flowRunId: string) {
@@ -216,7 +210,7 @@ export class HttpClient implements InvectClient {
 
   async listCredentials(_identity: InvectIdentity | null): Promise<CredentialSummary[]> {
     const result = await this.request<{ data: unknown[] }>('GET', '/credentials');
-    const items = Array.isArray(result) ? result : (result as { data: unknown[] }).data ?? [];
+    const items = Array.isArray(result) ? result : ((result as { data: unknown[] }).data ?? []);
     return (items as Array<Record<string, unknown>>).map((c) => ({
       id: String(c.id),
       name: String(c.name),

@@ -352,11 +352,11 @@ export const findCredentialsForActionTool: ChatToolDefinition = {
         // Sort: full match first, then partial, then none
         .sort((a, b) => {
           const order = { full: 0, partial: 1, none: 2 };
-          return order[a!.scopeMatch] - order[b!.scopeMatch];
+          return order[a?.scopeMatch ?? 'none'] - order[b?.scopeMatch ?? 'none'];
         });
 
-      const fullMatches = results.filter((r) => r!.scopeMatch === 'full');
-      const partialMatches = results.filter((r) => r!.scopeMatch === 'partial');
+      const fullMatches = results.filter((r) => r?.scopeMatch === 'full');
+      const partialMatches = results.filter((r) => r?.scopeMatch === 'partial');
 
       return {
         success: true,

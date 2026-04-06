@@ -359,10 +359,16 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
         const p = page ? parseInt(page, 10) : undefined;
         const l = limit ? parseInt(limit, 10) : undefined;
         if (p || l) {
-          options.pagination = { page: p && p >= 1 ? p : 1, limit: l && l >= 1 ? Math.min(l, 100) : 50 };
+          options.pagination = {
+            page: p && p >= 1 ? p : 1,
+            limit: l && l >= 1 ? Math.min(l, 100) : 50,
+          };
         }
         if (sortBy) {
-          options.sort = { sortBy, sortOrder: sortOrder === 'asc' || sortOrder === 'desc' ? sortOrder : 'desc' };
+          options.sort = {
+            sortBy,
+            sortOrder: sortOrder === 'asc' || sortOrder === 'desc' ? sortOrder : 'desc',
+          };
         }
         const nodeExecutions = await initializedCore.runs.getNodeExecutions(flowRunId, options);
         return Response.json(nodeExecutions);
@@ -415,10 +421,16 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
         const p = page ? parseInt(page, 10) : undefined;
         const l = limit ? parseInt(limit, 10) : undefined;
         if (p || l) {
-          options.pagination = { page: p && p >= 1 ? p : 1, limit: l && l >= 1 ? Math.min(l, 100) : 20 };
+          options.pagination = {
+            page: p && p >= 1 ? p : 1,
+            limit: l && l >= 1 ? Math.min(l, 100) : 20,
+          };
         }
         if (sortBy) {
-          options.sort = { sortBy, sortOrder: sortOrder === 'asc' || sortOrder === 'desc' ? sortOrder : 'desc' };
+          options.sort = {
+            sortBy,
+            sortOrder: sortOrder === 'asc' || sortOrder === 'desc' ? sortOrder : 'desc',
+          };
         }
         const flowRuns = await initializedCore.runs.listByFlowId(flowId, options);
         return Response.json(flowRuns);
@@ -902,10 +914,12 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
         const limit = searchParams.get('limit');
         const p = page ? parseInt(page, 10) : undefined;
         const l = limit ? parseInt(limit, 10) : undefined;
-        return Response.json(await initializedCore.chat.getMessages(flowId, {
-          ...(p ? { page: p } : {}),
-          ...(l ? { limit: l } : {}),
-        }));
+        return Response.json(
+          await initializedCore.chat.getMessages(flowId, {
+            ...(p ? { page: p } : {}),
+            ...(l ? { limit: l } : {}),
+          }),
+        );
       }
 
       if (method === 'PUT' && path.match(/^chat\/messages\/[^/]+$/)) {

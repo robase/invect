@@ -1,0 +1,31 @@
+# Build outputs
+**/dist/
+**/build/
+**/.next/
+**/out/
+
+# Dependencies
+**/node_modules/
+
+# Lock files
+pnpm-lock.yaml
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+
+# Drizzle migrations (generated)
+**/drizzle/
+
+# Test artifacts
+**/playwright-report/
+**/test-results/
+**/blob-report/
+**/coverage/
+playwright/visual-audit/output/
+
+# Generated/compiled
+*.tsbuildinfo
+*.map

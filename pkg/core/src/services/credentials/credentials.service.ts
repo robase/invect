@@ -317,9 +317,7 @@ export class CredentialsService {
     // Decrypt config for return
     if (updated.config) {
       const decryptedConfig = this.encryption.decryptObject<CredentialConfig>(
-        typeof updated.config === 'string'
-          ? updated.config
-          : JSON.stringify(updated.config),
+        typeof updated.config === 'string' ? updated.config : JSON.stringify(updated.config),
       );
       return {
         ...updated,

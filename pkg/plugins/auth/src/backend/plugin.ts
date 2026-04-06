@@ -7,7 +7,6 @@ import type {
 } from '@invect/core';
 import type {
   AuthenticationPluginOptions,
-  ApiKeyPluginOptions,
   BetterAuthContext,
   BetterAuthUser,
   BetterAuthSession,

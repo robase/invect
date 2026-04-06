@@ -320,7 +320,10 @@ export class InvectController {
     const p = page ? parseInt(page, 10) : undefined;
     const l = limit ? parseInt(limit, 10) : undefined;
     if (p || l) {
-      options.pagination = { page: p && p >= 1 ? p : 1, limit: l && l >= 1 ? Math.min(l, 100) : 20 };
+      options.pagination = {
+        page: p && p >= 1 ? p : 1,
+        limit: l && l >= 1 ? Math.min(l, 100) : 20,
+      };
     }
     if (sortBy) {
       options.sort = { sortBy, sortOrder: sortOrder ?? 'desc' };
@@ -377,12 +380,18 @@ export class InvectController {
     const p = page ? parseInt(page, 10) : undefined;
     const l = limit ? parseInt(limit, 10) : undefined;
     if (p || l) {
-      options.pagination = { page: p && p >= 1 ? p : 1, limit: l && l >= 1 ? Math.min(l, 100) : 50 };
+      options.pagination = {
+        page: p && p >= 1 ? p : 1,
+        limit: l && l >= 1 ? Math.min(l, 100) : 50,
+      };
     }
     if (sortBy) {
       options.sort = { sortBy, sortOrder: sortOrder ?? 'desc' };
     }
-    return await this.invect.runs.getNodeExecutions(flowRunId, options as QueryOptions<NodeExecution>);
+    return await this.invect.runs.getNodeExecutions(
+      flowRunId,
+      options as QueryOptions<NodeExecution>,
+    );
   }
 
   /**

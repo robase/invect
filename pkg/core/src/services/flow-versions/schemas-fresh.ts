@@ -19,66 +19,68 @@ import { metadataSchema } from 'src/types.internal';
  * When enabled, the JS expression runs against incoming upstream data.
  * Use `return` for multi-statement code; single expressions auto-return.
  */
-export const mapperConfigSchema = z.object({
-  /** Whether the mapper is enabled for this node. */
-  enabled: z.boolean().default(false),
+export const mapperConfigSchema = z
+  .object({
+    /** Whether the mapper is enabled for this node. */
+    enabled: z.boolean().default(false),
 
-  /**
-   * JS expression that receives all upstream outputs as local variables.
-   * Executed in a QuickJS sandbox. Use `return` to produce a value.
-   * Single expressions (no `return` keyword) auto-return.
-   *
-   * @example
-   * // Pass array → node iterates per item:
-   * "users"
-   *
-   * // Filter then iterate:
-   * "users.filter(u => u.active)"
-   *
-   * // Multi-statement with explicit return:
-   * "const active = users.filter(u => u.active);\nreturn active.map(u => ({ ...u, rank: 1 }));"
-   *
-   * // Reshape into object → single run:
-   * "return { total: orders.reduce((s, o) => s + o.amount, 0), count: orders.length }"
-   */
-  expression: z.string(),
+    /**
+     * JS expression that receives all upstream outputs as local variables.
+     * Executed in a QuickJS sandbox. Use `return` to produce a value.
+     * Single expressions (no `return` keyword) auto-return.
+     *
+     * @example
+     * // Pass array → node iterates per item:
+     * "users"
+     *
+     * // Filter then iterate:
+     * "users.filter(u => u.active)"
+     *
+     * // Multi-statement with explicit return:
+     * "const active = users.filter(u => u.active);\nreturn active.map(u => ({ ...u, rank: 1 }));"
+     *
+     * // Reshape into object → single run:
+     * "return { total: orders.reduce((s, o) => s + o.amount, 0), count: orders.length }"
+     */
+    expression: z.string(),
 
-  /**
-   * Explicit intent declaration — prevents accidental iteration.
-   * - "auto"    (default): infer from return type (array → iterate, object → single)
-   * - "iterate": assert the result is an array, fail if not
-   * - "reshape": assert the result is NOT an array (wrap in object if it is), single run
-   */
-  mode: z.enum(['auto', 'iterate', 'reshape']).default('auto'),
+    /**
+     * Explicit intent declaration — prevents accidental iteration.
+     * - "auto"    (default): infer from return type (array → iterate, object → single)
+     * - "iterate": assert the result is an array, fail if not
+     * - "reshape": assert the result is NOT an array (wrap in object if it is), single run
+     */
+    mode: z.enum(['auto', 'iterate', 'reshape']).default('auto'),
 
-  /**
-   * How to combine iteration results when mapper returns an array.
-   * - "array"  (default): collect all outputs into [result1, result2, ...]
-   * - "object": build { keyField: result } using a field as key
-   * - "first":  return only the first iteration's output
-   * - "last":   return only the last iteration's output
-   * - "concat": join all string outputs
-   */
-  outputMode: z.enum(['array', 'object', 'first', 'last', 'concat']).default('array'),
+    /**
+     * How to combine iteration results when mapper returns an array.
+     * - "array"  (default): collect all outputs into [result1, result2, ...]
+     * - "object": build { keyField: result } using a field as key
+     * - "first":  return only the first iteration's output
+     * - "last":   return only the last iteration's output
+     * - "concat": join all string outputs
+     */
+    outputMode: z.enum(['array', 'object', 'first', 'last', 'concat']).default('array'),
 
-  /** For outputMode "object": the field path in each result to use as key. */
-  keyField: z.string().optional(),
+    /** For outputMode "object": the field path in each result to use as key. */
+    keyField: z.string().optional(),
 
-  /** Max parallel iterations (1 = sequential). Only applies when mapper returns array. */
-  concurrency: z.number().int().min(1).max(50).default(1),
+    /** Max parallel iterations (1 = sequential). Only applies when mapper returns array. */
+    concurrency: z.number().int().min(1).max(50).default(1),
 
-  /**
-   * Behavior when mapper returns an empty array.
-   * - "skip":   produce empty output, don't fail (default)
-   * - "error":  fail the node
-   */
-  onEmpty: z.enum(['error', 'skip']).default('skip'),
-}).check(
-  z.refine((data) => !data.enabled || data.expression.length >= 1, {
-    message: 'Expression is required when mapper is enabled',
-    path: ['expression'],
-  }),
-);
+    /**
+     * Behavior when mapper returns an empty array.
+     * - "skip":   produce empty output, don't fail (default)
+     * - "error":  fail the node
+     */
+    onEmpty: z.enum(['error', 'skip']).default('skip'),
+  })
+  .check(
+    z.refine((data) => !data.enabled || data.expression.length >= 1, {
+      message: 'Expression is required when mapper is enabled',
+      path: ['expression'],
+    }),
+  );
 
 export type MapperConfig = z.infer<typeof mapperConfigSchema>;
 

@@ -83,7 +83,7 @@ export class SessionManager {
   /** Close all sessions and stop cleanup */
   async closeAll(): Promise<void> {
     this.stopCleanup();
-    for (const [id, entry] of this.sessions) {
+    for (const [_id, entry] of this.sessions) {
       try {
         const transport = entry.transport as { close?: () => Promise<void> | void };
         if (transport.close) {

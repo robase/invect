@@ -71,8 +71,14 @@ function coerceQueryValue(value: unknown): unknown {
  * Parse pagination options from Express query params.
  * Returns a QueryOptions object suitable for the core API.
  */
-function parsePaginationFromQuery(query: Record<string, unknown>): { pagination?: { page: number; limit: number }; sort?: { sortBy: string; sortOrder: 'asc' | 'desc' } } {
-  const result: { pagination?: { page: number; limit: number }; sort?: { sortBy: string; sortOrder: 'asc' | 'desc' } } = {};
+function parsePaginationFromQuery(query: Record<string, unknown>): {
+  pagination?: { page: number; limit: number };
+  sort?: { sortBy: string; sortOrder: 'asc' | 'desc' };
+} {
+  const result: {
+    pagination?: { page: number; limit: number };
+    sort?: { sortBy: string; sortOrder: 'asc' | 'desc' };
+  } = {};
   const page = typeof query.page === 'string' ? parseInt(query.page, 10) : undefined;
   const limit = typeof query.limit === 'string' ? parseInt(query.limit, 10) : undefined;
   if (page || limit) {
@@ -82,7 +88,8 @@ function parsePaginationFromQuery(query: Record<string, unknown>): { pagination?
     };
   }
   const sortBy = typeof query.sortBy === 'string' ? query.sortBy : undefined;
-  const sortOrder = query.sortOrder === 'asc' || query.sortOrder === 'desc' ? query.sortOrder : undefined;
+  const sortOrder =
+    query.sortOrder === 'asc' || query.sortOrder === 'desc' ? query.sortOrder : undefined;
   if (sortBy) {
     result.sort = { sortBy, sortOrder: sortOrder ?? 'desc' };
   }
@@ -545,7 +552,10 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
     requirePermission('flow-run:read'),
     asyncHandler(async (req: Request, res: Response) => {
       const paginationOpts = parsePaginationFromQuery(req.query as Record<string, unknown>);
-      const nodeExecutions = await invect.runs.getNodeExecutions(req.params.flowRunId, paginationOpts);
+      const nodeExecutions = await invect.runs.getNodeExecutions(
+        req.params.flowRunId,
+        paginationOpts,
+      );
       res.json(nodeExecutions);
     }),
   );

@@ -9,7 +9,7 @@ import { InvectModule } from '@invect/nestjs';
 @Module({
   imports: [
     InvectModule.forRoot({
-      encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+      encryptionKey: process.env.INVECT_ENCRYPTION_KEY ?? '',
       database: {
         type: 'sqlite',
         connectionString: 'file:./dev.db',
@@ -27,7 +27,7 @@ export class AppModule {}
   imports: [
     InvectModule.forRootAsync({
       useFactory: () => ({
-        encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+        encryptionKey: process.env.INVECT_ENCRYPTION_KEY ?? '',
         database: {
           type: 'sqlite',
           connectionString: process.env.DATABASE_URL || 'file:./dev.db',

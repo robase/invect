@@ -43,7 +43,13 @@ export class ChatMessagesModel {
   /**
    * Get all messages for a flow, ordered by creation time (oldest first).
    */
-  async getByFlowId(flowId: string, options?: { limit?: number; page?: number }): Promise<{ data: ChatMessageRecord[]; pagination: { page: number; limit: number; totalPages: number } }> {
+  async getByFlowId(
+    flowId: string,
+    options?: { limit?: number; page?: number },
+  ): Promise<{
+    data: ChatMessageRecord[];
+    pagination: { page: number; limit: number; totalPages: number };
+  }> {
     const limit = Math.min(Math.max(options?.limit ?? 100, 1), 100);
     const page = Math.max(options?.page ?? 1, 1);
     const offset = (page - 1) * limit;

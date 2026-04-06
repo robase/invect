@@ -28,14 +28,18 @@ async function main(): Promise<void> {
   const apiKey = args['api-key'] || process.env.INVECT_API_KEY;
 
   if (!url) {
-    console.error('Error: --url or INVECT_URL is required.');
-    console.error('Usage: invect-mcp --url http://localhost:3000/invect --api-key YOUR_KEY');
+    process.stderr.write('Error: --url or INVECT_URL is required.\n');
+    process.stderr.write(
+      'Usage: invect-mcp --url http://localhost:3000/invect --api-key YOUR_KEY\n',
+    );
     process.exit(1);
   }
 
   if (!apiKey) {
-    console.error('Error: --api-key or INVECT_API_KEY is required.');
-    console.error('Usage: invect-mcp --url http://localhost:3000/invect --api-key YOUR_KEY');
+    process.stderr.write('Error: --api-key or INVECT_API_KEY is required.\n');
+    process.stderr.write(
+      'Usage: invect-mcp --url http://localhost:3000/invect --api-key YOUR_KEY\n',
+    );
     process.exit(1);
   }
 
@@ -50,7 +54,7 @@ async function main(): Promise<void> {
   await server.connect(transport);
 
   // Log to stderr (stdout is used by the MCP protocol)
-  console.error(`invect-mcp: Connected to ${url} via stdio transport`);
+  process.stderr.write(`invect-mcp: Connected to ${url} via stdio transport\n`);
 }
 
 function parseArgs(argv: string[]): Record<string, string> {
@@ -75,6 +79,6 @@ function parseArgs(argv: string[]): Record<string, string> {
 }
 
 main().catch((err) => {
-  console.error('invect-mcp: Fatal error:', err);
+  process.stderr.write(`invect-mcp: Fatal error: ${err}\n`);
   process.exit(1);
 });

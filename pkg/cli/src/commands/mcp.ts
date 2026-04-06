@@ -33,13 +33,7 @@ export const mcpCommand = new Command('mcp')
         mcpServers: {
           invect: {
             command: 'npx',
-            args: [
-              'invect-cli',
-              'mcp',
-              '--url',
-              url,
-              ...(apiKey ? ['--api-key', apiKey] : []),
-            ],
+            args: ['invect-cli', 'mcp', '--url', url, ...(apiKey ? ['--api-key', apiKey] : [])],
           },
         },
       };
@@ -51,7 +45,9 @@ export const mcpCommand = new Command('mcp')
       console.error(pc.red('Error: --api-key or INVECT_API_KEY is required.'));
       console.error('');
       console.error(pc.dim('Usage:'));
-      console.error(pc.dim('  npx invect-cli mcp --url http://localhost:3000/invect --api-key YOUR_KEY'));
+      console.error(
+        pc.dim('  npx invect-cli mcp --url http://localhost:3000/invect --api-key YOUR_KEY'),
+      );
       console.error('');
       console.error(pc.dim('Or set environment variables:'));
       console.error(pc.dim('  INVECT_URL=http://localhost:3000/invect'));
@@ -64,9 +60,9 @@ export const mcpCommand = new Command('mcp')
     const mcpPkg = '@invect/mcp/cli';
     const sdkPkg = '@modelcontextprotocol/sdk/server/stdio.js';
 
-    let HttpClient: { new (url: string, apiKey: string): any };
-    let createMcpServer: (client: any) => any;
-    let StdioServerTransport: { new (): any };
+    let HttpClient: { new (url: string, apiKey: string): unknown };
+    let createMcpServer: (client: unknown) => unknown;
+    let StdioServerTransport: { new (): unknown };
 
     try {
       const mcpModule = await import(/* @vite-ignore */ mcpPkg);

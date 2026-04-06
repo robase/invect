@@ -1946,7 +1946,7 @@ export class Invect {
               metadata,
             });
             this.config.logger.debug(`Upserted credential "${seed.name}" (${existingCred.id})`);
-          } catch (updateErr) {
+          } catch {
             // Decryption failure (e.g. encryption key changed) — delete and recreate
             this.config.logger.warn(
               `Failed to update credential "${seed.name}", recreating with current encryption key`,
@@ -2205,7 +2205,10 @@ export class Invect {
   async getChatMessages(
     flowId: string,
     options?: { limit?: number; page?: number },
-  ): Promise<{ data: import('./services/chat/chat-messages.model').ChatMessageRecord[]; pagination: { page: number; limit: number; totalPages: number } }> {
+  ): Promise<{
+    data: import('./services/chat/chat-messages.model').ChatMessageRecord[];
+    pagination: { page: number; limit: number; totalPages: number };
+  }> {
     this.ensureInitialized();
     return this.serviceFactory.getDatabaseService().chatMessages.getByFlowId(flowId, options);
   }

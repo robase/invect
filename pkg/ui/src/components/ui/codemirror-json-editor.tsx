@@ -21,7 +21,13 @@ import {
 } from '@codemirror/state';
 import { json, jsonParseLinter } from '@codemirror/lang-json';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
-import { bracketMatching, foldGutter, foldKeymap, foldEffect, foldable } from '@codemirror/language';
+import {
+  bracketMatching,
+  foldGutter,
+  foldKeymap,
+  foldEffect,
+  foldable,
+} from '@codemirror/language';
 import {
   closeBrackets,
   closeBracketsKeymap,

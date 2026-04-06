@@ -7,12 +7,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { InvectClient } from '../client/types';
 import { resolveIdentity } from '../auth';
 import { TOOL_IDS } from '../../shared/types';
-import {
-  mapFlowList,
-  mapFlow,
-  mapFlowDefinition,
-  mapValidation,
-} from '../response-mappers';
+import { mapFlowList, mapFlow, mapFlowDefinition, mapValidation } from '../response-mappers';
 
 export function registerFlowTools(server: McpServer, client: InvectClient): void {
   server.tool(
