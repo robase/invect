@@ -67,7 +67,7 @@ function debugError(label: string, error: unknown) {
 // Constants
 // =============================================================================
 
-const FRAMEWORKS = [
+export const FRAMEWORKS = [
   {
     name: 'Express',
     id: 'express',
@@ -98,9 +98,9 @@ const FRAMEWORKS = [
   },
 ] as const;
 
-type Framework = (typeof FRAMEWORKS)[number];
+export type Framework = (typeof FRAMEWORKS)[number];
 
-const DATABASES = [
+export const DATABASES = [
   {
     name: 'SQLite',
     id: 'sqlite',
@@ -151,9 +151,9 @@ const DATABASES = [
   },
 ] as const;
 
-type Database = (typeof DATABASES)[number];
+export type Database = (typeof DATABASES)[number];
 
-const SCHEMA_TOOLS = [
+export const SCHEMA_TOOLS = [
   { name: 'Drizzle ORM', id: 'drizzle', description: 'TypeScript ORM with type-safe schema' },
   { name: 'Prisma', id: 'prisma', description: 'Schema-first ORM' },
   {
@@ -706,7 +706,8 @@ async function askSchemaTool(): Promise<SchemaTool> {
 // Generators
 // =============================================================================
 
-function generateConfigFile(framework: Framework, database: Database): string {
+/** @internal — exported for testing */
+export function generateConfigFile(framework: Framework, database: Database): string {
   let dbConfig: string;
 
   // Determine if we need an explicit `driver` field.
@@ -786,7 +787,8 @@ function detectPackageManager(): string {
   return 'npm';
 }
 
-function getInstallCommand(pm: string, packages: string[], isDev: boolean): string {
+/** @internal — exported for testing */
+export function getInstallCommand(pm: string, packages: string[], isDev: boolean): string {
   const flags: Record<string, string> = {
     npm: isDev ? '--save-dev' : '',
     pnpm: isDev ? '--save-dev' : '',
@@ -809,7 +811,8 @@ function findExistingDrizzleConfig(): string | null {
   return null;
 }
 
-function generateDrizzleConfigFile(database: Database, schemaPath: string): string {
+/** @internal — exported for testing */
+export function generateDrizzleConfigFile(database: Database, schemaPath: string): string {
   const dbCredentials: Record<string, string> = {
     sqlite: `  dbCredentials: {
     url: process.env.DATABASE_URL || './dev.db',
@@ -923,7 +926,8 @@ async function askSchemaPath(
 /**
  * Parse drizzle.config.ts to extract schema path and dialect via regex.
  */
-function parseDrizzleConfig(configFile: string): {
+/** @internal — exported for testing */
+export function parseDrizzleConfig(configFile: string): {
   schemaPath: string | null;
   dialect: 'sqlite' | 'postgresql' | 'mysql' | null;
 } | null {

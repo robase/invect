@@ -160,7 +160,8 @@ async function migrateAction(options: { config?: string; yes?: boolean; push?: b
 // =============================================================================
 
 /** Env for drizzle-kit subprocesses — suppresses Node.js deprecation warnings. */
-function drizzleKitEnv(): NodeJS.ProcessEnv {
+/** @internal — exported for testing */
+export function drizzleKitEnv(): NodeJS.ProcessEnv {
   const existing = process.env.NODE_OPTIONS || '';
   return {
     ...process.env,
@@ -175,7 +176,8 @@ function drizzleKitEnv(): NodeJS.ProcessEnv {
  * subprocess (Ctrl-C, SIGINT/SIGTERM) or by the tool's own interactive
  * prompt being declined (e.g. drizzle-kit "No, abort").
  */
-function wasAbortedByUser(error: unknown): boolean {
+/** @internal — exported for testing */
+export function wasAbortedByUser(error: unknown): boolean {
   const e = error as {
     signal?: string;
     status?: number | null;
@@ -197,7 +199,8 @@ function wasAbortedByUser(error: unknown): boolean {
  * Detect which drizzle.config file to use based on the database type.
  * Searches for dialect-specific configs first, then falls back to generic.
  */
-function detectDrizzleConfig(dbType: string): string | null {
+/** @internal — exported for testing */
+export function detectDrizzleConfig(dbType: string): string | null {
   const candidates: Record<string, string[]> = {
     sqlite: ['drizzle.config.sqlite.ts', 'drizzle.config.ts'],
     postgresql: ['drizzle.config.postgres.ts', 'drizzle.config.postgresql.ts', 'drizzle.config.ts'],

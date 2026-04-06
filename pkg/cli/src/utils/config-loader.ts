@@ -238,7 +238,8 @@ export async function loadConfig(configPath: string): Promise<ResolvedConfig> {
 /**
  * Resolve the actual config object from various export patterns.
  */
-function resolveConfigExport(module: unknown): unknown {
+/** @internal — exported for testing */
+export function resolveConfigExport(module: unknown): unknown {
   if (!module || typeof module !== 'object') {
     return module;
   }

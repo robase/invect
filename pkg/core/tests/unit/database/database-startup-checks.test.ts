@@ -227,10 +227,10 @@ describe('DatabaseService startup checks', () => {
       const logger = createMockLogger();
       const plugins: InvectPlugin[] = [
         {
-          id: 'better-auth',
-          name: 'Better Auth',
+          id: 'user-auth',
+          name: 'User Auth',
           requiredTables: ['user', 'session', 'account', 'verification'],
-          setupInstructions: 'Add better-auth tables to your schema, then run: pnpm db:push',
+          setupInstructions: 'Add user-auth tables to your schema, then run: pnpm db:push',
         },
       ];
       const service = new DatabaseService(
@@ -244,7 +244,7 @@ describe('DatabaseService startup checks', () => {
 
       const errorCall = logger.error.mock.calls[0][0] as string;
       expect(errorCall).toContain('PLUGIN TABLES MISSING');
-      expect(errorCall).toContain('Better Auth');
+      expect(errorCall).toContain('User Auth');
       expect(errorCall).toContain('user');
       expect(errorCall).toContain('session');
     });
@@ -283,8 +283,8 @@ describe('DatabaseService startup checks', () => {
       const logger = createMockLogger();
       const plugins: InvectPlugin[] = [
         {
-          id: 'better-auth',
-          name: 'Better Auth',
+          id: 'user-auth',
+          name: 'User Auth',
           requiredTables: ['user', 'session', 'account', 'verification'],
         },
       ];
@@ -401,8 +401,8 @@ describe('DatabaseService startup checks', () => {
       const logger = createMockLogger();
       const plugins: InvectPlugin[] = [
         {
-          id: 'better-auth',
-          name: 'Better Auth',
+          id: 'user-auth',
+          name: 'User Auth',
           requiredTables: ['user', 'session', 'account', 'verification'],
         },
       ];

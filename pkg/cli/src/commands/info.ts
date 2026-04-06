@@ -160,7 +160,8 @@ function printInfo(info: Record<string, unknown>): void {
 // Detection utilities
 // =============================================================================
 
-function detectPackageManager(): string {
+/** @internal — exported for testing */
+export function detectPackageManager(): string {
   const cwd = process.cwd();
   if (fs.existsSync(path.join(cwd, 'pnpm-lock.yaml'))) {
     return 'pnpm';
@@ -177,7 +178,8 @@ function detectPackageManager(): string {
   return 'unknown';
 }
 
-async function detectPackageVersion(pkg: string): Promise<string> {
+/** @internal — exported for testing */
+export async function detectPackageVersion(pkg: string): Promise<string> {
   try {
     const pkgJsonPath = path.join(process.cwd(), 'node_modules', pkg, 'package.json');
     if (fs.existsSync(pkgJsonPath)) {
@@ -190,7 +192,8 @@ async function detectPackageVersion(pkg: string): Promise<string> {
   return 'not installed';
 }
 
-function detectFrameworks(): string[] {
+/** @internal — exported for testing */
+export function detectFrameworks(): string[] {
   const frameworks: string[] = [];
   const pkgPath = path.join(process.cwd(), 'package.json');
 
@@ -236,7 +239,8 @@ function detectFrameworks(): string[] {
   return frameworks;
 }
 
-function detectDatabaseTools(): string[] {
+/** @internal — exported for testing */
+export function detectDatabaseTools(): string[] {
   const tools: string[] = [];
   const pkgPath = path.join(process.cwd(), 'package.json');
 
@@ -276,7 +280,8 @@ function detectDatabaseTools(): string[] {
   return tools;
 }
 
-function redactSensitive(config: Record<string, unknown>): Record<string, unknown> {
+/** @internal — exported for testing */
+export function redactSensitive(config: Record<string, unknown>): Record<string, unknown> {
   const sensitiveKeys = [
     'apiKey',
     'api_key',

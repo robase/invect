@@ -63,8 +63,8 @@ describe('userAuth', () => {
       const auth = createMockAuth();
       const plugin = userAuth({ auth });
 
-      expect(plugin.id).toBe('better-auth');
-      expect(plugin.name).toBe('Better Auth');
+      expect(plugin.id).toBe('user-auth');
+      expect(plugin.name).toBe('User Auth');
     });
 
     it('generates proxy endpoints for all HTTP methods', () => {
