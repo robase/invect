@@ -1,0 +1,48 @@
+---
+title: Introduction
+description: What Invect is, who it's for, and the key ideas behind it.
+---
+
+Invect is an open-source workflow orchestration library for Node.js. You install it as an npm package, mount it in your existing application, and get a visual flow editor, 190+ integrations, AI agent nodes, and a REST API — without running a separate platform.
+
+## What makes it different
+
+Most workflow tools (Airflow, Temporal, n8n) are standalone platforms. You deploy them alongside your application and coordinate between the two. Invect takes the opposite approach: it's a **library**. It lives inside your Express, NestJS, or Next.js app. Your flows share your database, your auth, and your deployment pipeline.
+
+This means no extra infrastructure, no network hops between your app and a workflow engine, and no separate auth system to integrate. When you deploy your app, Invect deploys with it.
+
+## Core ideas
+
+**Flows** are directed graphs of nodes. Each node does one thing — call an API, transform data, evaluate a condition, run an AI prompt. Nodes connect via edges that define data flow. When a flow runs, Invect resolves the graph in topological order, passing each node's output to its downstream dependents.
+
+**Actions** are the building blocks. Every node type (HTTP request, Gmail send, JQ transform, etc.) is defined as an action — a self-contained unit with a config schema, UI definition, and execute function. Actions also double as agent tools automatically.
+
+**Agents** are nodes that run an LLM in a loop. The model can call tools (which are actions), inspect results, and decide what to do next. This enables autonomous multi-step tasks like "research this topic and email a summary."
+
+**Plugins** extend the system. The auth plugin adds login and session management. The RBAC plugin adds per-flow access control. The webhooks plugin adds inbound triggers. You can write your own.
+
+## Architecture at a glance
+
+```
+Your Node.js app
+└── @invect/express (or /nestjs, /nextjs)   ← thin adapter
+    └── @invect/core                        ← all business logic
+        ├── Services (flows, credentials, execution, AI...)
+        ├── Actions (190+ integrations)
+        ├── Database (Drizzle ORM — SQLite, PostgreSQL, MySQL)
+        └── Plugin Manager
+```
+
+All logic lives in `@invect/core`. Framework packages are thin adapters — Express gets a router factory, NestJS gets a module, Next.js gets a route handler. Each is under 400 lines of code.
+
+## What you can build
+
+- **AI workflows** — chain prompts, tools, and human inputs into repeatable pipelines
+- **Integration automations** — connect Gmail, Slack, Jira, Salesforce, and 30+ other services
+- **Data pipelines** — transform, filter, and route data using JQ, JavaScript, or HTTP nodes
+- **Scheduled jobs** — cron-triggered flows for reports, sync, or maintenance
+- **Agent tasks** — autonomous agents that use tools to accomplish open-ended goals
+
+## Next
+
+Head to the [Quickstart](/docs/getting-started/quickstart) to get a running Invect server in a few minutes.

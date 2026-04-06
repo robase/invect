@@ -441,4 +441,180 @@ describe('Flow Execution', () => {
 
     expect(traces.length).toBeGreaterThanOrEqual(2);
   });
+
+  // ---------------------------------------------------------------------------
+  // trigger.manual — JSON string params (UI config panel scenario)
+  // ---------------------------------------------------------------------------
+
+  describe('trigger.manual inputDefinitions coercion', () => {
+    it('should accept inputDefinitions as a JSON string (from UI config panel)', async () => {
+      const result = await runFlow('trigger-json-string', {
+        nodes: [
+          {
+            id: 'trigger-1',
+            type: 'trigger.manual',
+            label: 'Start',
+            referenceId: 'start',
+            params: {
+              // UI config panel stores this as a JSON string from the textarea
+              inputDefinitions:
+                '[{ "name": "email" }, { "name": "topic", "defaultValue": "general" }]',
+            },
+            position: { x: 0, y: 0 },
+          },
+        ],
+        edges: [],
+      });
+
+      // The flow provides no inputs, so "email" is missing but "topic" has a default
+      expect(result.status).toBe(FlowRunStatus.FAILED);
+    });
+
+    it('should succeed with inputDefinitions as JSON string when inputs are provided', async () => {
+      const flow = await invect.flows.create({ name: `trigger-json-inputs-${Date.now()}` });
+      await invect.versions.create(flow.id, {
+        invectDefinition: {
+          nodes: [
+            {
+              id: 'trigger-1',
+              type: 'trigger.manual',
+              label: 'Start',
+              referenceId: 'start',
+              params: {
+                inputDefinitions:
+                  '[{ "name": "email" }, { "name": "topic", "defaultValue": "general" }]',
+              },
+              position: { x: 0, y: 0 },
+            },
+          ],
+          edges: [],
+        },
+      });
+
+      const result = await invect.runs.start(
+        flow.id,
+        { email: 'test@example.com' },
+        { useBatchProcessing: false },
+      );
+
+      expect(result.status).toBe(FlowRunStatus.SUCCESS);
+      expect(getNodeOutput(result, 'trigger-1')).toEqual({
+        email: 'test@example.com',
+        topic: 'general',
+      });
+    });
+
+    it('should accept inputDefinitions as a real array (from chat assistant)', async () => {
+      const flow = await invect.flows.create({ name: `trigger-array-${Date.now()}` });
+      await invect.versions.create(flow.id, {
+        invectDefinition: {
+          nodes: [
+            {
+              id: 'trigger-1',
+              type: 'trigger.manual',
+              label: 'Start',
+              referenceId: 'start',
+              params: {
+                // Chat assistant stores this as a real array
+                inputDefinitions: [{ name: 'email' }, { name: 'topic', defaultValue: 'general' }],
+              },
+              position: { x: 0, y: 0 },
+            },
+          ],
+          edges: [],
+        },
+      });
+
+      const result = await invect.runs.start(
+        flow.id,
+        { email: 'test@example.com' },
+        { useBatchProcessing: false },
+      );
+
+      expect(result.status).toBe(FlowRunStatus.SUCCESS);
+      expect(getNodeOutput(result, 'trigger-1')).toEqual({
+        email: 'test@example.com',
+        topic: 'general',
+      });
+    });
+
+    it('should handle empty string inputDefinitions as no definitions (pass all inputs through)', async () => {
+      const flow = await invect.flows.create({ name: `trigger-empty-${Date.now()}` });
+      await invect.versions.create(flow.id, {
+        invectDefinition: {
+          nodes: [
+            {
+              id: 'trigger-1',
+              type: 'trigger.manual',
+              label: 'Start',
+              referenceId: 'start',
+              params: {
+                // User cleared the field — empty string from UI
+                inputDefinitions: '',
+              },
+              position: { x: 0, y: 0 },
+            },
+          ],
+          edges: [],
+        },
+      });
+
+      const result = await invect.runs.start(
+        flow.id,
+        { anything: 'works' },
+        { useBatchProcessing: false },
+      );
+
+      expect(result.status).toBe(FlowRunStatus.SUCCESS);
+      expect(getNodeOutput(result, 'trigger-1')).toEqual({ anything: 'works' });
+    });
+
+    it('should handle inputDefinitions with extra fields from chat assistant (label, type, required)', async () => {
+      const flow = await invect.flows.create({ name: `trigger-extra-fields-${Date.now()}` });
+      await invect.versions.create(flow.id, {
+        invectDefinition: {
+          nodes: [
+            {
+              id: 'trigger-1',
+              type: 'trigger.manual',
+              label: 'Start',
+              referenceId: 'start',
+              params: {
+                // Chat assistant includes extra fields that Zod should strip
+                inputDefinitions: JSON.stringify([
+                  {
+                    name: 'reporter_email',
+                    label: 'Reporter Email',
+                    type: 'text',
+                    required: true,
+                  },
+                  {
+                    name: 'ticket_type',
+                    label: 'Ticket Type',
+                    type: 'text',
+                    required: true,
+                    description: 'bug | feature | question',
+                  },
+                ]),
+              },
+              position: { x: 0, y: 0 },
+            },
+          ],
+          edges: [],
+        },
+      });
+
+      const result = await invect.runs.start(
+        flow.id,
+        { reporter_email: 'admin@test.com', ticket_type: 'bug' },
+        { useBatchProcessing: false },
+      );
+
+      expect(result.status).toBe(FlowRunStatus.SUCCESS);
+      expect(getNodeOutput(result, 'trigger-1')).toEqual({
+        reporter_email: 'admin@test.com',
+        ticket_type: 'bug',
+      });
+    });
+  });
 });

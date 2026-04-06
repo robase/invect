@@ -130,12 +130,23 @@ export function AppSideMenu({ basePath = '' }: AppSideMenuProps) {
                 ? location.pathname === item.href
                 : location.pathname.startsWith(item.href);
 
+              if (!tooltipsEnabled) {
+                return (
+                  <Link key={item.label} to={item.href} aria-label={item.label}>
+                    <Button
+                      variant={isActive ? 'secondary' : 'ghost'}
+                      className="justify-start w-full px-0"
+                    >
+                      <span className="flex items-center justify-center w-12 shrink-0">
+                        <item.icon className="w-5 h-5" />
+                      </span>
+                      {!isCollapsed && <span>{item.label}</span>}
+                    </Button>
+                  </Link>
+                );
+              }
               return (
-                <Tooltip
-                  key={item.label}
-                  delayDuration={0}
-                  open={tooltipsEnabled ? undefined : false}
-                >
+                <Tooltip key={item.label} delayDuration={0}>
                   <TooltipTrigger asChild>
                     <Link to={item.href} aria-label={item.label}>
                       <Button
@@ -149,7 +160,7 @@ export function AppSideMenu({ basePath = '' }: AppSideMenuProps) {
                       </Button>
                     </Link>
                   </TooltipTrigger>
-                  {isCollapsed && tooltipsEnabled && (
+                  {isCollapsed && (
                     <TooltipContent side="right" sideOffset={16}>
                       <p>{item.label}</p>
                     </TooltipContent>
@@ -163,12 +174,23 @@ export function AppSideMenu({ basePath = '' }: AppSideMenuProps) {
           <div className="p-2 space-y-1 border-t border-border">
             {pluginBottomItems.map((item) => {
               const isActive = location.pathname.startsWith(item.href);
+              if (!tooltipsEnabled) {
+                return (
+                  <Link key={item.label} to={item.href} aria-label={item.label}>
+                    <Button
+                      variant={isActive ? 'secondary' : 'ghost'}
+                      className="justify-start w-full px-0"
+                    >
+                      <span className="flex items-center justify-center w-12 shrink-0">
+                        <item.icon className="w-5 h-5" />
+                      </span>
+                      {!isCollapsed && <span>{item.label}</span>}
+                    </Button>
+                  </Link>
+                );
+              }
               return (
-                <Tooltip
-                  key={item.label}
-                  delayDuration={0}
-                  open={tooltipsEnabled ? undefined : false}
-                >
+                <Tooltip key={item.label} delayDuration={0}>
                   <TooltipTrigger asChild>
                     <Link to={item.href} aria-label={item.label}>
                       <Button
@@ -182,7 +204,7 @@ export function AppSideMenu({ basePath = '' }: AppSideMenuProps) {
                       </Button>
                     </Link>
                   </TooltipTrigger>
-                  {isCollapsed && tooltipsEnabled && (
+                  {isCollapsed && (
                     <TooltipContent side="right" sideOffset={16}>
                       <p>{item.label}</p>
                     </TooltipContent>
@@ -190,27 +212,46 @@ export function AppSideMenu({ basePath = '' }: AppSideMenuProps) {
                 </Tooltip>
               );
             })}
-            <Tooltip delayDuration={0} open={tooltipsEnabled ? undefined : false}>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" onClick={toggleTheme} className="justify-start w-full px-0">
-                  <span className="flex items-center justify-center w-12 shrink-0">
-                    {resolvedTheme === 'dark' ? (
-                      <Sun className="w-5 h-5" />
-                    ) : (
-                      <Moon className="w-5 h-5" />
+            {tooltipsEnabled ? (
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    onClick={toggleTheme}
+                    className="justify-start w-full px-0"
+                  >
+                    <span className="flex items-center justify-center w-12 shrink-0">
+                      {resolvedTheme === 'dark' ? (
+                        <Sun className="w-5 h-5" />
+                      ) : (
+                        <Moon className="w-5 h-5" />
+                      )}
+                    </span>
+                    {!isCollapsed && (
+                      <span>{resolvedTheme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
                     )}
-                  </span>
-                  {!isCollapsed && (
-                    <span>{resolvedTheme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+                  </Button>
+                </TooltipTrigger>
+                {isCollapsed && (
+                  <TooltipContent side="right" sideOffset={16}>
+                    <p>{resolvedTheme === 'dark' ? 'Light Mode' : 'Dark Mode'}</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            ) : (
+              <Button variant="ghost" onClick={toggleTheme} className="justify-start w-full px-0">
+                <span className="flex items-center justify-center w-12 shrink-0">
+                  {resolvedTheme === 'dark' ? (
+                    <Sun className="w-5 h-5" />
+                  ) : (
+                    <Moon className="w-5 h-5" />
                   )}
-                </Button>
-              </TooltipTrigger>
-              {isCollapsed && tooltipsEnabled && (
-                <TooltipContent side="right" sideOffset={16}>
-                  <p>{resolvedTheme === 'dark' ? 'Light Mode' : 'Dark Mode'}</p>
-                </TooltipContent>
-              )}
-            </Tooltip>
+                </span>
+                {!isCollapsed && (
+                  <span>{resolvedTheme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+                )}
+              </Button>
+            )}
           </div>
 
           {/* Plugin sidebar footer (e.g. user menu) */}

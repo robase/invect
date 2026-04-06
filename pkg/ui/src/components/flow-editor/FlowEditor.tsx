@@ -1,5 +1,5 @@
 import React, { useRef, useCallback, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { FlowLayout } from './FlowLayout';
 import { ModeSwitcher } from './ModeSwitcher';
 import { NodeSidebar } from './NodeSidebar';
@@ -258,6 +258,28 @@ export function FlowWorkbenchView({
   React.useEffect(() => {
     setAllNodesHaveDefinitions(allNodesHaveDefinitions);
   }, [allNodesHaveDefinitions, setAllNodesHaveDefinitions]);
+
+  // Handle openNode query param (e.g. navigated from runs view "Edit" button)
+  const [searchParams, setSearchParams] = useSearchParams();
+  React.useEffect(() => {
+    const openNodeId = searchParams.get('openNode');
+    if (openNodeId && storeNodes.length > 0) {
+      const nodeExists = storeNodes.some((n) => n.id === openNodeId);
+      if (nodeExists) {
+        openConfigPanel(openNodeId);
+      }
+      // Clear the param to avoid re-opening on subsequent renders
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete('openNode');
+          return next;
+        },
+        { replace: true },
+      );
+    }
+  }, [searchParams, storeNodes, openConfigPanel, setSearchParams]);
+
   const dialogContainerRef = useRef<HTMLDivElement | null>(null);
   const isDraggingNodeRef = useRef(false);
   const isShiftKeyHeldRef = useRef(false);

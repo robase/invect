@@ -83,9 +83,9 @@ export function FlowRouteLayout({ basePath = '' }: FlowRouteLayoutProps) {
             isTogglingActive={updateFlowMutation.isPending}
             onToggleActive={handleToggleActive}
             onSave={flowActionsValue?.onSave}
-            onExecute={flowActionsValue?.onExecute}
+            onExecute={execute}
             isSaving={flowActionsValue?.isSaving}
-            isExecuting={flowActionsValue?.isExecuting}
+            isExecuting={isExecuting}
           />
           <div className="imp-page flex-1 min-h-0 bg-imp-background">
             <Outlet />

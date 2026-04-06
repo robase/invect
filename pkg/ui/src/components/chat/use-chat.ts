@@ -363,10 +363,9 @@ function handleUiAction(action: string, data: Record<string, unknown>, ctx: UiAc
       break;
     }
 
-    // ─── Open credential setup modal ───
+    // ─── Open credential setup (handled by CredentialSetupBubble in chat UI) ───
     case 'open_credential_setup': {
-      // Navigate to credentials page
-      navigate(`${basePath}/credentials`);
+      // No-op: the credential modal is rendered inline in the chat message bubble.
       break;
     }
 

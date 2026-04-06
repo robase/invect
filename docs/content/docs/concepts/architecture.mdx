@@ -1,0 +1,78 @@
+---
+title: Architecture
+description: How Invect is structured — core library, service layer, and framework adapters.
+---
+
+Invect's architecture is built around a single idea: all business logic lives in `@invect/core`, and framework packages are thin adapters.
+
+## The core
+
+`@invect/core` contains:
+
+- **Invect class** (`invect-core.ts`) — the central orchestrator. This single class exposes 40+ methods for flow CRUD, execution, credentials, triggers, and tools. Framework adapters call these methods; nothing else.
+- **Services** — business logic organised by domain. `FlowsService` handles flow CRUD. `FlowOrchestrationService` runs flows. `CredentialsService` manages encrypted secrets. Each service depends on models (database layer) and other services.
+- **Actions** — the node type system. Each action is a self-contained unit with config, UI definitions, and an execute function.
+- **Database layer** — Drizzle ORM models supporting three dialects (SQLite, PostgreSQL, MySQL).
+- **Plugin manager** — initialises plugins, executes hooks, manages lifecycle.
+
+```
+@invect/core
+├── Invect class (orchestrator)
+├── Services
+│   ├── FlowsService
+│   ├── FlowOrchestrationService
+│   ├── FlowRunCoordinator
+│   ├── NodeExecutionCoordinator
+│   ├── CredentialsService
+│   ├── BatchJobsService
+│   ├── TemplateService
+│   ├── GraphService
+│   └── ...
+├── Actions (190+ definitions)
+├── Database (Drizzle models)
+└── Plugin Manager
+```
+
+## Service layer
+
+Services are the real workforce. The `Invect` class is mostly a facade — it delegates to services. Services depend on models (for database operations) and on each other (for cross-cutting logic).
+
+Key services and their roles:
+
+| Service | Responsibility |
+|---------|---------------|
+| `FlowOrchestrationService` | Orchestrates complete flow execution |
+| `FlowRunCoordinator` | Manages flow run lifecycle (start → execute → complete) |
+| `NodeExecutionCoordinator` | Handles individual node execution, input data construction, template resolution |
+| `FlowsService` | Flow CRUD |
+| `FlowVersionsService` | Flow version management |
+| `CredentialsService` | Credential storage, encryption, OAuth2 token refresh |
+| `TemplateService` | JavaScript expression evaluation in QuickJS sandbox |
+| `GraphService` | Topological sorting, dependency analysis |
+| `BatchJobsService` | Batch API integration and polling |
+
+Services are instantiated by `ServiceFactory`, which handles dependency injection. Each service receives its dependencies through the constructor — no global state, no singletons.
+
+## Database layer
+
+The database layer uses Drizzle ORM with an abstraction for multi-dialect support:
+
+```
+Model → Drizzle ORM → SQLite / PostgreSQL / MySQL
+```
+
+Models handle CRUD for each table. Services use models — they never write SQL directly. This separation means switching databases requires no service changes.
+
+Schema generation is its own subsystem. The CLI reads core + plugin schemas (abstract format), generates dialect-specific Drizzle files, and applies migrations.
+
+## Framework adapters
+
+Each adapter is under 400 lines and follows a simple pattern: map HTTP routes to `Invect` class methods.
+
+```
+Express:  createInvectRouter(config) → Router
+NestJS:   InvectModule.forRoot(config) → DynamicModule
+Next.js:  createInvectHandler(config) → { GET, POST, ... }
+```
+
+See [Framework adapters](/docs/concepts/framework-adapters) for the details of each.

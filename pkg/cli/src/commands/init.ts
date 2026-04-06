@@ -754,17 +754,11 @@ export function generateConfigFile(framework: Framework, database: Database): st
 import { defineConfig } from '@invect/core';
 ${adapterImport}
 export default defineConfig({
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
 ${dbConfig}
 
   // Add plugins here
   // plugins: [],
-
-  // AI provider configuration
-  // ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
-  // OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-
-  // Encryption key for credential storage (auto-generated)
-  // INVECT_ENCRYPTION_KEY: process.env.INVECT_ENCRYPTION_KEY,
 });
 `;
 }

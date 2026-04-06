@@ -1,88 +1,101 @@
 ---
 title: Plugin API
-description: The InvectPlugin interface, hooks, schema format, and lifecycle.
+description: TypeScript interface reference for building plugins.
 ---
 
-## InvectPlugin interface
+## InvectPlugin
 
 ```ts
 interface InvectPlugin {
-  id: string; // Required: unique identifier
-  name?: string; // Display name
+  id: string;
+  name?: string;
+
+  // Lifecycle
   init?: (ctx: InvectPluginContext) => Promise<InvectPluginInitResult | void>;
-  schema?: InvectPluginSchema; // Abstract DB tables
-  requiredTables?: string[]; // Tables checked at startup
-  actions?: ActionDefinition[]; // Flow nodes + agent tools
-  endpoints?: InvectPluginEndpoint[]; // Custom API routes
-  hooks?: InvectPluginHooks; // Lifecycle hooks
-  setupInstructions?: string; // Shown when tables are missing
-  $ERROR_CODES?: Record<string, object>; // Custom error codes
-  shutdown?: () => Promise<void> | void; // Cleanup
+  shutdown?: () => Promise<void> | void;
+
+  // Extensions
+  actions?: ActionDefinition[];
+  schema?: InvectPluginSchema;
+  requiredTables?: string[];
+  endpoints?: InvectPluginEndpoint[];
+  hooks?: InvectPluginHooks;
+
+  // Metadata
+  setupInstructions?: string;
+  $ERROR_CODES?: Record<string, { message: string; statusCode: number }>;
 }
 ```
 
-## Plugin context (`init`)
+## InvectPluginContext
+
+Passed to `init()`:
 
 ```ts
 interface InvectPluginContext {
-  db: DatabaseConnection; // Drizzle database instance
-  logger: Logger; // Scoped logger
-  config: InvectConfig; // Full Invect config
-  registerTool: (def, executor) => void; // Register standalone agent tools
+  db: DatabaseConnection;
+  dbType: DatabaseType;
+  logger: Logger;
+  registerTool: (def: AgentToolDefinition, executor: AgentToolExecutor) => void;
+  config: InvectConfig;
 }
 ```
 
-## Hooks
+## InvectPluginHooks
 
-| Hook                | Signature                                                                      | Can short-circuit? |
-| ------------------- | ------------------------------------------------------------------------------ | ------------------ |
-| `beforeFlowRun`     | `(ctx: { flowId, inputs, config }) => Promise<{ cancel?, inputs? } \| void>`   | Yes                |
-| `afterFlowRun`      | `(ctx: { flowId, flowRunId, status, output }) => Promise<void>`                | No                 |
-| `beforeNodeExecute` | `(ctx: { nodeId, nodeType, params }) => Promise<{ skip?, params? } \| void>`   | Yes                |
-| `afterNodeExecute`  | `(ctx: { nodeId, nodeType, output, status }) => Promise<{ output? } \| void>`  | Override output    |
-| `onRequest`         | `(ctx: { request, method, path }) => Promise<{ response?, request? } \| void>` | Yes                |
-| `onResponse`        | `(ctx: { request, response }) => Promise<{ response? } \| void>`               | Replace response   |
-| `onAuthorize`       | `(ctx: { action, resource }) => Promise<{ allowed? } \| void>`                 | Yes                |
+```ts
+interface InvectPluginHooks {
+  beforeFlowRun?: (ctx: FlowRunHookContext) => Promise<{ cancel?: boolean; inputs?: any } | void>;
+  afterFlowRun?: (ctx: FlowRunHookContext) => Promise<void>;
+  beforeNodeExecute?: (ctx: NodeExecuteHookContext) => Promise<{ skip?: boolean; params?: any } | void>;
+  afterNodeExecute?: (ctx: NodeExecuteHookContext) => Promise<{ output?: any } | void>;
+  onRequest?: (ctx: RequestHookContext) => Promise<{ response?: any; request?: any } | void>;
+  onResponse?: (ctx: ResponseHookContext) => Promise<{ response?: any } | void>;
+  onAuthorize?: (ctx: AuthorizeHookContext) => Promise<{ allowed?: boolean } | void>;
+}
+```
 
-## Endpoints
+### Hook behaviour
+
+| Hook | Can short-circuit? | Return to modify |
+|------|-------------------|-----------------|
+| `beforeFlowRun` | Yes (`{ cancel: true }`) | `{ inputs }` to modify inputs |
+| `afterFlowRun` | No | — |
+| `beforeNodeExecute` | Yes (`{ skip: true }`) | `{ params }` to override |
+| `afterNodeExecute` | No | `{ output }` to override |
+| `onRequest` | Yes (`{ response }`) | `{ request }` to modify |
+| `onResponse` | No | `{ response }` to replace |
+| `onAuthorize` | Yes (`{ allowed: false }`) | `{ allowed: true }` to allow |
+
+## InvectPluginEndpoint
 
 ```ts
 interface InvectPluginEndpoint {
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-  path: string; // Mounted under /plugins/{pluginId}/
-  handler: (req, res) => Promise<void>;
-  skipAuth?: boolean; // Skip auth checks for this endpoint
+  path: string;
+  handler: (req: any, res: any) => Promise<void>;
+  skipAuth?: boolean;
 }
 ```
 
-## Schema format
+Endpoints are mounted at `/plugins/{pluginId}{path}`.
+
+## InvectPluginSchema
 
 ```ts
-interface InvectPluginSchema {
-  [tableName: string]: {
-    fields: {
-      [fieldName: string]: {
-        type: 'string' | 'integer' | 'boolean' | 'timestamp' | 'text' | 'json';
-        primaryKey?: boolean;
-        required?: boolean;
-        default?: unknown;
-        references?: { table: string; field: string };
-      };
-    };
-  };
-}
+type InvectPluginSchema = Record<string, {
+  fields: Record<string, {
+    type: 'string' | 'number' | 'boolean' | 'text' | 'json';
+    primaryKey?: boolean;
+    required?: boolean;
+    unique?: boolean;
+    default?: any;
+    references?: { table: string; field: string };
+  }>;
+}>;
 ```
 
-Schemas can define new tables or extend existing core tables (additive only — new fields are merged in).
-
-## Lifecycle
-
-1. Plugin `actions` are registered in the action registry.
-2. Plugin `init(ctx)` is called (in declaration order).
-3. Core services initialise (database, triggers, batch polling).
-4. On shutdown, `shutdown()` is called in **reverse** order.
-
-## Frontend plugin interface
+## InvectFrontendPlugin
 
 ```ts
 interface InvectFrontendPlugin {
@@ -93,8 +106,8 @@ interface InvectFrontendPlugin {
   panelTabs?: PluginPanelTabContribution[];
   headerActions?: PluginHeaderActionContribution[];
   components?: Record<string, ComponentType>;
-  providers?: ComponentType<{ children }>[];
+  providers?: ComponentType<{ children: ReactNode }>[];
   apiHeaders?: () => Record<string, string>;
-  checkPermission?: (perm, ctx?) => boolean | undefined;
+  checkPermission?: (permission: string, ctx?: any) => boolean | undefined;
 }
 ```

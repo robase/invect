@@ -1,0 +1,52 @@
+---
+title: Build Your First Flow
+description: Create a multi-step flow using the visual editor.
+---
+
+This walkthrough creates a simple flow: take a user's name as input, compose a greeting with a template, and return it. Along the way you'll see how the editor works, how nodes connect, and how data moves between them.
+
+## The flow
+
+You'll build an **Input → Template String → Output** pipeline. The Input node captures a `name` parameter, the Template String node composes a message using that value, and the Output node returns the result.
+
+## Creating the flow
+
+Open the Invect dashboard and click **Create Flow**. Name it `Greeting Flow`. The editor opens with a blank canvas.
+
+From the node palette on the left, drag these three nodes onto the canvas:
+
+- **Input** (Core provider) — configure it with a single field: `name` of type `string`
+- **Template String** (Core provider) — set the template to `Hello, {{ input.name }}! Welcome to Invect.`
+- **Output** (Core provider) — no configuration needed
+
+Connect them by dragging from each node's output handle to the next node's input handle: Input → Template String → Output.
+
+## How data flows
+
+When this runs, each node receives the combined outputs of its upstream nodes as a JSON object. The keys are the upstream nodes' **reference IDs** (visible in the config panel, defaulting to a snake_case version of the label).
+
+For the Template String node, the input data looks like:
+
+```json
+{ "input": { "name": "Alice" } }
+```
+
+The `{{ input.name }}` expression evaluates against this object. Template expressions support full JavaScript — method calls, ternaries, array operations — not just property access. They run in a QuickJS WASM sandbox, so they're safe.
+
+## Running the flow
+
+Click **Run** in the toolbar. A dialog asks for input values — enter a name and click **Run**. Each node highlights as it executes. Click any node afterward to see what it received (input data) and produced (output data), along with status and duration.
+
+Try updating the template to something like:
+
+```
+Hello, {{ input.name }}! Today is {{ new Date().toLocaleDateString() }}.
+```
+
+Re-run to see the result. Templates evaluate at execution time, so dynamic expressions work as expected.
+
+## What to try next
+
+- [Add AI to a flow](/docs/getting-started/first-ai-flow) — connect an LLM to generate the greeting instead
+- [Template syntax and data flow](/docs/flows/templates-and-data) — the full template expression reference
+- [Conditional logic](/docs/flows/conditional-logic) — branch your flows with if/else

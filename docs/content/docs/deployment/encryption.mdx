@@ -1,0 +1,53 @@
+---
+title: Encryption
+description: Securing credential storage with AES-256-GCM encryption.
+---
+
+All credential secrets (API keys, OAuth2 tokens, database passwords) are encrypted at rest in the database using AES-256-GCM. The encryption key is a 32-byte value you provide.
+
+## Setting the encryption key
+
+Generate a key:
+
+```bash
+pnpm dlx @invect/cli secret
+```
+
+This outputs a base64-encoded 32-byte key. Set it as an environment variable:
+
+```bash
+export INVECT_ENCRYPTION_KEY="your-base64-key-here"
+```
+
+**In development**, if the env var isn't set, Invect uses a deterministic default key. This lets you get started quickly but is not secure — anyone with access to the source code can derive it.
+
+**In production**, always set `INVECT_ENCRYPTION_KEY` to a randomly generated value. Store it in a secrets manager (AWS Secrets Manager, Vault, Doppler, etc.), not in environment files committed to version control.
+
+## How encryption works
+
+When a credential is stored:
+
+1. A random 12-byte IV (initialisation vector) is generated
+2. The credential's config (API keys, tokens, etc.) is serialised to JSON
+3. AES-256-GCM encrypts the JSON using the key and IV
+4. The ciphertext, IV, and authentication tag are stored together in the database
+
+GCM mode provides both encryption (confidentiality) and integrity checking (the auth tag detects tampering). If the ciphertext is modified, decryption fails.
+
+## Key rotation
+
+Invect doesn't have automatic key rotation. To rotate the key:
+
+1. Decrypt all existing credentials with the old key
+2. Re-encrypt with the new key
+3. Update the environment variable
+
+This is a manual process — plan accordingly for production.
+
+## SSRF protection
+
+The `POST /credentials/test-request` endpoint (used for testing HTTP credentials) includes protections against Server-Side Request Forgery:
+
+- Private IP ranges are blocked (127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16)
+- Internal hostnames are blocked
+- Request size and timeout limits are enforced

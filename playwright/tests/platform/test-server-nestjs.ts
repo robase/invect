@@ -44,6 +44,7 @@ sqlite.close();
 @Module({
   imports: [
     InvectModule.forRoot({
+      encryptionKey: 'dGVzdC1lbmNyeXB0aW9uLWtleS0xMjM0NTY3ODkw',
       database: {
         type: 'sqlite',
         connectionString: `file:${dbPath}`,

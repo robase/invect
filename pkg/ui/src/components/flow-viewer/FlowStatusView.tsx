@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
   ReactFlow,
@@ -7,6 +7,7 @@ import {
   Controls,
   Background,
   useReactFlow,
+  useNodesInitialized,
 } from '@xyflow/react';
 
 import { BatchFlowEdge, defaultEdgeOptions } from '../graph';
@@ -38,6 +39,7 @@ interface FlowStatusViewProps {
   selectedRun: FlowRun | null | undefined;
   logsExpanded: boolean;
   onNodeClick?: (nodeId: string) => void;
+  onEditNode?: (nodeId: string) => void;
   /** Node ID to focus/center on (only set on user-initiated selection) */
   focusNodeId?: string | null;
   /** Callback when focus animation completes */
@@ -56,6 +58,7 @@ export function FlowStatusView({
   selectedRun,
   logsExpanded,
   onNodeClick,
+  onEditNode,
   focusNodeId,
   onFocusComplete,
   recenterTrigger,
@@ -73,19 +76,48 @@ export function FlowStatusView({
     selectedRunId || undefined,
   );
 
+  // Wait until React Flow has measured all nodes and registered their handles
+  // before rendering edges. Output handles use nested relative positioning with
+  // CSS transforms, so we add a short delay after nodesInitialized for the
+  // browser to compute final handle positions. Without this, edge source points
+  // appear slightly disconnected from output handles.
+  const nodesInitialized = useNodesInitialized();
+  const [edgesReady, setEdgesReady] = useState(false);
+
+  useEffect(() => {
+    if (nodesInitialized && nodes.length > 0) {
+      const timeout = setTimeout(() => setEdgesReady(true), 80);
+      return () => clearTimeout(timeout);
+    }
+    setEdgesReady(false);
+  }, [nodesInitialized, nodes.length]);
+
+  const readyEdges = edgesReady ? edges : [];
+
   // nodeTypes: AGENT gets a custom component, everything else renders as
   // UniversalNode. Register action types from current flow nodes to avoid
   // ReactFlow's fallback CSS class; "default" catches unknown types.
-  const nodeTypes = useMemo(() => {
-    const mapping = { ...baseNodeTypes };
+  // Derive a stable key from the set of unique node types so the memo only
+  // recomputes when a genuinely new type appears (not on every node change).
+  const nodeTypeKeys = useMemo(() => {
+    const types = new Set<string>();
     for (const node of nodes) {
       const nodeType = (node.data as { type?: string })?.type ?? node.type;
-      if (nodeType && !(nodeType in mapping)) {
-        mapping[nodeType] = withNodeContext(getNodeComponent(nodeType));
+      if (nodeType) {types.add(nodeType);}
+    }
+    return [...types].sort().join(',');
+  }, [nodes]);
+
+  const nodeTypes = useMemo(() => {
+    const mapping = { ...baseNodeTypes };
+    for (const key of nodeTypeKeys.split(',')) {
+      if (key && !(key in mapping)) {
+        mapping[key] = withNodeContext(getNodeComponent(key));
       }
     }
     return mapping as NodeTypes;
-  }, [nodes]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodeTypeKeys]);
 
   // Fit view when logs panel is expanded/collapsed
   React.useEffect(() => {
@@ -252,11 +284,11 @@ export function FlowStatusView({
   }
 
   return (
-    <NodeViewProvider mode="view">
+    <NodeViewProvider mode="view" onEditNode={onEditNode}>
       <div style={{ width: '100%', height: '100%', background: 'var(--canvas-background)' }}>
         <ReactFlow
           nodes={processNodesForBatchExecution(nodes)}
-          edges={edges}
+          edges={readyEdges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           nodeTypes={nodeTypes}

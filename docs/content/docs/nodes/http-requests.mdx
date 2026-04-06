@@ -1,0 +1,67 @@
+---
+title: HTTP Requests
+description: Make outbound API calls with the HTTP request node.
+---
+
+The HTTP Request node makes outbound HTTP calls — REST APIs, webhooks, or any URL. All configuration fields support template expressions, so you can build dynamic requests from upstream data.
+
+## Configuration
+
+- **Method** — GET, POST, PUT, PATCH, DELETE
+- **URL** — the endpoint to call, e.g., `https://api.example.com/users/{{ input.user_id }}`
+- **Headers** — key-value pairs, commonly `Authorization: Bearer {{ credential.token }}`
+- **Body** — for POST/PUT/PATCH requests, a JSON body with template expressions
+- **Credential** — optional, attaches a stored credential's values for authentication
+- **Timeout** — request timeout in milliseconds
+
+## Response handling
+
+The node returns the full response:
+
+```json
+{
+  "status": 200,
+  "statusText": "OK",
+  "headers": { "content-type": "application/json" },
+  "data": { "id": 42, "name": "Alice" }
+}
+```
+
+The response body is automatically parsed as JSON if the content type indicates it. Downstream nodes access the data as `{{ http_request.data }}` or any nested path.
+
+If the response status is not in the 2xx range, the node still succeeds (it doesn't throw) — the status code is part of the output. This lets you handle errors in downstream logic:
+
+```
+{{ http_request.status >= 400 ? "Request failed" : http_request.data.name }}
+```
+
+## Using credentials
+
+For APIs that require authentication, attach a credential to the HTTP node rather than hardcoding tokens. The credential's values are available in template expressions:
+
+```
+Authorization: Bearer {{ credential.accessToken }}
+```
+
+For OAuth2 credentials, the access token is automatically refreshed if expired. See [Using credentials in nodes](/docs/credentials/using-in-nodes).
+
+## Common patterns
+
+**Calling your own API:**
+```
+URL: {{ "https://myapp.com/api/users/" + input.user_id }}
+Method: GET
+```
+
+**Posting to a webhook:**
+```
+URL: https://hooks.slack.com/services/T.../B.../xxx
+Method: POST
+Body: { "text": "New order from {{ input.customer_name}}" }
+```
+
+**Chaining API calls:**
+Connect multiple HTTP nodes in sequence. Each can use the previous one's response:
+```
+Node 1: GET /users/{{ input.id }}  →  Node 2: GET /orders?userId={{ get_user.data.id }}
+```

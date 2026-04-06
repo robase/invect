@@ -1,0 +1,97 @@
+---
+title: Next.js
+description: Set up Invect in a Next.js App Router application.
+---
+
+## Packages
+
+```bash
+pnpm add @invect/core @invect/nextjs @invect/ui better-sqlite3 react-router
+```
+
+For PostgreSQL, swap `better-sqlite3` for `postgres` and update the database config accordingly.
+
+## Database setup
+
+```ts title="invect.config.ts"
+import { defineConfig } from '@invect/core';
+
+export default defineConfig({
+  database: {
+    type: 'sqlite',
+    connectionString: 'file:./dev.db',
+  },
+});
+```
+
+```bash
+pnpm dlx @invect/cli generate
+pnpm dlx @invect/cli migrate --push
+```
+
+## API route handler
+
+Create a catch-all API route that Invect handles:
+
+```ts title="app/api/invect/[...invect]/route.ts"
+import { createInvectHandler } from '@invect/nextjs';
+
+const handler = createInvectHandler({
+  database: {
+    type: 'sqlite',
+    connectionString: 'file:./dev.db',
+  },
+});
+
+export const GET = handler.GET;
+export const POST = handler.POST;
+export const PATCH = handler.PATCH;
+export const PUT = handler.PUT;
+export const DELETE = handler.DELETE;
+```
+
+`createInvectHandler` returns HTTP method handlers for the catch-all route. Internally, it creates a singleton `Invect` instance that persists across requests.
+
+## Mounting the editor
+
+Since Next.js includes both backend and frontend, you can mount the visual editor directly as a page:
+
+```tsx title="app/invect/[[...slug]]/page.tsx"
+'use client';
+
+import { Invect } from '@invect/ui';
+import '@invect/ui/styles';
+
+export default function InvectPage() {
+  return (
+    <div style={{ height: '100vh' }}>
+      <Invect apiBaseUrl="/api/invect" basePath="/invect" />
+    </div>
+  );
+}
+```
+
+The `basePath` prop tells the editor's internal router where it's mounted, so navigation works correctly within the Next.js app.
+
+## Static export considerations
+
+If you're using `output: 'export'` in `next.config.js`, the API route won't work (static exports don't support API routes). In that case, run a separate Express or NestJS backend and point the frontend to it.
+
+## Adding plugins
+
+Same as other frameworks — add plugins to your config and re-run schema generation:
+
+```ts
+import { authentication } from '@invect/user-auth';
+import { rbacPlugin } from '@invect/rbac';
+
+const handler = createInvectHandler({
+  database: { type: 'sqlite', connectionString: 'file:./dev.db' },
+  plugins: [
+    authentication({ /* ... */ }),
+    rbacPlugin(),
+  ],
+});
+```
+
+For the auth plugin with Next.js, use `AuthenticatedInvect` from `@invect/user-auth/ui` to wrap the editor with sign-in gates. See [Authentication plugin](/docs/plugins/authentication).

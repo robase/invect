@@ -126,7 +126,7 @@ export class ServiceFactory {
 
       // 5b. Create credentials service with encryption
       const encryptionService = new EncryptionService({
-        masterKey: process.env.ENCRYPTION_KEY || 'default-dev-key-change-in-production',
+        masterKey: this.config.encryptionKey,
       });
       const credentialsService = new CredentialsService(
         databaseService.adapter,

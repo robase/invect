@@ -29,6 +29,8 @@ import type { ChatMessage } from './chat.store';
 import { useChatStore } from './chat.store';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { InlineCredentialSetup } from './InlineCredentialSetup';
+import { CreateCredentialModal } from '~/components/credentials/CreateCredentialModal';
+import { useCreateCredential } from '~/api/credentials.api';
 
 // =====================================
 // ChatMessageList
@@ -304,6 +306,7 @@ function UserMessageBubble({
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(message.content);
   const editRef = useRef<HTMLTextAreaElement>(null);
+  const [collapsed, setCollapsed] = useState(true);
 
   useEffect(() => {
     if (isEditing && editRef.current) {
@@ -375,7 +378,6 @@ function UserMessageBubble({
   }
 
   const isLongContent = message.content.length > 300 || message.content.split('\n').length > 8;
-  const [collapsed, setCollapsed] = useState(true);
 
   // For long content, split into typed text (before first newline) and pasted body (after)
   const firstNewline = message.content.indexOf('\n');
@@ -502,6 +504,12 @@ function ToolCallBubble({
   const isPending = toolMeta.status === 'pending';
   const isError = toolMeta.status === 'error';
   const isPlanTool = toolMeta.toolName === 'set_plan' || toolMeta.toolName === 'update_plan';
+  const isCredentialSetup = toolMeta.toolName === 'suggest_credential_setup';
+
+  // Credential setup tools get a special inline rendering with an action button
+  if (isCredentialSetup && !isPending && !isError && toolMeta.result?.data) {
+    return <CredentialSetupBubble data={toolMeta.result.data as Record<string, unknown>} />;
+  }
 
   // Plan tools get a special inline rendering instead of collapsed JSON
   if (isPlanTool && !isPending && !isError && toolMeta.result?.data) {
@@ -612,6 +620,44 @@ function ToolCallBubble({
           </div>
         </CollapsibleContent>
       </Collapsible>
+    </div>
+  );
+}
+
+// =====================================
+// CredentialSetupBubble — renders suggest_credential_setup as an action card
+// =====================================
+
+function CredentialSetupBubble({ data }: { data: Record<string, unknown> }) {
+  const [showModal, setShowModal] = useState(false);
+  const createMutation = useCreateCredential();
+
+  const message = data.message as string | undefined;
+
+  return (
+    <div className="my-1.5 ml-6">
+      <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-[11px]">
+        {message && <div className="text-foreground/80 mb-2">{message}</div>}
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 text-xs gap-1.5"
+          onClick={() => setShowModal(true)}
+        >
+          Set up credential
+        </Button>
+      </div>
+
+      <CreateCredentialModal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        onSubmit={(credentialData) => {
+          createMutation.mutate(credentialData, {
+            onSuccess: () => setShowModal(false),
+          });
+        }}
+        isLoading={createMutation.isPending}
+      />
     </div>
   );
 }

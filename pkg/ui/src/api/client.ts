@@ -71,10 +71,6 @@ class ApiClient {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
 
-    console.log('🌐 Request: Starting request');
-    console.log('🌐 Request: URL:', url);
-    console.log('🌐 Request: Method:', options.method || 'GET');
-
     const { headers: optionsHeaders, ...restOptions } = options;
     const config: RequestInit = {
       ...restOptions,
@@ -88,12 +84,7 @@ class ApiClient {
     try {
       const response = await fetch(url, config);
 
-      console.log('🌐 Request: Response received');
-      console.log('🌐 Request: Status:', response.status);
-      console.log('🌐 Request: OK:', response.ok);
-
       if (!response.ok) {
-        console.log('❌ Request: Response not OK, handling error...');
         // Try to extract error message from response body
         let errorMessage = `HTTP error! status: ${response.status}`;
         try {
@@ -205,14 +196,12 @@ class ApiClient {
             errorMessage = errorData.message;
           }
         } catch (parseError) {
-          console.log('❌ Request: Failed to parse error response body:', parseError);
           // Re-throw validation errors
           if (parseError instanceof ValidationError) {
             throw parseError;
           }
           // If we can't parse the response body, use the default message
         }
-        console.log('❌ Request: Throwing error:', errorMessage);
         throw new Error(errorMessage);
       }
 
@@ -224,7 +213,6 @@ class ApiClient {
       const result = await response.json();
       return result;
     } catch (error) {
-      console.log(`❌ Request: API request failed for endpoint ${endpoint}:`, error);
       throw error;
     }
   }
@@ -289,20 +277,13 @@ class ApiClient {
     flowId: string,
     createVersionRequest: CreateFlowVersionRequest,
   ): Promise<FlowVersion> {
-    console.log('🌐 ApiClient: createFlowVersion called');
-    console.log('🌐 ApiClient: flowId:', flowId);
-    console.log('🌐 ApiClient: payload:', JSON.stringify(createVersionRequest, null, 2));
-
     const endpoint = `/flows/${flowId}/versions`;
-    console.log('🌐 ApiClient: endpoint:', endpoint);
-    console.log('🌐 ApiClient: full URL:', `${this.baseURL}${endpoint}`);
 
     const response = await this.request<FlowVersion>(endpoint, {
       method: 'POST',
       body: JSON.stringify(createVersionRequest),
     });
 
-    console.log('🌐 ApiClient: createFlowVersion response:', response);
     return response;
   }
 

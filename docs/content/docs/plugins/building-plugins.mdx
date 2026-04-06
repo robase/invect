@@ -1,0 +1,170 @@
+---
+title: Building Plugins
+description: Create a custom plugin with actions, hooks, schema, and endpoints.
+---
+
+Plugins are plain objects (or factory functions returning them) that implement `InvectPlugin`. Here's how to build one from scratch.
+
+## Minimal plugin
+
+```ts
+import type { InvectPlugin } from '@invect/core';
+
+export function myPlugin(): InvectPlugin {
+  return {
+    id: 'my-plugin',
+    name: 'My Plugin',
+  };
+}
+```
+
+This does nothing, but it's valid. Build up from here.
+
+## Adding hooks
+
+```ts
+export function rateLimiter(): InvectPlugin {
+  const requestCounts = new Map<string, number>();
+
+  return {
+    id: 'rate-limiter',
+    hooks: {
+      onRequest: async ({ request }) => {
+        const ip = request.headers['x-forwarded-for'] || 'unknown';
+        const count = (requestCounts.get(ip) || 0) + 1;
+        requestCounts.set(ip, count);
+
+        if (count > 100) {
+          return { response: { status: 429, body: { error: 'Rate limited' } } };
+        }
+        return {};  // Continue to route handler
+      },
+    },
+  };
+}
+```
+
+Return `{ response }` to short-circuit. Return `{}` or `{ request }` (with modifications) to continue.
+
+## Adding actions
+
+```ts
+import { defineAction } from '@invect/core';
+import { z } from 'zod/v4';
+
+const myAction = defineAction({
+  id: 'my_plugin.transform',
+  name: 'My Transform',
+  description: 'Custom data transformation',
+  provider: { id: 'my_plugin', name: 'My Plugin', icon: 'Blocks' },
+  params: {
+    schema: z.object({ format: z.string() }),
+    fields: [{ name: 'format', label: 'Format', type: 'text', required: true }],
+  },
+  async execute(params, context) {
+    return { success: true, output: { formatted: params.format } };
+  },
+});
+
+export function myPlugin(): InvectPlugin {
+  return {
+    id: 'my-plugin',
+    actions: [myAction],
+  };
+}
+```
+
+Actions from plugins are registered in the action registry alongside built-in actions. They appear in the node palette and are available as agent tools.
+
+## Adding database tables
+
+```ts
+export function myPlugin(): InvectPlugin {
+  return {
+    id: 'my-plugin',
+    schema: {
+      my_plugin_logs: {
+        fields: {
+          id: { type: 'string', primaryKey: true },
+          flowRunId: { type: 'string', references: { table: 'flow_runs', field: 'id' } },
+          message: { type: 'string', required: true },
+          createdAt: { type: 'string', required: true },
+        },
+      },
+    },
+    requiredTables: ['my_plugin_logs'],
+  };
+}
+```
+
+After adding this plugin to config, `invect-cli generate` includes the table in the generated Drizzle files. `requiredTables` tells Invect to verify the table exists at startup.
+
+## Adding API endpoints
+
+```ts
+export function myPlugin(): InvectPlugin {
+  return {
+    id: 'my-plugin',
+    endpoints: [
+      {
+        method: 'GET',
+        path: '/stats',
+        handler: async (req, res) => {
+          res.json({ requests: 42 });
+        },
+      },
+    ],
+  };
+}
+```
+
+This is accessible at `GET /plugins/my-plugin/stats`.
+
+## Init and shutdown
+
+```ts
+export function myPlugin(): InvectPlugin {
+  let interval: NodeJS.Timeout;
+
+  return {
+    id: 'my-plugin',
+    async init(ctx) {
+      // ctx provides: db, logger, registerTool
+      ctx.logger.info('My plugin initializing');
+      interval = setInterval(() => { /* background work */ }, 60000);
+    },
+    async shutdown() {
+      clearInterval(interval);
+    },
+  };
+}
+```
+
+`init` runs during `Invect.initialize()`, in declaration order. `shutdown` runs in reverse order on graceful exit.
+
+## Frontend plugins
+
+Frontend plugins contribute UI elements to the editor. The interface (currently defined in `@invect/rbac`) supports:
+
+- `sidebar` — navigation items
+- `routes` — full pages
+- `panelTabs` — tabs in the editor panel
+- `headerActions` — buttons in the toolbar
+- `providers` — React context providers
+- `apiHeaders` — headers injected into API requests
+
+Frontend plugins are passed to the `Invect` component and composed at render time.
+
+## Plugin structure (recommended)
+
+```
+my-plugin/
+├── src/
+│   ├── backend/    # InvectPlugin implementation
+│   ├── frontend/   # React components, frontend plugin
+│   └── shared/     # Browser-safe types (no Node.js imports)
+├── package.json
+└── tsconfig.json
+```
+
+Keep backend and frontend code separate. Shared types must be browser-safe — no Node.js module imports.

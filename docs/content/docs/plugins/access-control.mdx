@@ -1,0 +1,70 @@
+---
+title: Access Control
+description: Add flow-level access control with @invect/rbac.
+---
+
+The RBAC plugin adds flow-level access control. It depends on the auth plugin — users must be authenticated before RBAC can check their permissions.
+
+## Installation
+
+```bash
+pnpm add @invect/rbac
+```
+
+## Setup
+
+Add it after the auth plugin in your config:
+
+```ts title="invect.config.ts"
+import { authentication } from '@invect/user-auth';
+import { rbacPlugin } from '@invect/rbac';
+
+export const invectConfig = defineConfig({
+  // ...
+  plugins: [
+    authentication({ /* ... */ }),
+    rbacPlugin(),
+  ],
+});
+```
+
+Plugin order matters: auth resolves the session first, then RBAC checks permissions.
+
+Regenerate the schema to create the `flow_access` table:
+
+```bash
+pnpm dlx @invect/cli generate
+pnpm dlx @invect/cli migrate --push
+```
+
+## How it works
+
+The RBAC plugin introduces **flow-level access roles**. Each user can be assigned a role on each flow:
+
+| Role | Permissions |
+|------|------------|
+| `owner` | Full access — edit, run, delete, manage access |
+| `editor` | Edit and run the flow |
+| `viewer` | View the flow and its runs |
+
+The `onAuthorize` hook checks whether the requesting user has the required role for the action they're attempting (e.g., `flow:read`, `flow-run:create`, `flow:delete`). Global admins bypass RBAC checks.
+
+## Frontend components
+
+The plugin contributes UI elements to the editor:
+
+- **Share button** — in the flow editor header, opens a dialog to manage access
+- **Flow Access Panel** — a tab in the editor panel showing who has access
+- **Access management page** — a full page listing all flow access rules
+- **Sidebar item** — navigation link to the access management page
+
+These are registered as frontend plugin contributions and render automatically when the RBAC plugin is active.
+
+## API endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/plugins/rbac/flows/:flowId/access` | GET | List access rules for a flow |
+| `/plugins/rbac/flows/:flowId/access` | POST | Grant access to a user |
+| `/plugins/rbac/flows/:flowId/access/:userId` | PUT | Update a user's role |
+| `/plugins/rbac/flows/:flowId/access/:userId` | DELETE | Remove a user's access |

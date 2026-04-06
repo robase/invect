@@ -26,12 +26,12 @@ export function SignInPage({
   subtitle = 'Sign in to your account to continue',
 }: SignInPageProps) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-imp-background p-4 text-imp-foreground">
-      <div className="flex w-full max-w-sm flex-col gap-6">
+    <div className="flex items-center justify-center min-h-screen p-4 bg-imp-background text-imp-foreground">
+      <div className="flex flex-col w-full max-w-sm gap-6">
         {/* Header: logo + title + subtitle */}
         <div className="flex flex-col items-center gap-2 text-center">
           <div className="flex items-center justify-center">
-            <ImpLogo className="h-10 w-auto" />
+            <ImpLogo className="w-auto h-24" />
           </div>
           <h1 className="text-xl font-bold">{title}</h1>
           <p className="text-sm text-imp-muted-foreground">{subtitle}</p>
@@ -41,15 +41,14 @@ export function SignInPage({
         <SignInForm onSuccess={onSuccess} />
 
         {/* Separator + admin note */}
-        <div className="relative text-center text-sm">
-          <div className="absolute inset-0 top-1/2 border-t border-imp-border" />
-          <span className="relative bg-imp-background px-2 text-imp-muted-foreground">
+        <div className="relative text-sm text-center">
+          <div className="absolute inset-0 border-t top-1/2 border-imp-border" />
+          <span className="relative px-2 bg-imp-background text-imp-muted-foreground">
             Admin-managed accounts
           </span>
         </div>
 
-        <p className="px-6 text-center text-xs text-imp-muted-foreground">
-          New accounts are created by your administrator.
+        <p className="px-6 text-xs text-center text-imp-muted-foreground">
           {onNavigateToSignUp ? ' Or ' : ' Contact your admin if you need access.'}
           {onNavigateToSignUp && (
             <button

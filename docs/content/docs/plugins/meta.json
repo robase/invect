@@ -1,0 +1,4 @@
+{
+  "title": "Plugins",
+  "pages": ["overview", "authentication", "access-control", "webhooks", "version-control", "building-plugins"]
+}

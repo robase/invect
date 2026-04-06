@@ -319,7 +319,7 @@ function ToolCallDetailView({ tool }: { tool: ExecutionLogToolCall }) {
   const [outputOpen, setOutputOpen] = useState(true);
 
   return (
-    <div className="max-w-full overflow-hidden">
+    <div className="max-w-full">
       <div className="sticky top-0 z-10 bg-imp-background px-4 py-2 border-b border-border">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
@@ -424,7 +424,7 @@ function NodeAttemptDetailView({
   const [outputsOpen, setOutputsOpen] = useState(true);
 
   return (
-    <div className="max-w-full overflow-hidden">
+    <div className="max-w-full">
       <div className="sticky top-0 z-10 bg-imp-background px-4 py-2 border-b border-border">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">

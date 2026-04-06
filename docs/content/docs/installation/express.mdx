@@ -1,0 +1,112 @@
+---
+title: Express
+description: Set up Invect in an Express application.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+## Packages
+
+```bash
+pnpm add @invect/core @invect/express better-sqlite3 express cors
+```
+
+For PostgreSQL, swap `better-sqlite3` for `postgres`:
+
+```bash
+pnpm add @invect/core @invect/express postgres express cors
+```
+
+## Configuration
+
+Create `invect.config.ts` at your project root:
+
+```ts title="invect.config.ts"
+import { defineConfig } from '@invect/core';
+
+export const invectConfig = defineConfig({
+  database: {
+    type: 'sqlite',
+    connectionString: 'file:./dev.db',
+  },
+  logging: {
+    level: 'info',
+  },
+});
+```
+
+`defineConfig` provides full type inference. See [Configuration reference](/docs/reference/configuration) for all options.
+
+## Database setup
+
+Generate the Drizzle schema files and apply them:
+
+```bash
+pnpm dlx @invect/cli generate
+pnpm dlx @invect/cli migrate --push
+```
+
+This creates all core tables. If you add plugins later, re-run these commands to pick up their tables too.
+
+## Mounting the router
+
+```ts title="index.ts"
+import express from 'express';
+import cors from 'cors';
+import { createInvectRouter } from '@invect/express';
+import { invectConfig } from './invect.config';
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+const invectRouter = await createInvectRouter(invectConfig);
+app.use('/invect', invectRouter);
+
+app.listen(3000, () => {
+  console.log('Invect API running at http://localhost:3000/invect');
+});
+```
+
+`createInvectRouter` is an async factory — it initialises the database, registers all built-in actions and tools, starts the batch polling service, and returns a standard Express router. Mount it at any path.
+
+## Adding plugins
+
+To add authentication and access control:
+
+```bash
+pnpm add @invect/user-auth @invect/rbac
+```
+
+```ts title="invect.config.ts"
+import { defineConfig } from '@invect/core';
+import { authentication } from '@invect/user-auth';
+import { rbacPlugin } from '@invect/rbac';
+
+export const invectConfig = defineConfig({
+  database: {
+    type: 'sqlite',
+    connectionString: 'file:./dev.db',
+  },
+  plugins: [
+    authentication({
+      betterAuthOptions: { secret: process.env.BETTER_AUTH_SECRET },
+      globalAdmins: [{ email: 'admin@example.com', pw: 'changeme', name: 'Admin' }],
+    }),
+    rbacPlugin(),
+  ],
+});
+```
+
+After adding plugins with database tables, re-run schema generation:
+
+```bash
+pnpm dlx @invect/cli generate
+pnpm dlx @invect/cli migrate --push
+```
+
+See [Plugins](/docs/plugins/overview) for more on the plugin ecosystem.
+
+## Frontend
+
+To add the visual editor, see [Embedding the editor](/docs/frontend/embedding).

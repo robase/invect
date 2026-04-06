@@ -1,0 +1,90 @@
+---
+title: Actions System
+description: How defineAction() works and how actions serve as both nodes and tools.
+---
+
+Actions are the unified abstraction for node types and agent tools. Every node type in Invect (except the legacy Agent node) is defined as an action using `defineAction()`. This single definition serves multiple purposes:
+
+- Flow node in the visual editor
+- Agent tool for LLM tool calling
+- Config panel UI generation
+- Input validation via Zod
+
+## The dual-purpose design
+
+When an action is registered:
+
+1. **As a node**: The action ID becomes the node type string in flow definitions. The `params.fields` array generates the config panel in the visual editor. When the node executes, `executeActionAsNode()` constructs an `ActionExecutionContext`, validates params with Zod, and calls `execute()`.
+
+2. **As an agent tool**: The `toAgentToolDefinition()` method converts the action's Zod schema to JSON Schema, pulls the description, and creates an `AgentToolDefinition`. When an agent calls the tool, `executeActionAsTool()` validates input with Zod and calls `execute()`.
+
+The `execute()` function is the same in both cases — it doesn't know whether it was invoked as a node or a tool.
+
+## Action registry
+
+The `ActionRegistry` is a central store of all registered actions. During `Invect.initialize()`:
+
+1. `initializeGlobalActionRegistry()` creates the registry
+2. `registerBuiltinActions()` registers all ~190 built-in actions
+3. Plugin actions are registered
+4. `registerActionsAsTools()` converts all actions to agent tools
+
+The registry supports lookup by action ID, listing all actions, and listing by provider.
+
+## Action execution context
+
+When an action executes (either as node or tool), it receives:
+
+```ts
+interface ActionExecutionContext {
+  incomingData: Record<string, unknown>;  // Upstream node outputs
+  flowInputs: Record<string, unknown>;    // Original flow inputs
+  credential?: Credential;                // Decrypted credential (if attached)
+  logger: Logger;                         // Scoped logger
+  flowRunState: {
+    flowId: string;
+    flowRunId: string;
+    nodeId: string;
+  };
+  functions: {
+    submitPrompt: (...) => Promise<...>;        // Call an LLM
+    getCredential: (id: string) => Promise<...>; // Load a credential
+    markDownstreamNodesAsSkipped: () => void;    // For conditional nodes
+  };
+}
+```
+
+## The execute function
+
+```ts
+async execute(params: T, context: ActionExecutionContext): Promise<ActionResult>
+```
+
+`params` are the validated, template-resolved configuration values. `context` provides everything else the action needs.
+
+Returns:
+
+```ts
+interface ActionResult {
+  success: boolean;
+  output?: unknown;              // The node's output data
+  error?: string;                // Error message (if success: false)
+  outputVariables?: Record<string, unknown>;  // For multi-output nodes (if/else, switch)
+}
+```
+
+## Provider grouping
+
+Actions are grouped by **provider** for the node palette UI. Each provider has an `id`, `name`, and `icon`:
+
+```ts
+const GMAIL_PROVIDER = {
+  id: 'gmail',
+  name: 'Gmail',
+  icon: 'Mail',
+  description: 'Google Gmail actions',
+  category: 'communication',
+};
+```
+
+The node palette groups actions under their provider's heading. Core actions are bundled under the "Core" provider.

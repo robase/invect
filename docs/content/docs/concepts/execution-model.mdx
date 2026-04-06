@@ -1,0 +1,92 @@
+---
+title: Execution Model
+description: How flows execute — topological ordering, data construction, template resolution, and state management.
+---
+
+When a flow runs, Invect resolves the graph, executes nodes in dependency order, constructs input data for each node from upstream outputs, and resolves template expressions before passing parameters to the execution function.
+
+## Execution sequence
+
+The flow execution lifecycle:
+
+```
+startFlowRun(flowId, inputs)
+  → Load the flow and its latest version
+  → Create a FlowRun record (status: RUNNING)
+  → Topological sort: determine execution order from the graph
+  → For each node (in topological order):
+      → Build the incoming data object from upstream outputs
+      → Resolve template expressions in all config params
+      → Execute the node (action or agent)
+      → Store the output for downstream nodes
+      → Create a NodeExecution record (input, output, timing)
+  → Mark the FlowRun as COMPLETED (or FAILED)
+  → Return the result
+```
+
+## Topological sorting
+
+The `GraphService` resolves the graph's execution order using topological sort. This ensures every node executes after all its upstream dependencies have completed. Cycles are detected and reported as errors.
+
+The sort uses Kahn's algorithm, which naturally handles parallel-independent branches. In the current implementation, nodes execute sequentially within the sorted order (parallelism is not automatic).
+
+## Input data construction
+
+For each node, the `NodeExecutionCoordinator.buildIncomingDataObject()` method constructs the input:
+
+1. Identify all upstream nodes (those with edges pointing to this node)
+2. For each upstream node, get its stored output
+3. Key the output by the upstream node's **reference ID**
+4. If the output is valid JSON, parse it (so downstream nodes get objects, not strings)
+5. Handle duplicate keys by appending numeric suffixes (`result`, `result1`)
+
+The result is a flat object:
+
+```json
+{
+  "input": { "name": "Alice" },
+  "fetch_user": { "id": 123, "role": "admin" },
+  "check_status": "active"
+}
+```
+
+## Template resolution
+
+After input data is constructed, all config parameters go through template resolution:
+
+1. Scan each parameter for `{{ }}` blocks
+2. For each block, evaluate the JavaScript expression in a QuickJS WASM sandbox
+3. The sandbox's global scope contains the incoming data object's keys as variables
+4. Replace the `{{ }}` block with the result
+
+If a parameter is entirely a single `{{ }}` expression, the raw value is returned (preserving types). If it mixes text and expressions, the result is concatenated as a string.
+
+## Special node handling
+
+Some nodes get special treatment during execution:
+
+- **Input nodes** — don't receive upstream data; they produce the flow's input values
+- **Output nodes** — passthrough; their upstream output becomes the flow's result
+- **If/Else nodes** — after execution, downstream nodes on the inactive branch are marked `SKIPPED`
+- **Switch nodes** — similar to if/else, but with multiple branches
+- **Agent nodes** — run through the legacy `NodeExecutorRegistry` path (not the action executor)
+
+## State management
+
+During execution, the coordinator maintains:
+
+- A map of node outputs (node ID → output data)
+- The current flow run record (updated with status changes)
+- Node execution records (one per node, created at start, updated at completion)
+
+If any node fails, the flow run is marked `FAILED` and remaining nodes are skipped. The error is recorded in both the node execution and the flow run records.
+
+## Batch pause/resume
+
+When a node returns `state: "PENDING"` (batch mode):
+
+1. The flow run transitions to `PAUSED_FOR_BATCH`
+2. A `batch_job` record is created
+3. Execution stops — no downstream nodes run
+4. The polling service periodically checks the batch provider
+5. When complete, the flow resumes from the paused node

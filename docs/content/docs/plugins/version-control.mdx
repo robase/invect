@@ -1,0 +1,40 @@
+---
+title: Version Control
+description: Flow versioning and export/import with @invect/version-control.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+The version control plugin adds enhanced flow version management — export, import, comparison, and restore capabilities beyond the built-in version history.
+
+<Callout type="info">
+This plugin is under active development. Refer to the package README for the latest API.
+</Callout>
+
+## Installation
+
+```bash
+pnpm add @invect/version-control
+```
+
+## Setup
+
+```ts title="invect.config.ts"
+import { versionControlPlugin } from '@invect/version-control';
+
+export const invectConfig = defineConfig({
+  // ...
+  plugins: [
+    versionControlPlugin(),
+  ],
+});
+```
+
+## Capabilities
+
+The plugin extends Invect's built-in versioning with:
+
+- **Export** — download a flow and all its versions as a portable JSON bundle
+- **Import** — restore a flow from an exported bundle, creating it as a new flow
+- **Compare** — view diffs between flow versions
+- **Metadata** — attach tags, descriptions, and annotations to versions

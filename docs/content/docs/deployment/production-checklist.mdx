@@ -1,0 +1,40 @@
+---
+title: Production Checklist
+description: Things to verify before deploying Invect to production.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+A quick reference for what to check before going live.
+
+## Database
+
+- [ ] **Switch from SQLite** — use PostgreSQL or MySQL for production workloads. SQLite is fine for single-process, low-traffic setups.
+- [ ] **Run migrations properly** — use `invect-cli migrate` (not `--push`) to generate migration files. Commit them to version control.
+- [ ] **Backups** — configure automated backups for your database. Invect stores flows, credentials, and execution history.
+
+## Security
+
+- [ ] **Set `INVECT_ENCRYPTION_KEY`** — generate with `invect-cli secret`. Don't use the default key.
+- [ ] **Set `BETTER_AUTH_SECRET`** — if using the auth plugin. Use a strong random value.
+- [ ] **Enable auth plugin** — don't run without authentication in production. The auth plugin gates all API endpoints.
+- [ ] **CORS configuration** — restrict `cors()` to your frontend's origin. Don't use `*` in production.
+- [ ] **HTTPS** — always run behind TLS. OAuth2 callbacks require HTTPS in production.
+
+## Configuration
+
+- [ ] **Review credential seeds** — `defaultCredentials` may have development keys. Use env vars for production.
+- [ ] **Set `webhookBaseUrl`** — if using webhooks, set this to your public URL so webhook URLs resolve correctly.
+- [ ] **Tune execution limits** — review `execution.maxConcurrentExecutions`, `flowTimeoutMs`, and `defaultTimeout` for your workload.
+- [ ] **Configure logging** — set `logging.level` to `'info'` or higher. Use `'debug'` scopes selectively.
+
+## Monitoring
+
+<Callout type="info">
+Built-in monitoring integrations are planned. For now, use your existing observability stack.
+</Callout>
+
+- [ ] **Health checks** — hit `GET /dashboard/stats` to verify the service is running
+- [ ] **Log aggregation** — pipe structured logs to your observability platform
+- [ ] **Error tracking** — monitor for failed flow runs and node execution errors
+- [ ] **Credential expiry** — poll `GET /credentials/expiring` to catch OAuth2 tokens before they expire

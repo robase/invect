@@ -1,0 +1,107 @@
+---
+title: Embedding the Editor
+description: Mount the visual flow editor in your React application.
+---
+
+The Invect visual editor is a React component provided by `@invect/ui`. It's the full dashboard — flow list, canvas editor, node palette, execution inspector, credentials manager, and settings.
+
+## Basic setup
+
+```bash
+pnpm add @invect/ui react-router
+```
+
+```tsx
+import { BrowserRouter, Routes, Route } from 'react-router';
+import { Invect } from '@invect/ui';
+import '@invect/ui/styles';
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route
+          path="/*"
+          element={
+            <div style={{ height: '100vh' }}>
+              <Invect apiBaseUrl="http://localhost:3000/invect" />
+            </div>
+          }
+        />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+```
+
+**`apiBaseUrl`** — the URL where your Invect backend API is mounted. The component makes all API calls to this URL.
+
+**`basePath`** (optional) — if the editor isn't mounted at the root (`/`), set this to the mount path so internal navigation works correctly:
+
+```tsx
+<Invect apiBaseUrl="/api/invect" basePath="/admin/workflows" />
+```
+
+**Important**: The `Invect` component needs a full-height container. Without explicit height, the canvas won't be visible.
+
+## What's inside
+
+`<Invect />` renders the complete application:
+
+- **Sidebar** — navigation between flows, credentials, settings
+- **Dashboard** — flow cards with create, duplicate, delete
+- **Flow editor** — drag-and-drop canvas with node palette, edge connections, config panels
+- **Execution inspector** — click nodes after a run to see input/output/timing
+- **Credentials manager** — create, edit, test, and delete credentials
+- **Settings** — configuration view
+
+It includes its own React Router internally, so it manages navigation between these views.
+
+## Styles
+
+The `@invect/ui/styles` import is required — it provides all CSS for the editor and its internal components. Without it, the editor renders unstyled.
+
+All styles are scoped under a `.invect` CSS class, so they won't conflict with your application's styles.
+
+## With authentication
+
+If you're using the `@invect/user-auth` plugin, wrap the editor with `AuthenticatedInvect` to add a sign-in gate:
+
+```tsx
+import { Invect, InvectShell } from '@invect/ui';
+import { AuthenticatedInvect } from '@invect/user-auth/ui';
+import '@invect/ui/styles';
+
+<AuthenticatedInvect
+  apiBaseUrl="/api/invect"
+  basePath="/invect"
+  InvectComponent={Invect}
+  ShellComponent={InvectShell}
+  theme="light"
+/>
+```
+
+`InvectShell` provides the CSS scope around the auth UI (sign-in page, loading states) so they render with Invect's theme tokens. The `Invect` component is passed as a prop to avoid circular dependencies.
+
+See [Authentication plugin](/docs/plugins/authentication) for full setup.
+
+## Next.js integration
+
+For Next.js, mount the editor in a client component with a catch-all route:
+
+```tsx title="app/invect/[[...slug]]/page.tsx"
+'use client';
+
+import { Invect } from '@invect/ui';
+import '@invect/ui/styles';
+
+export default function InvectPage() {
+  return (
+    <div style={{ height: '100vh' }}>
+      <Invect apiBaseUrl="/api/invect" basePath="/invect" />
+    </div>
+  );
+}
+```
+
+The `basePath="/invect"` matches the route segment so internal navigation resolves correctly.

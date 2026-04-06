@@ -1,6 +1,7 @@
 import { createInvectHandler } from '@invect/nextjs';
 
 const config = {
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
   database: {
     connectionString: 'file:./invect.db',
     type: 'sqlite' as const,

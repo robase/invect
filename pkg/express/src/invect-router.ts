@@ -1547,6 +1547,7 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
           getResolvedRole: (identity) => invect.auth.getResolvedRole(identity),
           authorize: (context) => invect.auth.authorize(context),
         },
+        getInvect: () => invect,
       });
 
       // Handle raw Response objects

@@ -132,7 +132,9 @@ export const ConfigFieldWithTemplate = ({
         ? value
         : value === null || value === undefined
           ? ''
-          : String(value);
+          : typeof value === 'object'
+            ? JSON.stringify(value, null, 2)
+            : String(value);
     return (
       <div className="flex flex-col gap-1.5">
         {fieldHeader}
@@ -167,7 +169,7 @@ export const ConfigFieldWithTemplate = ({
               ? value
               : value === null || value === undefined
                 ? ''
-                : String(value)
+                : JSON.stringify(value, null, 2)
           }
           placeholder={field.placeholder || '{{ nodeId.data.variables.output.value }}'}
           onChange={(newValue) => onChange(newValue)}

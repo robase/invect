@@ -1,0 +1,42 @@
+---
+title: Agent Overview
+description: What agent nodes are and how the iterative tool-calling loop works.
+---
+
+Agent nodes are different from every other node in Invect. While a Model node sends a single prompt and returns the response, an Agent node runs an **iterative loop** — it sends a prompt, the LLM may request tool calls, the tools execute, results go back to the LLM, and this continues until the agent decides it's done.
+
+## How the loop works
+
+The agent receives a **task prompt** (what to accomplish) and a set of **enabled tools** (what it can use). The cycle looks like:
+
+1. Send the task prompt and tool definitions to the LLM
+2. The LLM responds with either a text answer or one or more tool calls
+3. If tool calls: execute each tool, collect results, send them back to the LLM
+4. If text answer: check the stop condition — if met, the agent is done
+5. Repeat until a stop condition triggers or max iterations are reached
+
+Each iteration is a full round-trip to the LLM provider. The agent maintains conversation history across iterations so the model has context about what it's already tried.
+
+## What agents are good for
+
+Agents excel at **open-ended tasks** where the right sequence of steps isn't known upfront:
+
+- "Research this topic using web search and write a summary"
+- "Check the GitHub issues in this repo and create a Slack summary"
+- "Analyse this dataset, try different JQ queries until you find the right structure"
+
+For **deterministic pipelines** where you know the exact flow (call API A, transform with JQ, send to Slack), use regular nodes connected with edges. Agents add latency and cost from the LLM interactions.
+
+## Agents vs. Model nodes
+
+| | Model node | Agent node |
+|---|---|---|
+| LLM calls | 1 | 1 to N (iterative) |
+| Tool access | None | Any enabled tool |
+| Deterministic | Yes (same prompt → similar output) | No (LLM chooses its own path) |
+| Use case | Single prompt/response | Multi-step reasoning |
+| Cost | Predictable | Variable (depends on iterations) |
+
+## Tools
+
+Every registered action (Gmail, Slack, HTTP, JQ, JavaScript, etc.) is automatically available as an agent tool. You select which tools to enable per agent node. See [Tools](/docs/agents/tools) for the full details.

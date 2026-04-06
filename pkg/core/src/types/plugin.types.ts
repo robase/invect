@@ -23,6 +23,7 @@
  */
 
 import type { ActionDefinition } from 'src/actions/types';
+import type { InvectInstance } from 'src/api/types';
 import type {
   InvectIdentity,
   InvectPermission,
@@ -295,6 +296,20 @@ export interface PluginEndpointContext {
    * services. Populated by the framework adapter.
    */
   core: PluginEndpointCoreApi;
+
+  /**
+   * Access the full Invect instance for advanced operations.
+   *
+   * Use this when the narrow `core` API is insufficient — e.g., for
+   * reading flows, executing runs, accessing credentials, etc.
+   *
+   * @example
+   * ```typescript
+   * const invect = ctx.getInvect();
+   * const flows = await invect.flows.list();
+   * ```
+   */
+  getInvect: () => InvectInstance;
 }
 
 /**
@@ -486,6 +501,20 @@ export interface InvectPluginContext {
    * This is a simple key-value store scoped to the plugin.
    */
   store: Map<string, unknown>;
+
+  /**
+   * Access the full Invect instance.
+   *
+   * Available only after core initialization completes. Use for advanced
+   * operations that go beyond the basic plugin context (e.g., executing
+   * flows, accessing credentials, running tests).
+   *
+   * **Note:** This is a lazy accessor. The instance is not available during
+   * `init()` if called before `Invect.initialize()` finishes building
+   * the service layer. For init-time operations, use `registerAction`,
+   * `hasPlugin`, and `store` instead.
+   */
+  getInvect: () => InvectInstance;
 }
 
 // =============================================================================

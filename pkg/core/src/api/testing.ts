@@ -154,7 +154,8 @@ export function createTestingAPI(
                 nodeDataService.runTemplateReplacement(template, variables),
               submitPrompt: async (request: SubmitPromptRequest) =>
                 baseAIClient.executePrompt(request),
-              getCredential: async (credentialId: string) => credentialsService.get(credentialId),
+              getCredential: async (credentialId: string) =>
+                credentialsService.getDecryptedWithRefresh(credentialId),
             },
             allNodeOutputs: new Map(),
           } as unknown as NodeExecutionContext;
@@ -213,7 +214,8 @@ export function createTestingAPI(
               nodeDataService.runTemplateReplacement(template, variables),
             submitPrompt: async (request: SubmitPromptRequest) =>
               baseAIClient.executePrompt(request),
-            getCredential: async (credentialId: string) => credentialsService.get(credentialId),
+            getCredential: async (credentialId: string) =>
+              credentialsService.getDecryptedWithRefresh(credentialId),
           },
           allNodeOutputs: new Map(),
         };

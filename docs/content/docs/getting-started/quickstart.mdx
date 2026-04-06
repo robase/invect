@@ -1,0 +1,121 @@
+---
+title: Quickstart
+description: Get a running Invect server with the visual flow editor in minutes.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+This quickstart uses Express with SQLite — the simplest path. For NestJS or Next.js, see the [Installation](/docs/installation/express) section after completing this.
+
+## Install and configure
+
+Create a new project and install the packages:
+
+```bash
+mkdir my-invect-app && cd my-invect-app
+pnpm init
+pnpm add @invect/core @invect/express better-sqlite3 express cors
+pnpm add -D @types/express @types/cors @types/better-sqlite3 tsx typescript
+```
+
+Create `invect.config.ts` in the project root:
+
+```ts title="invect.config.ts"
+import { defineConfig } from '@invect/core';
+
+export const invectConfig = defineConfig({
+  database: {
+    type: 'sqlite',
+    connectionString: 'file:./dev.db',
+  },
+});
+```
+
+## Set up the database
+
+Generate the Drizzle schema files and push them to SQLite:
+
+```bash
+pnpm dlx @invect/cli generate
+pnpm dlx @invect/cli migrate --push
+```
+
+The CLI reads your config, generates dialect-specific schema files from Invect's core tables, and applies them. You'll see a summary of the tables created.
+
+## Start the server
+
+Create `index.ts`:
+
+```ts title="index.ts"
+import express from 'express';
+import cors from 'cors';
+import { createInvectRouter } from '@invect/express';
+import { invectConfig } from './invect.config';
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+const invectRouter = await createInvectRouter(invectConfig);
+app.use('/invect', invectRouter);
+
+app.listen(3000, () => {
+  console.log('Server running at http://localhost:3000');
+  console.log('Invect API at http://localhost:3000/invect');
+});
+```
+
+Run it:
+
+```bash
+pnpm tsx index.ts
+```
+
+Hit `http://localhost:3000/invect/flows` — you should get an empty JSON array. The API is live.
+
+## Add the visual editor
+
+The editor is a React app from `@invect/ui`. The quickest way is a separate Vite project.
+
+In a new terminal:
+
+```bash
+pnpm create vite invect-frontend --template react-ts
+cd invect-frontend
+pnpm add @invect/ui react-router
+```
+
+Replace `src/App.tsx`:
+
+```tsx title="invect-frontend/src/App.tsx"
+import { BrowserRouter, Routes, Route } from 'react-router';
+import { Invect } from '@invect/ui';
+import '@invect/ui/styles';
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route
+          path="/*"
+          element={
+            <div style={{ height: '100vh' }}>
+              <Invect apiBaseUrl="http://localhost:3000/invect" />
+            </div>
+          }
+        />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+```
+
+Start the frontend with `pnpm dev` and open `http://localhost:5173`. You'll see the Invect dashboard — ready for your first flow.
+
+## What you have now
+
+- An Express server with the Invect REST API at `/invect`
+- A SQLite database storing flows, credentials, and execution history
+- A React frontend with the visual flow editor
+
+Next, try [building your first flow](/docs/getting-started/first-flow).

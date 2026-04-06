@@ -1,0 +1,75 @@
+---
+title: Theming
+description: Configure theme tokens, dark mode, and CSS scoping.
+---
+
+All `@invect/ui` styles are scoped inside a `.invect` CSS class. The component uses custom CSS properties (theme tokens) prefixed with `imp-` for colors, spacing, and typography. This scoping prevents conflicts with your application's styles.
+
+## Theme modes
+
+The `Invect` and `InvectShell` components accept a `theme` prop:
+
+```tsx
+<Invect apiBaseUrl="/api/invect" theme="dark" />
+```
+
+Options:
+- `"light"` — light theme
+- `"dark"` — dark theme
+- `"system"` — follows the OS preference (default)
+
+The `system` option uses `prefers-color-scheme` and updates automatically when the user changes their OS setting.
+
+## Theme tokens
+
+All colors in the editor are defined as CSS custom properties. The main tokens:
+
+| Token | Usage |
+|-------|-------|
+| `--imp-background` | Page background |
+| `--imp-foreground` | Primary text |
+| `--imp-muted` | Muted/secondary backgrounds |
+| `--imp-muted-foreground` | Secondary text |
+| `--imp-border` | Borders and dividers |
+| `--imp-primary` | Primary action color |
+| `--imp-primary-foreground` | Text on primary backgrounds |
+| `--imp-accent` | Accent/highlight color |
+| `--imp-card` | Card backgrounds |
+| `--imp-destructive` | Error/danger states |
+
+In Tailwind, these are used as `bg-imp-background`, `text-imp-foreground`, `border-imp-border`, etc.
+
+## Customising tokens
+
+Override tokens by setting CSS custom properties within the `.invect` scope:
+
+```css
+.invect {
+  --imp-background: #fafafa;
+  --imp-foreground: #111111;
+  --imp-primary: #2563eb;
+  --imp-border: #e5e7eb;
+}
+
+.invect.dark {
+  --imp-background: #0a0a0a;
+  --imp-foreground: #fafafa;
+  --imp-primary: #3b82f6;
+  --imp-border: #27272a;
+}
+```
+
+Place these overrides after the `@invect/ui/styles` import so they take precedence.
+
+## InvectShell vs. Invect
+
+Two components are exported for different needs:
+
+- **`Invect`** — the full application (router, sidebar, editor, all providers). Use this for mounting the complete editor.
+- **`InvectShell`** — only the CSS scope (`.invect` class + theme resolution). No routing, no providers, no app logic. Use this when you need Invect styling around your own UI — for example, wrapping an auth gate that renders before the editor loads.
+
+```tsx
+import { Invect, InvectShell } from '@invect/ui';
+```
+
+The shell is lightweight — it just renders a `<div className="invect light|dark">` wrapper with theme-aware class toggling.

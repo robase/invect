@@ -983,6 +983,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
             getResolvedRole: (identity) => initializedCore.auth.getResolvedRole(identity),
             authorize: (context) => initializedCore.auth.authorize(context),
           },
+          getInvect: () => initializedCore,
         });
 
         // Handle raw Response objects

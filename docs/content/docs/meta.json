@@ -1,5 +1,18 @@
 {
   "root": true,
   "title": "Documentation",
-  "pages": ["index", "tutorials", "how-to", "reference", "explanation"]
+  "pages": [
+    "index",
+    "getting-started",
+    "installation",
+    "flows",
+    "nodes",
+    "agents",
+    "credentials",
+    "frontend",
+    "plugins",
+    "deployment",
+    "reference",
+    "concepts"
+  ]
 }

@@ -9,7 +9,7 @@
     "predev": "test -f dev.db || pnpm db:prepare",
     "predev:tsx": "test -f dev.db || pnpm db:prepare",
     "predev:debug": "test -f dev.db || pnpm db:prepare",
-    "dev": "nodemon --watch index.ts --watch ../../pkg/core/dist --watch ../../pkg/express/dist --watch ../../pkg/plugins/auth/dist --watch ../../pkg/plugins/rbac/dist --watch ../../pkg/plugins/webhooks/dist --exec tsx index.ts",
+    "dev": "nodemon --watch index.ts --watch ../../pkg/core/dist --watch ../../pkg/express/dist --watch ../../pkg/plugins/auth/dist --watch ../../pkg/plugins/rbac/dist --watch ../../pkg/plugins/webhooks/dist --watch ../../pkg/plugins/mcp/dist --exec tsx index.ts",
     "dev:tsx": "tsx watch --clear-screen=false index.ts",
     "dev:debug": "NODE_ENV=development tsx watch --clear-screen=false index.ts",
     "build": "tsc",
@@ -30,6 +30,7 @@
   "dependencies": {
     "@invect/core": "workspace:*",
     "@invect/express": "workspace:*",
+    "@invect/mcp": "workspace:*",
     "@invect/rbac": "workspace:*",
     "@invect/user-auth": "workspace:*",
     "@invect/webhooks": "workspace:*",

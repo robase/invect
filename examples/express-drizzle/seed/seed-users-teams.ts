@@ -247,6 +247,7 @@ async function main() {
   console.log('\n📦 Seeding flows…');
 
   const invect = await createInvect({
+    encryptionKey: process.env.INVECT_ENCRYPTION_KEY || 'dGVzdC1lbmNyeXB0aW9uLWtleS0xMjM0NTY3ODkw',
     database: {
       type: 'sqlite',
       connectionString: `file:${sqlitePath}`,

@@ -116,6 +116,14 @@ export function FlowRunsView({ flowId, flowVersion, basePath }: FlowRunsViewProp
     }
   };
 
+  // Navigate to editor and open the node config panel for the given node
+  const handleEditNode = (nodeId: string) => {
+    const editPath = flowVersion
+      ? `${basePath}/flow/${flowId}/version/${flowVersion}`
+      : `${basePath}/flow/${flowId}`;
+    navigate(`${editPath}?openNode=${encodeURIComponent(nodeId)}`);
+  };
+
   // Handle node click in the flow graph - expand logs and select the node
   const handleNodeClick = (nodeId: string) => {
     // Find the node in execution logs
@@ -157,7 +165,7 @@ export function FlowRunsView({ flowId, flowVersion, basePath }: FlowRunsViewProp
   }));
 
   return (
-    <div className="imp-page flex flex-col flex-1 h-full min-h-0 bg-imp-background text-imp-foreground">
+    <div className="flex flex-col flex-1 h-full min-h-0 imp-page bg-imp-background text-imp-foreground">
       <FlowLayout
         modeSwitcher={<ModeSwitcher mode="runs" onModeChange={handleModeChange} />}
         viewportRef={viewportRef}
@@ -182,12 +190,13 @@ export function FlowRunsView({ flowId, flowVersion, basePath }: FlowRunsViewProp
                   selectedRun={selectedRun}
                   logsExpanded={isLogsExpanded}
                   onNodeClick={handleNodeClick}
+                  onEditNode={handleEditNode}
                   focusNodeId={focusNodeId}
                   onFocusComplete={() => setFocusNodeId(null)}
                   recenterTrigger={recenterTrigger}
                   selectedNodeId={selectedAttempt?.nodeId}
                 />
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 rounded-lg border border-border bg-card/90 backdrop-blur-sm shadow-md p-1">
+                <div className="absolute z-10 flex items-center gap-1 p-1 -translate-x-1/2 border rounded-lg shadow-md bottom-4 left-1/2 border-border bg-card/90 backdrop-blur-sm">
                   <ChatToggleButton />
                 </div>
               </div>
@@ -197,7 +206,9 @@ export function FlowRunsView({ flowId, flowVersion, basePath }: FlowRunsViewProp
                 <ResizableHandle
                   withHandle
                   onDragging={(isDragging) => {
-                    if (!isDragging) {setRecenterTrigger((c) => c + 1);}
+                    if (!isDragging) {
+                      setRecenterTrigger((c) => c + 1);
+                    }
                   }}
                 />
                 <ResizablePanel defaultSize={45} minSize={10}>

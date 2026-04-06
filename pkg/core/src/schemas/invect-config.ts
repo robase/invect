@@ -111,6 +111,12 @@ export const LoggingConfigSchema = z.object({
  */
 export const InvectConfigSchema = z.object({
   database: databaseConfigSchema,
+  /**
+   * AES-256-GCM encryption key for credential storage (base64-encoded, 32 bytes).
+   *
+   * Generate with: `npx invect-cli secret`
+   */
+  encryptionKey: z.string().min(1, 'encryptionKey is required. Generate one with: npx invect-cli secret'),
   logging: LoggingConfigSchema.default(() => ({
     level: 'info' as const,
   })).optional(),

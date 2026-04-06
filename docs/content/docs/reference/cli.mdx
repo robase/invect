@@ -5,8 +5,6 @@ description: All commands, flags, and examples for the Invect CLI.
 
 The Invect CLI (`@invect/cli`) manages project initialisation, schema generation, and database migrations.
 
-## Usage
-
 ```bash
 pnpm dlx @invect/cli <command> [options]
 ```
@@ -17,44 +15,38 @@ All commands accept `--debug` for detailed error output and stack traces.
 
 ## `init`
 
-Interactive setup wizard. Detects your framework, installs dependencies, creates config, generates schemas, and runs the initial migration.
+Interactive setup wizard. Detects framework, installs dependencies, creates config, generates schemas, runs initial migration.
 
 ```bash
 pnpm dlx @invect/cli init
 ```
 
-| Flag                     | Description                                                    |
-| ------------------------ | -------------------------------------------------------------- |
-| `--framework <name>`     | Skip framework detection (`express`, `nestjs`, `nextjs`).      |
-| `--database <type>`      | Skip database selection (`sqlite`, `postgresql`, `mysql`).     |
+| Flag | Description |
+|------|-------------|
+| `--framework <name>` | Skip framework detection (`express`, `nestjs`, `nextjs`). |
+| `--database <type>` | Skip database selection (`sqlite`, `postgresql`, `mysql`). |
 | `--package-manager <pm>` | Skip package manager detection (`npm`, `pnpm`, `yarn`, `bun`). |
 
 ---
 
 ## `generate`
 
-Generate Drizzle schema files from core + plugin schemas. Reads `invect.config.ts` to discover plugins and merge their schemas with core tables.
+Generate Drizzle schema files from core + plugin schemas.
 
 ```bash
 pnpm dlx @invect/cli generate
 ```
 
-| Flag                | Description                                                             |
-| ------------------- | ----------------------------------------------------------------------- |
-| `--config <path>`   | Path to config file (default: auto-discovery).                          |
-| `--dialects <list>` | Comma-separated dialects to generate (`sqlite`, `postgresql`, `mysql`). |
-| `--out-dir <dir>`   | Output directory for generated files.                                   |
-| `--adapter <name>`  | Schema adapter (`drizzle` or `prisma`).                                 |
-| `--schema-only`     | Generate schema files without migration files.                          |
-| `-y, --yes`         | Skip confirmation prompts.                                              |
+| Flag | Description |
+|------|-------------|
+| `--config <path>` | Path to config file (default: auto-discovery). |
+| `--dialects <list>` | Comma-separated dialects (`sqlite`, `postgresql`, `mysql`). |
+| `--out-dir <dir>` | Output directory for generated files. |
+| `--adapter <name>` | Schema adapter (`drizzle` or `prisma`). |
+| `--schema-only` | Generate schema files without migration files. |
+| `-y, --yes` | Skip confirmation prompts. |
 
-### What it does
-
-1. Loads `invect.config.ts` and discovers plugins.
-2. Merges core schema with plugin-declared schemas.
-3. Generates dialect-specific Drizzle files (one per dialect).
-4. Compares against existing files — skips unchanged ones.
-5. Optionally chains to `migrate`.
+The CLI reads `invect.config.ts`, discovers plugins, merges schemas, and generates dialect-specific Drizzle files. Unchanged files are skipped.
 
 ---
 
@@ -66,41 +58,39 @@ Apply database schema changes.
 # Production: generate + apply migration files
 pnpm dlx @invect/cli migrate
 
-# Development: push schema directly (no migration files)
+# Development: push schema directly
 pnpm dlx @invect/cli migrate --push
 ```
 
-| Flag              | Description                                                              |
-| ----------------- | ------------------------------------------------------------------------ |
-| `--config <path>` | Path to config file.                                                     |
-| `--push`          | Use `drizzle-kit push` instead of migration files. Fast for development. |
-| `-y, --yes`       | Skip confirmation prompts.                                               |
+| Flag | Description |
+|------|-------------|
+| `--config <path>` | Path to config file. |
+| `--push` | Use `drizzle-kit push` (fast, no migration files). |
+| `-y, --yes` | Skip confirmation prompts. |
 
 ---
 
 ## `info`
 
-Display diagnostic information about your Invect setup.
+Display diagnostic information about your setup.
 
 ```bash
 pnpm dlx @invect/cli info
 ```
 
-| Flag              | Description          |
-| ----------------- | -------------------- |
+| Flag | Description |
+|------|-------------|
 | `--config <path>` | Path to config file. |
-| `--json`          | Output as JSON.      |
+| `--json` | Output as JSON. |
 
-Shows: system info, detected framework, database type, config location, installed packages, and registered plugins.
+Shows system info, detected framework, database type, config location, installed packages, and registered plugins.
 
 ---
 
 ## `secret`
 
-Generate a cryptographically secure 32-byte base64 encryption key.
+Generate a cryptographically secure 32-byte base64 encryption key for `INVECT_ENCRYPTION_KEY`.
 
 ```bash
 pnpm dlx @invect/cli secret
 ```
-
-Outputs a key suitable for the `INVECT_ENCRYPTION_KEY` environment variable. See [Encryption Keys](/docs/how-to/production/encryption-keys).

@@ -19,6 +19,7 @@ import type {
 } from 'src/types/plugin.types';
 import type { InvectIdentity, InvectPermission, AuthorizationResult } from 'src/types/auth.types';
 import type { ActionDefinition } from 'src/actions/types';
+import type { InvectInstance } from 'src/api/types';
 
 // =============================================================================
 // Plugin Manager
@@ -57,6 +58,7 @@ export class PluginManager implements PluginHookRunner {
       error: (...args: unknown[]) => void;
     };
     registerAction: (action: ActionDefinition) => void;
+    getInvect: () => InvectInstance;
   }): Promise<InvectPluginInitResult[]> {
     const results: InvectPluginInitResult[] = [];
 
@@ -68,6 +70,7 @@ export class PluginManager implements PluginHookRunner {
         getPlugin: (id: string) => this.pluginMap.get(id) ?? null,
         registerAction: opts.registerAction,
         store: this.pluginStores.get(plugin.id) ?? new Map(),
+        getInvect: opts.getInvect,
       };
 
       opts.logger.debug(`Initializing plugin: ${plugin.id}`);

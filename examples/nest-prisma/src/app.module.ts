@@ -16,6 +16,7 @@ const DATABASE_URL =
       envFilePath: '.env',
     }),
     InvectModule.forRoot({
+      encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
       database: {
         type: 'postgresql',
         connectionString: DATABASE_URL,

@@ -48,6 +48,7 @@ export async function createTestInvect(opts?: {
   sqlite.close();
 
   const invect = await createInvect({
+    encryptionKey: 'dGVzdC1lbmNyeXB0aW9uLWtleS0xMjM0NTY3ODkw',
     database: {
       type: 'sqlite',
       connectionString: `file:${dbPath}`,

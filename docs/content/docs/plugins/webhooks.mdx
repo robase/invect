@@ -1,0 +1,52 @@
+---
+title: Webhooks
+description: Trigger flows from external HTTP requests with @invect/webhooks.
+---
+
+The webhooks plugin adds inbound webhook support — external services can trigger flow runs by making HTTP requests to unique webhook URLs.
+
+## Installation
+
+```bash
+pnpm add @invect/webhooks
+```
+
+## Setup
+
+```ts title="invect.config.ts"
+import { webhooksPlugin } from '@invect/webhooks';
+
+export const invectConfig = defineConfig({
+  // ...
+  plugins: [
+    webhooksPlugin({
+      webhookBaseUrl: 'https://api.myapp.com/invect',
+    }),
+  ],
+});
+```
+
+The `webhookBaseUrl` is the public URL prefix used to generate webhook URLs displayed in the editor. Set this to your production URL so webhook URLs are correct.
+
+Regenerate the schema if needed:
+
+```bash
+pnpm dlx @invect/cli generate
+pnpm dlx @invect/cli migrate --push
+```
+
+## How it works
+
+Add a **Trigger: Webhook** node to a flow. The plugin generates a unique URL for that trigger. When an external service sends a request to that URL, the flow runs with the request body as input.
+
+The webhook URL format: `{webhookBaseUrl}/webhooks/{webhookId}`
+
+## Managing webhooks
+
+Webhooks are managed through the trigger system:
+
+- `GET /flows/:flowId/triggers` — lists all triggers including webhooks
+- `POST /flows/:flowId/triggers` — create a new webhook trigger
+- `DELETE /triggers/:triggerId` — delete a webhook trigger
+
+Each webhook has a unique ID and optional secret for signature verification.

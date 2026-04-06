@@ -1118,6 +1118,7 @@ export class InvectController {
         getResolvedRole: (identity) => this.invect.auth.getResolvedRole(identity),
         authorize: (context) => this.invect.auth.authorize(context),
       },
+      getInvect: () => this.invect,
     });
 
     // Handle raw Response objects

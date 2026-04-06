@@ -44,6 +44,7 @@ sqlite.close();
 
 // ── 2. Create the Next.js adapter handler ─────────────────────────────
 const handler = createInvectHandler({
+  encryptionKey: 'dGVzdC1lbmNyeXB0aW9uLWtleS0xMjM0NTY3ODkw',
   database: {
     type: 'sqlite',
     connectionString: `file:${dbPath}`,

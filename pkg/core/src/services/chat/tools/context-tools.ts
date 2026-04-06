@@ -250,7 +250,7 @@ export const findCredentialsForActionTool: ChatToolDefinition = {
   name: 'Find Credentials for Action',
   description:
     'Find credentials that are compatible with a specific action (node type). ' +
-    'Checks the action\'s credential requirements (OAuth2 provider and scopes) ' +
+    "Checks the action's credential requirements (OAuth2 provider and scopes) " +
     'against the granted scopes on stored credentials. Returns matching credentials ' +
     'with compatibility info (full match vs partial scopes). ' +
     'Use this before configuring a node to find the right credential, or to check ' +
@@ -308,9 +308,18 @@ export const findCredentialsForActionTool: ChatToolDefinition = {
             return null;
           }
 
-          // For non-OAuth2, match by type
-          if (credType && credType !== 'oauth2' && c.authType !== credType) {
-            return null;
+          // For non-OAuth2, match by auth type (map action credential types to credential auth types)
+          if (credType && credType !== 'oauth2') {
+            const authTypeMap: Record<string, string> = {
+              api_key: 'apiKey',
+              basic_auth: 'basic',
+              database: 'connectionString',
+              llm: 'apiKey',
+            };
+            const expectedAuthType = authTypeMap[credType] ?? credType;
+            if (c.authType !== expectedAuthType) {
+              return null;
+            }
           }
 
           // Scope matching
@@ -637,6 +646,7 @@ export const contextTools: ChatToolDefinition[] = [
   getCurrentFlowContextTool,
   searchActionsTool,
   listCredentialsTool,
+  findCredentialsForActionTool,
   suggestCredentialSetupTool,
   getActionDetailsTool,
   listProvidersTool,

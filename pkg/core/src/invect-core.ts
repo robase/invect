@@ -470,6 +470,12 @@ export class Invect {
         registerAction: (action) => {
           actionRegistry.register(action);
         },
+        getInvect: () => {
+          throw new Error(
+            'InvectInstance is not available via the legacy Invect class. ' +
+              'Use createInvect() instead to get full InvectInstance access in plugins.',
+          );
+        },
       });
 
       if (this.pluginManager.getPlugins().length > 0) {
@@ -1562,7 +1568,7 @@ export class Invect {
             submitPrompt: async (request: SubmitPromptRequest) =>
               this.baseAIClient.executePrompt(request),
             getCredential: async (credentialId: string) =>
-              this.credentialsService.get(credentialId),
+              this.credentialsService.getDecryptedWithRefresh(credentialId),
           },
           allNodeOutputs: new Map(),
         } as unknown as NodeExecutionContext;
@@ -1623,7 +1629,7 @@ export class Invect {
             return this.baseAIClient.executePrompt(request);
           },
           getCredential: async (credentialId: string) => {
-            return this.credentialsService.get(credentialId);
+            return this.credentialsService.getDecryptedWithRefresh(credentialId);
           },
         },
         allNodeOutputs: new Map(),
@@ -1929,16 +1935,39 @@ export class Invect {
         const existingCred = existingByName.get(seed.name);
 
         if (existingCred) {
-          await this.updateCredential(existingCred.id, {
-            name: rest.name,
-            type: rest.type,
-            authType: rest.authType as CredentialAuthType,
-            config: rest.config,
-            description: rest.description,
-            isShared: rest.isShared,
-            metadata,
-          });
-          this.config.logger.debug(`Upserted credential "${seed.name}" (${existingCred.id})`);
+          try {
+            await this.updateCredential(existingCred.id, {
+              name: rest.name,
+              type: rest.type,
+              authType: rest.authType as CredentialAuthType,
+              config: rest.config,
+              description: rest.description,
+              isShared: rest.isShared,
+              metadata,
+            });
+            this.config.logger.debug(`Upserted credential "${seed.name}" (${existingCred.id})`);
+          } catch (updateErr) {
+            // Decryption failure (e.g. encryption key changed) — delete and recreate
+            this.config.logger.warn(
+              `Failed to update credential "${seed.name}", recreating with current encryption key`,
+            );
+            try {
+              await this.credentialsService.forceDelete(existingCred.id);
+            } catch {
+              // best-effort delete
+            }
+            const created = await this.createCredential({
+              name: rest.name,
+              type: rest.type,
+              authType: rest.authType as CredentialAuthType,
+              config: rest.config,
+              description: rest.description,
+              isShared: rest.isShared,
+              metadata,
+            });
+            // eslint-disable-next-line no-console
+            console.log(`🔐 Re-seeded credential: ${created.name} (${created.id})`);
+          }
         } else {
           const created = await this.createCredential({
             name: rest.name,

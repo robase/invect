@@ -387,7 +387,10 @@ export class OAuth2Service {
    */
   isTokenExpired(config: CredentialConfig, bufferSeconds: number = 300): boolean {
     if (!config.expiresAt) {
-      return false; // No expiry means it doesn't expire (or we don't know)
+      // No expiry recorded — if the credential has a refresh token, assume
+      // expired so we proactively refresh (Google tokens expire in ~1 hour).
+      // If no refresh token, assume still valid (can't refresh anyway).
+      return !!config.refreshToken;
     }
 
     const expiresAt = new Date(config.expiresAt);

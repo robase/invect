@@ -1,0 +1,72 @@
+---
+title: Model Nodes
+description: Configure AI model nodes with OpenAI, Anthropic, or OpenRouter.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+Model nodes send a prompt to an LLM and return the response. They're the simplest way to add AI to a flow — no agent loop, no tool calling, just prompt in, text out.
+
+## Configuration
+
+A Model node needs three things:
+
+- **Credential** — an API key for OpenAI, Anthropic, or OpenRouter (see [API keys](/docs/credentials/api-keys))
+- **Model** — which model to use (e.g., `gpt-4o-mini`, `claude-sonnet-4-20250514`, or an OpenRouter route)
+- **Prompt** — the text to send, supporting `{{ }}` template expressions
+
+Optionally:
+
+- **System prompt** — sets the model's behaviour/persona
+- **Temperature** — controls randomness (0 = deterministic, 1 = creative)
+- **Max tokens** — caps the response length
+- **Response format** — request JSON output from models that support it
+
+## Template expressions in prompts
+
+The prompt field supports the same `{{ }}` template syntax as any other node parameter. Before sending the prompt to the LLM, all expressions are resolved against the incoming data:
+
+```
+Summarise this feedback from {{ input.customer_name }}:
+
+{{ fetch_feedback.content }}
+
+Focus on actionable items.
+```
+
+This makes it easy to build dynamic prompts that incorporate data from upstream nodes — API responses, user input, database queries, or any other node output.
+
+## Provider differences
+
+<Tabs items={['OpenAI', 'Anthropic', 'OpenRouter']}>
+  <Tab value="OpenAI">
+Models like `gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo`. Supports function calling, JSON mode, and batch API. Credential type: `openai` with an API key.
+  </Tab>
+  <Tab value="Anthropic">
+Models like `claude-sonnet-4-20250514`, `claude-haiku`. Supports tool use and streaming. Credential type: `anthropic` with an API key.
+  </Tab>
+  <Tab value="OpenRouter">
+Routes to multiple providers through a single API key. Use any model available on OpenRouter (OpenAI, Anthropic, Meta, Mistral, etc.). Credential type: `openrouter` with an API key. Model names follow OpenRouter's naming convention.
+  </Tab>
+</Tabs>
+
+## Output format
+
+A Model node produces:
+
+```json
+{
+  "content": "The model's response text...",
+  "usage": { "promptTokens": 150, "completionTokens": 85 },
+  "model": "gpt-4o-mini",
+  "finishReason": "stop"
+}
+```
+
+Downstream nodes reference the response as `{{ model.content }}` (where `model` is the node's reference ID).
+
+## Batch mode
+
+For large-scale processing where latency doesn't matter, Model nodes can use batch APIs. The node submits the request and returns `PENDING`. The flow pauses, and a background service polls for completion. This is covered in [Running programmatically](/docs/flows/running-programmatically).
+
+Batch mode is useful for cost savings (OpenAI's Batch API offers 50% discounts) and for workloads that would exceed real-time rate limits.

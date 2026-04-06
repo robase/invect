@@ -1,0 +1,126 @@
+---
+title: Database
+description: Configure SQLite, PostgreSQL, or MySQL and manage schema migrations.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+Invect uses Drizzle ORM and supports three database dialects. The choice goes in your `invect.config.ts` — everything else (schema generation, migrations, runtime queries) adapts automatically.
+
+## Choosing a database
+
+<Tabs items={['SQLite', 'PostgreSQL', 'MySQL']}>
+  <Tab value="SQLite">
+```ts title="invect.config.ts"
+import { defineConfig } from '@invect/core';
+
+export default defineConfig({
+  database: {
+    type: 'sqlite',
+    connectionString: 'file:./dev.db',
+  },
+});
+```
+
+Install `better-sqlite3`:
+```bash
+pnpm add better-sqlite3
+```
+
+SQLite is the simplest choice for local development and small deployments. The database is a single file — no server needed.
+  </Tab>
+  <Tab value="PostgreSQL">
+```ts title="invect.config.ts"
+import { defineConfig } from '@invect/core';
+
+export default defineConfig({
+  database: {
+    type: 'postgresql',
+    connectionString: process.env.DATABASE_URL || 'postgresql://invect:invect@localhost:5432/invect',
+  },
+});
+```
+
+Install `postgres`:
+```bash
+pnpm add postgres
+```
+
+PostgreSQL is recommended for production. Use a managed instance (RDS, Supabase, Neon) or run your own.
+  </Tab>
+  <Tab value="MySQL">
+```ts title="invect.config.ts"
+import { defineConfig } from '@invect/core';
+
+export default defineConfig({
+  database: {
+    type: 'mysql',
+    connectionString: process.env.DATABASE_URL || 'mysql://invect:invect@localhost:3306/invect',
+  },
+});
+```
+
+Install `mysql2`:
+```bash
+pnpm add mysql2
+```
+
+MySQL support follows the same patterns as PostgreSQL.
+  </Tab>
+</Tabs>
+
+## Schema generation
+
+Invect's database schema is defined in an abstract format — dialect-agnostic table definitions that the CLI converts to Drizzle schema files. This is how plugins can declare their own tables without writing dialect-specific code.
+
+Generate all three dialect files:
+
+```bash
+pnpm dlx @invect/cli generate
+```
+
+The CLI reads your `invect.config.ts`, discovers any plugins, merges their schemas with the core tables, and writes Drizzle schema files for SQLite, PostgreSQL, and MySQL. Only changed files are written.
+
+## Applying migrations
+
+Two modes for applying schema changes:
+
+**Push mode** (development) — directly applies the schema to your database without generating migration files:
+
+```bash
+pnpm dlx @invect/cli migrate --push
+```
+
+**Migration mode** (production) — generates migration SQL files, then applies them:
+
+```bash
+pnpm dlx @invect/cli migrate
+```
+
+This uses `drizzle-kit` under the hood. Migration files are stored in a `drizzle/` directory and should be committed to version control.
+
+## Adding plugin tables
+
+When you add a plugin that declares database tables (like `@invect/user-auth` or `@invect/rbac`), the schema generation automatically includes them. The flow is:
+
+1. Add the plugin to your config's `plugins` array
+2. Re-run `pnpm dlx @invect/cli generate` — the CLI discovers the plugin's schema and merges it
+3. Re-run `pnpm dlx @invect/cli migrate --push` (or `migrate` in production)
+
+At startup, Invect verifies that all required tables exist. If a plugin's tables are missing, you'll get a clear error message with instructions.
+
+## Core tables
+
+Invect creates these tables:
+
+| Table | Purpose |
+|-------|---------|
+| `flows` | Flow definitions (name, description, metadata) |
+| `flow_versions` | Versioned flow graphs (nodes, edges, config) |
+| `flow_runs` | Execution records (status, inputs, outputs, timing) |
+| `node_executions` | Per-node execution traces (input, output, duration) |
+| `credentials` | Encrypted credential storage |
+| `triggers` | Cron and webhook trigger definitions |
+| `batch_jobs` | Batch processing job tracking |
+
+See [Database schema reference](/docs/reference/database-schema) for the full column definitions.

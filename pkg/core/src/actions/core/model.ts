@@ -30,6 +30,7 @@ const paramsSchema = z.object({
   provider: z.string().optional(),
   temperature: z.number().min(0).max(2).optional().default(0.7),
   maxTokens: z.number().positive().optional(),
+  outputJsonSchema: z.string().optional(),
   useBatchProcessing: z.boolean().optional().default(false),
 });
 
@@ -112,6 +113,15 @@ export const modelAction = defineAction({
         label: 'Max Tokens',
         type: 'number',
         description: 'Maximum number of tokens to generate',
+        extended: true,
+      },
+      {
+        name: 'outputJsonSchema',
+        label: 'Output JSON Schema',
+        type: 'code',
+        description:
+          'Optional JSON Schema that constrains the model output. The model will use tool calling / structured output to return data matching this schema.',
+        placeholder: '{"type": "object", "properties": { ... }}',
         extended: true,
       },
       {
@@ -217,6 +227,7 @@ export const modelAction = defineAction({
       provider,
       temperature: params.temperature,
       credentialId: params.credentialId,
+      outputJsonSchema: params.outputJsonSchema || undefined,
     };
 
     const submitRequest: SubmitPromptRequest = useBatchProcessing

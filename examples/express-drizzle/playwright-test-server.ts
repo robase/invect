@@ -81,6 +81,7 @@ app.get('/invect/plugins/auth/api/auth/get-session', (_req, res) => {
 app.use(
   '/invect',
   await createInvectRouter({
+    encryptionKey: 'dGVzdC1lbmNyeXB0aW9uLWtleS0xMjM0NTY3ODkw',
     database: {
       type: 'sqlite',
       connectionString: `file:${dbPath}`,

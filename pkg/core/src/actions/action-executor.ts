@@ -22,7 +22,49 @@ import { NodeExecutionStatus } from 'src/types/base';
 import type {
   NodeExecutionResult,
   NodeExecutionFailedResult,
+  NodeExecutionPendingResult,
 } from 'src/types/node-execution.types';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Coerce JSON-encoded string params into real objects/arrays.
+ *
+ * The UI config panel stores JSON-type fields (like `inputDefinitions`) as
+ * stringified JSON from the code editor textarea.  Before Zod validation we
+ * attempt to parse any string value that looks like a JSON array or object so
+ * that the schema receives the expected types.
+ *
+ * Template expressions (containing `{{`) are left as-is.
+ */
+export function coerceJsonStringParams(params: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(params)) {
+    if (typeof value === 'string' && !value.includes('{{')) {
+      const trimmed = value.trim();
+      // Empty strings → undefined so optional Zod fields pass through
+      if (trimmed === '') {
+        result[key] = undefined;
+        continue;
+      }
+      if (
+        (trimmed.startsWith('[') && trimmed.endsWith(']')) ||
+        (trimmed.startsWith('{') && trimmed.endsWith('}'))
+      ) {
+        try {
+          result[key] = JSON.parse(trimmed);
+          continue;
+        } catch {
+          // Not valid JSON — keep as string
+        }
+      }
+    }
+    result[key] = value;
+  }
+  return result;
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PUBLIC API
@@ -42,8 +84,13 @@ export async function executeActionAsNode(
 ): Promise<NodeExecutionResult> {
   const logger = nodeContext.logger;
 
+  // 0. Coerce JSON strings — the UI config panel stores JSON-type fields as
+  //    stringified JSON (from the textarea editor).  Parse them so that Zod
+  //    receives real objects/arrays instead of raw strings.
+  const coercedParams = coerceJsonStringParams(params);
+
   // 1. Validate params with the action's Zod schema
-  const parseResult = action.params.schema.safeParse(params);
+  const parseResult = action.params.schema.safeParse(coercedParams);
   if (!parseResult.success) {
     const { prettifyError } = await import('zod/v4');
 
@@ -126,6 +173,19 @@ export async function executeActionAsNode(
       errors: [result.error ?? 'Action failed without error message'],
       metadata: result.metadata,
     } satisfies NodeExecutionFailedResult;
+  }
+
+  // 5a. Detect batch submission — the action signals this via metadata.
+  //     Convert to NodeExecutionPendingResult so the flow coordinator
+  //     can pause the flow and poll for completion.
+  if (result.metadata?.__batchSubmitted === true) {
+    return {
+      state: NodeExecutionStatus.PENDING,
+      type: 'batch_submitted' as const,
+      batchJobId: String(result.metadata.batchJobId ?? ''),
+      nodeId: String(result.metadata.nodeId ?? nodeContext.nodeId),
+      executionId: String(result.metadata.flowRunId ?? nodeContext.flowRunId),
+    } satisfies NodeExecutionPendingResult;
   }
 
   // Build output variables – prefer explicit outputVariables if the action

@@ -1,0 +1,141 @@
+---
+title: Custom Actions
+description: Build your own node types with defineAction().
+---
+
+Every node in Invect (except Agent) is defined as an action. You can create your own using the same `defineAction()` function that powers the built-in integrations. Custom actions appear in the node palette and are automatically available as agent tools.
+
+## Defining an action
+
+```ts
+import { defineAction } from '@invect/core';
+import { z } from 'zod/v4';
+
+export const myAction = defineAction({
+  id: 'my_app.transform_data',
+  name: 'Transform Data',
+  description: 'Apply custom transformation to incoming data',
+  provider: {
+    id: 'my_app',
+    name: 'My App',
+    icon: 'Blocks',
+  },
+
+  params: {
+    schema: z.object({
+      format: z.enum(['json', 'csv', 'xml']),
+      includeHeaders: z.boolean().optional().default(true),
+    }),
+    fields: [
+      { name: 'format', label: 'Output Format', type: 'select', required: true,
+        options: [
+          { label: 'JSON', value: 'json' },
+          { label: 'CSV', value: 'csv' },
+          { label: 'XML', value: 'xml' },
+        ]},
+      { name: 'includeHeaders', label: 'Include Headers', type: 'boolean' },
+    ],
+  },
+
+  async execute(params, context) {
+    const data = context.incomingData;
+    const result = transform(data, params.format, params.includeHeaders);
+    return { success: true, output: result };
+  },
+});
+```
+
+## Anatomy of an action
+
+**`id`** — a unique string identifier, conventionally `provider.action_name`. This becomes the node type in flow definitions and the tool ID for agents.
+
+**`provider`** — groups the action in the node palette. Use an existing provider (from `@invect/core/actions/providers`) or define your own inline.
+
+**`params.schema`** — a Zod schema that validates inputs. Parameters are validated after template expressions are resolved.
+
+**`params.fields`** — UI field definitions for the config panel. Field types include `text`, `textarea`, `code`, `number`, `boolean`, `select`, and `json`.
+
+**`execute(params, context)`** — the function that runs when the node fires. `params` are the validated, template-resolved parameters. `context` provides:
+
+- `incomingData` — the full input data object from upstream nodes
+- `credential` — the decrypted credential (if one is attached)
+- `logger` — scoped logger for the execution
+- `functions` — service functions like `submitPrompt`, `getCredential`, `markDownstreamNodesAsSkipped`
+- `flowRunState` — metadata about the current flow run
+
+**`credential`** (optional) — declares that the action needs a credential. Specify `oauth2Provider` for OAuth2 services or leave it generic for API keys.
+
+## Registering the action
+
+Add your action to the actions array and it's available at runtime:
+
+```ts
+import { myAction } from './actions/my-action';
+
+const config = defineConfig({
+  // ...
+  actions: [myAction],
+});
+```
+
+Alternatively, for built-in actions within the `@invect/core` package, add the action to the `allBuiltinActions` array in `pkg/core/src/actions/index.ts`.
+
+## Dual-purpose: node and tool
+
+Once registered, the action is available in two ways:
+
+- As a **flow node** — appears in the visual editor's palette under the provider group. The `params.fields` definitions generate the config panel UI.
+- As an **agent tool** — available to Agent nodes. The Zod schema is converted to JSON Schema for the LLM's tool definition. The description helps the LLM decide when to use it.
+
+There's no opt-out — every action is both. If you need a tool-only definition (no corresponding node), register it as a standalone tool instead.
+
+## Actions with OAuth2
+
+For actions that call external APIs with OAuth2 authentication:
+
+```ts
+export const myAction = defineAction({
+  id: 'my_service.list_items',
+  // ...
+  credential: {
+    required: true,
+    oauth2Provider: 'my_service',
+    description: 'My Service OAuth2 credential',
+  },
+
+  async execute(params, context) {
+    const token = context.credential?.config?.accessToken;
+    if (!token) {
+      return { success: false, error: 'OAuth2 credential required' };
+    }
+
+    const response = await fetch('https://api.myservice.com/items', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    return { success: true, output: await response.json() };
+  },
+});
+```
+
+The access token is automatically refreshed before execution if it has expired.
+
+## Multi-output actions
+
+Actions can define output variables for routing, similar to if/else:
+
+```ts
+async execute(params, context) {
+  const result = evaluate(params.condition, context.incomingData);
+  return {
+    success: true,
+    output: context.incomingData,
+    outputVariables: {
+      true_output: result ? context.incomingData : undefined,
+      false_output: result ? undefined : context.incomingData,
+    },
+  };
+}
+```
+
+This is how the built-in if/else and switch nodes are implemented.

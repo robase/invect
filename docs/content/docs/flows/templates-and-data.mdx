@@ -1,0 +1,104 @@
+---
+title: Templates and Data Flow
+description: How data moves between nodes and how template expressions work.
+---
+
+Understanding how data flows between nodes is key to building effective workflows. Every node receives its upstream nodes' outputs as a combined JSON object and can reference any value using template expressions.
+
+## The incoming data object
+
+When a node executes, Invect constructs an **incoming data object** from the outputs of all upstream nodes (those connected via edges). The keys are the upstream nodes' reference IDs, and the values are their outputs.
+
+For example, if a node has two upstream connections — one from a node with reference ID `user_input` and another from `api_response`:
+
+```json
+{
+  "user_input": { "name": "Alice", "email": "alice@example.com" },
+  "api_response": { "status": 200, "data": { "id": 42 } }
+}
+```
+
+This object is what template expressions evaluate against.
+
+## Template expressions
+
+Any node configuration parameter can contain `{{ }}` blocks. These are JavaScript expressions evaluated in a QuickJS WASM sandbox at execution time.
+
+**Property access:**
+```
+{{ user_input.name }}          → "Alice"
+{{ api_response.data.id }}     → 42
+```
+
+**Full JavaScript:**
+```
+{{ user_input.name.toUpperCase() }}                         → "ALICE"
+{{ api_response.status === 200 ? "OK" : "Error" }}          → "OK"
+{{ [1, 2, 3].filter(n => n > 1).length }}                   → 2
+{{ JSON.stringify(api_response.data) }}                      → '{"id":42}'
+```
+
+**String interpolation:**
+```
+Hello, {{ user_input.name }}! Your ID is {{ api_response.data.id }}.
+→ "Hello, Alice! Your ID is 42."
+```
+
+When the entire parameter value is a single `{{ }}` expression, the raw JavaScript value is returned (numbers, objects, arrays stay as their types). When a parameter mixes text and expressions, the result is always a string.
+
+## Available globals
+
+Inside `{{ }}` expressions, these JavaScript globals are available:
+
+- `JSON` — `parse`, `stringify`
+- `Math` — all math functions
+- `Date` — date construction and methods
+- `Array`, `Object`, `String` — prototype methods
+- `RegExp` — pattern matching
+- `Map`, `Set` — collection types
+- `parseInt`, `parseFloat`, `isNaN`, `isFinite`
+- `encodeURIComponent`, `decodeURIComponent`
+- `atob`, `btoa`
+
+No Node.js APIs (`fs`, `http`, `process`) are available — the sandbox is intentionally restricted.
+
+## Pure expressions vs. interpolation
+
+This distinction matters for type preservation:
+
+```
+{{ [1, 2, 3] }}              → [1, 2, 3]  (array)
+Items: {{ [1, 2, 3] }}      → "Items: 1,2,3"  (string)
+```
+
+If you need to pass structured data (objects, arrays, numbers) to a downstream node, use a pure expression without surrounding text. If you're composing a human-readable string, mix text and expressions freely.
+
+## Accessing nested data
+
+Upstream node outputs can be arbitrarily deep. Access nested properties with dot notation:
+
+```
+{{ api_response.data.users[0].name }}
+{{ config.settings.features.enabled }}
+```
+
+Optional chaining isn't available in the QuickJS sandbox, so guard against undefined values with ternaries or logical operators:
+
+```
+{{ api_response.data ? api_response.data.name : "unknown" }}
+```
+
+## How Input nodes work
+
+Input nodes are special — they capture the flow's runtime inputs (what the user provides when clicking Run, or what's passed via the API). Their output is the input values object directly:
+
+```json
+// If the Input node defines fields "name" (string) and "count" (number):
+{ "name": "Alice", "count": 5 }
+```
+
+Downstream nodes access these as `{{ input.name }}`, where `input` is the Input node's reference ID.
+
+## How Output nodes work
+
+Output nodes define what the flow returns. They don't need configuration — they automatically capture whatever their upstream node produces as the flow's final result.

@@ -66,6 +66,7 @@ app.use(express.json());
 
 // --- Mount Invect API ---
 const invectRouter = await createInvectRouter({
+  encryptionKey,
   database: {
     id: 'invect-docker',
     type: dbType,

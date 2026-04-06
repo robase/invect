@@ -1,0 +1,74 @@
+#!/usr/bin/env node
+/**
+ * invect-mcp CLI — Standalone MCP server over stdio transport.
+ *
+ * Connects to a running Invect instance via HTTP API.
+ * Designed for Claude Desktop, VS Code Copilot, and other MCP clients.
+ *
+ * Usage:
+ *   npx invect-mcp --url http://localhost:3000/invect --api-key YOUR_KEY
+ *
+ * Environment variables:
+ *   INVECT_URL     — Base URL of the Invect API
+ *   INVECT_API_KEY — API key for authentication
+ */
+
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { HttpClient } from '../backend/client/http-client';
+import { createMcpServer } from '../backend/mcp-server';
+
+async function main(): Promise<void> {
+  const args = parseArgs(process.argv.slice(2));
+
+  const url = args.url || process.env.INVECT_URL;
+  const apiKey = args['api-key'] || process.env.INVECT_API_KEY;
+
+  if (!url) {
+    console.error('Error: --url or INVECT_URL is required.');
+    console.error('Usage: invect-mcp --url http://localhost:3000/invect --api-key YOUR_KEY');
+    process.exit(1);
+  }
+
+  if (!apiKey) {
+    console.error('Error: --api-key or INVECT_API_KEY is required.');
+    console.error('Usage: invect-mcp --url http://localhost:3000/invect --api-key YOUR_KEY');
+    process.exit(1);
+  }
+
+  // Create HTTP client pointing at the remote Invect API
+  const client = new HttpClient(url, apiKey);
+
+  // Create MCP server with all tools
+  const server = createMcpServer(client);
+
+  // Connect via stdio transport
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+
+  // Log to stderr (stdout is used by the MCP protocol)
+  console.error(`invect-mcp: Connected to ${url} via stdio transport`);
+}
+
+function parseArgs(argv: string[]): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (!arg) continue;
+    if (arg.startsWith('--')) {
+      const key = arg.slice(2);
+      const next = argv[i + 1];
+      if (next && !next.startsWith('--')) {
+        result[key] = next;
+        i++;
+      } else {
+        result[key] = 'true';
+      }
+    }
+  }
+  return result;
+}
+
+main().catch((err) => {
+  console.error('invect-mcp: Fatal error:', err);
+  process.exit(1);
+});

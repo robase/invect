@@ -103,16 +103,39 @@ async function seedDefaultCredentials(sf: ServiceFactory, config: InvectConfig):
       const existingCred = existingByName.get(seed.name);
 
       if (existingCred) {
-        await credentialsService.update(existingCred.id, {
-          name: rest.name,
-          type: rest.type,
-          authType: rest.authType as CredentialAuthType,
-          config: rest.config,
-          description: rest.description,
-          isShared: rest.isShared,
-          metadata,
-        });
-        config.logger.debug(`Upserted credential "${seed.name}" (${existingCred.id})`);
+        try {
+          await credentialsService.update(existingCred.id, {
+            name: rest.name,
+            type: rest.type,
+            authType: rest.authType as CredentialAuthType,
+            config: rest.config,
+            description: rest.description,
+            isShared: rest.isShared,
+            metadata,
+          });
+          config.logger.debug(`Upserted credential "${seed.name}" (${existingCred.id})`);
+        } catch {
+          // Decryption failure (e.g. encryption key changed) — delete and recreate
+          config.logger.warn(
+            `Failed to update credential "${seed.name}", recreating with current encryption key`,
+          );
+          try {
+            await credentialsService.forceDelete(existingCred.id);
+          } catch {
+            // best-effort delete
+          }
+          const created = await credentialsService.create({
+            name: rest.name,
+            type: rest.type,
+            authType: rest.authType as CredentialAuthType,
+            config: rest.config,
+            description: rest.description,
+            isShared: rest.isShared,
+            metadata,
+          });
+          // eslint-disable-next-line no-console
+          console.log(`🔐 Re-seeded credential: ${created.name} (${created.id})`);
+        }
       } else {
         const created = await credentialsService.create({
           name: rest.name,
@@ -190,12 +213,27 @@ export async function createInvect(config: InvectConfig): Promise<InvectInstance
     );
 
     // Initialize plugins (register plugin actions, call init hooks)
+    // Use a lazy accessor since the InvectInstance is not yet built at this point.
+    // Plugins that call getInvect() during init() will get an error; it's only
+    // available after initialization completes (in endpoint handlers, hooks, etc.).
+    let _invectInstance: InvectInstance | null = null;
+    const getInvect = (): InvectInstance => {
+      if (!_invectInstance) {
+        throw new Error(
+          'InvectInstance is not yet available. getInvect() cannot be called during plugin init(). ' +
+            'It is available in endpoint handlers, hooks, and after initialization completes.',
+        );
+      }
+      return _invectInstance;
+    };
+
     await pluginManager.initializePlugins({
       config: parsedConfig as unknown as Record<string, unknown>,
       logger,
       registerAction: (action) => {
         actionRegistry.register(action);
       },
+      getInvect,
     });
 
     if (pluginManager.getPlugins().length > 0) {
@@ -374,6 +412,9 @@ export async function createInvect(config: InvectConfig): Promise<InvectInstance
     seedDefaultCredentials(sf, parsedConfig).catch((err) => {
       logger.error('Default credential seeding failed', err);
     });
+
+    // Make instance available to plugins via the lazy getInvect() accessor
+    _invectInstance = instance;
 
     return instance;
   } catch (error) {

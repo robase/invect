@@ -1,9 +1,0 @@
-{
-  "title": "Nodes",
-  "pages": [
-    "configure-model-nodes",
-    "use-http-requests",
-    "use-javascript-node",
-    "create-custom-actions"
-  ]
-}

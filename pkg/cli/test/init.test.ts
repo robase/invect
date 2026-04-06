@@ -209,14 +209,9 @@ describe('generateConfigFile()', () => {
     expect(config).toContain('plugins');
   });
 
-  it('should include AI provider configuration comments', () => {
+  it('should include encryptionKey config field', () => {
     const config = generateConfigFile(expressFramework, sqliteDb);
-    expect(config).toContain('ANTHROPIC_API_KEY');
-    expect(config).toContain('OPENAI_API_KEY');
-  });
-
-  it('should include encryption key comment', () => {
-    const config = generateConfigFile(expressFramework, sqliteDb);
+    expect(config).toContain('encryptionKey');
     expect(config).toContain('INVECT_ENCRYPTION_KEY');
   });
 });

@@ -55,8 +55,7 @@ type FindAgentNodeResult =
  * After checking `result.error`, use `result.node` (guaranteed non-null).
  */
 function findAgentNode(nodes: FlowNodeDefinitions[], nodeId: string): FindAgentNodeResult {
-  const node =
-    nodes.find((n) => n.id === nodeId) ?? nodes.find((n) => n.referenceId === nodeId);
+  const node = nodes.find((n) => n.id === nodeId) ?? nodes.find((n) => n.referenceId === nodeId);
   if (!node) {
     return { error: `Node "${nodeId}" not found in flow` };
   }

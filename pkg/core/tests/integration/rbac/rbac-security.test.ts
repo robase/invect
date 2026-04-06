@@ -316,6 +316,7 @@ describe('RBAC Plugin — Security Red Team', () => {
     // 7. Create plugin + Invect
     plugin = rbacPlugin({ enableTeams: true });
     invect = await createInvect({
+      encryptionKey: 'dGVzdC1lbmNyeXB0aW9uLWtleS0xMjM0NTY3ODkw',
       database: {
         type: 'sqlite',
         connectionString: `file:${dbPath}`,

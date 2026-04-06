@@ -1,0 +1,98 @@
+---
+title: Running Programmatically
+description: Trigger flows from code, handle batch processing, and work with flow run results.
+---
+
+While the visual editor is great for building and testing, production use often means triggering flows from your application code or external systems.
+
+## REST API
+
+The primary way to run a flow programmatically:
+
+```bash
+POST /flows/:flowId/run
+Content-Type: application/json
+
+{
+  "inputs": { "name": "Alice", "topic": "machine learning" }
+}
+```
+
+The response includes the flow run ID, status, and output:
+
+```json
+{
+  "id": "run_abc123",
+  "status": "COMPLETED",
+  "output": { "message": "Hello, Alice! ..." },
+  "startedAt": "2025-01-01T12:00:00Z",
+  "completedAt": "2025-01-01T12:00:01Z"
+}
+```
+
+For long-running flows, the response comes after completion. For batch flows, the response comes immediately with status `PAUSED_FOR_BATCH`.
+
+## Direct core access
+
+If you're running Invect in the same process (the library approach), you can call the core directly:
+
+```ts
+const result = await invect.startFlowRun('my-flow-id', {
+  name: 'Alice',
+  topic: 'machine learning',
+});
+```
+
+In NestJS, inject `InvectService` and call `getCore()`. In Express, the core instance is accessible from the router factory's return.
+
+## Streaming execution
+
+For real-time feedback during execution, use the SSE (Server-Sent Events) endpoint:
+
+```
+GET /flow-runs/:flowRunId/stream
+```
+
+This streams node status changes as they happen — useful for building UIs that show execution progress. The visual editor uses this internally.
+
+## Batch processing
+
+When a node uses a batch API (like OpenAI's Batch API for cost savings on large workloads), the flow doesn't block waiting for completion. Instead:
+
+1. The node submits the batch and returns `PENDING`
+2. The flow run transitions to `PAUSED_FOR_BATCH`
+3. A background polling service checks the provider periodically
+4. When the batch completes, the flow resumes from where it paused
+
+The polling interval is configured via `execution.staleRunCheckIntervalMs`. You can also manually resume a paused run:
+
+```bash
+POST /flow-runs/:flowRunId/resume
+```
+
+## Flow run states
+
+A flow run moves through these states:
+
+```
+RUNNING → COMPLETED          (normal)
+RUNNING → FAILED             (node error)
+RUNNING → PAUSED_FOR_BATCH   (batch pending)
+PAUSED_FOR_BATCH → RUNNING   (batch complete, resumed)
+RUNNING → CANCELLED          (manual cancel)
+```
+
+## Listing and inspecting runs
+
+```bash
+# List all runs for a flow
+GET /flows/:flowId/runs
+
+# Get a specific run with full details
+GET /flow-runs/:flowRunId
+
+# Get node-level execution traces
+GET /flow-runs/:flowRunId/node-executions
+```
+
+Execution traces include each node's input data, resolved parameters, output, duration, and status. This is the same data the visual editor's execution inspector displays.

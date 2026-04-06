@@ -1,0 +1,55 @@
+---
+title: Creating Flows
+description: Create, edit, version, duplicate, and delete flows.
+---
+
+Flows are the core unit of work in Invect — directed graphs of nodes connected by edges. Each flow has a name, a description, and a versioned graph definition.
+
+## Creating and editing
+
+In the visual editor, click **Create Flow** from the dashboard. Give it a name and you land in the flow editor — a canvas where you drag nodes from the palette, connect them with edges, and configure each node's parameters.
+
+Every change you make is saved as a new **version** of the flow. The version history is accessible from the flow's detail view, and you can revert to any previous version. Versions are immutable — editing always creates a new one.
+
+Flows can also be created through the REST API:
+
+```bash
+curl -X POST http://localhost:3000/invect/flows \
+  -H "Content-Type: application/json" \
+  -d '{"name": "My Flow", "description": "A test flow"}'
+```
+
+## Flow structure
+
+A flow version contains:
+
+- **Nodes** — each with a type (action ID like `core.model`, `gmail.send_message`), a label, a position on the canvas, a reference ID (used in templates), and configuration parameters.
+- **Edges** — directed connections between nodes that define data flow. An edge goes from a source node's output handle to a target node's input handle.
+- **Input schema** — what the flow accepts when it runs (defined by Input nodes).
+- **Output mapping** — what the flow returns (defined by Output nodes).
+
+## Duplicating and deleting
+
+From the dashboard, each flow card has a menu with **Duplicate** and **Delete** options. Duplicating creates a new flow with a copy of the latest version's graph. Deleting removes the flow and all its versions and run history.
+
+Via the API:
+
+```bash
+# Duplicate
+curl -X POST http://localhost:3000/invect/flows/:flowId/duplicate
+
+# Delete
+curl -X DELETE http://localhost:3000/invect/flows/:flowId
+```
+
+## Reference IDs
+
+Every node has a **reference ID** — a short identifier used to access that node's output from downstream nodes' template expressions. By default, it's the node's label converted to `snake_case`. You can change it in the node's config panel.
+
+Reference IDs matter because they're how you wire data between nodes: `{{ fetch_user.name }}` references the `name` field from the output of a node whose reference ID is `fetch_user`.
+
+If two upstream nodes produce the same reference ID (e.g., two nodes both labeled "Result"), a numeric suffix is appended automatically: `result`, `result1`.
+
+## Importing and exporting
+
+Flows can be exported as JSON from the API (`GET /flows/:flowId`) and imported by creating a new flow with the same graph definition. The version control plugin adds more sophisticated export/import with metadata preservation.

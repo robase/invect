@@ -344,6 +344,14 @@ export class CredentialsService {
   }
 
   /**
+   * Force-delete a credential by ID without decrypting or checking usage.
+   * Used when re-seeding after an encryption key change.
+   */
+  async forceDelete(id: string): Promise<void> {
+    await this.model.delete(id);
+  }
+
+  /**
    * Update the lastUsedAt timestamp
    * Called by execution engine when credential is used
    */

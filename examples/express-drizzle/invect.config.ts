@@ -8,13 +8,16 @@
 import { authentication } from '@invect/user-auth';
 import { rbacPlugin } from '@invect/rbac';
 import { webhooksPlugin } from '@invect/webhooks';
+import { mcpPlugin } from '@invect/mcp';
 import { defineConfig } from '@invect/core';
 
 const webhookBaseUrl = process.env.INVECT_WEBHOOK_BASE_URL || 'http://localhost:3000/invect';
 
 export const invectConfig = defineConfig({
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
   database: {
     type: 'sqlite',
+
     connectionString: process.env.DB_FILE_NAME || 'file:./dev.db',
   },
   logging: {
@@ -87,5 +90,6 @@ export const invectConfig = defineConfig({
     webhooksPlugin({
       webhookBaseUrl,
     }),
+    mcpPlugin(),
   ],
 });
