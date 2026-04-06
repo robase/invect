@@ -5,31 +5,31 @@ description: All environment variables for Invect in production.
 
 ## Core
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
+| Variable                | Required         | Default     | Description                                                                                            |
+| ----------------------- | ---------------- | ----------- | ------------------------------------------------------------------------------------------------------ |
 | `INVECT_ENCRYPTION_KEY` | Yes (production) | Dev default | 32-byte base64 key for AES-256-GCM credential encryption. Generate with `pnpm dlx @invect/cli secret`. |
-| `DATABASE_URL` | Yes | — | Database connection string. |
+| `DATABASE_URL`          | Yes              | —           | Database connection string.                                                                            |
 
 ## Authentication plugin
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `BETTER_AUTH_SECRET` | Yes | — | Secret for Better Auth session tokens. |
-| `INVECT_ADMIN_EMAIL` | Recommended | — | Initial admin user email. |
-| `INVECT_ADMIN_PASSWORD` | Recommended | — | Initial admin user password. |
+| Variable                | Required    | Default | Description                            |
+| ----------------------- | ----------- | ------- | -------------------------------------- |
+| `BETTER_AUTH_SECRET`    | Yes         | —       | Secret for Better Auth session tokens. |
+| `INVECT_ADMIN_EMAIL`    | Recommended | —       | Initial admin user email.              |
+| `INVECT_ADMIN_PASSWORD` | Recommended | —       | Initial admin user password.           |
 
 ## Webhooks plugin
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `INVECT_WEBHOOK_BASE_URL` | Yes | — | Public URL for webhook endpoints. |
+| Variable                  | Required | Default | Description                       |
+| ------------------------- | -------- | ------- | --------------------------------- |
+| `INVECT_WEBHOOK_BASE_URL` | Yes      | —       | Public URL for webhook endpoints. |
 
 ## AI providers
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `OPENAI_API_KEY` | No | — | OpenAI API key (alternative to storing as a credential). |
-| `ANTHROPIC_API_KEY` | No | — | Anthropic API key (alternative to storing as a credential). |
+| Variable            | Required | Default | Description                                                 |
+| ------------------- | -------- | ------- | ----------------------------------------------------------- |
+| `OPENAI_API_KEY`    | No       | —       | OpenAI API key (alternative to storing as a credential).    |
+| `ANTHROPIC_API_KEY` | No       | —       | Anthropic API key (alternative to storing as a credential). |
 
 ## Example `.env`
 

@@ -7,17 +7,17 @@ description: The InvectPlugin interface, hooks, schema format, and lifecycle.
 
 ```ts
 interface InvectPlugin {
-  id: string;                              // Required: unique identifier
-  name?: string;                           // Display name
+  id: string; // Required: unique identifier
+  name?: string; // Display name
   init?: (ctx: InvectPluginContext) => Promise<InvectPluginInitResult | void>;
-  schema?: InvectPluginSchema;            // Abstract DB tables
-  requiredTables?: string[];               // Tables checked at startup
-  actions?: ActionDefinition[];            // Flow nodes + agent tools
-  endpoints?: InvectPluginEndpoint[];     // Custom API routes
-  hooks?: InvectPluginHooks;              // Lifecycle hooks
-  setupInstructions?: string;              // Shown when tables are missing
-  $ERROR_CODES?: Record<string, object>;   // Custom error codes
-  shutdown?: () => Promise<void> | void;   // Cleanup
+  schema?: InvectPluginSchema; // Abstract DB tables
+  requiredTables?: string[]; // Tables checked at startup
+  actions?: ActionDefinition[]; // Flow nodes + agent tools
+  endpoints?: InvectPluginEndpoint[]; // Custom API routes
+  hooks?: InvectPluginHooks; // Lifecycle hooks
+  setupInstructions?: string; // Shown when tables are missing
+  $ERROR_CODES?: Record<string, object>; // Custom error codes
+  shutdown?: () => Promise<void> | void; // Cleanup
 }
 ```
 
@@ -25,33 +25,33 @@ interface InvectPlugin {
 
 ```ts
 interface InvectPluginContext {
-  db: DatabaseConnection;          // Drizzle database instance
-  logger: Logger;                  // Scoped logger
-  config: InvectConfig;            // Full Invect config
-  registerTool: (def, executor) => void;  // Register standalone agent tools
+  db: DatabaseConnection; // Drizzle database instance
+  logger: Logger; // Scoped logger
+  config: InvectConfig; // Full Invect config
+  registerTool: (def, executor) => void; // Register standalone agent tools
 }
 ```
 
 ## Hooks
 
-| Hook | Signature | Can short-circuit? |
-|------|-----------|-------------------|
-| `beforeFlowRun` | `(ctx: { flowId, inputs, config }) => Promise<{ cancel?, inputs? } \| void>` | Yes |
-| `afterFlowRun` | `(ctx: { flowId, flowRunId, status, output }) => Promise<void>` | No |
-| `beforeNodeExecute` | `(ctx: { nodeId, nodeType, params }) => Promise<{ skip?, params? } \| void>` | Yes |
-| `afterNodeExecute` | `(ctx: { nodeId, nodeType, output, status }) => Promise<{ output? } \| void>` | Override output |
-| `onRequest` | `(ctx: { request, method, path }) => Promise<{ response?, request? } \| void>` | Yes |
-| `onResponse` | `(ctx: { request, response }) => Promise<{ response? } \| void>` | Replace response |
-| `onAuthorize` | `(ctx: { action, resource }) => Promise<{ allowed? } \| void>` | Yes |
+| Hook                | Signature                                                                      | Can short-circuit? |
+| ------------------- | ------------------------------------------------------------------------------ | ------------------ |
+| `beforeFlowRun`     | `(ctx: { flowId, inputs, config }) => Promise<{ cancel?, inputs? } \| void>`   | Yes                |
+| `afterFlowRun`      | `(ctx: { flowId, flowRunId, status, output }) => Promise<void>`                | No                 |
+| `beforeNodeExecute` | `(ctx: { nodeId, nodeType, params }) => Promise<{ skip?, params? } \| void>`   | Yes                |
+| `afterNodeExecute`  | `(ctx: { nodeId, nodeType, output, status }) => Promise<{ output? } \| void>`  | Override output    |
+| `onRequest`         | `(ctx: { request, method, path }) => Promise<{ response?, request? } \| void>` | Yes                |
+| `onResponse`        | `(ctx: { request, response }) => Promise<{ response? } \| void>`               | Replace response   |
+| `onAuthorize`       | `(ctx: { action, resource }) => Promise<{ allowed? } \| void>`                 | Yes                |
 
 ## Endpoints
 
 ```ts
 interface InvectPluginEndpoint {
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-  path: string;           // Mounted under /plugins/{pluginId}/
+  path: string; // Mounted under /plugins/{pluginId}/
   handler: (req, res) => Promise<void>;
-  skipAuth?: boolean;      // Skip auth checks for this endpoint
+  skipAuth?: boolean; // Skip auth checks for this endpoint
 }
 ```
 

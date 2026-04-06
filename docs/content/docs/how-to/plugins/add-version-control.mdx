@@ -15,7 +15,7 @@ pnpm add @invect/version-control
 
 ```ts title="invect.config.ts"
 import { defineConfig } from '@invect/core';
-import { versionControlPlugin } from '@invect/version-control';
+import { versionControl } from '@invect/version-control';
 
 export const invectConfig = defineConfig({
   database: {
@@ -23,11 +23,11 @@ export const invectConfig = defineConfig({
     connectionString: 'file:./dev.db',
   },
   plugins: [
-    versionControlPlugin({
+    versionControl({
       // Git provider (currently GitHub)
       provider: 'github',
       // Sync mode
-      mode: 'pr-per-publish',  // 'pr-per-publish' | 'direct-push' | 'branch-per-version'
+      mode: 'pr-per-publish', // 'pr-per-publish' | 'direct-push' | 'branch-per-version'
     }),
   ],
 });
@@ -42,11 +42,11 @@ pnpm dlx @invect/cli migrate --push
 
 ## Sync modes
 
-| Mode | Behaviour |
-|------|-----------|
-| `pr-per-publish` | Creates a pull request for each published flow version. |
-| `direct-push` | Pushes directly to the configured branch. |
-| `branch-per-version` | Creates a new branch for each version. |
+| Mode                 | Behaviour                                               |
+| -------------------- | ------------------------------------------------------- |
+| `pr-per-publish`     | Creates a pull request for each published flow version. |
+| `direct-push`        | Pushes directly to the configured branch.               |
+| `branch-per-version` | Creates a new branch for each version.                  |
 
 ## Next steps
 

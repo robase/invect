@@ -3,7 +3,7 @@ import type { ErrorRequestHandler } from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createInvectRouter } from '@invect/express';
-import { userAuth } from '@invect/user-auth';
+import { authentication } from '@invect/user-auth';
 import { rbacPlugin } from '@invect/rbac';
 import { webhooksPlugin } from '@invect/webhooks';
 
@@ -43,7 +43,7 @@ const logLevel = (process.env.INVECT_LOG_LEVEL as 'debug' | 'info' | 'warn' | 'e
 
 // --- Plugins ---
 const plugins = [
-  userAuth({
+  authentication({
     onSessionError: 'continue',
     trustedOrigins,
     betterAuthOptions: {

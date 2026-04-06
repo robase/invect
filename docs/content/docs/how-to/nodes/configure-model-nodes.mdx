@@ -13,14 +13,14 @@ Model nodes send a prompt to an LLM and return the response. They support OpenAI
 
 ## Configuration fields
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| **Credential** | Yes | An LLM API key credential (OpenAI or Anthropic). |
-| **Model** | Yes | The model to use (e.g., `gpt-4o-mini`, `claude-sonnet-4-20250514`). |
-| **Prompt** | Yes | The main prompt. Supports `{{ }}` template expressions. |
-| **System Prompt** | No | Optional system instructions. |
-| **Temperature** | No | Creativity (0.0–2.0). Lower = more deterministic. |
-| **Max Tokens** | No | Maximum response length. |
+| Field             | Required | Description                                                         |
+| ----------------- | -------- | ------------------------------------------------------------------- |
+| **Credential**    | Yes      | An LLM API key credential (OpenAI or Anthropic).                    |
+| **Model**         | Yes      | The model to use (e.g., `gpt-4o-mini`, `claude-sonnet-4-20250514`). |
+| **Prompt**        | Yes      | The main prompt. Supports `{{ }}` template expressions.             |
+| **System Prompt** | No       | Optional system instructions.                                       |
+| **Temperature**   | No       | Creativity (0.0–2.0). Lower = more deterministic.                   |
+| **Max Tokens**    | No       | Maximum response length.                                            |
 
 ## Using template expressions in prompts
 

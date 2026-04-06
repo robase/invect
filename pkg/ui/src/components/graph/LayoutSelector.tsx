@@ -22,7 +22,7 @@ export const LayoutSelector: React.FC<LayoutSelectorProps> = ({ onLayoutChange, 
           variant="ghost"
           size="sm"
           onClick={handleRealign}
-          className="h-8 gap-1.5 rounded-md border border-border/70 bg-background/90 px-2.5 text-muted-foreground shadow-sm hover:text-foreground"
+          className="h-8 gap-1.5 rounded-md px-2.5 text-muted-foreground hover:bg-accent hover:text-foreground"
         >
           <AlignHorizontalDistributeCenter className="w-3.5 h-3.5" />
           Realign

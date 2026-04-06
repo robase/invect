@@ -407,7 +407,7 @@ function AssistantMessageBubble({ message }: { message: ChatMessage }) {
           title="Copy message"
         >
           {copied ? (
-            <ClipboardCheck className="text-green-600 size-3" />
+            <ClipboardCheck className="text-success size-3" />
           ) : (
             <Copy className="size-3" />
           )}
@@ -444,7 +444,7 @@ function ToolCallBubble({ toolMeta }: { toolMeta: NonNullable<ChatMessage['toolM
   ) : isError ? (
     <XCircle className="size-3 text-destructive" />
   ) : (
-    <Check className="size-3 text-emerald-600" />
+    <Check className="size-3 text-success" />
   );
 
   const hasResult = toolMeta.result !== null && toolMeta.result !== undefined;
@@ -559,7 +559,7 @@ function PlanStepsBubble({ data }: { data: Record<string, unknown> }) {
   const stepIcon = (status: string) => {
     switch (status) {
       case 'done':
-        return <CheckCircle2 className="size-3.5 text-emerald-600 shrink-0" />;
+        return <CheckCircle2 className="size-3.5 text-success shrink-0" />;
       case 'in_progress':
         return <Loader2 className="size-3.5 text-primary animate-spin shrink-0" />;
       case 'skipped':

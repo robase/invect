@@ -24,11 +24,11 @@ A cron trigger runs the flow automatically on a recurring schedule.
 
 ### Config fields
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `cronExpression` | `string` | Yes | Standard 5-field cron expression. |
-| `inputs` | `object` | No | Static input values passed to the flow on each run. |
-| `timezone` | `string` | No | IANA timezone (e.g., `America/New_York`). |
+| Field            | Type     | Required | Description                                         |
+| ---------------- | -------- | -------- | --------------------------------------------------- |
+| `cronExpression` | `string` | Yes      | Standard 5-field cron expression.                   |
+| `inputs`         | `object` | No       | Static input values passed to the flow on each run. |
+| `timezone`       | `string` | No       | IANA timezone (e.g., `America/New_York`).           |
 
 ### Cron expression format
 
@@ -44,16 +44,16 @@ A cron trigger runs the flow automatically on a recurring schedule.
 
 ### Examples
 
-| Expression | Schedule |
-|------------|----------|
-| `* * * * *` | Every minute |
-| `*/5 * * * *` | Every 5 minutes |
-| `0 * * * *` | Every hour |
-| `0 9 * * *` | 9:00 AM daily |
-| `0 9 * * 1-5` | 9:00 AM weekdays |
-| `0 0 * * *` | Midnight daily |
-| `0 0 1 * *` | Midnight on the 1st of each month |
-| `0 0 * * 0` | Midnight every Sunday |
+| Expression    | Schedule                          |
+| ------------- | --------------------------------- |
+| `* * * * *`   | Every minute                      |
+| `*/5 * * * *` | Every 5 minutes                   |
+| `0 * * * *`   | Every hour                        |
+| `0 9 * * *`   | 9:00 AM daily                     |
+| `0 9 * * 1-5` | 9:00 AM weekdays                  |
+| `0 0 * * *`   | Midnight daily                    |
+| `0 0 1 * *`   | Midnight on the 1st of each month |
+| `0 0 * * 0`   | Midnight every Sunday             |
 
 ### Behaviour
 

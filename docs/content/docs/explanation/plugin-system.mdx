@@ -154,6 +154,7 @@ Frontend plugins are passed to the `Invect` component (or `AuthenticatedInvect`)
 The `@invect/user-auth` and `@invect/rbac` plugins demonstrate all of these concepts working together:
 
 **Auth plugin**:
+
 - **Schema**: Declares Better Auth tables (users, sessions, accounts).
 - **Init**: Creates a Better Auth instance, seeds admin user.
 - **Hooks**: `onRequest` resolves sessions. `onAuthorize` enforces session-based access.
@@ -161,12 +162,14 @@ The `@invect/user-auth` and `@invect/rbac` plugins demonstrate all of these conc
 - **Frontend**: `AuthProvider`, `SignInPage`, `UserButton`, `AuthGate`.
 
 **RBAC plugin**:
+
 - **Schema**: Declares `flow_access` table.
 - **Hooks**: `onAuthorize` checks flow-level ACLs (overrides auth plugin's broad allow).
 - **Endpoints**: Flow access management API.
 - **Frontend**: `ShareButton`, `FlowAccessPanel`, access management page.
 
 Together, they create a complete auth + ACL system:
+
 1. Auth's `onRequest` resolves the session.
 2. Auth's `onAuthorize` verifies the user is logged in.
 3. RBAC's `onAuthorize` checks if the user has access to the specific flow.

@@ -27,7 +27,7 @@ pnpm add @invect/user-auth better-auth
 
 ```ts
 import { betterAuth } from 'better-auth';
-import { userAuth } from '@invect/user-auth';
+import { authentication } from '@invect/user-auth';
 import { createInvectRouter } from '@invect/express';
 
 const auth = betterAuth({
@@ -40,7 +40,7 @@ app.use(
   createInvectRouter({
     database: { type: 'sqlite', connectionString: 'file:./dev.db' },
     plugins: [
-      userAuth({
+      authentication({
         auth,
         globalAdmins: [
           {

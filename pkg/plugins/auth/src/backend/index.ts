@@ -14,11 +14,11 @@
  * @example
  * ```ts
  * // Simple — no separate auth setup needed:
- * import { userAuth } from '@invect/user-auth';
+ * import { authentication } from '@invect/user-auth';
  *
  * createInvectRouter({
  *   databaseUrl: 'file:./dev.db',
- *   plugins: [userAuth()],
+ *   plugins: [authentication()],
  * });
  * ```
  *
@@ -26,21 +26,22 @@
  * ```ts
  * // Advanced — provide your own better-auth instance:
  * import { betterAuth } from 'better-auth';
- * import { userAuth } from '@invect/user-auth';
+ * import { authentication } from '@invect/user-auth';
  *
  * const auth = betterAuth({ ... });
  *
  * createInvectRouter({
  *   databaseUrl: 'file:./dev.db',
- *   plugins: [userAuth({ auth })],
+ *   plugins: [authentication({ auth })],
  * });
  * ```
  *
  * @packageDocumentation
  */
-export { userAuth, USER_AUTH_SCHEMA } from './plugin';
+export { authentication, USER_AUTH_SCHEMA } from './plugin';
 export type {
-  UserAuthPluginOptions,
+  AuthenticationPluginOptions,
+  ApiKeyPluginOptions,
   BetterAuthPassthroughOptions,
   BetterAuthInstance,
   BetterAuthUser,

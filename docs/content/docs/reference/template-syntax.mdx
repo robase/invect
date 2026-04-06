@@ -34,10 +34,10 @@ When a field value contains both text and `{{ }}` blocks, the result is always a
 
 ## Context variables
 
-| Variable | Description |
-|----------|-------------|
+| Variable        | Description                                             |
+| --------------- | ------------------------------------------------------- |
 | `{referenceId}` | Each upstream node's output, keyed by its reference ID. |
-| `$input` | The full context object (all upstream outputs). |
+| `$input`        | The full context object (all upstream outputs).         |
 
 ### Example
 
@@ -54,6 +54,7 @@ If you have upstream nodes with reference IDs `input` and `api_response`:
 Template expressions run in QuickJS. All standard JavaScript is available:
 
 ### Built-in objects
+
 `JSON`, `Math`, `Date`, `Array`, `Object`, `String`, `Number`, `Boolean`, `RegExp`, `Map`, `Set`, `Promise` (sync only), `Error`
 
 ### Common patterns

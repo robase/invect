@@ -6,7 +6,8 @@ import type {
   InvectPluginSchema,
 } from '@invect/core';
 import type {
-  UserAuthPluginOptions,
+  AuthenticationPluginOptions,
+  ApiKeyPluginOptions,
   BetterAuthContext,
   BetterAuthUser,
   BetterAuthSession,
@@ -536,6 +537,44 @@ export const USER_AUTH_SCHEMA: InvectPluginSchema = {
   },
 };
 
+/**
+ * Abstract schema for the Better Auth API Key plugin's `apikey` table.
+ *
+ * Only merged into the plugin schema when `apiKey` is enabled.
+ *
+ * @see https://better-auth.com/docs/plugins/api-key/reference#schema
+ */
+const API_KEY_SCHEMA: InvectPluginSchema = {
+  apikey: {
+    tableName: 'apikey',
+    order: 3,
+    fields: {
+      id: { type: 'string', primaryKey: true },
+      configId: { type: 'string', required: true, defaultValue: 'default' },
+      name: { type: 'string', required: false },
+      start: { type: 'string', required: false },
+      prefix: { type: 'string', required: false },
+      key: { type: 'string', required: true },
+      referenceId: { type: 'string', required: true },
+      refillInterval: { type: 'number', required: false },
+      refillAmount: { type: 'number', required: false },
+      lastRefillAt: { type: 'date', required: false },
+      enabled: { type: 'boolean', required: false, defaultValue: true },
+      rateLimitEnabled: { type: 'boolean', required: false },
+      rateLimitTimeWindow: { type: 'number', required: false },
+      rateLimitMax: { type: 'number', required: false },
+      requestCount: { type: 'number', required: false },
+      remaining: { type: 'number', required: false },
+      lastRequest: { type: 'date', required: false },
+      expiresAt: { type: 'date', required: false },
+      createdAt: { type: 'date', required: true, defaultValue: 'now()' },
+      updatedAt: { type: 'date', required: true, defaultValue: 'now()' },
+      permissions: { type: 'string', required: false },
+      metadata: { type: 'string', required: false },
+    },
+  },
+};
+
 // ---------------------------------------------------------------------------
 // Internal Better Auth instance creation
 // ---------------------------------------------------------------------------
@@ -553,7 +592,7 @@ export const USER_AUTH_SCHEMA: InvectPluginSchema = {
  */
 async function createInternalBetterAuth(
   invectConfig: Record<string, unknown>,
-  options: UserAuthPluginOptions,
+  options: AuthenticationPluginOptions,
   logger: PluginLoggerLike,
 ): Promise<BetterAuthInstance> {
   // 1. Dynamic-import better-auth (peer dependency)
@@ -657,14 +696,58 @@ async function createInternalBetterAuth(
       : {}),
   };
 
-  // 6. Create the instance
+  // 6. Resolve secret — fall back to INVECT_ENCRYPTION_KEY when no explicit
+  //    secret or secrets are provided.  This lets deployments that already set
+  //    INVECT_ENCRYPTION_KEY get a valid Better Auth secret for free.
+  let resolvedSecret = passthrough.secret;
+  const resolvedSecrets = passthrough.secrets;
+
+  if (!resolvedSecret && !resolvedSecrets) {
+    const envKey = process.env.INVECT_ENCRYPTION_KEY;
+    if (envKey) {
+      resolvedSecret = envKey;
+      logger.debug?.(
+        'Using INVECT_ENCRYPTION_KEY as Better Auth secret (no explicit secret/secrets provided)',
+      );
+    }
+  }
+
+  // 7. Optionally load the Better Auth API Key plugin
+  //    Merge top-level `options.apiKey` with `passthrough.apiKey` (top-level wins).
+  const apiKeyOpt = options.apiKey ?? passthrough.apiKey;
+  const betterAuthPlugins: unknown[] = [
+    adminPlugin({ defaultRole: AUTH_DEFAULT_ROLE, adminRoles: [AUTH_ADMIN_ROLE] }),
+  ];
+
+  if (apiKeyOpt) {
+    let apiKeyPluginFn: (config?: Record<string, unknown>) => unknown;
+    try {
+      // Dynamic import — @better-auth/api-key is an optional peer dependency.
+      // Using a variable to prevent TypeScript from resolving the module at
+      // type-check time (it may not be installed).
+      const pkg = '@better-auth/api-key';
+      const apiKeyModule: Record<string, unknown> = await import(pkg);
+      apiKeyPluginFn = apiKeyModule.apiKey as (config?: Record<string, unknown>) => unknown;
+    } catch {
+      throw new Error(
+        'Could not import "@better-auth/api-key". Install it with: npm install @better-auth/api-key',
+      );
+    }
+
+    const apiKeyConfig: Record<string, unknown> =
+      typeof apiKeyOpt === 'object' ? { ...apiKeyOpt } : {};
+    betterAuthPlugins.push(apiKeyPluginFn(apiKeyConfig));
+    logger.info?.('Better Auth API Key plugin enabled');
+  }
+
+  // 8. Create the instance
   logger.info?.('Creating internal Better Auth instance');
 
   const instance = betterAuthFn({
     baseURL,
     database,
     emailAndPassword,
-    plugins: [adminPlugin({ defaultRole: AUTH_DEFAULT_ROLE, adminRoles: [AUTH_ADMIN_ROLE] })],
+    plugins: betterAuthPlugins,
     session,
     trustedOrigins,
     // Spread optional passthrough fields
@@ -675,8 +758,8 @@ async function createInternalBetterAuth(
     ...(passthrough.databaseHooks ? { databaseHooks: passthrough.databaseHooks } : {}),
     ...(passthrough.hooks ? { hooks: passthrough.hooks } : {}),
     ...(passthrough.disabledPaths ? { disabledPaths: passthrough.disabledPaths } : {}),
-    ...(passthrough.secret ? { secret: passthrough.secret } : {}),
-    ...(passthrough.secrets ? { secrets: passthrough.secrets } : {}),
+    ...(resolvedSecret ? { secret: resolvedSecret } : {}),
+    ...(resolvedSecrets ? { secrets: resolvedSecrets } : {}),
   });
 
   return instance as BetterAuthInstance;
@@ -764,11 +847,11 @@ async function createMySQLPool(connectionString: string) {
  * @example
  * ```ts
  * // Simple: let the plugin manage Better Auth internally
- * import { userAuth } from '@invect/user-auth';
+ * import { authentication } from '@invect/user-auth';
  *
  * app.use('/invect', createInvectRouter({
  *   databaseUrl: 'file:./dev.db',
- *   plugins: [userAuth({
+ *   plugins: [authentication({
  *     globalAdmins: [{ email: 'admin@co.com', pw: 'secret' }],
  *   })],
  * }));
@@ -778,7 +861,7 @@ async function createMySQLPool(connectionString: string) {
  * ```ts
  * // Advanced: provide your own better-auth instance
  * import { betterAuth } from 'better-auth';
- * import { userAuth } from '@invect/user-auth';
+ * import { authentication } from '@invect/user-auth';
  *
  * const auth = betterAuth({
  *   database: { ... },
@@ -788,11 +871,11 @@ async function createMySQLPool(connectionString: string) {
  *
  * app.use('/invect', createInvectRouter({
  *   databaseUrl: 'file:./dev.db',
- *   plugins: [userAuth({ auth })],
+ *   plugins: [authentication({ auth })],
  * }));
  * ```
  */
-export function userAuth(options: UserAuthPluginOptions): InvectPlugin {
+export function authentication(options: AuthenticationPluginOptions): InvectPlugin {
   const {
     prefix = DEFAULT_PREFIX,
     mapUser: customMapUser,
@@ -963,6 +1046,19 @@ export function userAuth(options: UserAuthPluginOptions): InvectPlugin {
     },
   }));
 
+  // ----- Resolve API key opt from top-level or passthrough -----
+  const apiKeyEnabled = !!(options.apiKey ?? options.betterAuthOptions?.apiKey);
+
+  // ----- Build schema (conditionally includes apikey table) -----
+  const schema: InvectPluginSchema = apiKeyEnabled
+    ? { ...USER_AUTH_SCHEMA, ...API_KEY_SCHEMA }
+    : USER_AUTH_SCHEMA;
+
+  const requiredTables = ['user', 'session', 'account', 'verification', 'flow_access'];
+  if (apiKeyEnabled) {
+    requiredTables.push('apikey');
+  }
+
   // ----- Build the plugin -----
   return {
     id: 'user-auth',
@@ -970,10 +1066,10 @@ export function userAuth(options: UserAuthPluginOptions): InvectPlugin {
 
     // Abstract schema for auth tables — the CLI reads this to generate
     // Drizzle/Prisma schema files that include auth tables automatically.
-    schema: USER_AUTH_SCHEMA,
+    schema,
 
     // Also declare requiredTables for the startup existence check.
-    requiredTables: ['user', 'session', 'account', 'verification', 'flow_access'],
+    requiredTables,
     setupInstructions:
       'Run `npx invect-cli generate` to add the better-auth tables to your schema, ' +
       'then `npx drizzle-kit push` (or `npx invect-cli migrate`) to apply.',
@@ -1541,7 +1637,7 @@ export function userAuth(options: UserAuthPluginOptions): InvectPlugin {
 
       if (globalAdmins.length === 0) {
         pluginContext.logger.debug(
-          'No global admins configured. Pass `globalAdmins` to userAuth(...) to seed admin access.',
+          'No global admins configured. Pass `globalAdmins` to authentication(...) to seed admin access.',
         );
         return;
       }

@@ -15,7 +15,7 @@ pnpm add @invect/user-auth
 
 ```ts title="invect.config.ts"
 import { defineConfig } from '@invect/core';
-import { userAuth } from '@invect/user-auth';
+import { authentication } from '@invect/user-auth';
 
 export const invectConfig = defineConfig({
   database: {
@@ -23,7 +23,7 @@ export const invectConfig = defineConfig({
     connectionString: 'file:./dev.db',
   },
   plugins: [
-    userAuth({
+    authentication({
       betterAuthOptions: {
         secret: process.env.BETTER_AUTH_SECRET || 'dev-secret-change-in-production',
       },
@@ -75,10 +75,11 @@ import '@invect/ui/styles';
   InvectComponent={Invect}
   ShellComponent={InvectShell}
   plugins={[authFrontendPlugin]}
-/>
+/>;
 ```
 
 `AuthenticatedInvect` wraps the Invect UI with:
+
 - A sign-in page shown when unauthenticated.
 - Session management and automatic token handling.
 - The `InvectShell` CSS scope so the sign-in page uses Invect theme tokens.

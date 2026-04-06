@@ -50,16 +50,14 @@ const handler = createInvectHandler({
   },
 });
 
-export {
-  handler as GET,
-  handler as POST,
-  handler as PUT,
-  handler as DELETE,
-  handler as PATCH,
-};
+export const GET = handler.GET;
+export const POST = handler.POST;
+export const PUT = handler.PUT;
+export const DELETE = handler.DELETE;
+export const PATCH = handler.PATCH;
 ```
 
-`createInvectHandler` returns a single handler function that you export for all HTTP methods. The catch-all route `[...invect]` matches all Invect API paths.
+`createInvectHandler` returns an object with methods for each HTTP verb. Export each method individually for the App Router. The catch-all route `[...invect]` matches all Invect API paths.
 
 ## Mount the visual editor
 
@@ -71,10 +69,9 @@ Create a client page for the Invect UI:
 import dynamic from 'next/dynamic';
 import '@invect/ui/styles';
 
-const Invect = dynamic(
-  () => import('@invect/ui').then((mod) => ({ default: mod.Invect })),
-  { ssr: false }
-);
+const Invect = dynamic(() => import('@invect/ui').then((mod) => ({ default: mod.Invect })), {
+  ssr: false,
+});
 
 export default function InvectPage() {
   return (
@@ -107,7 +104,7 @@ Update your API route:
 
 ```ts title="app/api/invect/[...invect]/route.ts"
 import { createInvectHandler } from '@invect/nextjs';
-import { userAuth } from '@invect/user-auth';
+import { authentication } from '@invect/user-auth';
 import { rbacPlugin } from '@invect/rbac';
 
 const handler = createInvectHandler({
@@ -116,7 +113,7 @@ const handler = createInvectHandler({
     connectionString: 'file:./invect.db',
   },
   plugins: [
-    userAuth({
+    authentication({
       betterAuthOptions: { secret: process.env.BETTER_AUTH_SECRET },
       globalAdmins: [{ email: 'admin@example.com', pw: 'changeme', name: 'Admin' }],
     }),
@@ -124,13 +121,11 @@ const handler = createInvectHandler({
   ],
 });
 
-export {
-  handler as GET,
-  handler as POST,
-  handler as PUT,
-  handler as DELETE,
-  handler as PATCH,
-};
+export const GET = handler.GET;
+export const POST = handler.POST;
+export const PUT = handler.PUT;
+export const DELETE = handler.DELETE;
+export const PATCH = handler.PATCH;
 ```
 
 Re-run `pnpm dlx @invect/cli generate && pnpm dlx @invect/cli migrate --push` after adding plugins that require database tables.

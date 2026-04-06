@@ -81,15 +81,15 @@ The `PAUSED_FOR_BATCH` state is visible in the UI — the flow run card shows th
 
 The `batch_jobs` table tracks:
 
-| Field | Description |
-|-------|-------------|
-| `flowRunId` | Which flow run this batch belongs to. |
-| `nodeId` | Which node submitted the batch. |
-| `provider` | AI provider (`openai`, `anthropic`). |
-| `batchId` | The provider's batch ID. |
-| `status` | `PENDING` → `PROCESSING` → `COMPLETED` or `FAILED`. |
-| `input` | The batch input (for debugging). |
-| `output` | The batch result (when complete). |
+| Field       | Description                                         |
+| ----------- | --------------------------------------------------- |
+| `flowRunId` | Which flow run this batch belongs to.               |
+| `nodeId`    | Which node submitted the batch.                     |
+| `provider`  | AI provider (`openai`, `anthropic`).                |
+| `batchId`   | The provider's batch ID.                            |
+| `status`    | `PENDING` → `PROCESSING` → `COMPLETED` or `FAILED`. |
+| `input`     | The batch input (for debugging).                    |
+| `output`    | The batch result (when complete).                   |
 
 ## When to use batch mode
 

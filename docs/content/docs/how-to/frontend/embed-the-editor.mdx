@@ -30,11 +30,11 @@ The `Invect` component includes a full app shell with sidebar navigation, React 
 
 ## Props
 
-| Prop | Type | Required | Description |
-|------|------|----------|-------------|
-| `apiBaseUrl` | `string` | Yes | URL of the Invect REST API. |
-| `basePath` | `string` | No | Base path for client-side routing (e.g., `/invect`). |
-| `theme` | `'light' \| 'dark' \| 'system'` | No | Theme mode. |
+| Prop         | Type                     | Required | Description                                          |
+| ------------ | ------------------------ | -------- | ---------------------------------------------------- |
+| `apiBaseUrl` | `string`                 | Yes      | URL of the Invect REST API.                          |
+| `basePath`   | `string`                 | No       | Base path for client-side routing (e.g., `/invect`). |
+| `plugins`    | `InvectFrontendPlugin[]` | No       | Frontend plugins to load.                            |
 
 ## With React Router
 
@@ -49,7 +49,7 @@ import '@invect/ui/styles';
   <Routes>
     <Route path="/invect/*" element={<Invect apiBaseUrl="/api/invect" basePath="/invect" />} />
   </Routes>
-</BrowserRouter>
+</BrowserRouter>;
 ```
 
 ## With Next.js
@@ -62,10 +62,9 @@ Use dynamic import with SSR disabled:
 import dynamic from 'next/dynamic';
 import '@invect/ui/styles';
 
-const Invect = dynamic(
-  () => import('@invect/ui').then((mod) => ({ default: mod.Invect })),
-  { ssr: false }
-);
+const Invect = dynamic(() => import('@invect/ui').then((mod) => ({ default: mod.Invect })), {
+  ssr: false,
+});
 
 export default function InvectPage() {
   return (
@@ -90,7 +89,7 @@ import '@invect/ui/styles';
   InvectComponent={Invect}
   ShellComponent={InvectShell}
   plugins={[authFrontendPlugin]}
-/>
+/>;
 ```
 
 `InvectShell` provides the CSS scope (theme tokens, dark mode) without any app logic — this lets the sign-in page render with Invect styling before the full app mounts.

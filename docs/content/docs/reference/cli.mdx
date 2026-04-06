@@ -23,10 +23,10 @@ Interactive setup wizard. Detects your framework, installs dependencies, creates
 pnpm dlx @invect/cli init
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--framework <name>` | Skip framework detection (`express`, `nestjs`, `nextjs`). |
-| `--database <type>` | Skip database selection (`sqlite`, `postgresql`, `mysql`). |
+| Flag                     | Description                                                    |
+| ------------------------ | -------------------------------------------------------------- |
+| `--framework <name>`     | Skip framework detection (`express`, `nestjs`, `nextjs`).      |
+| `--database <type>`      | Skip database selection (`sqlite`, `postgresql`, `mysql`).     |
 | `--package-manager <pm>` | Skip package manager detection (`npm`, `pnpm`, `yarn`, `bun`). |
 
 ---
@@ -39,14 +39,14 @@ Generate Drizzle schema files from core + plugin schemas. Reads `invect.config.t
 pnpm dlx @invect/cli generate
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--config <path>` | Path to config file (default: auto-discovery). |
+| Flag                | Description                                                             |
+| ------------------- | ----------------------------------------------------------------------- |
+| `--config <path>`   | Path to config file (default: auto-discovery).                          |
 | `--dialects <list>` | Comma-separated dialects to generate (`sqlite`, `postgresql`, `mysql`). |
-| `--out-dir <dir>` | Output directory for generated files. |
-| `--adapter <name>` | Schema adapter (`drizzle` or `prisma`). |
-| `--schema-only` | Generate schema files without migration files. |
-| `-y, --yes` | Skip confirmation prompts. |
+| `--out-dir <dir>`   | Output directory for generated files.                                   |
+| `--adapter <name>`  | Schema adapter (`drizzle` or `prisma`).                                 |
+| `--schema-only`     | Generate schema files without migration files.                          |
+| `-y, --yes`         | Skip confirmation prompts.                                              |
 
 ### What it does
 
@@ -70,11 +70,11 @@ pnpm dlx @invect/cli migrate
 pnpm dlx @invect/cli migrate --push
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--config <path>` | Path to config file. |
-| `--push` | Use `drizzle-kit push` instead of migration files. Fast for development. |
-| `-y, --yes` | Skip confirmation prompts. |
+| Flag              | Description                                                              |
+| ----------------- | ------------------------------------------------------------------------ |
+| `--config <path>` | Path to config file.                                                     |
+| `--push`          | Use `drizzle-kit push` instead of migration files. Fast for development. |
+| `-y, --yes`       | Skip confirmation prompts.                                               |
 
 ---
 
@@ -86,10 +86,10 @@ Display diagnostic information about your Invect setup.
 pnpm dlx @invect/cli info
 ```
 
-| Flag | Description |
-|------|-------------|
+| Flag              | Description          |
+| ----------------- | -------------------- |
 | `--config <path>` | Path to config file. |
-| `--json` | Output as JSON. |
+| `--json`          | Output as JSON.      |
 
 Shows: system info, detected framework, database type, config location, installed packages, and registered plugins.
 

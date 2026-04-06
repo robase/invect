@@ -7,128 +7,128 @@ All endpoints are relative to the mount path (e.g., `/invect`).
 
 ## Dashboard
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/dashboard/stats` | Dashboard statistics (flow counts, run counts, activity). |
+| Method | Path               | Description                                               |
+| ------ | ------------------ | --------------------------------------------------------- |
+| GET    | `/dashboard/stats` | Dashboard statistics (flow counts, run counts, activity). |
 
 ## Flows
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/flows/list` | List all flows. |
-| POST | `/flows/list` | List flows with filtering and pagination. |
-| POST | `/flows` | Create a new flow. |
-| GET | `/flows/:id` | Get flow by ID. |
-| PUT | `/flows/:id` | Update flow. |
-| DELETE | `/flows/:id` | Delete flow. |
-| POST | `/validate-flow` | Validate a flow definition. |
-| GET | `/flows/:flowId/react-flow` | Get flow in React Flow format. Query: `version`, `flowRunId`. |
+| Method | Path                        | Description                                                   |
+| ------ | --------------------------- | ------------------------------------------------------------- |
+| GET    | `/flows/list`               | List all flows.                                               |
+| POST   | `/flows/list`               | List flows with filtering and pagination.                     |
+| POST   | `/flows`                    | Create a new flow.                                            |
+| GET    | `/flows/:id`                | Get flow by ID.                                               |
+| PUT    | `/flows/:id`                | Update flow.                                                  |
+| DELETE | `/flows/:id`                | Delete flow.                                                  |
+| POST   | `/validate-flow`            | Validate a flow definition.                                   |
+| GET    | `/flows/:flowId/react-flow` | Get flow in React Flow format. Query: `version`, `flowRunId`. |
 
 ## Flow Versions
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/flows/:id/versions/list` | List versions with filtering. |
-| POST | `/flows/:id/versions` | Create a new version. |
-| GET | `/flows/:id/versions/:version` | Get specific version (supports `latest`). |
+| Method | Path                           | Description                               |
+| ------ | ------------------------------ | ----------------------------------------- |
+| POST   | `/flows/:id/versions/list`     | List versions with filtering.             |
+| POST   | `/flows/:id/versions`          | Create a new version.                     |
+| GET    | `/flows/:id/versions/:version` | Get specific version (supports `latest`). |
 
 ## Flow Execution
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/flows/:flowId/run` | Start async flow execution. |
-| POST | `/flows/:flowId/run-to-node/:nodeId` | Execute flow up to a specific node. |
-| POST | `/flow-runs/list` | List all flow runs with filtering. |
-| GET | `/flow-runs/:flowRunId` | Get a specific flow run. |
-| GET | `/flows/:flowId/flow-runs` | Get runs for a flow. |
-| POST | `/flow-runs/:flowRunId/resume` | Resume a paused execution. |
-| POST | `/flow-runs/:flowRunId/cancel` | Cancel a running execution. |
-| POST | `/flow-runs/:flowRunId/pause` | Pause a running execution. |
+| Method | Path                                 | Description                         |
+| ------ | ------------------------------------ | ----------------------------------- |
+| POST   | `/flows/:flowId/run`                 | Start async flow execution.         |
+| POST   | `/flows/:flowId/run-to-node/:nodeId` | Execute flow up to a specific node. |
+| POST   | `/flow-runs/list`                    | List all flow runs with filtering.  |
+| GET    | `/flow-runs/:flowRunId`              | Get a specific flow run.            |
+| GET    | `/flows/:flowId/flow-runs`           | Get runs for a flow.                |
+| POST   | `/flow-runs/:flowRunId/resume`       | Resume a paused execution.          |
+| POST   | `/flow-runs/:flowRunId/cancel`       | Cancel a running execution.         |
+| POST   | `/flow-runs/:flowRunId/pause`        | Pause a running execution.          |
 
 ## Node Execution
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/flow-runs/:flowRunId/node-executions` | Get node executions for a run. |
-| GET | `/flow-runs/:flowRunId/stream` | SSE stream of execution events. |
-| POST | `/node-executions/list` | List node executions with filtering. |
+| Method | Path                                    | Description                          |
+| ------ | --------------------------------------- | ------------------------------------ |
+| GET    | `/flow-runs/:flowRunId/node-executions` | Get node executions for a run.       |
+| GET    | `/flow-runs/:flowRunId/stream`          | SSE stream of execution events.      |
+| POST   | `/node-executions/list`                 | List node executions with filtering. |
 
 ## Node Testing & Data
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/node-data/sql-query` | Test a SQL query. |
-| POST | `/node-data/test-expression` | Test a JavaScript expression (QuickJS). |
-| POST | `/node-data/test-mapper` | Test a mapper expression. |
-| POST | `/node-data/model-query` | Test an AI model prompt. |
-| GET | `/node-data/models` | Get available AI models. Query: `credentialId` or `provider`. |
-| GET | `/node-data/databases` | Get available databases. |
+| Method | Path                         | Description                                                   |
+| ------ | ---------------------------- | ------------------------------------------------------------- |
+| POST   | `/node-data/sql-query`       | Test a SQL query.                                             |
+| POST   | `/node-data/test-expression` | Test a JavaScript expression (QuickJS).                       |
+| POST   | `/node-data/test-mapper`     | Test a mapper expression.                                     |
+| POST   | `/node-data/model-query`     | Test an AI model prompt.                                      |
+| GET    | `/node-data/models`          | Get available AI models. Query: `credentialId` or `provider`. |
+| GET    | `/node-data/databases`       | Get available databases.                                      |
 
 ## Node Registry
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/nodes` | Get all available node definitions. |
-| GET | `/node-definition/:nodeType` | Get a specific node definition. |
-| GET | `/actions/:actionId/fields/:fieldName/options` | Load dynamic field options. |
-| POST | `/nodes/test` | Test/execute a single node in isolation. |
-| POST | `/node-config/update` | Update node configuration. |
+| Method | Path                                           | Description                              |
+| ------ | ---------------------------------------------- | ---------------------------------------- |
+| GET    | `/nodes`                                       | Get all available node definitions.      |
+| GET    | `/node-definition/:nodeType`                   | Get a specific node definition.          |
+| GET    | `/actions/:actionId/fields/:fieldName/options` | Load dynamic field options.              |
+| POST   | `/nodes/test`                                  | Test/execute a single node in isolation. |
+| POST   | `/node-config/update`                          | Update node configuration.               |
 
 ## Credentials
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/credentials` | Create a credential. |
-| GET | `/credentials` | List credentials. Query: `type`, `authType`, `isActive`. |
-| GET | `/credentials/:id` | Get credential by ID. |
-| PUT | `/credentials/:id` | Update a credential. |
-| DELETE | `/credentials/:id` | Delete a credential. |
-| POST | `/credentials/:id/test` | Test credential validity. |
-| POST | `/credentials/:id/track-usage` | Update last-used timestamp. |
-| GET | `/credentials/expiring` | Get expiring credentials. Query: `daysUntilExpiry`. |
-| POST | `/credentials/test-request` | Proxy HTTP request for credential testing. |
+| Method | Path                           | Description                                              |
+| ------ | ------------------------------ | -------------------------------------------------------- |
+| POST   | `/credentials`                 | Create a credential.                                     |
+| GET    | `/credentials`                 | List credentials. Query: `type`, `authType`, `isActive`. |
+| GET    | `/credentials/:id`             | Get credential by ID.                                    |
+| PUT    | `/credentials/:id`             | Update a credential.                                     |
+| DELETE | `/credentials/:id`             | Delete a credential.                                     |
+| POST   | `/credentials/:id/test`        | Test credential validity.                                |
+| POST   | `/credentials/:id/track-usage` | Update last-used timestamp.                              |
+| GET    | `/credentials/expiring`        | Get expiring credentials. Query: `daysUntilExpiry`.      |
+| POST   | `/credentials/test-request`    | Proxy HTTP request for credential testing.               |
 
 ## OAuth2
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/credentials/oauth2/providers` | List available OAuth2 providers. |
-| GET | `/credentials/oauth2/providers/:providerId` | Get specific OAuth2 provider. |
-| POST | `/credentials/oauth2/start` | Start OAuth2 authorization flow. |
-| POST | `/credentials/oauth2/callback` | Handle OAuth2 callback (exchange code for tokens). |
-| GET | `/credentials/oauth2/callback` | Handle OAuth2 redirect callback. |
-| POST | `/credentials/:id/refresh` | Force-refresh an OAuth2 access token. |
+| Method | Path                                        | Description                                        |
+| ------ | ------------------------------------------- | -------------------------------------------------- |
+| GET    | `/credentials/oauth2/providers`             | List available OAuth2 providers.                   |
+| GET    | `/credentials/oauth2/providers/:providerId` | Get specific OAuth2 provider.                      |
+| POST   | `/credentials/oauth2/start`                 | Start OAuth2 authorization flow.                   |
+| POST   | `/credentials/oauth2/callback`              | Handle OAuth2 callback (exchange code for tokens). |
+| GET    | `/credentials/oauth2/callback`              | Handle OAuth2 redirect callback.                   |
+| POST   | `/credentials/:id/refresh`                  | Force-refresh an OAuth2 access token.              |
 
 ## Triggers
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/flows/:flowId/triggers` | List triggers for a flow. |
-| POST | `/flows/:flowId/triggers` | Create a trigger. |
-| POST | `/flows/:flowId/triggers/sync` | Sync triggers from flow definition. |
-| GET | `/triggers/:triggerId` | Get a specific trigger. |
-| PUT | `/triggers/:triggerId` | Update a trigger. |
-| DELETE | `/triggers/:triggerId` | Delete a trigger. |
+| Method | Path                           | Description                         |
+| ------ | ------------------------------ | ----------------------------------- |
+| GET    | `/flows/:flowId/triggers`      | List triggers for a flow.           |
+| POST   | `/flows/:flowId/triggers`      | Create a trigger.                   |
+| POST   | `/flows/:flowId/triggers/sync` | Sync triggers from flow definition. |
+| GET    | `/triggers/:triggerId`         | Get a specific trigger.             |
+| PUT    | `/triggers/:triggerId`         | Update a trigger.                   |
+| DELETE | `/triggers/:triggerId`         | Delete a trigger.                   |
 
 ## Agent Tools
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/agent/tools` | List all available agent tools. |
+| Method | Path           | Description                     |
+| ------ | -------------- | ------------------------------- |
+| GET    | `/agent/tools` | List all available agent tools. |
 
 ## Chat Assistant
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/chat/status` | Check if chat is enabled. |
-| POST | `/chat` | Chat streaming endpoint (SSE). |
-| GET | `/chat/models/:credentialId` | List models for a credential. Query: `q`. |
-| GET | `/chat/messages/:flowId` | Get persisted chat messages. |
-| PUT | `/chat/messages/:flowId` | Save chat messages for a flow. |
-| DELETE | `/chat/messages/:flowId` | Delete chat messages for a flow. |
+| Method | Path                         | Description                               |
+| ------ | ---------------------------- | ----------------------------------------- |
+| GET    | `/chat/status`               | Check if chat is enabled.                 |
+| POST   | `/chat`                      | Chat streaming endpoint (SSE).            |
+| GET    | `/chat/models/:credentialId` | List models for a credential. Query: `q`. |
+| GET    | `/chat/messages/:flowId`     | Get persisted chat messages.              |
+| PUT    | `/chat/messages/:flowId`     | Save chat messages for a flow.            |
+| DELETE | `/chat/messages/:flowId`     | Delete chat messages for a flow.          |
 
 ## Plugins
 
-| Method | Path | Description |
-|--------|------|-------------|
-| ALL | `/plugins/*` | Dynamic plugin endpoints. Routing handled by plugin manager. |
+| Method | Path         | Description                                                  |
+| ------ | ------------ | ------------------------------------------------------------ |
+| ALL    | `/plugins/*` | Dynamic plugin endpoints. Routing handled by plugin manager. |

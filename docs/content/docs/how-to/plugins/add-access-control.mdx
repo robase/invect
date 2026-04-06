@@ -13,11 +13,11 @@ pnpm add @invect/rbac
 
 ## Configure
 
-Add `rbacPlugin()` **after** `userAuth()` in the plugins array:
+Add `rbacPlugin()` **after** `authentication()` in the plugins array:
 
 ```ts title="invect.config.ts"
 import { defineConfig } from '@invect/core';
-import { userAuth } from '@invect/user-auth';
+import { authentication } from '@invect/user-auth';
 import { rbacPlugin } from '@invect/rbac';
 
 export const invectConfig = defineConfig({
@@ -26,7 +26,9 @@ export const invectConfig = defineConfig({
     connectionString: 'file:./dev.db',
   },
   plugins: [
-    userAuth({ /* auth config */ }),
+    authentication({
+      /* auth config */
+    }),
     rbacPlugin(),
   ],
 });
@@ -52,10 +54,11 @@ import '@invect/ui/styles';
   InvectComponent={Invect}
   ShellComponent={InvectShell}
   plugins={[authFrontendPlugin, rbacFrontendPlugin]}
-/>
+/>;
 ```
 
 The RBAC frontend plugin adds:
+
 - An **Access** page in the sidebar for managing flow permissions.
 - A **Share** button in the flow editor header.
 - A **Flow Access** tab in the editor panel.

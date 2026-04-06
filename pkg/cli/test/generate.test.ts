@@ -31,7 +31,7 @@ import {
   pluginB,
   conflictPluginA,
   conflictPluginB,
-  userAuthPlugin,
+  authenticationPlugin,
 } from './fixtures/example-schemas';
 
 // =============================================================================
@@ -137,7 +137,7 @@ describe('generate core-only schema (no plugins)', () => {
 // =============================================================================
 
 describe('generate with user-auth plugin', () => {
-  const { sqlite, postgres, mysql, merged } = generateAll([userAuthPlugin]);
+  const { sqlite, postgres, mysql, merged } = generateAll([authenticationPlugin]);
 
   it('should include all 4 user-auth tables', () => {
     for (const tableName of ['user', 'session', 'account', 'verification']) {

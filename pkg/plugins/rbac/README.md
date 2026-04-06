@@ -26,7 +26,7 @@ pnpm add @invect/rbac
 ## Backend
 
 ```ts
-import { userAuth } from '@invect/user-auth';
+import { authentication } from '@invect/user-auth';
 import { rbacPlugin } from '@invect/rbac';
 
 app.use(
@@ -34,7 +34,7 @@ app.use(
   createInvectRouter({
     database: { type: 'sqlite', connectionString: 'file:./dev.db' },
     plugins: [
-      userAuth({ auth }), // Must come first
+      authentication({ auth }), // Must come first
       rbacPlugin(),
     ],
   }),

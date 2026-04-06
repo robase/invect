@@ -21,7 +21,8 @@ import { defineConfig } from '@invect/core';
 export default defineConfig({
   database: {
     type: 'postgresql',
-    connectionString: process.env.DATABASE_URL || 'postgresql://invect:invect@localhost:5432/invect',
+    connectionString:
+      process.env.DATABASE_URL || 'postgresql://invect:invect@localhost:5432/invect',
   },
 });
 ```
@@ -46,7 +47,8 @@ import { InvectModule } from '@invect/nestjs';
     InvectModule.forRoot({
       database: {
         type: 'postgresql',
-        connectionString: process.env.DATABASE_URL || 'postgresql://invect:invect@localhost:5432/invect',
+        connectionString:
+          process.env.DATABASE_URL || 'postgresql://invect:invect@localhost:5432/invect',
       },
       execution: {
         defaultTimeout: 60000,

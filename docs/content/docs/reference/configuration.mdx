@@ -20,20 +20,20 @@ export const invectConfig = defineConfig({
 
 ## `database` (required)
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `connectionString` | `string` | — | Database URL. SQLite: `file:./dev.db`. PostgreSQL: `postgresql://user:pass@host:port/db`. MySQL: `mysql://user:pass@host:port/db`. |
-| `type` | `'sqlite' \| 'postgresql' \| 'mysql'` | — | Database dialect. |
-| `name` | `string` | — | Optional human-readable name. |
-| `driver` | see below | auto-detected | Database driver to use. |
+| Field              | Type                                  | Default       | Description                                                                                                                        |
+| ------------------ | ------------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `connectionString` | `string`                              | —             | Database URL. SQLite: `file:./dev.db`. PostgreSQL: `postgresql://user:pass@host:port/db`. MySQL: `mysql://user:pass@host:port/db`. |
+| `type`             | `'sqlite' \| 'postgresql' \| 'mysql'` | —             | Database dialect.                                                                                                                  |
+| `name`             | `string`                              | —             | Optional human-readable name.                                                                                                      |
+| `driver`           | see below                             | auto-detected | Database driver to use.                                                                                                            |
 
 ### Supported drivers
 
-| Database | Drivers | Default |
-|----------|---------|---------|
-| PostgreSQL | `postgres`, `pg`, `neon-serverless` | `postgres` |
-| SQLite | `better-sqlite3`, `libsql` | `better-sqlite3` |
-| MySQL | `mysql2` | `mysql2` |
+| Database   | Drivers                             | Default          |
+| ---------- | ----------------------------------- | ---------------- |
+| PostgreSQL | `postgres`, `pg`, `neon-serverless` | `postgres`       |
+| SQLite     | `better-sqlite3`, `libsql`          | `better-sqlite3` |
+| MySQL      | `mysql2`                            | `mysql2`         |
 
 ```ts
 // SQLite (simplest for local dev)
@@ -64,10 +64,10 @@ database: {
 
 ## `logging` (optional)
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `level` | `'debug' \| 'info' \| 'warn' \| 'error' \| 'silent'` | `'silent'` | Global log level. |
-| `scopes` | `Record<string, LogLevel>` | — | Per-scope log level overrides. |
+| Field    | Type                                                 | Default    | Description                    |
+| -------- | ---------------------------------------------------- | ---------- | ------------------------------ |
+| `level`  | `'debug' \| 'info' \| 'warn' \| 'error' \| 'silent'` | `'silent'` | Global log level.              |
+| `scopes` | `Record<string, LogLevel>`                           | —          | Per-scope log level overrides. |
 
 ### Available logging scopes
 
@@ -86,14 +86,14 @@ logging: {
 
 ## `execution` (optional)
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `defaultTimeout` | `number` | `60000` | Node execution timeout in milliseconds. |
-| `maxConcurrentExecutions` | `number` | `10` | Maximum parallel flow runs. |
-| `enableTracing` | `boolean` | `true` | Store node-level execution traces. |
-| `flowTimeoutMs` | `number` | `600000` | Flow run timeout in milliseconds (10 minutes). |
-| `heartbeatIntervalMs` | `number` | `30000` | Status heartbeat interval in milliseconds. |
-| `staleRunCheckIntervalMs` | `number` | `60000` | Interval for checking stale flow runs. |
+| Field                     | Type      | Default  | Description                                    |
+| ------------------------- | --------- | -------- | ---------------------------------------------- |
+| `defaultTimeout`          | `number`  | `60000`  | Node execution timeout in milliseconds.        |
+| `maxConcurrentExecutions` | `number`  | `10`     | Maximum parallel flow runs.                    |
+| `enableTracing`           | `boolean` | `true`   | Store node-level execution traces.             |
+| `flowTimeoutMs`           | `number`  | `600000` | Flow run timeout in milliseconds (10 minutes). |
+| `heartbeatIntervalMs`     | `number`  | `30000`  | Status heartbeat interval in milliseconds.     |
+| `staleRunCheckIntervalMs` | `number`  | `60000`  | Interval for checking stale flow runs.         |
 
 ```ts
 execution: {
@@ -105,10 +105,10 @@ execution: {
 
 ## `triggers` (optional)
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `webhookBaseUrl` | `string` | — | Public URL prefix for webhook URLs displayed in the editor. |
-| `cronEnabled` | `boolean` | `true` | Enable or disable the cron scheduler. |
+| Field            | Type      | Default | Description                                                 |
+| ---------------- | --------- | ------- | ----------------------------------------------------------- |
+| `webhookBaseUrl` | `string`  | —       | Public URL prefix for webhook URLs displayed in the editor. |
+| `cronEnabled`    | `boolean` | `true`  | Enable or disable the cron scheduler.                       |
 
 ```ts
 triggers: {
@@ -122,18 +122,18 @@ triggers: {
 An array of plugin instances. Plugins are initialised in order during startup and shut down in reverse order.
 
 ```ts
-import { userAuth } from '@invect/user-auth';
+import { authentication } from '@invect/user-auth';
 import { rbacPlugin } from '@invect/rbac';
 import { webhooksPlugin } from '@invect/webhooks';
 
 plugins: [
-  userAuth({
+  authentication({
     betterAuthOptions: { secret: process.env.BETTER_AUTH_SECRET },
     globalAdmins: [{ email: 'admin@example.com', pw: 'changeme', name: 'Admin' }],
   }),
   rbacPlugin(),
   webhooksPlugin({ webhookBaseUrl: 'https://api.myapp.com/invect' }),
-]
+];
 ```
 
 See [Plugin API reference](/docs/reference/plugin-api) for the plugin interface and [How-to guides](/docs/how-to/plugins/add-authentication) for individual plugin setup.
@@ -144,16 +144,16 @@ An array of credentials to seed on startup. Credentials are matched by name — 
 
 Each credential has:
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `name` | `string` | Yes | Unique credential name. |
-| `type` | `'llm' \| 'http-api' \| 'database'` | Yes | Credential category. |
-| `provider` | `string` | For `llm` | Provider identifier (e.g., `openai`, `anthropic`). |
-| `authType` | `string` | Yes | Authentication method (e.g., `apiKey`, `oauth2`). |
-| `config` | `Record<string, unknown>` | Yes | Provider-specific config (e.g., `{ apiKey: '...' }`). |
-| `description` | `string` | No | Human-readable note. |
-| `isShared` | `boolean` | No | Whether the credential is visible to all users. |
-| `metadata` | `Record<string, unknown>` | No | Arbitrary metadata. |
+| Field         | Type                                | Required  | Description                                           |
+| ------------- | ----------------------------------- | --------- | ----------------------------------------------------- |
+| `name`        | `string`                            | Yes       | Unique credential name.                               |
+| `type`        | `'llm' \| 'http-api' \| 'database'` | Yes       | Credential category.                                  |
+| `provider`    | `string`                            | For `llm` | Provider identifier (e.g., `openai`, `anthropic`).    |
+| `authType`    | `string`                            | Yes       | Authentication method (e.g., `apiKey`, `oauth2`).     |
+| `config`      | `Record<string, unknown>`           | Yes       | Provider-specific config (e.g., `{ apiKey: '...' }`). |
+| `description` | `string`                            | No        | Human-readable note.                                  |
+| `isShared`    | `boolean`                           | No        | Whether the credential is visible to all users.       |
+| `metadata`    | `Record<string, unknown>`           | No        | Arbitrary metadata.                                   |
 
 ```ts
 defaultCredentials: [
@@ -173,26 +173,26 @@ defaultCredentials: [
     config: { apiKey: process.env.ANTHROPIC_API_KEY },
     isShared: true,
   },
-]
+];
 ```
 
 ## `basePath` (optional)
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `basePath` | `string` | — | Base URL path prefix for all Invect routes. |
+| Field      | Type     | Default | Description                                 |
+| ---------- | -------- | ------- | ------------------------------------------- |
+| `basePath` | `string` | —       | Base URL path prefix for all Invect routes. |
 
 ## `logger` (optional)
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
+| Field    | Type     | Default        | Description                                                                      |
+| -------- | -------- | -------------- | -------------------------------------------------------------------------------- |
 | `logger` | `Logger` | Console logger | Custom logger instance. Must implement `info`, `debug`, `warn`, `error` methods. |
 
 ## Full example
 
 ```ts title="invect.config.ts"
 import { defineConfig } from '@invect/core';
-import { userAuth } from '@invect/user-auth';
+import { authentication } from '@invect/user-auth';
 import { rbacPlugin } from '@invect/rbac';
 import { webhooksPlugin } from '@invect/webhooks';
 
@@ -217,7 +217,7 @@ export const invectConfig = defineConfig({
     cronEnabled: true,
   },
   plugins: [
-    userAuth({
+    authentication({
       betterAuthOptions: { secret: process.env.BETTER_AUTH_SECRET },
       globalAdmins: [
         { email: process.env.ADMIN_EMAIL, pw: process.env.ADMIN_PASSWORD, name: 'Admin' },

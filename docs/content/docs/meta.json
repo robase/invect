@@ -1,15 +1,5 @@
 {
   "root": true,
   "title": "Documentation",
-  "pages": [
-    "index",
-    "---Tutorials---",
-    "...tutorials",
-    "---How-to Guides---",
-    "...how-to",
-    "---Reference---",
-    "...reference",
-    "---Understanding Invect---",
-    "...explanation"
-  ]
+  "pages": ["index", "tutorials", "how-to", "reference", "explanation"]
 }

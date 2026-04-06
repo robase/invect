@@ -15,7 +15,7 @@ import type { InvectPluginSchema } from '@invect/core';
 //    Mirrors the schema exported by @invect/user-auth's USER_AUTH_SCHEMA
 // =============================================================================
 
-export const userAuthSchema: InvectPluginSchema = {
+export const authenticationSchema: InvectPluginSchema = {
   user: {
     tableName: 'user',
     order: 1,
@@ -85,10 +85,10 @@ export const userAuthSchema: InvectPluginSchema = {
   },
 };
 
-export const userAuthPlugin = {
+export const authenticationPlugin = {
   id: 'user-auth',
   name: 'User Auth',
-  schema: userAuthSchema,
+  schema: authenticationSchema,
   requiredTables: ['user', 'session', 'account', 'verification'],
 };
 

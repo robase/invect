@@ -70,7 +70,7 @@ If you want the visual editor, add `@invect/ui` to a React frontend and point it
 import { Invect } from '@invect/ui';
 import '@invect/ui/styles';
 
-<Invect apiBaseUrl="http://localhost:3000/invect" />
+<Invect apiBaseUrl="http://localhost:3000/invect" />;
 ```
 
 See [Embed the Editor](/docs/how-to/frontend/embed-the-editor) for full frontend setup.
@@ -85,7 +85,7 @@ pnpm add @invect/user-auth @invect/rbac
 
 ```ts title="invect.config.ts"
 import { defineConfig } from '@invect/core';
-import { userAuth } from '@invect/user-auth';
+import { authentication } from '@invect/user-auth';
 import { rbacPlugin } from '@invect/rbac';
 
 export const invectConfig = defineConfig({
@@ -94,7 +94,7 @@ export const invectConfig = defineConfig({
     connectionString: 'file:./dev.db',
   },
   plugins: [
-    userAuth({
+    authentication({
       betterAuthOptions: { secret: process.env.BETTER_AUTH_SECRET },
       globalAdmins: [{ email: 'admin@example.com', pw: 'changeme', name: 'Admin' }],
     }),

@@ -200,6 +200,53 @@ export interface BetterAuthPassthroughOptions {
    * `BETTER_AUTH_SECRETS=2:base64secret,1:base64secret`
    */
   secrets?: Array<{ version: number; value: string }>;
+
+  /**
+   * Configuration for the Better Auth API Key plugin (`@better-auth/api-key`).
+   *
+   * Set to `true` to enable with defaults, or pass an object to customise.
+   * Disabled by default.
+   *
+   * When enabled, `@better-auth/api-key` must be installed as a dependency.
+   *
+   * @see https://better-auth.com/docs/plugins/api-key
+   */
+  apiKey?: boolean | ApiKeyPluginOptions;
+}
+
+/**
+ * Options forwarded to the `apiKey()` Better Auth plugin.
+ *
+ * @see https://better-auth.com/docs/plugins/api-key/reference
+ */
+export interface ApiKeyPluginOptions {
+  /** Default length of generated API keys (excluding prefix). */
+  defaultKeyLength?: number;
+  /** Default prefix prepended to every generated key. */
+  defaultPrefix?: string;
+  /** Require a name when creating an API key. */
+  requireName?: boolean;
+  /** Enable metadata storage on API keys. */
+  enableMetadata?: boolean;
+  /** Create mock sessions from API keys so existing session guards work. */
+  enableSessionForAPIKeys?: boolean;
+  /** Disable hashing of API keys (NOT recommended — insecure). */
+  disableKeyHashing?: boolean;
+  /** Header(s) to read the API key from. @default 'x-api-key' */
+  apiKeyHeaders?: string | string[];
+  /** Key expiration defaults. */
+  keyExpiration?: {
+    defaultExpiresIn?: number | null;
+    disableCustomExpiresTime?: boolean;
+    minExpiresIn?: number;
+    maxExpiresIn?: number;
+  };
+  /** Rate limiting for API key usage. */
+  rateLimit?: {
+    enabled?: boolean;
+    timeWindow?: number;
+    maxRequests?: number;
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -211,7 +258,7 @@ export interface BetterAuthPassthroughOptions {
  *
  * A light wrapper around [Better Auth](https://better-auth.com).
  */
-export interface UserAuthPluginOptions {
+export interface AuthenticationPluginOptions {
   /**
    * A configured Better Auth instance (the return value of `betterAuth()`).
    *
@@ -222,12 +269,12 @@ export interface UserAuthPluginOptions {
    * @example
    * ```ts
    * // Simple: let the plugin manage better-auth internally
-   * userAuth({ globalAdmins: [{ email: 'admin@example.com', pw: 'secret' }] });
+   * authentication({ globalAdmins: [{ email: 'admin@example.com', pw: 'secret' }] });
    *
    * // Advanced: provide your own instance for full control
    * import { betterAuth } from 'better-auth';
    * const auth = betterAuth({ ... });
-   * userAuth({ auth });
+   * authentication({ auth });
    * ```
    */
   auth?: BetterAuthInstance;
@@ -337,7 +384,7 @@ export interface UserAuthPluginOptions {
    *
    * @example
    * ```ts
-   * userAuth({
+   * authentication({
    *   betterAuthOptions: {
    *     session: { expiresIn: 60 * 60 * 24 * 30 }, // 30 days
    *     advanced: { useSecureCookies: true },
@@ -346,4 +393,21 @@ export interface UserAuthPluginOptions {
    * ```
    */
   betterAuthOptions?: BetterAuthPassthroughOptions;
+
+  /**
+   * Enable the Better Auth API Key plugin (`@better-auth/api-key`).
+   *
+   * Set to `true` to enable with defaults, or pass an options object.
+   * Disabled by default.
+   *
+   * When enabled, users can create and verify API keys for programmatic
+   * access to your application. The `apikey` database table will be
+   * required.
+   *
+   * This is a convenience shorthand — equivalent to setting
+   * `betterAuthOptions.apiKey`.
+   *
+   * @see https://better-auth.com/docs/plugins/api-key
+   */
+  apiKey?: boolean | ApiKeyPluginOptions;
 }

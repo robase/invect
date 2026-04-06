@@ -55,14 +55,14 @@ That's it. The router handles initialization, batch polling, and all API routes.
 ## With Plugins
 
 ```ts
-import { userAuth } from '@invect/user-auth';
+import { authentication } from '@invect/user-auth';
 import { rbacPlugin } from '@invect/rbac';
 
 app.use(
   '/invect',
   createInvectRouter({
     database: { type: 'sqlite', connectionString: 'file:./dev.db' },
-    plugins: [userAuth({ auth }), rbacPlugin()],
+    plugins: [authentication({ auth }), rbacPlugin()],
   }),
 );
 ```

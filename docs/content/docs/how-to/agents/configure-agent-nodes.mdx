@@ -12,26 +12,26 @@ Agent nodes run an iterative prompt → tool-call → response loop using OpenAI
 
 ## Configuration fields
 
-| Field | Required | Default | Description |
-|-------|----------|---------|-------------|
-| **Credential** | Yes | — | LLM API key (OpenAI or Anthropic). |
-| **Model** | Yes | — | Model identifier (e.g., `gpt-4o`, `claude-sonnet-4-20250514`). |
-| **Task Prompt** | Yes | — | The agent's goal. Supports `{{ }}` templates. |
-| **System Prompt** | No | — | Optional system instructions. |
-| **Enabled Tools** | Yes | — | Which tools the agent can call. |
-| **Max Iterations** | No | `10` | Maximum prompt→tool→response cycles (1–50). |
-| **Stop Condition** | No | `explicit_stop` | When to stop iterating. |
-| **Temperature** | No | — | LLM temperature. |
-| **Max Tokens** | No | — | Max response tokens per iteration. |
-| **Enable Parallel Tools** | No | `false` | Allow the LLM to call multiple tools in one turn. |
+| Field                     | Required | Default         | Description                                                    |
+| ------------------------- | -------- | --------------- | -------------------------------------------------------------- |
+| **Credential**            | Yes      | —               | LLM API key (OpenAI or Anthropic).                             |
+| **Model**                 | Yes      | —               | Model identifier (e.g., `gpt-4o`, `claude-sonnet-4-20250514`). |
+| **Task Prompt**           | Yes      | —               | The agent's goal. Supports `{{ }}` templates.                  |
+| **System Prompt**         | No       | —               | Optional system instructions.                                  |
+| **Enabled Tools**         | Yes      | —               | Which tools the agent can call.                                |
+| **Max Iterations**        | No       | `10`            | Maximum prompt→tool→response cycles (1–50).                    |
+| **Stop Condition**        | No       | `explicit_stop` | When to stop iterating.                                        |
+| **Temperature**           | No       | —               | LLM temperature.                                               |
+| **Max Tokens**            | No       | —               | Max response tokens per iteration.                             |
+| **Enable Parallel Tools** | No       | `false`         | Allow the LLM to call multiple tools in one turn.              |
 
 ## Stop conditions
 
-| Condition | Behaviour |
-|-----------|-----------|
-| `explicit_stop` | Agent decides when to stop (sends a final text response with no tool calls). |
-| `tool_result` | Stops after the first tool execution and returns its result. |
-| `max_iterations` | Runs until hitting the iteration limit. |
+| Condition        | Behaviour                                                                    |
+| ---------------- | ---------------------------------------------------------------------------- |
+| `explicit_stop`  | Agent decides when to stop (sends a final text response with no tool calls). |
+| `tool_result`    | Stops after the first tool execution and returns its result.                 |
+| `max_iterations` | Runs until hitting the iteration limit.                                      |
 
 ## Selecting tools
 
@@ -42,7 +42,7 @@ Click the tools area on the Agent node to open the **Tool Selector**. You can:
 - Enable/disable individual tools.
 - Customise tool instances (override name, description, or default params).
 
-Every built-in action (180+) is automatically available as an agent tool. Standalone utility tools (math_eval, json_logic) are also available.
+Every built-in action (190+) is automatically available as an agent tool. Standalone utility tools (math_eval, json_logic) are also available.
 
 ## Example: research agent
 

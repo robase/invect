@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { userAuth } from '../../src/backend/plugin';
+import { authentication } from '../../src/backend/plugin';
 import type { BetterAuthInstance } from '../../src/backend/types';
 import type { InvectIdentity } from '@invect/core/types';
 
@@ -54,14 +54,14 @@ const TEST_SESSION = {
 };
 
 // ===========================================================================
-// userAuth()
+// authentication()
 // ===========================================================================
 
-describe('userAuth', () => {
+describe('authentication', () => {
   describe('construction', () => {
     it('creates a plugin with correct id and name', () => {
       const auth = createMockAuth();
-      const plugin = userAuth({ auth });
+      const plugin = authentication({ auth });
 
       expect(plugin.id).toBe('user-auth');
       expect(plugin.name).toBe('User Auth');
@@ -69,7 +69,7 @@ describe('userAuth', () => {
 
     it('generates proxy endpoints for all HTTP methods', () => {
       const auth = createMockAuth();
-      const plugin = userAuth({ auth });
+      const plugin = authentication({ auth });
 
       expect(plugin.endpoints).toBeDefined();
       const methods = plugin.endpoints!.map((e) => e.method);
@@ -78,7 +78,7 @@ describe('userAuth', () => {
 
     it('marks proxy catch-all endpoints as public', () => {
       const auth = createMockAuth();
-      const plugin = userAuth({ auth });
+      const plugin = authentication({ auth });
 
       // Only the proxy catch-all endpoints (path = /auth/*) should be public.
       // Management endpoints like /auth/me, /auth/users, etc. are not public.
@@ -91,7 +91,7 @@ describe('userAuth', () => {
 
     it('marks management endpoints as non-public', () => {
       const auth = createMockAuth();
-      const plugin = userAuth({ auth });
+      const plugin = authentication({ auth });
 
       const managementEndpoints = plugin.endpoints!.filter((e) => e.path !== '/auth/*');
       expect(managementEndpoints.length).toBeGreaterThan(0);
@@ -102,7 +102,7 @@ describe('userAuth', () => {
 
     it('uses custom prefix in endpoint paths', () => {
       const auth = createMockAuth();
-      const plugin = userAuth({ auth, prefix: 'myauth' });
+      const plugin = authentication({ auth, prefix: 'myauth' });
 
       for (const endpoint of plugin.endpoints!) {
         expect(endpoint.path).toContain('/myauth/');
@@ -111,7 +111,7 @@ describe('userAuth', () => {
 
     it('includes error codes', () => {
       const auth = createMockAuth();
-      const plugin = userAuth({ auth });
+      const plugin = authentication({ auth });
 
       expect(plugin.$ERROR_CODES).toBeDefined();
       expect(plugin.$ERROR_CODES!['auth:session_expired']).toBeDefined();
@@ -120,7 +120,7 @@ describe('userAuth', () => {
 
     it('declares required tables for startup verification', () => {
       const auth = createMockAuth();
-      const plugin = userAuth({ auth });
+      const plugin = authentication({ auth });
 
       expect(plugin.requiredTables).toBeDefined();
       expect(plugin.requiredTables).toContain('user');
@@ -131,7 +131,7 @@ describe('userAuth', () => {
 
     it('provides setup instructions referencing the CLI', () => {
       const auth = createMockAuth();
-      const plugin = userAuth({ auth });
+      const plugin = authentication({ auth });
 
       expect(plugin.setupInstructions).toBeDefined();
       expect(plugin.setupInstructions).toContain('npx invect-cli generate');
@@ -139,7 +139,7 @@ describe('userAuth', () => {
 
     it('provides abstract schema for all better-auth tables', () => {
       const auth = createMockAuth();
-      const plugin = userAuth({ auth });
+      const plugin = authentication({ auth });
 
       expect(plugin.schema).toBeDefined();
       expect(plugin.schema!.user).toBeDefined();
@@ -158,7 +158,7 @@ describe('userAuth', () => {
 
     it('schema tables have foreign key references', () => {
       const auth = createMockAuth();
-      const plugin = userAuth({ auth });
+      const plugin = authentication({ auth });
 
       // session.userId should reference user.id
       expect(plugin.schema!.session.fields.userId.references).toEqual({
@@ -179,7 +179,7 @@ describe('userAuth', () => {
   describe('hooks.onRequest', () => {
     it('returns undefined for better-auth proxy routes', async () => {
       const auth = createMockAuth();
-      const plugin = userAuth({ auth });
+      const plugin = authentication({ auth });
 
       const request = new Request('http://localhost/plugins/auth/api/auth/sign-in/email');
       const result = await plugin.hooks!.onRequest!(request, {
@@ -193,7 +193,7 @@ describe('userAuth', () => {
 
     it('returns undefined for public paths', async () => {
       const auth = createMockAuth();
-      const plugin = userAuth({
+      const plugin = authentication({
         auth,
         publicPaths: ['/health'],
       });
@@ -210,7 +210,7 @@ describe('userAuth', () => {
 
     it('returns 401 Response when no session and onSessionError is throw', async () => {
       const auth = createMockAuth(null);
-      const plugin = userAuth({ auth, onSessionError: 'throw' });
+      const plugin = authentication({ auth, onSessionError: 'throw' });
 
       const request = new Request('http://localhost/flows');
       const result = await plugin.hooks!.onRequest!(request, {
@@ -229,7 +229,7 @@ describe('userAuth', () => {
 
     it('returns undefined when no session and onSessionError is continue', async () => {
       const auth = createMockAuth(null);
-      const plugin = userAuth({ auth, onSessionError: 'continue' });
+      const plugin = authentication({ auth, onSessionError: 'continue' });
 
       const request = new Request('http://localhost/flows');
       const result = await plugin.hooks!.onRequest!(request, {
@@ -245,7 +245,7 @@ describe('userAuth', () => {
   describe('hooks.onAuthorize', () => {
     it('returns void when identity is present (defers to downstream authorization)', async () => {
       const auth = createMockAuth();
-      const plugin = userAuth({ auth });
+      const plugin = authentication({ auth });
 
       const result = await plugin.hooks!.onAuthorize!({
         identity: { id: 'user-123', name: 'Test', role: 'admin' },
@@ -257,7 +257,7 @@ describe('userAuth', () => {
 
     it('returns { allowed: false } when no identity', async () => {
       const auth = createMockAuth(null);
-      const plugin = userAuth({ auth });
+      const plugin = authentication({ auth });
 
       const result = await plugin.hooks!.onAuthorize!({
         identity: null,
@@ -273,7 +273,7 @@ describe('userAuth', () => {
 
   describe('default role mapping (via onRequest hook)', () => {
     async function resolveIdentityViaHook(auth: BetterAuthInstance, cookie = 'session=tok') {
-      const plugin = userAuth({ auth });
+      const plugin = authentication({ auth });
       const request = new Request('http://localhost/flows', {
         headers: { cookie },
       });
@@ -331,7 +331,7 @@ describe('userAuth', () => {
   describe('proxy endpoints', () => {
     it('forwards requests to auth.handler', async () => {
       const auth = createMockAuth();
-      const plugin = userAuth({ auth });
+      const plugin = authentication({ auth });
 
       // Find the proxy catch-all POST endpoint (path = /auth/*), not the management endpoints
       const proxyEndpoint = plugin.endpoints!.find(
@@ -366,7 +366,7 @@ describe('userAuth', () => {
   describe('init', () => {
     it('logs initialization message', async () => {
       const auth = createMockAuth();
-      const plugin = userAuth({ auth });
+      const plugin = authentication({ auth });
 
       const logger = {
         info: vi.fn(),
@@ -407,7 +407,7 @@ describe('userAuth', () => {
         findUserByEmail,
         updateUser,
       });
-      const plugin = userAuth({
+      const plugin = authentication({
         auth,
         globalAdmins: [
           {
@@ -445,9 +445,9 @@ describe('session resolution via onRequest hook', () => {
   async function resolveIdentity(
     auth: BetterAuthInstance,
     headers: Record<string, string> = {},
-    pluginOptions?: Partial<Parameters<typeof userAuth>[0]>,
+    pluginOptions?: Partial<Parameters<typeof authentication>[0]>,
   ) {
-    const plugin = userAuth({ auth, ...pluginOptions });
+    const plugin = authentication({ auth, ...pluginOptions });
     const request = new Request('http://localhost/flows', { headers });
     const context = { path: '/flows', method: 'GET', identity: null as InvectIdentity | null };
     await plugin.hooks!.onRequest!(request, context);
@@ -539,5 +539,59 @@ describe('session resolution via onRequest hook', () => {
     );
 
     expect(identity).toBeNull();
+  });
+});
+
+// ===========================================================================
+// Schema & API key configuration
+// ===========================================================================
+
+describe('schema and apiKey option', () => {
+  it('does not include apikey table in schema by default', () => {
+    const auth = createMockAuth();
+    const plugin = authentication({ auth });
+
+    expect(plugin.schema).toBeDefined();
+    expect(plugin.schema!.apikey).toBeUndefined();
+    expect(plugin.requiredTables).not.toContain('apikey');
+  });
+
+  it('includes apikey table when apiKey is true', () => {
+    const auth = createMockAuth();
+    const plugin = authentication({ auth, apiKey: true });
+
+    expect(plugin.schema!.apikey).toBeDefined();
+    expect(plugin.schema!.apikey.fields.key).toBeDefined();
+    expect(plugin.schema!.apikey.fields.referenceId).toBeDefined();
+    expect(plugin.requiredTables).toContain('apikey');
+  });
+
+  it('includes apikey table when apiKey is an options object', () => {
+    const auth = createMockAuth();
+    const plugin = authentication({ auth, apiKey: { defaultPrefix: 'inv_' } });
+
+    expect(plugin.schema!.apikey).toBeDefined();
+    expect(plugin.requiredTables).toContain('apikey');
+  });
+
+  it('includes apikey table via betterAuthOptions.apiKey', () => {
+    const auth = createMockAuth();
+    const plugin = authentication({ auth, betterAuthOptions: { apiKey: true } });
+
+    expect(plugin.schema!.apikey).toBeDefined();
+    expect(plugin.requiredTables).toContain('apikey');
+  });
+
+  it('always includes core auth tables regardless of apiKey', () => {
+    const auth = createMockAuth();
+    const plugin = authentication({ auth, apiKey: true });
+
+    expect(plugin.schema!.user).toBeDefined();
+    expect(plugin.schema!.session).toBeDefined();
+    expect(plugin.schema!.account).toBeDefined();
+    expect(plugin.schema!.verification).toBeDefined();
+    expect(plugin.requiredTables).toEqual(
+      expect.arrayContaining(['user', 'session', 'account', 'verification', 'flow_access']),
+    );
   });
 });

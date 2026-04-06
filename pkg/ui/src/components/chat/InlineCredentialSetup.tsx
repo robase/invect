@@ -210,8 +210,8 @@ function CreateCredentialForm({ onBack }: { onBack?: () => void }) {
   if (formState === 'success') {
     return (
       <div className="flex flex-col items-center gap-3 rounded-xl border bg-muted/20 p-5 mx-2 w-full max-w-sm">
-        <div className="flex size-10 items-center justify-center rounded-full bg-emerald-500/10">
-          <CheckCircle2 className="size-5 text-emerald-600" />
+        <div className="flex size-10 items-center justify-center rounded-full bg-success/10">
+          <CheckCircle2 className="size-5 text-success" />
         </div>
         <div className="text-center">
           <p className="text-sm font-semibold text-foreground">Provider connected</p>

@@ -25,9 +25,9 @@ export const invectConfig = defineConfig({
   plugins: [
     webhooksPlugin({
       webhookBaseUrl: process.env.WEBHOOK_BASE_URL || 'http://localhost:3000/invect',
-      rateLimitMaxRequests: 60,     // Max requests per window (default: 60)
-      rateLimitWindowMs: 60_000,    // Rate limit window in ms (default: 60s)
-      dedupTtlMs: 86_400_000,      // Deduplication TTL in ms (default: 24h)
+      rateLimitMaxRequests: 60, // Max requests per window (default: 60)
+      rateLimitWindowMs: 60_000, // Rate limit window in ms (default: 60s)
+      dedupTtlMs: 86_400_000, // Deduplication TTL in ms (default: 24h)
     }),
   ],
 });

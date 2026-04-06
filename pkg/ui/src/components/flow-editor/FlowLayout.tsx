@@ -41,23 +41,31 @@ export function FlowLayout({
         className="relative flex flex-col flex-1 min-h-0 overflow-hidden"
         ref={viewportRef as React.RefObject<HTMLDivElement>}
       >
-        <div className="absolute left-4 top-4 z-10 flex items-center gap-2">
-          {!sidebarOpen && onToggleSidebar && (
-            <button
-              onClick={onToggleSidebar}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-border bg-card/90 backdrop-blur-sm text-card-foreground shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-              title="Open node panel"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add nodes
-            </button>
-          )}
+        {/* Mode switcher - top center */}
+        <div className="absolute left-1/2 -translate-x-1/2 top-4 z-10">
           {modeSwitcher}
-          {layoutSelector}
         </div>
-        {chatToggle && <div className="absolute right-4 top-4 z-10">{chatToggle}</div>}
+
         {viewport}
         {chatOverlay}
+
+        {/* Bottom toolbar - Figma-style */}
+        {(onToggleSidebar || layoutSelector || chatToggle) && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 rounded-lg border border-border bg-card/90 backdrop-blur-sm shadow-md p-1">
+            {onToggleSidebar && (
+              <button
+                onClick={onToggleSidebar}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md text-card-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                title={sidebarOpen ? 'Close node panel' : 'Open node panel'}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add nodes
+              </button>
+            )}
+            {layoutSelector}
+            {chatToggle}
+          </div>
+        )}
       </div>
       {rightPanel}
       {chatPanel}

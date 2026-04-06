@@ -5,7 +5,7 @@
  * whenever plugins are added or removed.
  */
 
-import { userAuth } from '@invect/user-auth';
+import { authentication } from '@invect/user-auth';
 import { rbacPlugin } from '@invect/rbac';
 import { webhooksPlugin } from '@invect/webhooks';
 import { defineConfig } from '@invect/core';
@@ -69,7 +69,7 @@ export const invectConfig = defineConfig({
       ]
     : [],
   plugins: [
-    userAuth({
+    authentication({
       onSessionError: 'continue',
       trustedOrigins: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
       betterAuthOptions: {

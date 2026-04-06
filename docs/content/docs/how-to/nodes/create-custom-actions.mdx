@@ -31,7 +31,11 @@ export const myAction = defineAction({
     }),
     fields: [
       { name: 'name', label: 'Name', type: 'text', required: true },
-      { name: 'style', label: 'Style', type: 'select', required: false,
+      {
+        name: 'style',
+        label: 'Style',
+        type: 'select',
+        required: false,
         options: [
           { label: 'Formal', value: 'formal' },
           { label: 'Casual', value: 'casual' },
@@ -41,9 +45,10 @@ export const myAction = defineAction({
   },
 
   async execute(params, context) {
-    const greeting = params.style === 'formal'
-      ? `Dear ${params.name}, it is a pleasure to connect with you.`
-      : `Hey ${params.name}! Great to meet you!`;
+    const greeting =
+      params.style === 'formal'
+        ? `Dear ${params.name}, it is a pleasure to connect with you.`
+        : `Hey ${params.name}! Great to meet you!`;
 
     return {
       success: true,
@@ -55,16 +60,16 @@ export const myAction = defineAction({
 
 ## Action definition fields
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `id` | Yes | Unique identifier, typically `provider.action_name`. |
-| `name` | Yes | Human-readable name shown in the UI palette. |
-| `description` | Yes | What the action does. Used in the palette and by agents to decide when to use the tool. |
-| `provider` | Yes | Provider grouping. Can reference an existing provider or define inline. |
-| `params.schema` | Yes | Zod schema for input validation. Params are validated before `execute` runs. |
-| `params.fields` | Yes | Field definitions for the UI config panel. |
-| `execute` | Yes | The function that runs when the node executes. |
-| `credential` | No | Credential requirements (see below). |
+| Field           | Required | Description                                                                             |
+| --------------- | -------- | --------------------------------------------------------------------------------------- |
+| `id`            | Yes      | Unique identifier, typically `provider.action_name`.                                    |
+| `name`          | Yes      | Human-readable name shown in the UI palette.                                            |
+| `description`   | Yes      | What the action does. Used in the palette and by agents to decide when to use the tool. |
+| `provider`      | Yes      | Provider grouping. Can reference an existing provider or define inline.                 |
+| `params.schema` | Yes      | Zod schema for input validation. Params are validated before `execute` runs.            |
+| `params.fields` | Yes      | Field definitions for the UI config panel.                                              |
+| `execute`       | Yes      | The function that runs when the node executes.                                          |
+| `credential`    | No       | Credential requirements (see below).                                                    |
 
 ## The execute function
 
@@ -107,10 +112,12 @@ import { myAction } from './my-action';
 
 export const invectConfig = defineConfig({
   database: { type: 'sqlite', connectionString: 'file:./dev.db' },
-  plugins: [{
-    id: 'my-custom-plugin',
-    actions: [myAction],
-  }],
+  plugins: [
+    {
+      id: 'my-custom-plugin',
+      actions: [myAction],
+    },
+  ],
 });
 ```
 
@@ -118,5 +125,5 @@ The action now appears in the node palette and is available as an agent tool.
 
 ## Next steps
 
-- [Reference: Built-in Actions](/docs/reference/built-in-actions) — see how the 180+ built-in actions are structured.
+- [Reference: Built-in Actions](/docs/reference/built-in-actions) — see how the 190+ built-in actions are structured.
 - [Reference: Plugin API](/docs/reference/plugin-api) — the full plugin interface.

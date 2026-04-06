@@ -77,6 +77,7 @@ The coordinator dispatches to the appropriate executor:
 - **Agent nodes** → `AgentNodeExecutor.execute()` runs the iterative prompt-tool loop.
 
 The execution context provides:
+
 - `incomingData` — the full input data object.
 - `credential` — the decrypted credential (if attached).
 - `logger` — a scoped logger.
@@ -99,6 +100,7 @@ For flow control nodes (if/else, switch):
 When a node returns `state: "PENDING"` (typically from a batch API call), the flow run transitions to `PAUSED_FOR_BATCH`. The `BatchJobsService` records the batch job, and a polling service periodically checks the provider for completion.
 
 When the batch completes:
+
 1. The batch result is stored as the node's output.
 2. The flow run resumes from where it left off.
 3. Remaining nodes execute normally.

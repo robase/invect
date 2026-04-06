@@ -7,105 +7,105 @@ Invect supports 35 OAuth2 providers across 9 categories. Each provider defines a
 
 ## Google
 
-| Provider | ID | Default Scopes | Refresh |
-|----------|----|---------------|---------|
-| Gmail | `google_gmail` | `gmail.readonly`, `gmail.send`, `gmail.modify` | Yes |
-| Google Docs | `google_docs` | `documents`, `documents.readonly` | Yes |
-| Google Sheets | `google_sheets` | `spreadsheets`, `spreadsheets.readonly` | Yes |
-| Google Drive | `google_drive` | `drive`, `drive.file`, `drive.readonly` | Yes |
-| Google Calendar | `google_calendar` | `calendar`, `calendar.events`, `calendar.readonly` | Yes |
-| Google Analytics | `google_analytics` | `analytics.readonly` | Yes |
+| Provider         | ID                 | Default Scopes                                     | Refresh |
+| ---------------- | ------------------ | -------------------------------------------------- | ------- |
+| Gmail            | `google_gmail`     | `gmail.readonly`, `gmail.send`, `gmail.modify`     | Yes     |
+| Google Docs      | `google_docs`      | `documents`, `documents.readonly`                  | Yes     |
+| Google Sheets    | `google_sheets`    | `spreadsheets`, `spreadsheets.readonly`            | Yes     |
+| Google Drive     | `google_drive`     | `drive`, `drive.file`, `drive.readonly`            | Yes     |
+| Google Calendar  | `google_calendar`  | `calendar`, `calendar.events`, `calendar.readonly` | Yes     |
+| Google Analytics | `google_analytics` | `analytics.readonly`                               | Yes     |
 
 All Google providers use `access_type=offline` and `prompt=consent` by default to obtain refresh tokens.
 
 ## Microsoft
 
-| Provider | ID | Default Scopes | Refresh |
-|----------|----|---------------|---------|
-| Microsoft 365 | `microsoft` | `Mail.Read`, `Calendars.Read`, `OnlineMeetings.Read` | Yes |
-| Microsoft Teams | `microsoft_teams` | `Team.ReadBasic.All`, `Channel.ReadBasic.All`, `ChannelMessage.Read.All` | Yes |
-| OneDrive | `onedrive` | `Files.Read`, `Files.ReadWrite` | Yes |
+| Provider        | ID                | Default Scopes                                                           | Refresh |
+| --------------- | ----------------- | ------------------------------------------------------------------------ | ------- |
+| Microsoft 365   | `microsoft`       | `Mail.Read`, `Calendars.Read`, `OnlineMeetings.Read`                     | Yes     |
+| Microsoft Teams | `microsoft_teams` | `Team.ReadBasic.All`, `Channel.ReadBasic.All`, `ChannelMessage.Read.All` | Yes     |
+| OneDrive        | `onedrive`        | `Files.Read`, `Files.ReadWrite`                                          | Yes     |
 
 ## GitHub
 
-| Provider | ID | Default Scopes | Refresh |
-|----------|----|---------------|---------|
-| GitHub | `github` | `repo`, `read:user` | No |
+| Provider | ID       | Default Scopes      | Refresh |
+| -------- | -------- | ------------------- | ------- |
+| GitHub   | `github` | `repo`, `read:user` | No      |
 
 ## Slack
 
-| Provider | ID | Default Scopes | Refresh |
-|----------|----|---------------|---------|
-| Slack | `slack` | `chat:write`, `channels:read`, `channels:history` | Yes |
+| Provider | ID      | Default Scopes                                    | Refresh |
+| -------- | ------- | ------------------------------------------------- | ------- |
+| Slack    | `slack` | `chat:write`, `channels:read`, `channels:history` | Yes     |
 
 ## Project Management
 
-| Provider | ID | Default Scopes | Refresh |
-|----------|----|---------------|---------|
-| Linear | `linear` | `read`, `write` | No |
-| Jira | `jira` | `read:jira-work`, `write:jira-work` | Yes |
-| Asana | `asana` | `default` | Yes |
-| Trello | `trello` | `read`, `write` | No |
+| Provider | ID       | Default Scopes                      | Refresh |
+| -------- | -------- | ----------------------------------- | ------- |
+| Linear   | `linear` | `read`, `write`                     | No      |
+| Jira     | `jira`   | `read:jira-work`, `write:jira-work` | Yes     |
+| Asana    | `asana`  | `default`                           | Yes     |
+| Trello   | `trello` | `read`, `write`                     | No      |
 
 ## Developer Tools
 
-| Provider | ID | Default Scopes | Refresh |
-|----------|----|---------------|---------|
-| GitLab | `gitlab` | `api`, `read_user` | Yes |
-| Sentry | `sentry` | `project:read`, `event:read` | Yes |
-| Grafana | `grafana` | — (API key auth) | No |
+| Provider | ID        | Default Scopes               | Refresh |
+| -------- | --------- | ---------------------------- | ------- |
+| GitLab   | `gitlab`  | `api`, `read_user`           | Yes     |
+| Sentry   | `sentry`  | `project:read`, `event:read` | Yes     |
+| Grafana  | `grafana` | — (API key auth)             | No      |
 
 ## CRM / Sales
 
-| Provider | ID | Default Scopes | Refresh |
-|----------|----|---------------|---------|
-| Salesforce | `salesforce` | `api`, `refresh_token` | Yes |
-| HubSpot | `hubspot` | `crm.objects.contacts.read`, `crm.objects.deals.read` | Yes |
+| Provider   | ID           | Default Scopes                                        | Refresh |
+| ---------- | ------------ | ----------------------------------------------------- | ------- |
+| Salesforce | `salesforce` | `api`, `refresh_token`                                | Yes     |
+| HubSpot    | `hubspot`    | `crm.objects.contacts.read`, `crm.objects.deals.read` | Yes     |
 
 ## E-commerce
 
-| Provider | ID | Default Scopes | Refresh |
-|----------|----|---------------|---------|
-| Shopify | `shopify` | `read_products`, `read_orders` | No |
-| Stripe | `stripe` | — (API key auth) | — |
-| WooCommerce | `woocommerce` | — (API key auth) | — |
+| Provider    | ID            | Default Scopes                 | Refresh |
+| ----------- | ------------- | ------------------------------ | ------- |
+| Shopify     | `shopify`     | `read_products`, `read_orders` | No      |
+| Stripe      | `stripe`      | — (API key auth)               | —       |
+| WooCommerce | `woocommerce` | — (API key auth)               | —       |
 
 ## Communication / Social
 
-| Provider | ID | Default Scopes | Refresh |
-|----------|----|---------------|---------|
-| Twitter / X | `twitter` | `tweet.read`, `tweet.write`, `users.read` | Yes |
-| LinkedIn | `linkedin` | `r_liteprofile`, `w_member_social` | Yes |
-| Facebook | `facebook` | `pages_manage_posts`, `pages_read_engagement` | Yes |
+| Provider    | ID         | Default Scopes                                | Refresh |
+| ----------- | ---------- | --------------------------------------------- | ------- |
+| Twitter / X | `twitter`  | `tweet.read`, `tweet.write`, `users.read`     | Yes     |
+| LinkedIn    | `linkedin` | `r_liteprofile`, `w_member_social`            | Yes     |
+| Facebook    | `facebook` | `pages_manage_posts`, `pages_read_engagement` | Yes     |
 
 ## Support
 
-| Provider | ID | Default Scopes | Refresh |
-|----------|----|---------------|---------|
-| Zendesk | `zendesk` | `tickets:read`, `tickets:write` | Yes |
-| Intercom | `intercom` | — (OAuth2 full access) | Yes |
-| Freshdesk | `freshdesk` | — (API key auth) | — |
+| Provider  | ID          | Default Scopes                  | Refresh |
+| --------- | ----------- | ------------------------------- | ------- |
+| Zendesk   | `zendesk`   | `tickets:read`, `tickets:write` | Yes     |
+| Intercom  | `intercom`  | — (OAuth2 full access)          | Yes     |
+| Freshdesk | `freshdesk` | — (API key auth)                | —       |
 
 ## Storage
 
-| Provider | ID | Default Scopes | Refresh |
-|----------|----|---------------|---------|
-| Dropbox | `dropbox` | `files.content.read`, `files.content.write` | Yes |
+| Provider | ID        | Default Scopes                              | Refresh |
+| -------- | --------- | ------------------------------------------- | ------- |
+| Dropbox  | `dropbox` | `files.content.read`, `files.content.write` | Yes     |
 
 ## Email
 
-| Provider | ID | Default Scopes | Refresh |
-|----------|----|---------------|---------|
-| Resend | `resend` | — (API key auth) | — |
-| SendGrid | `sendgrid` | — (API key auth) | — |
+| Provider | ID         | Default Scopes   | Refresh |
+| -------- | ---------- | ---------------- | ------- |
+| Resend   | `resend`   | — (API key auth) | —       |
+| SendGrid | `sendgrid` | — (API key auth) | —       |
 
 ## Analytics
 
-| Provider | ID | Default Scopes | Refresh |
-|----------|----|---------------|---------|
-| Segment | `segment` | — (API key auth) | — |
-| Mixpanel | `mixpanel` | — (API key auth) | — |
-| Notion | `notion` | — (OAuth2) | No |
+| Provider | ID         | Default Scopes   | Refresh |
+| -------- | ---------- | ---------------- | ------- |
+| Segment  | `segment`  | — (API key auth) | —       |
+| Mixpanel | `mixpanel` | — (API key auth) | —       |
+| Notion   | `notion`   | — (OAuth2)       | No      |
 
 ## Notes
 

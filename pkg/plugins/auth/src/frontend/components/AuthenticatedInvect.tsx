@@ -9,7 +9,7 @@
  * When authenticated, renders the full Invect UI.
  *
  * Sign-up is disabled — initial admin users are configured explicitly via
- * `userAuth({ globalAdmins: [...] })`, and subsequent users are
+ * `authentication({ globalAdmins: [...] })`, and subsequent users are
  * created by the admin through the User Management panel.
  *
  * @example

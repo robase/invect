@@ -45,7 +45,7 @@ import type {
  * ```ts
  * import { resolveTeamIds } from '@invect/rbac/backend';
  *
- * userAuth({
+ * authentication({
  *   auth,
  *   mapUser: async (user, session) => ({
  *     id: user.id,
@@ -772,7 +772,7 @@ export function rbacPlugin(options: RbacPluginOptions = {}): InvectPlugin {
         ctx.logger.warn(
           'RBAC plugin requires the @invect/user-auth plugin. ' +
             'RBAC will work with reduced functionality (no session resolution). ' +
-            'Make sure userAuth() is registered before rbacPlugin().',
+            'Make sure authentication() is registered before rbacPlugin().',
         );
       }
 

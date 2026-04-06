@@ -12,7 +12,7 @@ The original architecture used class-based node executors:
 ```ts
 class JqNodeExecutor extends BaseNodeExecutor {
   nodeType = GraphNodeType.JQ;
-  
+
   async execute(context: NodeExecutionContext): Promise<NodeExecutionResult> {
     const query = context.params.query;
     const result = jq.run(query, context.incomingData);
@@ -22,6 +22,7 @@ class JqNodeExecutor extends BaseNodeExecutor {
 ```
 
 Each executor was:
+
 - A **class** registered in a `NodeExecutorRegistry`.
 - Tied to a **GraphNodeType enum** value.
 - Node-only — agent tools were defined separately.
@@ -56,7 +57,7 @@ export const sendMessageAction = defineAction({
   name: 'Send Email',
   description: 'Send an email via Gmail',
   provider: GMAIL_PROVIDER,
-  
+
   params: {
     schema: z.object({
       to: z.string().email(),
@@ -69,7 +70,7 @@ export const sendMessageAction = defineAction({
       { name: 'body', label: 'Body', type: 'textarea', required: true },
     ],
   },
-  
+
   credential: {
     required: true,
     oauth2Provider: 'google_gmail',
@@ -92,11 +93,12 @@ One definition, two purposes:
 
 During `Invect.initialize()`:
 
-1. `registerBuiltinActions()` registers all 160+ actions in the `ActionRegistry`.
+1. `registerBuiltinActions()` registers all 190+ actions in the `ActionRegistry`.
 2. `registerActionsAsTools()` iterates the registry and converts each action to an `AgentToolDefinition` using `toAgentToolDefinition()`.
 3. For each action, a `createToolExecutorForAction()` wrapper is registered that bridges the agent context to the action's `execute` function.
 
 The conversion is mechanical:
+
 - Action `id` → tool `id`
 - Action `description` → tool `description`
 - Action `params.schema` (Zod) → tool `inputSchema` (JSON Schema)
@@ -107,6 +109,7 @@ The conversion is mechanical:
 Only one node type still uses the legacy executor: **Agent**. The `AgentNodeExecutor` implements the iterative prompt → tool-call → response loop, which involves maintaining conversation state, streaming LLM responses, and managing parallel tool calls. This complexity doesn't fit the simple `execute(params, context) → result` model.
 
 The `GraphNodeType` enum still exists and is referenced in the `NodeExecutionCoordinator` for special-case handling:
+
 - Template String nodes resolve their template parameter differently from other nodes.
 - If/Else and Switch nodes need branch routing logic after execution.
 

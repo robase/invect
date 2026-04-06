@@ -20,7 +20,7 @@ Enter your JavaScript in the **code** field. Upstream node outputs are available
 For simple transformations, write a single expression — `return` is auto-prepended:
 
 ```js
-input.users.filter(u => u.active)
+input.users.filter((u) => u.active);
 ```
 
 ### Multi-statement code
@@ -29,19 +29,20 @@ For complex logic, use explicit `return`:
 
 ```js
 const users = input.users;
-const active = users.filter(u => u.active);
-const names = active.map(u => u.name);
+const active = users.filter((u) => u.active);
+const names = active.map((u) => u.name);
 return { count: active.length, names };
 ```
 
 ## Available context
 
-| Variable | Description |
-|----------|-------------|
-| `$input` | The full context object (all upstream outputs). |
+| Variable        | Description                                             |
+| --------------- | ------------------------------------------------------- |
+| `$input`        | The full context object (all upstream outputs).         |
 | `{referenceId}` | Each upstream node's output, keyed by its reference ID. |
 
 For example, with upstream nodes `input` and `api_response`:
+
 ```js
 const name = input.name;
 const data = api_response.data;

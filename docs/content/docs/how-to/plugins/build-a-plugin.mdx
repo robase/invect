@@ -76,15 +76,15 @@ export function myPlugin(options?: MyPluginOptions): InvectPlugin {
 
 ## Available hooks
 
-| Hook | When | Can short-circuit? |
-|------|------|--------------------|
-| `beforeFlowRun` | Before flow execution | Yes — `{ cancel: true }` stops the run |
-| `afterFlowRun` | After flow completes | No |
-| `beforeNodeExecute` | Before each node | Yes — `{ skip: true }` skips it |
-| `afterNodeExecute` | After each node | Can override output |
-| `onRequest` | Before every API request | Yes — return `{ response }` |
-| `onResponse` | After every API response | Can replace response |
-| `onAuthorize` | During auth checks | Yes — `{ allowed: true/false }` |
+| Hook                | When                     | Can short-circuit?                     |
+| ------------------- | ------------------------ | -------------------------------------- |
+| `beforeFlowRun`     | Before flow execution    | Yes — `{ cancel: true }` stops the run |
+| `afterFlowRun`      | After flow completes     | No                                     |
+| `beforeNodeExecute` | Before each node         | Yes — `{ skip: true }` skips it        |
+| `afterNodeExecute`  | After each node          | Can override output                    |
+| `onRequest`         | Before every API request | Yes — return `{ response }`            |
+| `onResponse`        | After every API response | Can replace response                   |
+| `onAuthorize`       | During auth checks       | Yes — `{ allowed: true/false }`        |
 
 ## Schema format
 
@@ -120,7 +120,11 @@ import { myPlugin } from './my-plugin';
 
 export const invectConfig = defineConfig({
   database: { type: 'sqlite', connectionString: 'file:./dev.db' },
-  plugins: [myPlugin({ /* options */ })],
+  plugins: [
+    myPlugin({
+      /* options */
+    }),
+  ],
 });
 ```
 

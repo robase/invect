@@ -35,7 +35,7 @@ export function ChatSettingsPanel({ onClose }: ChatSettingsPanelProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
         <Button variant="ghost" size="icon-sm" onClick={onClose} title="Back to chat">
           <ArrowLeft className="size-4" />
         </Button>
@@ -44,7 +44,7 @@ export function ChatSettingsPanel({ onClose }: ChatSettingsPanelProps) {
       </div>
 
       {/* Description */}
-      <div className="px-4 py-2 text-xs border-b text-muted-foreground bg-muted/30">
+      <div className="px-4 py-2 text-xs border-b border-border text-muted-foreground bg-muted/20">
         Configure how the AI assistant behaves. Settings are saved locally in your browser.
       </div>
 

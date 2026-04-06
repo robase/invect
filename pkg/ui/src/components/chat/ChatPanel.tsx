@@ -131,7 +131,7 @@ export function ChatPanel({
   return (
     <div
       className={cn(
-        'relative flex flex-col h-full border-l bg-background/95 shadow-[-6px_0_16px_rgba(0,0,0,0.06)]',
+        'relative flex flex-col h-full border-l border-border bg-imp-background text-card-foreground',
         className,
       )}
       style={{ width: panelWidth, minWidth: MIN_WIDTH, maxWidth: MAX_WIDTH }}
@@ -142,7 +142,7 @@ export function ChatPanel({
         className="absolute inset-y-0 left-0 z-20 w-1 transition-colors cursor-col-resize hover:bg-primary/20 active:bg-primary/30"
       />
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b bg-muted/20">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
         <div className="flex items-center gap-2">
           <Bot className="size-4 text-primary" />
           <span className="text-sm font-semibold">Assistant</span>
@@ -173,7 +173,7 @@ export function ChatPanel({
 
       {/* Settings Panel (slide-over) */}
       {isSettingsPanelOpen && (
-        <div className="absolute inset-0 z-30 flex flex-col bg-background">
+        <div className="absolute inset-0 z-30 flex flex-col bg-imp-background">
           <ChatSettingsPanel onClose={toggleSettingsPanel} />
         </div>
       )}
@@ -212,17 +212,19 @@ export function ChatPanel({
 export function ChatToggleButton({ className }: { className?: string }) {
   const { isOpen, togglePanel } = useChat();
 
-  if (isOpen) {
-    return null;
-  }
-
   return (
     <Button
-      variant="outline"
+      variant="ghost"
       size="sm"
       onClick={togglePanel}
-      title="Toggle AI Assistant"
-      className={cn('gap-1.5 shadow-sm bg-card/90 backdrop-blur-sm hover:bg-accent', className)}
+      title={isOpen ? 'Close AI Assistant' : 'Open AI Assistant'}
+      className={cn(
+        'gap-1.5 hover:bg-accent',
+        isOpen
+          ? 'bg-accent text-accent-foreground'
+          : 'text-muted-foreground hover:text-foreground',
+        className,
+      )}
     >
       <MessageSquare className="size-4" />
       <span className="text-xs font-medium">Assistant</span>
