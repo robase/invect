@@ -29,6 +29,10 @@ export type { AuthGateProps } from './components/AuthGate';
 export { UserManagement } from './components/UserManagement';
 export type { UserManagementProps } from './components/UserManagement';
 
+// API key management (admin-only, requires apiKey enabled)
+export { ApiKeysDialog } from './components/ApiKeysDialog';
+export type { ApiKeysDialogProps } from './components/ApiKeysDialog';
+
 // Authenticated Invect wrapper
 export { AuthenticatedInvect } from './components/AuthenticatedInvect';
 export type { AuthenticatedInvectProps } from './components/AuthenticatedInvect';

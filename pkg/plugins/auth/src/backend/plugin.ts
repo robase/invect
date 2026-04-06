@@ -1139,6 +1139,194 @@ export function authentication(options: AuthenticationPluginOptions): InvectPlug
         },
       },
 
+      // ── Auth Info ────────────────────────────────────────────
+
+      {
+        method: 'GET' as const,
+        path: `/${prefix}/info`,
+        isPublic: false,
+        handler: async (ctx: {
+          body: Record<string, unknown>;
+          params: Record<string, string>;
+          query: Record<string, string | undefined>;
+          headers: Record<string, string | undefined>;
+          identity: InvectIdentity | null;
+          request: Request;
+        }) => {
+          const identity = await resolveEndpointIdentity(ctx);
+          if (!identity) {
+            return {
+              status: 401,
+              body: { error: 'Unauthorized' },
+            };
+          }
+          return {
+            status: 200,
+            body: {
+              apiKeysEnabled: apiKeyEnabled,
+            },
+          };
+        },
+      },
+
+      // ── API Key Management (admin-only) ────────────────────
+
+      {
+        method: 'GET' as const,
+        path: `/${prefix}/api-keys`,
+        isPublic: false,
+        handler: async (ctx: {
+          body: Record<string, unknown>;
+          params: Record<string, string>;
+          query: Record<string, string | undefined>;
+          headers: Record<string, string | undefined>;
+          identity: InvectIdentity | null;
+          request: Request;
+        }) => {
+          const identity = await resolveEndpointIdentity(ctx);
+          if (!identity || identity.role !== 'admin') {
+            return {
+              status: 403,
+              body: { error: 'Forbidden', message: 'Admin access required' },
+            };
+          }
+          if (!apiKeyEnabled) {
+            return {
+              status: 400,
+              body: { error: 'API keys are not enabled' },
+            };
+          }
+
+          try {
+            const result = await callBetterAuthHandler(auth, ctx.request, '/api-key/list', {
+              method: 'GET',
+              query: ctx.query,
+            });
+            if (result && result.status >= 200 && result.status < 300) {
+              return { status: 200, body: result.body };
+            }
+            return {
+              status: result?.status ?? 500,
+              body: result?.body ?? { error: 'Failed to list API keys' },
+            };
+          } catch (err) {
+            endpointLogger.error('Failed to list API keys', {
+              identity: sanitizeForLogging(identity),
+              error: getErrorLogDetails(err),
+            });
+            return toAuthApiErrorResponse('Failed to list API keys', err);
+          }
+        },
+      },
+
+      {
+        method: 'POST' as const,
+        path: `/${prefix}/api-keys`,
+        isPublic: false,
+        handler: async (ctx: {
+          body: Record<string, unknown>;
+          params: Record<string, string>;
+          query: Record<string, string | undefined>;
+          headers: Record<string, string | undefined>;
+          identity: InvectIdentity | null;
+          request: Request;
+        }) => {
+          const identity = await resolveEndpointIdentity(ctx);
+          if (!identity || identity.role !== 'admin') {
+            return {
+              status: 403,
+              body: { error: 'Forbidden', message: 'Admin access required' },
+            };
+          }
+          if (!apiKeyEnabled) {
+            return {
+              status: 400,
+              body: { error: 'API keys are not enabled' },
+            };
+          }
+
+          const { name, expiresIn, prefix: keyPrefix } = ctx.body as {
+            name?: string;
+            expiresIn?: number;
+            prefix?: string;
+          };
+
+          try {
+            const result = await callBetterAuthHandler(auth, ctx.request, '/api-key/create', {
+              method: 'POST',
+              body: {
+                name: name || undefined,
+                expiresIn: expiresIn || undefined,
+                prefix: keyPrefix || undefined,
+              },
+            });
+            if (result && result.status >= 200 && result.status < 300) {
+              return { status: 201, body: result.body };
+            }
+            return {
+              status: result?.status ?? 500,
+              body: result?.body ?? { error: 'Failed to create API key' },
+            };
+          } catch (err) {
+            endpointLogger.error('Failed to create API key', {
+              identity: sanitizeForLogging(identity),
+              error: getErrorLogDetails(err),
+            });
+            return toAuthApiErrorResponse('Failed to create API key', err);
+          }
+        },
+      },
+
+      {
+        method: 'DELETE' as const,
+        path: `/${prefix}/api-keys/:keyId`,
+        isPublic: false,
+        handler: async (ctx: {
+          body: Record<string, unknown>;
+          params: Record<string, string>;
+          query: Record<string, string | undefined>;
+          headers: Record<string, string | undefined>;
+          identity: InvectIdentity | null;
+          request: Request;
+        }) => {
+          const identity = await resolveEndpointIdentity(ctx);
+          if (!identity || identity.role !== 'admin') {
+            return {
+              status: 403,
+              body: { error: 'Forbidden', message: 'Admin access required' },
+            };
+          }
+          if (!apiKeyEnabled) {
+            return {
+              status: 400,
+              body: { error: 'API keys are not enabled' },
+            };
+          }
+
+          const { keyId } = ctx.params;
+          try {
+            const result = await callBetterAuthHandler(auth, ctx.request, '/api-key/delete', {
+              method: 'POST',
+              body: { keyId },
+            });
+            if (result && result.status >= 200 && result.status < 300) {
+              return { status: 200, body: { success: true } };
+            }
+            return {
+              status: result?.status ?? 500,
+              body: result?.body ?? { error: 'Failed to delete API key' },
+            };
+          } catch (err) {
+            endpointLogger.error('Failed to delete API key', {
+              identity: sanitizeForLogging(identity),
+              params: sanitizeForLogging(ctx.params),
+              error: getErrorLogDetails(err),
+            });
+            return toAuthApiErrorResponse('Failed to delete API key', err);
+          }
+        },
+      },
+
       // ── User Management (admin-only) ──────────────────────
 
       {

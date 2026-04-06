@@ -16,10 +16,12 @@ import {
   ArrowUp,
   ChevronsUpDown,
   ChevronDown,
+  Key,
   Search,
   Trash2,
   UserPlus,
 } from 'lucide-react';
+import { ApiKeysDialog } from './ApiKeysDialog';
 import {
   Dialog,
   DialogContent,
@@ -201,6 +203,9 @@ export function UserManagement({ apiBaseUrl, className }: UserManagementProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState<'name' | 'createdAt' | 'role'>('name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [apiKeysEnabled, setApiKeysEnabled] = useState(false);
+  const [showApiKeysDialog, setShowApiKeysDialog] = useState(false);
+  const [hasCheckedApiKeys, setHasCheckedApiKeys] = useState(false);
 
   const PAGE_SIZE = 10;
 
@@ -252,6 +257,22 @@ export function UserManagement({ apiBaseUrl, className }: UserManagementProps) {
   );
 
   const authApiBase = `${apiBaseUrl}/plugins/auth`;
+
+  // ── Check API Key Feature ───────────────────────────────────
+
+  const checkApiKeys = useCallback(async () => {
+    try {
+      const res = await fetch(`${authApiBase}/info`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setApiKeysEnabled(!!data.apiKeysEnabled);
+      }
+    } catch {
+      // Silently ignore — feature just won't show
+    } finally {
+      setHasCheckedApiKeys(true);
+    }
+  }, [authApiBase]);
 
   // ── Fetch Users ────────────────────────────────────────────
 
@@ -329,6 +350,9 @@ export function UserManagement({ apiBaseUrl, className }: UserManagementProps) {
   if (!hasFetched && !isLoading) {
     fetchUsers();
   }
+  if (!hasCheckedApiKeys) {
+    checkApiKeys();
+  }
 
   return (
     <div className={`space-y-4 ${className ?? ''}`}>
@@ -347,6 +371,15 @@ export function UserManagement({ apiBaseUrl, className }: UserManagementProps) {
             className="w-full py-2 pr-3 text-sm border rounded-lg outline-none border-imp-border bg-transparent pl-9 placeholder:text-imp-muted-foreground focus:border-imp-primary/50"
           />
         </div>
+        {apiKeysEnabled && (
+          <button
+            type="button"
+            onClick={() => setShowApiKeysDialog(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-imp-border px-3 py-2 text-sm font-medium text-imp-muted-foreground transition-colors hover:border-imp-primary/50 hover:text-imp-foreground"
+          >
+            <Key className="w-4 h-4" /> API Keys
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setShowCreateDialog(true)}
@@ -498,6 +531,15 @@ export function UserManagement({ apiBaseUrl, className }: UserManagementProps) {
           </button>
         </div>
       </div>
+
+      {/* API Keys Dialog */}
+      {apiKeysEnabled && (
+        <ApiKeysDialog
+          open={showApiKeysDialog}
+          onOpenChange={setShowApiKeysDialog}
+          apiBaseUrl={apiBaseUrl}
+        />
+      )}
 
       {/* Create User Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={(open) => !open && setShowCreateDialog(false)}>

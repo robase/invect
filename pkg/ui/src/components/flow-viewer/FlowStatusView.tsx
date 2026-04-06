@@ -8,6 +8,7 @@ import {
   Background,
   useReactFlow,
   useNodesInitialized,
+  useUpdateNodeInternals,
 } from '@xyflow/react';
 
 import { BatchFlowEdge, defaultEdgeOptions } from '../graph';
@@ -82,15 +83,37 @@ export function FlowStatusView({
   // browser to compute final handle positions. Without this, edge source points
   // appear slightly disconnected from output handles.
   const nodesInitialized = useNodesInitialized();
+  const updateNodeInternals = useUpdateNodeInternals();
   const [edgesReady, setEdgesReady] = useState(false);
+
+  // Build a fingerprint of execution statuses so we can detect when node
+  // borders change (1px → 2px) and handle positions shift in the DOM.
+  const executionFingerprint = useMemo(
+    () =>
+      nodes
+        .map((n) => {
+          const d = n.data as { executionStatus?: string } | undefined;
+          return `${n.id}:${d?.executionStatus ?? ''}`;
+        })
+        .join(','),
+    [nodes],
+  );
 
   useEffect(() => {
     if (nodesInitialized && nodes.length > 0) {
+      // Force React Flow to re-measure handle positions for all nodes.
+      // Border changes from execution status (e.g. 1px → 2px on success)
+      // shift handle DOM elements, but React Flow caches stale positions.
+      const nodeIds = nodes.map((n) => n.id);
+      updateNodeInternals(nodeIds);
+
+      setEdgesReady(false);
       const timeout = setTimeout(() => setEdgesReady(true), 80);
       return () => clearTimeout(timeout);
     }
     setEdgesReady(false);
-  }, [nodesInitialized, nodes.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodesInitialized, nodes.length, executionFingerprint, updateNodeInternals]);
 
   const readyEdges = edgesReady ? edges : [];
 
