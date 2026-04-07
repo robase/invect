@@ -87,7 +87,7 @@ const getEdgeStyles = (data?: BatchFlowEdgeData, selected?: boolean) => {
 // Main Invect Edge Component
 export const BatchFlowEdge = memo(function BatchFlowEdge(props: EdgeProps) {
   const {
-    id,
+    id: _id,
     sourceX,
     sourceY,
     targetX,

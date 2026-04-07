@@ -1147,7 +1147,7 @@ export class AgentNodeExecutor extends BaseNodeExecutor<
           j < rest.length &&
           rest[j].role === 'tool' &&
           rest[j].toolCallId &&
-          toolCallIds.has(rest[j].toolCallId!)
+          toolCallIds.has(rest[j].toolCallId as string)
         ) {
           group.push(rest[j]);
           j++;
@@ -1166,7 +1166,10 @@ export class AgentNodeExecutor extends BaseNodeExecutor<
     let totalTokens = firstMsgTokens + groups.reduce((sum, g) => sum + g.tokens, 0);
 
     while (groups.length > 1 && totalTokens > tokenBudget) {
-      const removed = groups.shift()!;
+      const removed = groups.shift();
+      if (!removed) {
+        break;
+      }
       totalTokens -= removed.tokens;
     }
 

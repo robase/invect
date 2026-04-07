@@ -249,7 +249,11 @@ export function useExecutionLogData({ nodes, nodeExecutions }: UseExecutionLogDa
             total: number;
           }
         | undefined;
-      const isLoop = itemMeta != null && typeof itemMeta === 'object' && 'iteration' in itemMeta;
+      const isLoop =
+        itemMeta !== null &&
+        itemMeta !== undefined &&
+        typeof itemMeta === 'object' &&
+        'iteration' in itemMeta;
 
       group.attempts.push({
         id: execution.id,

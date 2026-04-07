@@ -2,7 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApiClient } from '../contexts/ApiContext';
 import { queryKeys, getErrorMessage } from './query-keys';
-import { ValidationError, type ReactFlowDataOptions } from './types';
+import { type ReactFlowDataOptions } from './types';
 import {
   type CreateFlowDto,
   type CreateFlowVersionDto,

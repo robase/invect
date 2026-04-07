@@ -110,7 +110,7 @@ export const getNodeExecutionResultsTool: ChatToolDefinition = {
                   if (!byIteration.has(iter)) {
                     byIteration.set(iter, []);
                   }
-                  byIteration.get(iter)!.push(te);
+                  byIteration.get(iter)?.push(te);
                 }
 
                 base.agentDetails = {
