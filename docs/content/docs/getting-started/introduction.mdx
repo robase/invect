@@ -89,7 +89,8 @@ That's it. You now have:
 
 Invect uses a **core + adapter** pattern. All business logic lives in `@invect/core`. Framework packages (`@invect/express`, `@invect/nestjs`, `@invect/nextjs`) are thin adapters that wrap the core.
 
-<Mermaid chart={`
+<Mermaid
+  chart={`
 graph BT
   subgraph core["@invect/core"]
     C["Flows · Nodes · Agents · Actions\nTemplates · Credentials · Database"]
@@ -98,7 +99,8 @@ graph BT
   NestJS["NestJS Module"] --> core
   NextJS["Next.js Handler"] --> core
   UI["@invect/ui (React)"] -.->|connects to| Express & NestJS & NextJS
-`} />
+`}
+/>
 
 The frontend is a separate React component (`@invect/ui`) that connects to whichever backend adapter you're using.
 

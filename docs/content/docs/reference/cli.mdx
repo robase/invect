@@ -12,7 +12,8 @@ npx invect-cli <command> [options]
 ```
 
 <Callout type="info">
-  You can also use your package manager's equivalent: `pnpm dlx invect-cli`, `yarn dlx invect-cli`, or `bunx invect-cli`.
+  You can also use your package manager's equivalent: `pnpm dlx invect-cli`, `yarn dlx invect-cli`,
+  or `bunx invect-cli`.
 </Callout>
 
 All commands accept `--debug` for detailed error output and stack traces.
@@ -121,11 +122,11 @@ Start a Model Context Protocol (MCP) server over stdio. Connects to a running In
 npx invect-cli mcp --url http://localhost:3000/invect
 ```
 
-| Flag             | Description                                                  |
-| ---------------- | ------------------------------------------------------------ |
-| `--url <url>`    | URL of the running Invect API (default: `http://localhost:3000/invect`). |
-| `--api-key <key>` | API key for authenticated access.                           |
-| `--print-config` | Output ready-to-paste MCP client config (e.g., for Claude Desktop). |
+| Flag              | Description                                                              |
+| ----------------- | ------------------------------------------------------------------------ |
+| `--url <url>`     | URL of the running Invect API (default: `http://localhost:3000/invect`). |
+| `--api-key <key>` | API key for authenticated access.                                        |
+| `--print-config`  | Output ready-to-paste MCP client config (e.g., for Claude Desktop).      |
 
 **Example: generate config for Claude Desktop**
 

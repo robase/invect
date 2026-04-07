@@ -398,6 +398,10 @@ export function applyMultiOutputBranchOffsets<N extends LayoutNode, E extends La
       continue;
     }
 
+    // Get actual source node height for correct centering
+    const sourceNode = layoutedNodes.find((n) => n.id === nodeId);
+    const sourceHeight = sourceNode?.measured?.height ?? sourceNode?.height ?? 60;
+
     // Get all handles sorted in reverse alphabetical order
     // This puts "true" before "false", "output_1" before "output_0", etc.
     // which results in the first handle being at the top (lower Y)
@@ -405,9 +409,10 @@ export function applyMultiOutputBranchOffsets<N extends LayoutNode, E extends La
     const numBranches = handles.length;
 
     // Calculate the total height needed and center offset
-    // We want branches evenly spaced and centered around the source node's Y
+    // Center branches around the source node's vertical center
     const totalSpan = (numBranches - 1) * branchSpacing;
-    const startY = sourcePos.y - totalSpan / 2;
+    const sourceCenterY = sourcePos.y + sourceHeight / 2;
+    const startY = sourceCenterY - totalSpan / 2;
 
     // Position each branch group
     handles.forEach((handle, branchIndex) => {

@@ -1,11 +1,13 @@
 import { FlowEditor } from '../components/flow-editor/FlowEditor';
 import { useParams } from 'react-router';
+import { useDocumentTitle } from '../hooks/use-document-title';
 
 interface FlowProps {
   basePath?: string;
 }
 
 export const Flow = ({ basePath = '' }: FlowProps) => {
+  useDocumentTitle('edit');
   const { flowId, version } = useParams();
 
   if (!flowId) {

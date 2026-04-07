@@ -230,7 +230,8 @@ export const gmailGetMessageAction = defineAction({
         if (response.status === 400 && errorText.includes('Invalid id value')) {
           return {
             success: false,
-            error: `Gmail API error (400): Invalid message ID "${messageId}". ` +
+            error:
+              `Gmail API error (400): Invalid message ID "${messageId}". ` +
               'Message IDs are alphanumeric strings like "18e1a2b3c4d5e6f7", not email addresses. ' +
               'Call gmail.list_messages first to get valid message IDs.',
           };

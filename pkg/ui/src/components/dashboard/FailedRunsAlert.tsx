@@ -56,8 +56,8 @@ export function FailedRunsAlert({ basePath }: { basePath: string }) {
           ))}
         </div>
         <Button variant="ghost" size="sm" asChild className="mt-2 w-full text-xs">
-          <Link to={`${basePath}/executions`}>
-            View all executions
+          <Link to={`${basePath}/flow-runs`}>
+            View all flow runs
             <ArrowRight className="ml-1 h-3 w-3" />
           </Link>
         </Button>

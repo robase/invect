@@ -24,7 +24,7 @@ const switchCaseSchema = z.object({
 });
 
 const paramsSchema = z.object({
-  cases: z.array(switchCaseSchema).min(1).max(20),
+  cases: z.array(switchCaseSchema).min(1).max(4),
 });
 
 export const switchAction = defineAction({

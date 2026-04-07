@@ -77,7 +77,17 @@ export function FlowRouteLayout({ basePath = '' }: FlowRouteLayoutProps) {
           }
         : {}),
     }),
-    [isEditView, isDirty, save, execute, isSaving, isExecuting, isActive, updateFlowMutation.isPending, handleToggleActive],
+    [
+      isEditView,
+      isDirty,
+      save,
+      execute,
+      isSaving,
+      isExecuting,
+      isActive,
+      updateFlowMutation.isPending,
+      handleToggleActive,
+    ],
   );
 
   return (

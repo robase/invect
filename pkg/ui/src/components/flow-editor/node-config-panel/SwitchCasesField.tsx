@@ -202,7 +202,7 @@ export function SwitchCasesField({ value, onChange, nodeId, inputData }: SwitchC
         size="sm"
         className="h-7 text-xs gap-1"
         onClick={handleAddCase}
-        disabled={cases.length >= 20}
+        disabled={cases.length >= 4}
       >
         <Plus className="w-3 h-3" />
         Add Case

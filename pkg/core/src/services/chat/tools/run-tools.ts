@@ -64,6 +64,7 @@ export const getNodeExecutionResultsTool: ChatToolDefinition = {
   description:
     'Get the execution trace for every node in a flow run. ' +
     'Shows per-node status, inputs, outputs, duration, and errors. ' +
+    'For AGENT nodes, also returns per-iteration tool call details (tool name, success, duration, error). ' +
     'Essential for debugging — tells you exactly which node failed and why.',
   parameters: z.object({
     flowRunId: z.string().describe('The flow run ID to get node executions for'),
@@ -76,24 +77,68 @@ export const getNodeExecutionResultsTool: ChatToolDefinition = {
       const executionsResult = await invect.runs.getNodeExecutions(flowRunId);
 
       // Return a compact view — full outputs can be huge
-      const traces = executionsResult.data.map((ex) => ({
-        nodeId: ex.nodeId,
-        nodeType: ex.nodeType,
-        status: ex.status,
-        duration: ex.duration,
-        error: ex.error,
-        // Truncate large outputs to keep context manageable
-        output: ex.outputs
-          ? JSON.stringify(ex.outputs).length > 2000
-            ? JSON.stringify(ex.outputs).slice(0, 2000) + '…(truncated)'
-            : ex.outputs
-          : undefined,
-        input: ex.inputs
-          ? JSON.stringify(ex.inputs).length > 1000
-            ? JSON.stringify(ex.inputs).slice(0, 1000) + '…(truncated)'
-            : ex.inputs
-          : undefined,
-      }));
+      const traces = await Promise.all(
+        executionsResult.data.map(async (ex) => {
+          const base = {
+            nodeId: ex.nodeId,
+            nodeType: ex.nodeType,
+            status: ex.status,
+            duration: ex.duration,
+            error: ex.error,
+            // Truncate large outputs to keep context manageable
+            output: ex.outputs
+              ? JSON.stringify(ex.outputs).length > 2000
+                ? JSON.stringify(ex.outputs).slice(0, 2000) + '…(truncated)'
+                : ex.outputs
+              : undefined,
+            input: ex.inputs
+              ? JSON.stringify(ex.inputs).length > 1000
+                ? JSON.stringify(ex.inputs).slice(0, 1000) + '…(truncated)'
+                : ex.inputs
+              : undefined,
+          } as Record<string, unknown>;
+
+          // For AGENT nodes, fetch tool execution details per iteration
+          if (ex.nodeType === 'AGENT') {
+            try {
+              const toolExecs = await invect.runs.getToolExecutionsByNodeExecutionId(ex.id);
+              if (toolExecs.length > 0) {
+                // Group by iteration for clarity
+                const byIteration = new Map<number, typeof toolExecs>();
+                for (const te of toolExecs) {
+                  const iter = te.iteration ?? 0;
+                  if (!byIteration.has(iter)) {byIteration.set(iter, []);}
+                  byIteration.get(iter)!.push(te);
+                }
+
+                base.agentDetails = {
+                  totalToolCalls: toolExecs.length,
+                  iterations: Array.from(byIteration.entries()).map(([iteration, calls]) => ({
+                    iteration,
+                    toolCalls: calls.map((tc) => ({
+                      toolId: tc.toolId,
+                      toolName: tc.toolName,
+                      success: tc.success,
+                      duration: tc.duration,
+                      error: tc.error,
+                      // Truncate tool output to keep context manageable
+                      output: tc.output
+                        ? JSON.stringify(tc.output).length > 500
+                          ? JSON.stringify(tc.output).slice(0, 500) + '…(truncated)'
+                          : tc.output
+                        : undefined,
+                    })),
+                  })),
+                };
+              }
+            } catch {
+              // Best-effort — don't fail trace retrieval if tool executions can't be fetched
+            }
+          }
+
+          return base;
+        }),
+      );
 
       const failedNodes = traces.filter((t) => t.status === 'FAILED' || t.error);
 

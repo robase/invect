@@ -160,7 +160,13 @@ function agentNode(
       taskPrompt: 'Do the task',
       systemPrompt: 'You are a helpful assistant.',
       addedTools: [
-        { instanceId: 'inst_math', toolId: 'math_eval', name: 'Math Evaluate', description: 'Evaluate math expressions', params: {} },
+        {
+          instanceId: 'inst_math',
+          toolId: 'math_eval',
+          name: 'Math Evaluate',
+          description: 'Evaluate math expressions',
+          params: {},
+        },
       ],
       maxIterations: 10,
       stopCondition: 'explicit_stop',
@@ -750,10 +756,26 @@ describe('Agent Node + Tool Execution', () => {
       responseQueue.push(textResponse('Age 25 is adult, 7 years over 18.'));
 
       const result = await runAgentFlow({
-        nodes: [agentNode({ addedTools: [
-          { instanceId: 'inst_math', toolId: 'math_eval', name: 'Math Evaluate', description: 'Evaluate math expressions', params: {} },
-          { instanceId: 'inst_json', toolId: 'json_logic', name: 'JSON Logic', description: 'Evaluate JSON logic', params: {} },
-        ] })],
+        nodes: [
+          agentNode({
+            addedTools: [
+              {
+                instanceId: 'inst_math',
+                toolId: 'math_eval',
+                name: 'Math Evaluate',
+                description: 'Evaluate math expressions',
+                params: {},
+              },
+              {
+                instanceId: 'inst_json',
+                toolId: 'json_logic',
+                name: 'JSON Logic',
+                description: 'Evaluate JSON logic',
+                params: {},
+              },
+            ],
+          }),
+        ],
         edges: [],
       });
 
@@ -771,10 +793,26 @@ describe('Agent Node + Tool Execution', () => {
       responseQueue.push(textResponse('No tools needed.'));
 
       await runAgentFlow({
-        nodes: [agentNode({ addedTools: [
-          { instanceId: 'inst_math', toolId: 'math_eval', name: 'Math Evaluate', description: 'Evaluate math expressions', params: {} },
-          { instanceId: 'inst_json', toolId: 'json_logic', name: 'JSON Logic', description: 'Evaluate JSON logic', params: {} },
-        ] })],
+        nodes: [
+          agentNode({
+            addedTools: [
+              {
+                instanceId: 'inst_math',
+                toolId: 'math_eval',
+                name: 'Math Evaluate',
+                description: 'Evaluate math expressions',
+                params: {},
+              },
+              {
+                instanceId: 'inst_json',
+                toolId: 'json_logic',
+                name: 'JSON Logic',
+                description: 'Evaluate JSON logic',
+                params: {},
+              },
+            ],
+          }),
+        ],
         edges: [],
       });
 

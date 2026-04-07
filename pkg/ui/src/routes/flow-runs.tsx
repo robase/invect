@@ -1,11 +1,13 @@
 import { FlowRunsView } from '../components/flow-viewer/FlowRunsView';
 import { useParams } from 'react-router';
+import { useDocumentTitle } from '../hooks/use-document-title';
 
 interface FlowRunsProps {
   basePath?: string;
 }
 
 export const FlowRuns = ({ basePath = '' }: FlowRunsProps) => {
+  useDocumentTitle('runs');
   const { flowId, version } = useParams();
 
   if (!flowId) {

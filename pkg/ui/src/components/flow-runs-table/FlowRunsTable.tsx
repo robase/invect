@@ -248,11 +248,11 @@ const StatusBadge: React.FC<{ status: ExecutionStatus }> = ({ status }) => {
   );
 };
 
-interface ExecutionsTableProps {
+interface FlowRunsTableProps {
   basePath?: string;
 }
 
-export const ExecutionsTable: React.FC<ExecutionsTableProps> = ({ basePath = '' }) => {
+export const FlowRunsTable: React.FC<FlowRunsTableProps> = ({ basePath = '' }) => {
   const navigate = useNavigate();
   const [flowSearch, setFlowSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
@@ -357,7 +357,7 @@ export const ExecutionsTable: React.FC<ExecutionsTableProps> = ({ basePath = '' 
   if (executionsLoading || flowsLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <InvectLoader iconClassName="h-14" label="Loading executions..." />
+        <InvectLoader iconClassName="h-14" label="Loading flow runs..." />
       </div>
     );
   }
@@ -366,7 +366,7 @@ export const ExecutionsTable: React.FC<ExecutionsTableProps> = ({ basePath = '' 
     return (
       <div className="p-4 border border-red-200 dark:border-red-800 rounded-lg bg-red-50 dark:bg-red-900/30">
         <div className="text-red-800 dark:text-red-300">
-          <strong>Error loading executions:</strong>{' '}
+          <strong>Error loading flow runs:</strong>{' '}
           {executionsError instanceof Error
             ? executionsError.message
             : 'Failed to load executions from the server'}
@@ -421,7 +421,7 @@ export const ExecutionsTable: React.FC<ExecutionsTableProps> = ({ basePath = '' 
         )}
       </div>
 
-      {/* Executions Table */}
+      {/* Flow Runs Table */}
       {executions.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center py-14 text-center">
@@ -433,7 +433,7 @@ export const ExecutionsTable: React.FC<ExecutionsTableProps> = ({ basePath = '' 
               )}
             </div>
             <h3 className="text-base font-semibold text-foreground mb-1">
-              {hasActiveFilters ? 'No executions match your filters' : 'No executions yet'}
+              {hasActiveFilters ? 'No flow runs match your filters' : 'No flow runs yet'}
             </h3>
             <p className="max-w-sm mx-auto text-sm text-muted-foreground mb-5">
               {hasActiveFilters

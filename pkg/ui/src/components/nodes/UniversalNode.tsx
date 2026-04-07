@@ -34,6 +34,16 @@ const HIDDEN_HANDLE_STYLE_FALSE = {
 const HANDLE_CLASS =
   '!bg-background !w-4 !h-4 !border-2 !border-muted-foreground !rounded-full !transition-all hover:!w-[18px] hover:!h-[18px] hover:!border-primary !shadow-none !ring-0';
 
+// Height calculation for nodes with >2 outputs (e.g. switch with multiple cases)
+const MULTI_OUTPUT_PADDING = 16; // px padding above first handle and below last
+const MULTI_OUTPUT_HANDLE_SPACING = 24; // px between each output handle
+
+/** Compute node height based on output count. Must match react-flow-renderer.service.ts */
+function getNodeHeight(outputCount: number): number {
+  if (outputCount <= 2) {return 60;}
+  return MULTI_OUTPUT_PADDING * 2 + (outputCount - 1) * MULTI_OUTPUT_HANDLE_SPACING;
+}
+
 const DEFAULT_CATEGORY_COLOR = 'bg-muted text-muted-foreground';
 
 function getProviderAccentColor(providerId?: string): string {
@@ -111,13 +121,21 @@ const NodeLoadingPlaceholder = memo(
     const label = data.display_name || data.type || 'Loading...';
     const nodeType = data.type || 'Loading';
 
+    // Compute dynamic height for switch nodes
+    const switchOutputCount =
+      data.type === 'core.switch' && Array.isArray(data.params?.cases)
+        ? (data.params.cases as unknown[]).length + 1
+        : 0;
+    const placeholderHeight = switchOutputCount > 2 ? getNodeHeight(switchOutputCount) : 60;
+
     return (
       <Card
-        className={`relative w-[240px] h-[60px] flex-row py-0 items-center cursor-move transition-colors bg-card hover:bg-card/80 ${
+        className={`relative w-[240px] flex-row py-0 items-center cursor-move transition-colors bg-card hover:bg-card/80 ${
           selected
             ? 'border-blue-500 dark:border-blue-400 shadow-lg shadow-blue-500/25 dark:shadow-blue-400/30'
             : 'border-sidebar-ring hover:border-muted-foreground'
         }`}
+        style={{ height: placeholderHeight }}
       >
         {/* Input handle */}
         <Handle
@@ -229,18 +247,26 @@ export const UniversalNode = memo(({ data, selected }: NodeProps) => {
 
   const outputHandleConfigs = outputs.map((output, index) => {
     if (outputs.length === 1) {
-      return { output, topPercent: 50 };
+      return { output, topStyle: '50%' };
     }
+    // >2 outputs: use pixel positioning (node grows taller to fit)
+    if (outputs.length > 2) {
+      const topPx = MULTI_OUTPUT_PADDING + index * MULTI_OUTPUT_HANDLE_SPACING;
+      return { output, topStyle: `${topPx}px` };
+    }
+    // 2 outputs (e.g. if_else): percentage positioning within standard 60px height
     const EDGE_OFFSET = 28; // Keep outer handles closer to node edges without clipping
     const availableSpace = 100 - EDGE_OFFSET * 2;
     const topPercent = EDGE_OFFSET + (index / (outputs.length - 1)) * availableSpace;
-    return { output, topPercent };
+    return { output, topStyle: `${topPercent}%` };
   });
+
+  const nodeHeight = getNodeHeight(outputs.length);
 
   return (
     <Card
       className={cn(
-        'relative w-[200px] h-[60px] flex-row py-0 items-center cursor-move transition-colors node-hover-bg bg-card shadow-md border-l-4',
+        'relative w-[200px] flex-row py-0 items-center cursor-move transition-colors node-hover-bg bg-card shadow-md border-l-4',
         getProviderAccentColor(definition?.provider?.id),
         // Default border
         !isRunning &&
@@ -260,6 +286,7 @@ export const UniversalNode = memo(({ data, selected }: NodeProps) => {
         // Selection state - change existing border color to blue for visibility
         selected && !isRunning && !isSuccess && !isError && !isSkipped && 'node-selected',
       )}
+      style={{ height: nodeHeight }}
     >
       {/* Unified Input Handle */}
       {hasIncomingHandle && (
@@ -294,14 +321,14 @@ export const UniversalNode = memo(({ data, selected }: NodeProps) => {
       </div>
 
       {/* Output Handles */}
-      {outputHandleConfigs.map(({ output, topPercent }) => {
+      {outputHandleConfigs.map(({ output, topStyle }) => {
         // Show labels when there are multiple outputs (e.g., If/Else True/False)
         const showLabel = outputs.length > 1;
         return (
           <div
             key={output.id}
             className="absolute right-0"
-            style={{ top: `${topPercent}%`, transform: 'translateY(-50%)' }}
+            style={{ top: topStyle, transform: 'translateY(-50%)' }}
           >
             <div className="relative flex items-center">
               <Handle

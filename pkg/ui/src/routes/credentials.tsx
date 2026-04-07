@@ -17,6 +17,7 @@ import {
 } from '../components/ui/alert-dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../components/ui/tooltip';
 import type { Credential, CreateCredentialInput } from '../api/types';
+import { useDocumentTitle } from '../hooks/use-document-title';
 import { CreateCredentialModal } from '../components/credentials/CreateCredentialModal';
 import { CredentialDetailDialog } from '../components/credentials/CredentialDetailDialog';
 import { ProviderIcon } from '../components/shared/ProviderIcon';
@@ -40,6 +41,7 @@ export interface CredentialsProps {
 }
 
 export const Credentials: React.FC<CredentialsProps> = ({ basePath: _basePath = '/invect' }) => {
+  useDocumentTitle('credentials');
   const containerRef = useRef<HTMLDivElement>(null);
 
   // State

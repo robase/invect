@@ -171,6 +171,76 @@ export const listAgentToolsTool: ChatToolDefinition = {
 };
 
 // =====================================
+// get_tool_details
+// =====================================
+
+export const getToolDetailsTool: ChatToolDefinition = {
+  id: 'get_tool_details',
+  name: 'Get Tool Details',
+  description:
+    'Get the full details of a specific tool including its parameter schema. ' +
+    'Shows every parameter with its type, whether it is required, default values, and description. ' +
+    'Use this before add_tool_to_agent to know what params a tool expects.',
+  parameters: z.object({
+    toolId: z.string().describe('The tool ID to inspect (e.g. "gmail.send_message")'),
+  }),
+  async execute(params: unknown, ctx: ChatToolContext): Promise<ChatToolResult> {
+    const { toolId } = params as { toolId: string };
+    const invect = ctx.invect;
+
+    try {
+      const allTools = invect.agent.getTools();
+      const tool = allTools.find((t) => t.id === toolId);
+
+      if (!tool) {
+        // Suggest close matches
+        const idLower = toolId.toLowerCase();
+        const suggestions = allTools
+          .filter(
+            (t) => t.id.toLowerCase().includes(idLower) || idLower.includes(t.id.toLowerCase()),
+          )
+          .slice(0, 5)
+          .map((t) => t.id);
+        return {
+          success: false,
+          error: `Tool "${toolId}" not found.${suggestions.length > 0 ? ` Did you mean: ${suggestions.join(', ')}?` : ' Use list_agent_tools to discover available tools.'}`,
+        };
+      }
+
+      // Extract parameter details from the JSON Schema
+      const schema = tool.inputSchema as Record<string, unknown>;
+      const properties = (schema.properties ?? {}) as Record<string, Record<string, unknown>>;
+      const required = (schema.required ?? []) as string[];
+
+      const paramDetails = Object.entries(properties).map(([name, prop]) => ({
+        name,
+        type: (prop.type ?? prop.anyOf) ? 'union' : 'unknown',
+        required: required.includes(name),
+        description: prop.description,
+        ...(prop.default !== undefined ? { default: prop.default } : {}),
+        ...(prop.enum ? { allowedValues: prop.enum } : {}),
+      }));
+
+      return {
+        success: true,
+        data: {
+          toolId: tool.id,
+          name: tool.name,
+          description: tool.description,
+          provider: tool.provider?.name,
+          category: tool.category,
+          parameters: paramDetails,
+          parameterCount: paramDetails.length,
+          requiredCount: paramDetails.filter((p) => p.required).length,
+        },
+      };
+    } catch (error: unknown) {
+      return { success: false, error: `Failed to get tool details: ${(error as Error).message}` };
+    }
+  },
+};
+
+// =====================================
 // get_agent_node_tools
 // =====================================
 
@@ -728,6 +798,7 @@ export const configureAgentTool: ChatToolDefinition = {
 
 export const agentNodeTools: ChatToolDefinition[] = [
   listAgentToolsTool,
+  getToolDetailsTool,
   getAgentNodeToolsTool,
   addToolToAgentTool,
   removeToolFromAgentTool,

@@ -9,7 +9,8 @@ import { Mermaid } from '../../../components/Mermaid';
 
 All business logic lives in `@invect/core`. Framework packages are thin adapters that wrap the core. This means the same logic runs identically across Express, NestJS, and Next.js.
 
-<Mermaid chart={`
+<Mermaid
+  chart={`
 graph BT
   subgraph core["@invect/core"]
     direction TB
@@ -21,7 +22,8 @@ graph BT
   Express["Express Router"] --> core
   NestJS["NestJS Module"] --> core
   NextJS["Next.js Handler"] --> core
-`} />
+`}
+/>
 
 ## Service layer
 

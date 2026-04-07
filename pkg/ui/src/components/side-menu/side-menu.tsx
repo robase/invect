@@ -26,7 +26,7 @@ export function AppSideMenu({ basePath = '' }: AppSideMenuProps) {
 
   const menuItems = [
     { icon: Home, label: 'Home', href: basePath || '/' },
-    { icon: FileText, label: 'Executions', href: `${basePath}/executions` },
+    { icon: FileText, label: 'Flow Runs', href: `${basePath}/flow-runs` },
     { icon: KeyRound, label: 'Credentials', href: `${basePath}/credentials` },
   ];
 

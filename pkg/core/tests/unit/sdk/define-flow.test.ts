@@ -361,8 +361,20 @@ describe('agent node', () => {
       model: 'claude-sonnet-4-0',
       taskPrompt: 'Handle ticket: {{ ticket }}',
       addedTools: [
-        { instanceId: 'inst_http', toolId: 'http.request', name: 'HTTP Request', description: 'Make HTTP requests', params: {} },
-        { instanceId: 'inst_js', toolId: 'core.javascript', name: 'JavaScript', description: 'Run JavaScript', params: {} },
+        {
+          instanceId: 'inst_http',
+          toolId: 'http.request',
+          name: 'HTTP Request',
+          description: 'Make HTTP requests',
+          params: {},
+        },
+        {
+          instanceId: 'inst_js',
+          toolId: 'core.javascript',
+          name: 'JavaScript',
+          description: 'Run JavaScript',
+          params: {},
+        },
       ],
       maxIterations: 15,
       stopCondition: 'explicit_stop',
@@ -403,7 +415,13 @@ describe('agent node', () => {
           model: 'gpt-4o',
           taskPrompt: 'Research {{ topic }}',
           addedTools: [
-            { instanceId: 'inst_http', toolId: 'http.request', name: 'HTTP Request', description: 'Make HTTP requests', params: {} },
+            {
+              instanceId: 'inst_http',
+              toolId: 'http.request',
+              name: 'HTTP Request',
+              description: 'Make HTTP requests',
+              params: {},
+            },
           ],
           maxIterations: 10,
         }),

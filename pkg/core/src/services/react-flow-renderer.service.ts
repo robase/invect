@@ -292,13 +292,27 @@ export class ReactFlowRendererService {
         ...(node.mapper ? { mapper: node.mapper } : {}),
       };
 
+      // Compute per-node height: switch nodes grow taller with more outputs
+      let nodeHeight = 60;
+      if (
+        node.type === 'core.switch' &&
+        node.params &&
+        Array.isArray((node.params as Record<string, unknown>).cases)
+      ) {
+        const outputCount =
+          ((node.params as Record<string, unknown>).cases as unknown[]).length + 1; // cases + default
+        if (outputCount > 2) {
+          nodeHeight = 32 + (outputCount - 1) * 24;
+        }
+      }
+
       const transformedNode: ReactFlowNode = {
         id: node.id,
         type: node.type,
         position: node.position || { x: 0, y: 0 },
         data: nodeData,
         width: 200,
-        height: 60,
+        height: nodeHeight,
       };
 
       nodes.push(transformedNode);

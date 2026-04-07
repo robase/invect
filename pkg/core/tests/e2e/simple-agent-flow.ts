@@ -79,7 +79,13 @@ Use the math_eval tool if you need to perform any calculations. Be precise and s
         systemPrompt:
           'You are a helpful math assistant. Use the math_eval tool to perform accurate calculations. Always show your reasoning.',
         addedTools: [
-          { instanceId: 'inst_math', toolId: 'math_eval', name: 'Math Evaluate', description: 'Evaluate math expressions', params: {} },
+          {
+            instanceId: 'inst_math',
+            toolId: 'math_eval',
+            name: 'Math Evaluate',
+            description: 'Evaluate math expressions',
+            params: {},
+          },
         ],
         maxIterations: 5,
         stopCondition: 'explicit_stop',

@@ -92,9 +92,7 @@ export function FlowLayout({
                         {!collapsed && 'Add nodes'}
                       </button>
                     </TooltipTrigger>
-                    {collapsed && (
-                      <TooltipContent side="top">Add nodes</TooltipContent>
-                    )}
+                    {collapsed && <TooltipContent side="top">Add nodes</TooltipContent>}
                   </Tooltip>
                 )}
                 {layoutSelector}

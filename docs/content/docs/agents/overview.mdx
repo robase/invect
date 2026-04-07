@@ -10,7 +10,8 @@ The **Agent** node runs an iterative AI loop: send a prompt to an LLM, the model
 
 ## How agents work
 
-<Mermaid chart={`
+<Mermaid
+  chart={`
 flowchart TD
   A["1. Send task prompt + tools to LLM"] --> B{"2. LLM response"}
   B -->|Tool call| C["3. Execute tool(s)"]
@@ -18,7 +19,8 @@ flowchart TD
   D --> A
   B -->|Text response| E["Agent loop ends"]
   B -->|Stop tool called| E
-`} />
+`}
+/>
 
 At each iteration, the LLM can:
 

@@ -131,6 +131,12 @@ export interface AgentToolExecutionContext {
    * Example: credentialId for OAuth2 tools like Gmail
    */;
   staticParams?: Record<string, unknown>;
+  /**
+   * Abort signal from the timeout controller.
+   * Tools (especially HTTP-based) should pass this to fetch() or similar APIs
+   * so that in-flight requests are cancelled when the tool times out.
+   */
+  abortSignal?: AbortSignal;
 }
 
 /**

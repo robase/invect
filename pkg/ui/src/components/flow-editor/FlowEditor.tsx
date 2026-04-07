@@ -58,7 +58,7 @@ const EMPTY_TOOLS: AddedToolInstance[] = [];
 // Node dimensions (must match max-w/h in UniversalNode / AgentNode)
 const NODE_WIDTH = 240;
 const NODE_HEIGHT = 60;
-const PLACEMENT_OFFSET = 80; // Larger than NODE_HEIGHT so a single step always clears collisions
+const PLACEMENT_OFFSET = 140; // Larger than max possible node height (128px for 5-output switch)
 
 /**
  * Finds a position that doesn't overlap any existing node, stepping down-right
@@ -74,7 +74,9 @@ function findNonOverlappingPosition(
 
   const overlaps = (cx: number, cy: number) =>
     existingNodes.some(
-      (n) => Math.abs(n.position.x - cx) < NODE_WIDTH && Math.abs(n.position.y - cy) < NODE_HEIGHT,
+      (n) =>
+        Math.abs(n.position.x - cx) < NODE_WIDTH &&
+        Math.abs(n.position.y - cy) < (n.height ?? NODE_HEIGHT),
     );
 
   while (overlaps(x, y)) {

@@ -9,7 +9,8 @@ This page covers the internals of flow execution. For a practical overview, see 
 
 ## Flow execution pipeline
 
-<Mermaid chart={`
+<Mermaid
+  chart={`
 flowchart TD
   A["core.startFlowRun(flowId, inputs)"] --> B["FlowsService.getFlowById()\nLoad flow + latest version definition"]
   B --> C["FlowOrchestrationService.initiateFlowRun()"]
@@ -28,7 +29,8 @@ flowchart TD
   N --> O["Store output for downstream nodes"]
   O --> F
   F -->|All done| P["Return FlowRunResult"]
-`} />
+`}
+/>
 
 ## Input data construction
 

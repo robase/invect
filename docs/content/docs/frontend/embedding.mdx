@@ -136,13 +136,15 @@ function App() {
 
 This renders:
 
-<Mermaid chart={`
+<Mermaid
+  chart={`
 graph TD
   Shell["InvectShell (CSS scope + theme)"] --> Auth["AuthProvider"]
   Auth --> Gate["AuthGate"]
   Gate -->|Not authenticated| SignIn["Sign-in page\n(with Invect styling)"]
   Gate -->|Authenticated| App["&lt;Invect /&gt; (full app)"]
-`} />
+`}
+/>
 
 See [Authentication Plugin](/docs/plugins/authentication) for backend setup.
 

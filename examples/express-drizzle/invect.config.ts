@@ -23,8 +23,8 @@ export const invectConfig = defineConfig({
   logging: {
     level: 'info',
     scopes: {
-      credentials: 'debug'
-    }
+      credentials: 'debug',
+    },
   },
   defaultCredentials: process.env.SEED_ANTHROPIC_API_KEY
     ? [

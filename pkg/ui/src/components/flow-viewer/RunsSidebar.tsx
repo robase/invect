@@ -74,7 +74,7 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({ runs, selectedRunId, o
         {runs.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full px-4 text-center">
             <Clock className="w-12 h-12 mb-3 text-muted-foreground/50" />
-            <p className="mb-1 text-sm text-muted-foreground">No executions yet</p>
+            <p className="mb-1 text-sm text-muted-foreground">No flow runs yet</p>
             <p className="text-xs text-muted-foreground">Run this flow to see execution history</p>
           </div>
         ) : (

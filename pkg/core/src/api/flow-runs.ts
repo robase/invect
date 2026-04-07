@@ -143,5 +143,10 @@ export function createFlowRunsAPI(sf: ServiceFactory, logger: Logger): FlowRunsA
       logger.debug('listNodeExecutions called');
       return nodeExecutionsService.listNodeExecutions(options);
     },
+
+    getToolExecutionsByNodeExecutionId(nodeExecutionId) {
+      logger.debug('getToolExecutionsByNodeExecutionId called', { nodeExecutionId });
+      return nodeExecutionsService.getToolExecutionsByNodeExecutionId(nodeExecutionId);
+    },
   };
 }

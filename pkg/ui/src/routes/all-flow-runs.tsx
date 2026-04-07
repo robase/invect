@@ -1,15 +1,17 @@
 import { Link } from 'react-router';
-import { ExecutionsTable } from '../components/executions/ExecutionsTable';
+import { FlowRunsTable } from '../components/flow-runs-table/FlowRunsTable';
 import { PageLayout } from '../components/PageLayout';
+import { useDocumentTitle } from '../hooks/use-document-title';
 
-interface ExecutionsProps {
+interface AllFlowRunsProps {
   basePath?: string;
 }
 
-export const Executions = ({ basePath = '' }: ExecutionsProps) => {
+export const AllFlowRuns = ({ basePath = '' }: AllFlowRunsProps) => {
+  useDocumentTitle('flow runs');
   return (
     <PageLayout
-      title="Executions"
+      title="Flow Runs"
       actions={
         <Link
           to={basePath || '/'}
@@ -19,7 +21,7 @@ export const Executions = ({ basePath = '' }: ExecutionsProps) => {
         </Link>
       }
     >
-      <ExecutionsTable basePath={basePath} />
+      <FlowRunsTable basePath={basePath} />
     </PageLayout>
   );
 };

@@ -8,7 +8,10 @@
 import type { Flow, CreateFlowInput, UpdateFlowInput } from '../services/flows/flows.model';
 import type { FlowVersion } from '../database';
 import type { FlowRun } from '../services/flow-runs/flow-runs.model';
-import type { NodeExecution } from '../services/node-executions/node-executions.model';
+import type {
+  NodeExecution,
+  AgentToolExecution,
+} from '../services/node-executions/node-executions.model';
 import type {
   ExecuteFlowOptions,
   FlowRunResult,
@@ -128,6 +131,7 @@ export interface FlowRunsAPI {
   listNodeExecutions(
     options?: QueryOptions<NodeExecution>,
   ): Promise<PaginatedResponse<NodeExecution>>;
+  getToolExecutionsByNodeExecutionId(nodeExecutionId: string): Promise<AgentToolExecution[]>;
 }
 
 // =====================================

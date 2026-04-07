@@ -224,18 +224,12 @@ function DetailsSection({
           </p>
           <div className="flex items-center gap-1.5">
             {expired ? (
-              <Badge
-                variant="secondary"
-                className="bg-warning-muted text-warning"
-              >
+              <Badge variant="secondary" className="bg-warning-muted text-warning">
                 <AlertTriangle className="w-3 h-3 mr-1" />
                 Token Expired
               </Badge>
             ) : credential.isActive ? (
-              <Badge
-                variant="secondary"
-                className="bg-success-muted text-success"
-              >
+              <Badge variant="secondary" className="bg-success-muted text-success">
                 <CheckCircle2 className="w-3 h-3 mr-1" />
                 Active
               </Badge>
@@ -708,9 +702,7 @@ function OAuth2AwareTestSection({
       {testResult && (
         <div
           className={`rounded-md px-3 py-2 text-sm ${
-            testResult.success
-              ? 'bg-success/10 text-success'
-              : 'bg-destructive/10 text-destructive'
+            testResult.success ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
           }`}
         >
           {testResult.success

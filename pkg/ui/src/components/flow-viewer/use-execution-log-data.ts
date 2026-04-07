@@ -62,7 +62,14 @@ export interface ExecutionLogAttempt {
   /** True when this attempt is a loop/mapper iteration (detected via _item in inputs) */
   isLoopIteration?: boolean;
   /** The _item metadata for loop iterations */
-  iterationItem?: { value: unknown; index: number; iteration: number; first: boolean; last: boolean; total: number };
+  iterationItem?: {
+    value: unknown;
+    index: number;
+    iteration: number;
+    first: boolean;
+    last: boolean;
+    total: number;
+  };
 }
 
 export interface ExecutionLogNode {
@@ -81,7 +88,11 @@ export interface SelectedExecutionAttempt {
   toolCallId?: string;
 }
 
-type RawAttempt = ExecutionLogAttempt & { startedAtMs?: number; isPlaceholder?: boolean; _isLoopIteration?: boolean };
+type RawAttempt = ExecutionLogAttempt & {
+  startedAtMs?: number;
+  isPlaceholder?: boolean;
+  _isLoopIteration?: boolean;
+};
 
 type UseExecutionLogDataParams = {
   nodes?: ReactFlowNode[];
@@ -229,7 +240,14 @@ export function useExecutionLogData({ nodes, nodeExecutions }: UseExecutionLogDa
 
       // Detect loop iteration via _item metadata in inputs
       const itemMeta = execution.inputs?._item as
-        | { value: unknown; index: number; iteration: number; first: boolean; last: boolean; total: number }
+        | {
+            value: unknown;
+            index: number;
+            iteration: number;
+            first: boolean;
+            last: boolean;
+            total: number;
+          }
         | undefined;
       const isLoop = itemMeta != null && typeof itemMeta === 'object' && 'iteration' in itemMeta;
 

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { PageLayout } from '../components/PageLayout';
+import { useDocumentTitle } from '../hooks/use-document-title';
 import { useFlows, useDashboardStats, useCreateFlow } from '../api/flows.api';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
@@ -28,6 +29,7 @@ interface HomeProps {
 }
 
 export const Home = ({ basePath = '' }: HomeProps) => {
+  useDocumentTitle('dashboard');
   const navigate = useNavigate();
   const { data: statsData, isLoading: statsLoading } = useDashboardStats();
   const { data: flowsResponse, isLoading: flowsLoading, error } = useFlows();
@@ -73,9 +75,9 @@ export const Home = ({ basePath = '' }: HomeProps) => {
             </Link>
           </Button>
           <Button variant="outline" size="sm" asChild>
-            <Link to={`${basePath}/executions`}>
+            <Link to={`${basePath}/flow-runs`}>
               <History className="h-3.5 w-3.5 mr-1.5" />
-              Executions
+              Flow Runs
             </Link>
           </Button>
           <Button size="sm" onClick={handleCreateFlow} disabled={createFlowMutation.isPending}>
@@ -256,7 +258,7 @@ export const Home = ({ basePath = '' }: HomeProps) => {
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold">Recent Activity</h2>
             <Button variant="ghost" size="sm" className="text-xs" asChild>
-              <Link to={`${basePath}/executions`}>
+              <Link to={`${basePath}/flow-runs`}>
                 View all
                 <ArrowRight className="w-3 h-3 ml-1" />
               </Link>

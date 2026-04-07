@@ -15,7 +15,7 @@ import { NodeRegistryProvider } from './contexts/NodeRegistryContext';
 import { PluginRegistryProvider } from './contexts/PluginRegistryContext';
 import type { InvectFrontendPlugin } from './types/plugin.types';
 import { Home } from './routes/home';
-import { Executions } from './routes/executions';
+import { AllFlowRuns } from './routes/all-flow-runs';
 import { Flow } from './routes/flow';
 import { FlowRuns } from './routes/flow-runs';
 import { Credentials } from './routes/credentials';
@@ -141,7 +141,7 @@ const InvectRoutes = React.memo(
           >
             <Route index element={<Home basePath={basePath} />} />
             <Route path="credentials" element={<Credentials basePath={basePath} />} />
-            <Route path="executions" element={<Executions basePath={basePath} />} />
+            <Route path="flow-runs" element={<AllFlowRuns basePath={basePath} />} />
             {/* Flow-scoped layout with header */}
             <Route path="flow/:flowId" element={<FlowRouteLayout basePath={basePath} />}>
               <Route index element={<Flow basePath={basePath} />} />
