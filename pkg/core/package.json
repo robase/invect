@@ -85,7 +85,7 @@
     "croner": "^10.0.1",
     "drizzle-orm": "^0.44.7",
     "json-logic-js": "^2.0.5",
-    "kysely": "^0.28.11",
+    "kysely": "^0.28.14",
     "nanoid": "^5.0.9",
     "openai": "^5.11.0",
     "quickjs-emscripten": "^0.32.0",
