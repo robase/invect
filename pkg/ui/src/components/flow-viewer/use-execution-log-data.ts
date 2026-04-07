@@ -59,6 +59,10 @@ export interface ExecutionLogAttempt {
   toolCalls?: ExecutionLogToolCall[];
   /** Agent-specific metadata for agent nodes */
   agentMetadata?: AgentExecutionMetadata;
+  /** True when this attempt is a loop/mapper iteration (detected via _item in inputs) */
+  isLoopIteration?: boolean;
+  /** The _item metadata for loop iterations */
+  iterationItem?: { value: unknown; index: number; iteration: number; first: boolean; last: boolean; total: number };
 }
 
 export interface ExecutionLogNode {
@@ -77,7 +81,7 @@ export interface SelectedExecutionAttempt {
   toolCallId?: string;
 }
 
-type RawAttempt = ExecutionLogAttempt & { startedAtMs?: number; isPlaceholder?: boolean };
+type RawAttempt = ExecutionLogAttempt & { startedAtMs?: number; isPlaceholder?: boolean; _isLoopIteration?: boolean };
 
 type UseExecutionLogDataParams = {
   nodes?: ReactFlowNode[];
@@ -223,6 +227,12 @@ export function useExecutionLogData({ nodes, nodeExecutions }: UseExecutionLogDa
       // Extract tool calls for agent nodes
       const agentData = extractAgentToolCalls(execution);
 
+      // Detect loop iteration via _item metadata in inputs
+      const itemMeta = execution.inputs?._item as
+        | { value: unknown; index: number; iteration: number; first: boolean; last: boolean; total: number }
+        | undefined;
+      const isLoop = itemMeta != null && typeof itemMeta === 'object' && 'iteration' in itemMeta;
+
       group.attempts.push({
         id: execution.id,
         attemptNumber: 0,
@@ -239,6 +249,9 @@ export function useExecutionLogData({ nodes, nodeExecutions }: UseExecutionLogDa
         isPlaceholder: false,
         toolCalls: agentData?.toolCalls,
         agentMetadata: agentData?.agentMetadata,
+        _isLoopIteration: isLoop,
+        isLoopIteration: isLoop,
+        iterationItem: isLoop ? itemMeta : undefined,
       });
     });
 
@@ -280,18 +293,28 @@ export function useExecutionLogData({ nodes, nodeExecutions }: UseExecutionLogDa
             }
             return a.id.localeCompare(b.id);
           })
-          .map((attempt, index) => ({
-            ...attempt,
-            attemptNumber: index + 1,
-            label: attempt.isPlaceholder
-              ? 'Pending'
-              : index === 0
-                ? `Attempt #${index + 1}`
-                : `Retry #${index + 1}`,
-          }));
+          .map((attempt, index, arr) => {
+            // Check if all non-placeholder attempts in this group are loop iterations
+            const allLoop = arr.filter((a) => !a.isPlaceholder).every((a) => a._isLoopIteration);
+            let label: string;
+            if (attempt.isPlaceholder) {
+              label = 'Pending';
+            } else if (allLoop && attempt._isLoopIteration) {
+              label = `Iteration #${index + 1}`;
+            } else if (index === 0) {
+              label = `Attempt #${index + 1}`;
+            } else {
+              label = `Retry #${index + 1}`;
+            }
+            return {
+              ...attempt,
+              attemptNumber: index + 1,
+              label,
+            };
+          });
 
         const sortedAttemptsWithoutMeta = sortedAttempts.map(
-          ({ startedAtMs, isPlaceholder, ...rest }) => rest,
+          ({ startedAtMs, isPlaceholder, _isLoopIteration, ...rest }) => rest,
         );
         const firstTimestamp = sortedAttempts.find(
           (attempt) => attempt.startedAtMs !== undefined,

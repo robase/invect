@@ -48,11 +48,11 @@ const providerIcons: Record<string, React.ElementType> = {
 
 // Category labels and colors
 const categoryConfig: Record<string, { label: string; color: string }> = {
-  google: { label: 'Google', color: 'bg-blue-500/20 text-blue-600 border-blue-500/30' },
-  microsoft: { label: 'Microsoft', color: 'bg-cyan-500/20 text-cyan-600 border-cyan-500/30' },
+  google: { label: 'Google', color: 'bg-info/15 text-info border-info/30' },
+  microsoft: { label: 'Microsoft', color: 'bg-info/15 text-info border-info/30' },
   github: { label: 'GitHub', color: 'bg-muted text-muted-foreground border-border' },
-  slack: { label: 'Slack', color: 'bg-purple-500/20 text-purple-600 border-purple-500/30' },
-  other: { label: 'Other', color: 'bg-orange-500/20 text-orange-600 border-orange-500/30' },
+  slack: { label: 'Slack', color: 'bg-primary/15 text-primary border-primary/30' },
+  other: { label: 'Other', color: 'bg-warning/15 text-warning border-warning/30' },
 };
 
 interface OAuth2ProviderSelectorProps {
@@ -146,13 +146,7 @@ export function OAuth2ProviderSelector({
   };
 
   const handleSuccess = (credential: Credential) => {
-    console.log('[OAuth2ProviderSelector] handleSuccess called with credential:', credential.id);
-    console.log(
-      '[OAuth2ProviderSelector] onCredentialCreated callback exists:',
-      !!onCredentialCreated,
-    );
     onCredentialCreated?.(credential);
-    console.log('[OAuth2ProviderSelector] onCredentialCreated callback completed');
     onOpenChange(false);
     // Reset state
     setSelectedProvider(null);
@@ -250,10 +244,10 @@ export function OAuth2ProviderSelector({
 
               <div className="p-2 text-xs rounded-lg bg-muted/50">
                 <p className="font-medium mb-1">Redirect URI</p>
-                <code className="block p-1.5 rounded bg-background text-[10px] break-all">
+                <code className="block p-1.5 rounded bg-background text-xs font-mono break-all">
                   {redirectUri}
                 </code>
-                <p className="mt-1 text-[10px] text-muted-foreground">
+                <p className="mt-1 text-xs text-muted-foreground">
                   Add this URL to your OAuth app's allowed redirect URIs
                 </p>
               </div>
@@ -340,7 +334,7 @@ export function OAuth2ProviderSelector({
                                     {provider.description}
                                   </p>
                                 </div>
-                                <Badge variant="outline" className="text-[10px] shrink-0">
+                                <Badge variant="outline" className="text-xs shrink-0">
                                   {provider.supportsRefresh ? 'Auto-refresh' : 'Manual'}
                                 </Badge>
                               </button>

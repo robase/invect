@@ -1,6 +1,6 @@
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Play, Save, Settings, Share2, Loader2, Power, PowerOff } from 'lucide-react';
+import { Save, Settings, Share2, Loader2 } from 'lucide-react';
 import { InlineEdit } from './inline-edit';
 import { cn } from '../../lib/utils';
 import { usePluginRegistry } from '../../contexts/PluginRegistryContext';
@@ -10,26 +10,16 @@ interface FlowHeaderProps {
   flowName: string;
   onFlowNameChange: (name: string) => void;
   isDirty?: boolean;
-  isActive?: boolean;
-  isTogglingActive?: boolean;
-  onToggleActive?: () => void;
   onSave?: () => Promise<boolean | void>;
-  onExecute?: () => Promise<void>;
   isSaving?: boolean;
-  isExecuting?: boolean;
 }
 
 export function FlowHeader({
   flowName,
   onFlowNameChange,
   isDirty = false,
-  isActive,
-  isTogglingActive = false,
-  onToggleActive,
   onSave,
-  onExecute,
   isSaving = false,
-  isExecuting = false,
 }: FlowHeaderProps) {
   const { flowId } = useParams();
   const registry = usePluginRegistry();
@@ -48,9 +38,9 @@ export function FlowHeader({
         {isDirty ? (
           <Badge
             variant="secondary"
-            className="gap-1.5 text-xs border-amber-300/40 bg-amber-100/60 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-700/40"
+            className="gap-1.5 text-xs border-warning/40 bg-warning-muted text-warning"
           >
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+            <span className="h-1.5 w-1.5 rounded-full bg-warning" />
             Unsaved Changes
           </Badge>
         ) : (
@@ -91,71 +81,6 @@ export function FlowHeader({
           )}
           Save
         </Button>
-        <Button
-          size="sm"
-          onClick={onExecute}
-          disabled={isExecuting || !onExecute}
-          className="shadow-sm"
-        >
-          {isExecuting ? (
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-          ) : (
-            <Play className="w-4 h-4 mr-2" />
-          )}
-          Run
-        </Button>
-
-        {/* Active / Inactive segmented toggle */}
-        {isActive !== undefined && onToggleActive && (
-          <div className="inline-flex items-center rounded-md border border-border bg-muted/40 p-0.5">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                if (!isActive) {
-                  onToggleActive();
-                }
-              }}
-              disabled={isTogglingActive}
-              className={cn(
-                'h-7 gap-1.5 rounded-sm px-2.5 text-xs',
-                isActive
-                  ? 'bg-card text-foreground shadow-sm hover:bg-card'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              {isTogglingActive && !isActive ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Power className="w-3.5 h-3.5" />
-              )}
-              Active
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                if (isActive) {
-                  onToggleActive();
-                }
-              }}
-              disabled={isTogglingActive}
-              className={cn(
-                'h-7 gap-1.5 rounded-sm px-2.5 text-xs',
-                !isActive
-                  ? 'bg-card text-foreground shadow-sm hover:bg-card'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              {isTogglingActive && isActive ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <PowerOff className="w-3.5 h-3.5" />
-              )}
-              Inactive
-            </Button>
-          </div>
-        )}
       </div>
     </header>
   );

@@ -491,7 +491,7 @@ export function UserManagement({ apiBaseUrl, className }: UserManagementProps) {
                     <button
                       type="button"
                       onClick={() => setPendingDeleteUser(u)}
-                      className="rounded-md p-1.5 text-imp-muted-foreground opacity-0 transition-opacity hover:bg-red-50 hover:text-red-600 group-hover:opacity-100 dark:hover:bg-red-950/20 dark:hover:text-red-400"
+                      className="rounded-md p-1.5 text-imp-muted-foreground opacity-0 transition-opacity hover:bg-imp-destructive/10 hover:text-imp-destructive group-hover:opacity-100"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

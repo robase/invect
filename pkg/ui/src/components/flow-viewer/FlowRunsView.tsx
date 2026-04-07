@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { FlowLayout } from '../flow-editor/FlowLayout';
 import { ModeSwitcher } from '../flow-editor/ModeSwitcher';
+import { RunControls } from '../flow-editor/RunControls';
 import { FlowStatusView } from './FlowStatusView';
 import { LogsPanel } from './logs-panel';
 import { ChatPanel, ChatToggleButton } from '~/components/chat';
@@ -11,6 +12,7 @@ import { useFlowReactFlowData } from '../../api/flows.api';
 import { FlowRun } from '@invect/core/types';
 import { useExecutionLogData, SelectedExecutionAttempt } from './use-execution-log-data';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '../ui/resizable';
+import { useFlowActions } from '../../routes/flow-route-layout';
 
 export interface FlowRunsViewProps {
   flowId: string;
@@ -169,6 +171,9 @@ export function FlowRunsView({ flowId, flowVersion, basePath }: FlowRunsViewProp
     completedAt: r.completedAt,
   }));
 
+  // Flow actions from parent layout context (execute, active state)
+  const flowActions = useFlowActions();
+
   return (
     <div className="flex flex-col flex-1 h-full min-h-0 imp-page bg-imp-background text-imp-foreground">
       <FlowLayout
@@ -182,6 +187,16 @@ export function FlowRunsView({ flowId, flowVersion, basePath }: FlowRunsViewProp
             viewMode="runs"
           />
         }
+        toolbarExtra={
+          <RunControls
+            onExecute={flowActions?.onExecute}
+            isExecuting={flowActions?.isExecuting}
+            isActive={flowActions?.isActive}
+            isTogglingActive={flowActions?.isTogglingActive}
+            onToggleActive={flowActions?.onToggleActive}
+          />
+        }
+        chatToggle={<ChatToggleButton />}
         sidebar={<></>}
         viewport={
           <ResizablePanelGroup direction="vertical" className="h-full min-h-0">
@@ -201,9 +216,6 @@ export function FlowRunsView({ flowId, flowVersion, basePath }: FlowRunsViewProp
                   recenterTrigger={recenterTrigger}
                   selectedNodeId={selectedAttempt?.nodeId}
                 />
-                <div className="absolute z-10 flex items-center gap-1 p-1 -translate-x-1/2 border rounded-lg shadow-md bottom-4 left-1/2 border-border bg-card/90 backdrop-blur-sm">
-                  <ChatToggleButton />
-                </div>
               </div>
             </ResizablePanel>
             {isLogsExpanded && (

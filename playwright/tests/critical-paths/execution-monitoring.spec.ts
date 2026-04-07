@@ -740,7 +740,6 @@ test.describe('Execution Monitoring', () => {
             model: 'claude-opus-4-6',
             taskPrompt:
               'You must call the math_eval tool exactly once with expression 21*2, then summarize the tool result.',
-            enabledTools: ['math_eval'],
             addedTools: [
               {
                 instanceId: 'math-eval-1',

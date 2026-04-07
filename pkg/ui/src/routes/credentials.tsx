@@ -240,16 +240,16 @@ export const Credentials: React.FC<CredentialsProps> = ({ basePath: _basePath = 
                       <span
                         className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${
                           expired
-                            ? 'bg-amber-500'
+                            ? 'bg-warning'
                             : credential.isActive
-                              ? 'bg-emerald-500'
+                              ? 'bg-success'
                               : 'bg-muted-foreground/40'
                         }`}
                       />
                       {expired && (
                         <Badge
                           variant="secondary"
-                          className="text-[10px] px-1.5 py-0 font-medium leading-4 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                          className="text-[10px] px-1.5 py-0 font-medium leading-4 bg-warning-muted text-warning"
                         >
                           Expired
                         </Badge>
@@ -348,7 +348,7 @@ export const Credentials: React.FC<CredentialsProps> = ({ basePath: _basePath = 
                 }
               }}
               disabled={deleteCredentialMutation.isPending}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-destructive hover:bg-destructive/90"
             >
               {deleteCredentialMutation.isPending ? 'Deleting…' : 'Delete'}
             </AlertDialogAction>

@@ -92,7 +92,6 @@ export const SEED_FLOWS = {
             model: 'gpt-4o-mini',
             taskPrompt: 'Research: {{ build_prompt }}',
             maxIterations: 5,
-            enabledTools: [],
           },
           position: { x: 600, y: 200 },
         },

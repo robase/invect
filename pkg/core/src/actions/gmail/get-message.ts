@@ -95,7 +95,13 @@ function extractContent(payload: GmailPayload | undefined): {
 
 const paramsSchema = z.object({
   credentialId: z.string().min(1, 'Gmail credential is required'),
-  messageId: z.string().min(1, 'Message ID is required'),
+  messageId: z
+    .string()
+    .min(1, 'Message ID is required')
+    .refine((id) => !id.includes('@'), {
+      message:
+        'Message ID cannot be an email address. Use the numeric/alphanumeric ID from gmail.list_messages (e.g. "18e1a2b3c4d5e6f7").',
+    }),
   format: z.enum(['full', 'metadata', 'minimal']).optional().default('full'),
 });
 
@@ -103,7 +109,9 @@ export const gmailGetMessageAction = defineAction({
   id: 'gmail.get_message',
   name: 'Get Email',
   description:
-    "Get the full content of a single email by ID (users.messages.get). Use when the user wants to read a specific email's body, headers, or attachments.\n\n" +
+    'Get the full content of a single email by its Gmail message ID (users.messages.get). ' +
+    'The messageId is an opaque alphanumeric string (e.g. "18e1a2b3c4d5e6f7") returned by gmail.list_messages — it is NOT an email address. ' +
+    'You must call gmail.list_messages first to obtain valid message IDs.\n\n' +
     'Example response:\n' +
     '```json\n' +
     '{"id": "18e1a2b", "threadId": "18e1a2b", "from": "alice@example.com", "subject": "Hello", "textBody": "...", "attachments": []}\n' +
@@ -153,7 +161,8 @@ export const gmailGetMessageAction = defineAction({
         type: 'text',
         required: true,
         placeholder: '18e1a2b3c4d5e6f7',
-        description: 'The Gmail message ID to retrieve (from list_messages output)',
+        description:
+          'The Gmail message ID to retrieve. This is an alphanumeric string from gmail.list_messages output, NOT an email address.',
         aiProvided: true,
       },
       {
@@ -217,9 +226,18 @@ export const gmailGetMessageAction = defineAction({
 
       if (!response.ok) {
         const errorText = await response.text();
+        // Add helpful context for common errors
+        if (response.status === 400 && errorText.includes('Invalid id value')) {
+          return {
+            success: false,
+            error: `Gmail API error (400): Invalid message ID "${messageId}". ` +
+              'Message IDs are alphanumeric strings like "18e1a2b3c4d5e6f7", not email addresses. ' +
+              'Call gmail.list_messages first to get valid message IDs.',
+          };
+        }
         return {
           success: false,
-          error: `Gmail API error: ${response.status} ${response.statusText} - ${errorText}`,
+          error: `Gmail API error (${response.status}): ${response.statusText} - ${errorText}`,
         };
       }
 

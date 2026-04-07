@@ -4,6 +4,7 @@ description: How flows execute — topological ordering, data flow, and state ma
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
+import { Mermaid } from '../../../components/Mermaid';
 
 Understanding how Invect executes flows helps you build reliable workflows and debug issues.
 
@@ -11,11 +12,12 @@ Understanding how Invect executes flows helps you build reliable workflows and d
 
 Invect uses **topological sorting** to determine the order nodes execute. A node only runs after all its upstream dependencies have completed. Nodes at the same level with no dependencies between them could theoretically run in parallel (currently sequential).
 
-```
-Input ──→ Fetch Data ──→ Transform ──→ Output
-              │
-              └──→ Validate ──→ Log
-```
+<Mermaid chart={`
+graph LR
+  Input --> FetchData["Fetch Data"]
+  FetchData --> Transform --> Output
+  FetchData --> Validate --> Log
+`} />
 
 In this flow, execution order is:
 
@@ -56,19 +58,16 @@ Each node's output is stored and made available to downstream nodes. Outputs are
 
 ## Flow run lifecycle
 
-```
-┌─────────────┐
-│  PENDING     │  Flow run created
-└──────┬──────┘
-       ▼
-┌─────────────┐
-│  RUNNING     │  Nodes executing in order
-└──────┬──────┘
-       ▼
-┌─────────────────────────────────────┐
-│  SUCCESS / FAILED / PAUSED_FOR_BATCH │
-└─────────────────────────────────────┘
-```
+<Mermaid chart={`
+stateDiagram-v2
+  [*] --> PENDING : Flow run created
+  PENDING --> RUNNING : Execution starts
+  RUNNING --> SUCCESS : All nodes completed
+  RUNNING --> FAILED : A node failed
+  RUNNING --> PAUSED_FOR_BATCH : Batch job submitted
+  RUNNING --> CANCELLED : Cancelled
+  PAUSED_FOR_BATCH --> RUNNING : Batch completes
+`} />
 
 | Status             | Description                                                         |
 | ------------------ | ------------------------------------------------------------------- |

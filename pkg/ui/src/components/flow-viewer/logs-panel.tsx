@@ -503,12 +503,18 @@ function NodeAttemptDetailView({
               ) : (
                 <ChevronRight className="size-3.5" />
               )}
-              Inputs
+              {attempt.isLoopIteration ? 'Iteration Input' : 'Inputs'}
             </button>
             {inputsOpen && (
               <div className="max-w-full overflow-hidden border rounded-md border-border">
                 <CodeMirrorJsonEditor
-                  value={JSON.stringify(attempt.inputs, null, 2)}
+                  value={JSON.stringify(
+                    attempt.isLoopIteration && attempt.iterationItem
+                      ? attempt.iterationItem.value
+                      : attempt.inputs,
+                    null,
+                    2,
+                  )}
                   readOnly
                   disableLinting
                   minHeight="60px"

@@ -3,6 +3,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import {
   Dialog,
   DialogContent,
@@ -222,11 +223,10 @@ export const CreateCredentialModal: React.FC<CreateCredentialModalProps> = ({
             <Label htmlFor="type" className="text-xs">
               Credential Type*
             </Label>
-            <select
-              id="type"
+            <Select
               value={formData.type}
-              onChange={(e) => {
-                const newType = e.target.value as CredentialType;
+              onValueChange={(value) => {
+                const newType = value as CredentialType;
                 if (newType === 'llm') {
                   setFormData({ ...formData, type: newType, authType: 'apiKey' });
                 } else {
@@ -237,13 +237,16 @@ export const CreateCredentialModal: React.FC<CreateCredentialModalProps> = ({
                   setFormData({ ...formData, type: newType, authType: nextAuthType });
                 }
               }}
-              className="flex w-full h-8 px-3 py-1 text-xs rounded-md border border-input bg-background dark:bg-input/30 shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-              required
             >
-              <option value="http-api">HTTP API</option>
-              <option value="llm">LLM Provider</option>
-              <option value="database">Database</option>
-            </select>
+              <SelectTrigger size="sm" className="w-full text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="http-api">HTTP API</SelectItem>
+                <SelectItem value="llm">LLM Provider</SelectItem>
+                <SelectItem value="database">Database</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Auth Type (hidden for LLM — always apiKey) */}
@@ -252,21 +255,23 @@ export const CreateCredentialModal: React.FC<CreateCredentialModalProps> = ({
               <Label htmlFor="authType" className="text-xs">
                 Authentication Type*
               </Label>
-              <select
-                id="authType"
+              <Select
                 value={formData.authType}
-                onChange={(e) =>
-                  setFormData({ ...formData, authType: e.target.value as CredentialAuthType })
+                onValueChange={(value) =>
+                  setFormData({ ...formData, authType: value as CredentialAuthType })
                 }
-                className="flex w-full h-8 px-3 py-1 text-xs rounded-md border border-input bg-background dark:bg-input/30 shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-                required
               >
-                {getAuthTypesForType(formData.type).map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger size="sm" className="w-full text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {getAuthTypesForType(formData.type).map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 
@@ -276,23 +281,24 @@ export const CreateCredentialModal: React.FC<CreateCredentialModalProps> = ({
               <Label htmlFor="llmProvider" className="text-xs">
                 LLM Provider*
               </Label>
-              <select
-                id="llmProvider"
+              <Select
                 value={(formData.metadata?.provider as string) || ''}
-                onChange={(e) =>
+                onValueChange={(value) =>
                   setFormData({
                     ...formData,
-                    metadata: { ...formData.metadata, provider: e.target.value },
+                    metadata: { ...formData.metadata, provider: value },
                   })
                 }
-                className="flex w-full h-8 px-3 py-1 text-xs rounded-md border border-input bg-background dark:bg-input/30 shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-                required
               >
-                <option value="">Select a provider…</option>
-                <option value="openai">OpenAI</option>
-                <option value="anthropic">Anthropic</option>
-                <option value="openrouter">OpenRouter</option>
-              </select>
+                <SelectTrigger size="sm" className="w-full text-xs">
+                  <SelectValue placeholder="Select a provider…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="openai">OpenAI</SelectItem>
+                  <SelectItem value="anthropic">Anthropic</SelectItem>
+                  <SelectItem value="openrouter">OpenRouter</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           )}
 
@@ -499,27 +505,31 @@ export const CreateCredentialModal: React.FC<CreateCredentialModalProps> = ({
               <div className="p-2.5 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium">Test Credential</span>
-                  <span className="text-[10px] text-muted-foreground">Optional</span>
+                  <span className="text-xs text-muted-foreground">Optional</span>
                 </div>
-                <p className="text-[10px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   Test your credential by making a request to an API endpoint.
                 </p>
 
                 <div className="flex gap-2">
-                  <select
+                  <Select
                     value={testMethod}
-                    onChange={(e) => {
-                      setTestMethod(e.target.value as typeof testMethod);
+                    onValueChange={(value) => {
+                      setTestMethod(value as typeof testMethod);
                       setTestStatus('idle');
                     }}
-                    className="w-20 h-8 px-2 py-1 text-xs rounded-md border border-input bg-background dark:bg-input/30 shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                   >
-                    <option value="GET">GET</option>
-                    <option value="POST">POST</option>
-                    <option value="PUT">PUT</option>
-                    <option value="PATCH">PATCH</option>
-                    <option value="DELETE">DELETE</option>
-                  </select>
+                    <SelectTrigger size="sm" className="w-20 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="GET">GET</SelectItem>
+                      <SelectItem value="POST">POST</SelectItem>
+                      <SelectItem value="PUT">PUT</SelectItem>
+                      <SelectItem value="PATCH">PATCH</SelectItem>
+                      <SelectItem value="DELETE">DELETE</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <Input
                     id="testUrl"
                     value={testUrl}
@@ -549,7 +559,7 @@ export const CreateCredentialModal: React.FC<CreateCredentialModalProps> = ({
 
                 {['POST', 'PUT', 'PATCH'].includes(testMethod) && (
                   <div className="space-y-1">
-                    <Label htmlFor="testBody" className="text-[10px]">
+                    <Label htmlFor="testBody" className="text-xs">
                       Request Body (JSON)
                     </Label>
                     <Textarea
@@ -568,14 +578,14 @@ export const CreateCredentialModal: React.FC<CreateCredentialModalProps> = ({
                 )}
 
                 {testStatus === 'success' && (
-                  <div className="flex items-center gap-1.5 text-[10px] text-green-600">
+                  <div className="flex items-center gap-1.5 text-xs text-success">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     <span>{testMessage}</span>
                   </div>
                 )}
 
                 {testStatus === 'error' && (
-                  <div className="flex items-center gap-1.5 text-[10px] text-destructive">
+                  <div className="flex items-center gap-1.5 text-xs text-destructive">
                     <XCircle className="w-3.5 h-3.5" />
                     <span>{testMessage}</span>
                   </div>

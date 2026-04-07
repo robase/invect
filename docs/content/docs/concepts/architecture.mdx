@@ -3,46 +3,25 @@ title: Architecture
 description: How Invect is structured — core, services, adapters, and the plugin system.
 ---
 
+import { Mermaid } from '../../../components/Mermaid';
+
 ## Core + adapter pattern
 
 All business logic lives in `@invect/core`. Framework packages are thin adapters that wrap the core. This means the same logic runs identically across Express, NestJS, and Next.js.
 
-```
-┌──────────────────────────────────────┐
-│            @invect/core              │
-│                                      │
-│  Invect class (invect-core.ts)       │
-│  ├── initialize()                    │
-│  ├── createFlow()                    │
-│  ├── startFlowRun()                  │
-│  ├── createCredential()              │
-│  └── 40+ methods                     │
-│                                      │
-│  Services (business logic)           │
-│  ├── FlowOrchestrationService        │
-│  ├── FlowsService                    │
-│  ├── CredentialsService              │
-│  ├── TemplateService                 │
-│  ├── BatchJobsService                │
-│  └── ...                             │
-│                                      │
-│  Actions (node definitions)          │
-│  ├── 190+ defineAction() definitions │
-│  ├── ActionRegistry                  │
-│  └── AgentToolRegistry              │
-│                                      │
-│  Database (Drizzle ORM)              │
-│  ├── SQLite, PostgreSQL, MySQL       │
-│  ├── Models (CRUD abstraction)       │
-│  └── Schema (core + plugin tables)   │
-└──────────────────────────────────────┘
-         ▲        ▲        ▲
-         │        │        │
-┌────────┤  ┌─────┤  ┌─────┤
-│Express │  │NestJS│  │Next │
-│ Router │  │Module│  │Hndlr│
-└────────┘  └──────┘  └─────┘
-```
+<Mermaid chart={`
+graph BT
+  subgraph core["@invect/core"]
+    direction TB
+    A["Invect class\ninitialize() · createFlow()\nstartFlowRun() · 40+ methods"]
+    B["Services\nFlowOrchestration · Flows\nCredentials · Template · BatchJobs"]
+    C["Actions\n190+ defineAction() definitions\nActionRegistry · AgentToolRegistry"]
+    D["Database (Drizzle ORM)\nSQLite · PostgreSQL · MySQL\nModels · Schema"]
+  end
+  Express["Express Router"] --> core
+  NestJS["NestJS Module"] --> core
+  NextJS["Next.js Handler"] --> core
+`} />
 
 ## Service layer
 

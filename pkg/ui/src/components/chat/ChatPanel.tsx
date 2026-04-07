@@ -9,12 +9,14 @@ import React, { useRef, useEffect, useCallback, useMemo } from 'react';
 import { MessageSquare, X, Trash2, Bot, Settings2 } from 'lucide-react';
 import { cn } from '~/lib/utils';
 import { Button } from '~/components/ui/button';
+import { Tooltip, TooltipTrigger, TooltipContent } from '~/components/ui/tooltip';
 import { useChat } from './use-chat';
 import { useCredentials } from '~/api/credentials.api';
 import { useChatStore } from './chat.store';
 import { ChatSettingsPanel } from './ChatSettingsPanel';
 import { ChatMessageList } from './ChatMessageList';
 import { ChatInput } from './ChatInput';
+import { useToolbarCollapsed } from '~/components/flow-editor/toolbar-context';
 
 const DEFAULT_WIDTH = 440;
 const MIN_WIDTH = 340;
@@ -211,21 +213,31 @@ export function ChatPanel({
 
 export function ChatToggleButton({ className }: { className?: string }) {
   const { isOpen, togglePanel } = useChat();
+  const collapsed = useToolbarCollapsed();
 
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={togglePanel}
-      title={isOpen ? 'Close AI Chat' : 'Open AI Chat'}
-      className={cn(
-        'gap-1.5 hover:bg-accent',
-        isOpen ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground',
-        className,
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={togglePanel}
+          title={collapsed ? undefined : isOpen ? 'Close AI Chat' : 'Open AI Chat'}
+          className={cn(
+            'gap-1.5 hover:bg-accent',
+            isOpen
+              ? 'bg-accent text-accent-foreground'
+              : 'text-muted-foreground hover:text-foreground',
+            className,
+          )}
+        >
+          <MessageSquare className="size-4" />
+          {!collapsed && <span className="text-xs font-medium">Chat</span>}
+        </Button>
+      </TooltipTrigger>
+      {collapsed && (
+        <TooltipContent side="top">{isOpen ? 'Close AI Chat' : 'Open AI Chat'}</TooltipContent>
       )}
-    >
-      <MessageSquare className="size-4" />
-      <span className="text-xs font-medium">Chat</span>
-    </Button>
+    </Tooltip>
   );
 }

@@ -9,19 +9,17 @@ Invect encrypts all stored credentials (API keys, OAuth2 tokens, database passwo
 
 ## Encryption key
 
-The `INVECT_ENCRYPTION_KEY` environment variable must be a **base64-encoded 32-byte key**. Generate one:
+The `INVECT_ENCRYPTION_KEY` environment variable must be a **base64-encoded 32-byte key**. Generate one with the CLI:
 
 ```bash
 npx invect-cli secret
 ```
 
-This uses `crypto.randomBytes(32)` to generate a cryptographically secure key and outputs it as base64.
+This uses `crypto.randomBytes(32)` to generate a cryptographically secure key and outputs it as base64. Copy the result into your `.env` or secrets manager.
 
-Alternatively:
-
-```bash
-openssl rand -base64 32
-```
+<Callout type="info">
+  You can also use `openssl rand -base64 32` if you prefer, but `invect-cli secret` is the recommended approach.
+</Callout>
 
 <Callout type="error">
   **Never commit the encryption key to source control.** Store it securely in your environment

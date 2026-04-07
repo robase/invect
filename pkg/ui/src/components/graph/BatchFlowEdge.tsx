@@ -188,8 +188,7 @@ export const BatchFlowEdge = memo(function BatchFlowEdge(props: EdgeProps) {
                 className="w-6 h-6 ml-2 opacity-80 hover:opacity-100"
                 onClick={(e) => {
                   e.stopPropagation();
-                  // Handle edge deletion in parent component
-                  console.log('Delete edge:', id);
+                  // Edge deletion handled by parent component via onEdgesDelete
                 }}
               >
                 <X className="w-3 h-3" />

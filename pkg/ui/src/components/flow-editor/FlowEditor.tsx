@@ -2,6 +2,7 @@ import React, { useRef, useCallback, useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { FlowLayout } from './FlowLayout';
 import { ModeSwitcher } from './ModeSwitcher';
+import { RunControls } from './RunControls';
 import { NodeSidebar } from './NodeSidebar';
 import { ValidationPanel } from './ValidationPanel';
 import { LayoutSelector } from '../graph/LayoutSelector';
@@ -27,6 +28,7 @@ import { ToolConfigPanel } from './ToolConfigPanel';
 import { ChatPanel, ChatToggleButton, ChatPromptOverlay } from '~/components/chat';
 import { useNodeRegistry } from '~/contexts/NodeRegistryContext';
 import { useFlowEditorStore, useIsLoading } from './flow-editor.store';
+import { useFlowActions } from '../../routes/flow-route-layout';
 import { useUIStore } from '~/stores/uiStore';
 import { useTheme } from '~/contexts/ThemeProvider';
 import {
@@ -107,6 +109,9 @@ export function FlowEditor({ flowId, flowVersion, basePath = '' }: FlowEditorPro
   const nodeSidebarOpen = useUIStore((s) => s.nodeSidebarOpen);
   const toggleNodeSidebar = useUIStore((s) => s.toggleNodeSidebar);
 
+  // Flow actions from parent layout context (execute, active state)
+  const flowActions = useFlowActions();
+
   const handleModeChange = (newMode: 'edit' | 'runs') => {
     if (newMode === 'runs') {
       const runsPath = flowVersion
@@ -150,6 +155,15 @@ export function FlowEditor({ flowId, flowVersion, basePath = '' }: FlowEditorPro
           chatToggle={<ChatToggleButton />}
           chatPanel={<ChatPanel flowId={flowId} basePath={basePath} />}
           chatOverlay={<ChatPromptOverlay />}
+          toolbarExtra={
+            <RunControls
+              onExecute={flowActions?.onExecute}
+              isExecuting={flowActions?.isExecuting}
+              isActive={flowActions?.isActive}
+              isTogglingActive={flowActions?.isTogglingActive}
+              onToggleActive={flowActions?.onToggleActive}
+            />
+          }
           viewport={
             <FlowWorkbenchView
               flowId={flowId}

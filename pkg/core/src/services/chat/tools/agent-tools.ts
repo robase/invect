@@ -202,7 +202,6 @@ export const getAgentNodeToolsTool: ChatToolDefinition = {
       const node = agentResult.node;
 
       const addedTools = (node.params?.addedTools ?? []) as AddedToolInstance[];
-      const enabledTools = (node.params?.enabledTools ?? []) as string[];
 
       return {
         success: true,
@@ -217,9 +216,6 @@ export const getAgentNodeToolsTool: ChatToolDefinition = {
             description: t.description,
             params: t.params,
           })),
-          // Include legacy enabledTools for visibility if present
-          ...(enabledTools.length > 0 &&
-            addedTools.length === 0 && { legacyEnabledTools: enabledTools }),
         },
       };
     } catch (error: unknown) {
@@ -345,6 +341,15 @@ export const addToolToAgentTool: ChatToolDefinition = {
         ? (node.params.addedTools as AddedToolInstance[])
         : [];
 
+      // Check for duplicate tool instances of the same base tool
+      const existingOfSameType = existingTools.filter((t) => t.toolId === toolId);
+      const duplicateWarning =
+        existingOfSameType.length > 0
+          ? `Note: This agent already has ${existingOfSameType.length} instance(s) of "${toolId}". ` +
+            `Existing: ${existingOfSameType.map((t) => `${t.name} (${t.instanceId})`).join(', ')}. ` +
+            `Adding another instance. Use update_agent_tool to modify an existing one instead.`
+          : undefined;
+
       existingTools.push(toolInstance);
       node.params.addedTools = existingTools;
 
@@ -359,6 +364,7 @@ export const addToolToAgentTool: ChatToolDefinition = {
           nodeId,
           versionNumber: version.version,
           totalTools: existingTools.length,
+          ...(duplicateWarning ? { warning: duplicateWarning } : {}),
         },
         uiAction: {
           action: 'refresh_flow',
@@ -675,8 +681,22 @@ export const configureAgentTool: ChatToolDefinition = {
       }
       const node = agentResult.node;
 
-      // Merge params — preserve addedTools and enabledTools
+      // Validate credentialId exists before saving
+      if (definedUpdates.credentialId) {
+        try {
+          await invect.credentials.get(definedUpdates.credentialId as string);
+        } catch {
+          return {
+            success: false,
+            error: `Credential "${definedUpdates.credentialId}" not found. Use list_credentials to find available credential IDs.`,
+          };
+        }
+      }
+
+      // Merge params — preserve addedTools (never overwrite tool config here)
       const existingParams = node.params ?? {};
+      // Strip any tool-related keys that might have leaked into the updates
+      delete definedUpdates.addedTools;
       node.params = {
         ...existingParams,
         ...definedUpdates,

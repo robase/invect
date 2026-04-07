@@ -60,11 +60,13 @@ npx invect-cli generate
 npx invect-cli migrate
 ```
 
-Or use `drizzle-kit push` for direct schema application (common in CI/CD):
+For development, use `--push` for a fast direct schema sync without migration files:
 
 ```bash
-npx drizzle-kit push
+npx invect-cli migrate --push
 ```
+
+See [CLI Reference](/docs/reference/cli) for all options.
 
 ## Docker
 

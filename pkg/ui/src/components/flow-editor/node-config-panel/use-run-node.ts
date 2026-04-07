@@ -48,7 +48,7 @@ export function useRunNode({
 
     try {
       // Auto-save flow before running to ensure backend has latest nodes
-      if (flowActions) {
+      if (flowActions?.onSave) {
         const saveSucceeded = await flowActions.onSave({ skipSuccessToast: true });
         if (!saveSucceeded) {
           handleExecutionError(

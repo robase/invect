@@ -3,7 +3,21 @@ title: Introduction
 description: What Invect is and why you'd use it.
 ---
 
+import { Mermaid } from '../../../components/Mermaid';
+
 Invect is a workflow orchestration library that mounts directly into your existing Node.js application. It provides a visual flow editor, AI agent nodes, 190+ built-in integrations, and batch processing — all as npm packages, not a separate platform.
+
+## Getting started
+
+The fastest way to set up Invect is with the CLI:
+
+```bash
+npx invect-cli init
+```
+
+This interactive wizard detects your framework, installs the right packages, creates your config, generates the database schema, and runs the initial migration — all in one command.
+
+See the [Quickstart](/docs/getting-started/quickstart) for a full walkthrough.
 
 ## Features
 
@@ -49,7 +63,7 @@ import { Card, Cards } from 'fumadocs-ui/components/card';
 
 ## How it works
 
-Install the packages. Mount a router. Open the visual editor. Build workflows that connect your AI models, APIs, and data — then trigger them from your code or on a schedule.
+Run `npx invect-cli init` to scaffold your project, or install manually and mount a router. Open the visual editor. Build workflows that connect your AI models, APIs, and data — then trigger them from your code or on a schedule.
 
 ```ts title="index.ts"
 import express from 'express';
@@ -75,21 +89,16 @@ That's it. You now have:
 
 Invect uses a **core + adapter** pattern. All business logic lives in `@invect/core`. Framework packages (`@invect/express`, `@invect/nestjs`, `@invect/nextjs`) are thin adapters that wrap the core.
 
-```
-┌──────────────────────────────────┐
-│         @invect/core             │
-│  Flows, Nodes, Agents, Actions   │
-│  Templates, Credentials, DB      │
-│             ▲  ▲  ▲              │
-└─────────────┼──┼──┼──────────────┘
-              │  │  │
-    ┌─────────┘  │  └─────────┐
-    │            │            │
-┌───▼────┐  ┌───▼────┐  ┌───▼──────┐
-│Express │  │ NestJS │  │ Next.js  │
-│ Router │  │ Module │  │ Handler  │
-└────────┘  └────────┘  └──────────┘
-```
+<Mermaid chart={`
+graph BT
+  subgraph core["@invect/core"]
+    C["Flows · Nodes · Agents · Actions\nTemplates · Credentials · Database"]
+  end
+  Express["Express Router"] --> core
+  NestJS["NestJS Module"] --> core
+  NextJS["Next.js Handler"] --> core
+  UI["@invect/ui (React)"] -.->|connects to| Express & NestJS & NextJS
+`} />
 
 The frontend is a separate React component (`@invect/ui`) that connects to whichever backend adapter you're using.
 

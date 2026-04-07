@@ -133,7 +133,11 @@ Provide a comprehensive analysis with specific numbers and insights.`,
 - json_logic: For conditional checks and rule evaluation
 
 Always use tools for data operations rather than estimating. Show your analysis step by step.`,
-        enabledTools: ['jq_query', 'math_eval', 'json_logic'],
+        addedTools: [
+          { instanceId: 'inst_jq', toolId: 'jq_query', name: 'JQ Query', description: 'Query JSON data using JQ', params: {} },
+          { instanceId: 'inst_math', toolId: 'math_eval', name: 'Math Evaluate', description: 'Evaluate math expressions', params: {} },
+          { instanceId: 'inst_json', toolId: 'json_logic', name: 'JSON Logic', description: 'Evaluate JSON logic rules', params: {} },
+        ],
         maxIterations: 15,
         stopCondition: 'explicit_stop',
         temperature: 0.2,

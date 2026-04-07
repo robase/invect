@@ -215,10 +215,15 @@ export class AnthropicAdapter extends BaseProviderAdapter {
           });
         } catch (error) {
           this.logger.warn('Failed to parse tool input', { error, input: currentToolUse.input });
+          // Signal the parse failure so the agent can see it and retry
           toolCalls.push({
             id: currentToolUse.id,
             toolId: currentToolUse.name,
-            input: {},
+            input: {
+              _parseError:
+                'The tool arguments you provided were malformed JSON. Please retry with valid JSON.',
+              _rawArguments: (currentToolUse.input || '').substring(0, 500),
+            },
           });
         }
         currentToolUse = null;

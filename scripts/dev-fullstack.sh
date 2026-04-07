@@ -4,28 +4,26 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-# Filters combine base packages with their dependents so pnpm automatically
-# rebuilds anything downstream that relies on them (core ➜ adapters ➜ apps).
-TARGET_FILTERS=(
-  "@invect/core..."        # core plus every package that depends on it
-  "@invect/express..."     # express adapter + its dependents
-  "@invect/user-auth..."   # auth plugin + its dependents
-  "@invect/rbac..."        # RBAC plugin + its dependents
-  "@invect/ui..."    # frontend package + example apps
-  "invect-express-simple"  # example backend (explicit for clarity)
-  "flow-executor"             # example frontend (explicit for clarity)
+# "...pkg" = package + all its transitive workspace dependencies (upstream).
+# This auto-discovers the full dependency graph for both example apps:
+#   invect-express-simple  → @invect/core, @invect/express, plugins (auth, rbac, webhooks, mcp)
+#   flow-executor          → @invect/ui, plugins (auth, rbac, webhooks)
+DEV_FILTERS=(
+  --filter "...invect-express-simple"
+  --filter "...flow-executor"
 )
 
-FILTER_ARGS=()
-for filter in "${TARGET_FILTERS[@]}"; do
-  FILTER_ARGS+=("--filter" "$filter")
-done
+# Phase 1: Build only the workspace library deps (exclude the apps themselves
+# since their dev scripts handle startup directly).
+echo "==> Building workspace packages (topological order)"
+pnpm "${DEV_FILTERS[@]}" \
+  --filter "!invect-express-simple" --filter "!flow-executor" \
+  --workspace-concurrency=1 run --if-present build
 
-echo "==> Running dependency-aware initial builds"
-echo "    (pnpm orders the work using the workspace graph so dependents rebuild automatically)"
-pnpm "${FILTER_ARGS[@]}" --workspace-concurrency=1 run --if-present build
-
+# Phase 2: Start everything in watch/dev mode.
+#   - Library packages run tsdown --watch / vite build --watch → rebuild dist/ on change
+#   - express-drizzle's nodemon watches pkg/*/dist and restarts on change
+#   - vite-react-frontend's dev server picks up @invect/ui dist changes
 echo ""
 echo "==> Starting full-stack watch mode"
-echo "    (core/express/frontend packages + example apps share the same dependency-aware filters)"
-pnpm "${FILTER_ARGS[@]}" --parallel --stream run dev
+pnpm "${DEV_FILTERS[@]}" --parallel --stream run dev

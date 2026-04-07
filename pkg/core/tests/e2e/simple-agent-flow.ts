@@ -78,7 +78,9 @@ function buildSimpleAgentFlowDefinition(credentialId: string, isOpenAI: boolean)
 Use the math_eval tool if you need to perform any calculations. Be precise and show your work.`,
         systemPrompt:
           'You are a helpful math assistant. Use the math_eval tool to perform accurate calculations. Always show your reasoning.',
-        enabledTools: ['math_eval'],
+        addedTools: [
+          { instanceId: 'inst_math', toolId: 'math_eval', name: 'Math Evaluate', description: 'Evaluate math expressions', params: {} },
+        ],
         maxIterations: 5,
         stopCondition: 'explicit_stop',
         temperature: 0.1,

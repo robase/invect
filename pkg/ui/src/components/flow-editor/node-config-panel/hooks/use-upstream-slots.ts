@@ -218,7 +218,7 @@ export function useUpstreamSlots({ nodeId, flowId }: UseUpstreamSlotsOptions) {
       dispatch({ type: 'SET_LOADING', nodeId: slot.sourceNodeId });
 
       // Auto-save before running
-      if (flowActions) {
+      if (flowActions?.onSave) {
         const saved = await flowActions.onSave({ skipSuccessToast: true });
         if (!saved) {
           dispatch({

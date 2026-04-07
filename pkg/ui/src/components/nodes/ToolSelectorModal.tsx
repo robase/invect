@@ -334,18 +334,9 @@ export const ToolSelectorModal = memo(function ToolSelectorModal({
   // Handle credential created (from either modal)
   const handleCredentialCreated = useCallback(
     async (createdCredential: Credential) => {
-      console.log(
-        '[ToolSelectorModal] handleCredentialCreated called with credential:',
-        createdCredential.id,
-      );
-      console.log('[ToolSelectorModal] activeCredentialField:', activeCredentialField);
-      console.log('[ToolSelectorModal] selectedInstanceId:', selectedInstanceId);
-
       // Explicitly refetch credentials to ensure the list is up-to-date
       // This is needed because the ToolParamField's useCredentials hook may have stale data
-      console.log('[ToolSelectorModal] Refetching credentials...');
       await queryClient.refetchQueries({ queryKey: ['credentials'] });
-      console.log('[ToolSelectorModal] Credentials refetched');
 
       // If we have a selected instance and active field, update it with the new credential
       // Note: We capture these values before closing modals which clear them
@@ -354,17 +345,10 @@ export const ToolSelectorModal = memo(function ToolSelectorModal({
 
       if (instanceToUpdate && fieldToUpdate) {
         const instance = addedTools.find((t) => t.instanceId === instanceToUpdate);
-        console.log(
-          '[ToolSelectorModal] Updating tool instance:',
-          instanceToUpdate,
-          'field:',
-          fieldToUpdate,
-        );
         if (instance) {
           onUpdateTool(instanceToUpdate, {
             params: { ...instance.params, [fieldToUpdate]: createdCredential.id },
           });
-          console.log('[ToolSelectorModal] Tool updated with credential ID');
         }
       }
       // Close whichever modal is open (this clears activeCredentialField)

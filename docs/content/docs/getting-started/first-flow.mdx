@@ -5,6 +5,7 @@ description: Create a multi-step workflow from scratch using the visual editor.
 
 import { Callout } from 'fumadocs-ui/components/callout';
 import { Step, Steps } from 'fumadocs-ui/components/steps';
+import { Mermaid } from '../../../components/Mermaid';
 
 This guide assumes you've completed the [Quickstart](/docs/getting-started/quickstart) and have Invect running locally.
 
@@ -12,9 +13,10 @@ This guide assumes you've completed the [Quickstart](/docs/getting-started/quick
 
 A simple flow that takes a topic as input, generates a summary using an AI model, and outputs the result. The flow has three nodes:
 
-```
-Input → Model → Output
-```
+<Mermaid chart={`
+graph LR
+  Input --> Model --> Output
+`} />
 
 <Steps>
 

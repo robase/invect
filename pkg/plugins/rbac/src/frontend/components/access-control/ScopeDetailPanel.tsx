@@ -141,7 +141,7 @@ export function ScopeDetailPanel({
                   <button
                     type="button"
                     onClick={() => setShowDeleteConfirm(true)}
-                    className="flex items-center gap-1.5 rounded-md border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-500/10 dark:border-red-500/20 dark:text-red-400"
+                    className="flex items-center gap-1.5 rounded-md border border-imp-destructive/30 px-3 py-1.5 text-xs font-medium text-imp-destructive transition-colors hover:bg-imp-destructive/10"
                   >
                     <Trash2 className="w-4 h-4" /> Delete team
                   </button>

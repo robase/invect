@@ -252,9 +252,9 @@ export const UniversalNode = memo(({ data, selected }: NodeProps) => {
         isRunning &&
           'node-running-border animate-node-border rounded-xl border-y border-r border-transparent',
         // Success state - green border
-        isSuccess && 'border-y-2 border-r-2 border-green-500',
+        isSuccess && 'border-y-2 border-r-2 border-success',
         // Error state - red border
-        isError && 'border-y-2 border-r-2 border-red-500',
+        isError && 'border-y-2 border-r-2 border-destructive',
         // Skipped state - greyed out with dashed border
         isSkipped && 'border-y-2 border-r-2 border-dashed border-muted-foreground/50 opacity-50',
         // Selection state - change existing border color to blue for visibility

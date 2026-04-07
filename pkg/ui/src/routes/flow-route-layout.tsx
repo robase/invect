@@ -17,11 +17,16 @@ interface SaveOptions {
 
 // Context for flow actions
 interface FlowActionsContextType {
-  isDirty: boolean;
-  onSave: (options?: SaveOptions) => Promise<boolean>;
+  // Always available
   onExecute: () => Promise<void>;
-  isSaving: boolean;
   isExecuting: boolean;
+  isActive?: boolean;
+  isTogglingActive: boolean;
+  onToggleActive?: () => void;
+  // Edit-only
+  isDirty?: boolean;
+  onSave?: (options?: SaveOptions) => Promise<boolean>;
+  isSaving?: boolean;
 }
 
 const FlowActionsContext = createContext<FlowActionsContextType | null>(null);
@@ -56,19 +61,23 @@ export function FlowRouteLayout({ basePath = '' }: FlowRouteLayoutProps) {
   // Get setFlowName from store for header updates
   const setFlowName = useFlowEditorStore((s) => s.setFlowName);
 
-  // Context value (only provide in edit view)
-  const flowActionsValue = useMemo(
-    () =>
-      isEditView
+  // Context value — always provided for Run + Active/Inactive; save fields only in edit view
+  const flowActionsValue = useMemo<FlowActionsContextType>(
+    () => ({
+      onExecute: execute,
+      isExecuting,
+      isActive,
+      isTogglingActive: updateFlowMutation.isPending,
+      onToggleActive: handleToggleActive,
+      ...(isEditView
         ? {
             isDirty,
             onSave: save,
-            onExecute: execute,
             isSaving,
-            isExecuting,
           }
-        : null,
-    [isEditView, isDirty, save, execute, isSaving, isExecuting],
+        : {}),
+    }),
+    [isEditView, isDirty, save, execute, isSaving, isExecuting, isActive, updateFlowMutation.isPending, handleToggleActive],
   );
 
   return (
@@ -79,13 +88,8 @@ export function FlowRouteLayout({ basePath = '' }: FlowRouteLayoutProps) {
             flowName={flowName}
             onFlowNameChange={setFlowName}
             isDirty={flowActionsValue?.isDirty}
-            isActive={isActive}
-            isTogglingActive={updateFlowMutation.isPending}
-            onToggleActive={handleToggleActive}
             onSave={flowActionsValue?.onSave}
-            onExecute={execute}
             isSaving={flowActionsValue?.isSaving}
-            isExecuting={isExecuting}
           />
           <div className="imp-page flex-1 min-h-0 bg-imp-background">
             <Outlet />

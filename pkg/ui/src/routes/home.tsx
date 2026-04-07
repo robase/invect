@@ -135,9 +135,9 @@ export const Home = ({ basePath = '' }: HomeProps) => {
 
       {/* ── Error State ─────────────────────────────────────── */}
       {error && (
-        <Card className="border-red-200 dark:border-red-900">
+        <Card className="border-destructive/30">
           <CardContent className="py-4">
-            <div className="text-sm text-red-700 dark:text-red-300">
+            <div className="text-sm text-destructive">
               <strong>Error loading data:</strong>{' '}
               {error instanceof Error ? error.message : 'Failed to connect to server'}
             </div>

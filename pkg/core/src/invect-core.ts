@@ -1936,11 +1936,23 @@ export class Invect {
 
         if (existingCred) {
           try {
+            // For OAuth2 credentials, merge the seed config with the existing
+            // config so that tokens obtained during authorization are preserved.
+            // The seed typically only provides clientId, clientSecret, and
+            // oauth2Provider — overwriting the full config would erase
+            // accessToken, refreshToken, expiresAt, etc.
+            let mergedConfig = rest.config;
+            if (rest.authType === 'oauth2') {
+              const existingDecrypted = await this.credentialsService.get(existingCred.id);
+              const existingConfig = existingDecrypted.config ?? {};
+              mergedConfig = { ...existingConfig, ...rest.config };
+            }
+
             await this.updateCredential(existingCred.id, {
               name: rest.name,
               type: rest.type,
               authType: rest.authType as CredentialAuthType,
-              config: rest.config,
+              config: mergedConfig,
               description: rest.description,
               isShared: rest.isShared,
               metadata,

@@ -5,15 +5,17 @@ description: Mount the Invect visual editor in your React application.
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
 import { Callout } from 'fumadocs-ui/components/callout';
+import { Mermaid } from '../../../components/Mermaid';
 
 The `@invect/ui` package provides a React component that renders the full visual flow editor, dashboard, and management UI.
 
 ## Installation
 
-<Tabs items={['pnpm', 'npm', 'yarn']}>
+<Tabs items={['pnpm', 'npm', 'yarn', 'bun']}>
   <Tab value="pnpm">```bash pnpm add @invect/ui ```</Tab>
   <Tab value="npm">```bash npm install @invect/ui ```</Tab>
   <Tab value="yarn">```bash yarn add @invect/ui ```</Tab>
+  <Tab value="bun">```bash bun add @invect/ui ```</Tab>
 </Tabs>
 
 ## Basic usage
@@ -134,13 +136,13 @@ function App() {
 
 This renders:
 
-```
-InvectShell (CSS scope + theme)
-  └─ AuthProvider
-      └─ AuthGate
-          ├─ Not authenticated → Sign-in page (with Invect styling)
-          └─ Authenticated → <Invect /> (full app)
-```
+<Mermaid chart={`
+graph TD
+  Shell["InvectShell (CSS scope + theme)"] --> Auth["AuthProvider"]
+  Auth --> Gate["AuthGate"]
+  Gate -->|Not authenticated| SignIn["Sign-in page\n(with Invect styling)"]
+  Gate -->|Authenticated| App["&lt;Invect /&gt; (full app)"]
+`} />
 
 See [Authentication Plugin](/docs/plugins/authentication) for backend setup.
 

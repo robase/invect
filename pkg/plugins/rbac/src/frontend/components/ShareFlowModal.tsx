@@ -225,7 +225,7 @@ export function ShareFlowModal({ flowId, onClose }: ShareFlowModalProps) {
                                 <div className="my-1 border-t border-imp-border" />
                                 <button
                                   type="button"
-                                  className="w-full px-3 py-1.5 text-left text-xs text-red-600 hover:bg-red-500/10 dark:text-red-400"
+                                  className="w-full px-3 py-1.5 text-left text-xs text-imp-destructive hover:bg-imp-destructive/10"
                                   onClick={() => {
                                     handleRevoke(record.id);
                                     setOpenRoleDropdown(null);

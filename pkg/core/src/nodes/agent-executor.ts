@@ -39,6 +39,18 @@ import {
   DEFAULT_MAX_CONVERSATION_TOKENS,
   APPROX_TOKENS_PER_CHAR,
 } from 'src/types/agent-tool.types';
+
+/**
+ * Maximum size (in characters) for a single tool output before truncation.
+ * Full output is still recorded to the database for debugging.
+ */
+const MAX_TOOL_OUTPUT_CHARS = 10_000;
+
+/**
+ * Maximum number of tool calls that can execute in parallel.
+ * Excess calls are queued and executed in subsequent batches.
+ */
+const MAX_PARALLEL_TOOL_CALLS = 10;
 import { AgentToolRegistry } from 'src/services/agent-tools/agent-tool-registry';
 import z from 'zod/v4';
 import { createOutputSchema } from 'src/types/node-output-schemas';
@@ -67,8 +79,6 @@ export const agentNodeParamsSchema = z.object({
   // Optional fields with defaults
   systemPrompt: z.string().optional().default(''),
   provider: z.string().optional(),
-  // Support both legacy string array and new AddedToolInstance array
-  enabledTools: z.array(z.string()).optional().default([]),
   addedTools: z.array(addedToolInstanceSchema).optional().default([]),
   maxIterations: z.number().int().min(1).max(50).optional().default(10),
   stopCondition: z
@@ -215,16 +225,6 @@ export class AgentNodeExecutor extends BaseNodeExecutor<
           placeholder: 'Optional: Additional context or behavior instructions...',
           description: "System-level instructions for the agent's behavior.",
         },
-        // Tool Selection (would be tool-selector type in frontend)
-        {
-          name: 'enabledTools',
-          label: 'Available Tools',
-          type: 'json',
-          required: false,
-          defaultValue: [],
-          description:
-            'Array of tool IDs the agent can use. Example: ["jq_query", "http_request", "math_eval"]',
-        },
         // Max Iterations
         {
           name: 'maxIterations',
@@ -308,7 +308,6 @@ export class AgentNodeExecutor extends BaseNodeExecutor<
         model: '',
         taskPrompt: '',
         systemPrompt: '',
-        enabledTools: [],
         maxIterations: 10,
         stopCondition: 'explicit_stop',
         temperature: 0.7,
@@ -341,9 +340,10 @@ export class AgentNodeExecutor extends BaseNodeExecutor<
 
     try {
       let provider = providerFromParams;
+      let credential: Awaited<ReturnType<typeof context.services.credentials.get>> | undefined;
 
       if (!provider && credentialId) {
-        const credential = await context.services.credentials.get(credentialId);
+        credential = await context.services.credentials.get(credentialId);
         provider = detectProviderFromCredential(credential) ?? undefined;
       }
 
@@ -352,6 +352,33 @@ export class AgentNodeExecutor extends BaseNodeExecutor<
           definition: this.getDefinition(),
           params,
           warnings: ['Unable to detect provider from credential'],
+        };
+      }
+
+      // Ensure the adapter is registered so listModelsForProvider can use it
+      if (!context.services.baseAIClient.hasAdapter(provider)) {
+        if (!credential && credentialId) {
+          credential = await context.services.credentials.get(credentialId);
+        }
+        const apiKey = (credential?.config as Record<string, unknown>)?.apiKey as string | undefined;
+        if (apiKey) {
+          const label =
+            provider === BatchProvider.OPENAI
+              ? 'OPENAI'
+              : provider === BatchProvider.ANTHROPIC
+                ? 'ANTHROPIC'
+                : 'OPENROUTER';
+          context.services.baseAIClient.registerAdapter(label, apiKey);
+        }
+      }
+
+      if (!context.services.baseAIClient.hasAdapter(provider)) {
+        return {
+          definition: this.getDefinition(),
+          params: { ...params, provider },
+          errors: [
+            `Unable to initialise ${provider} adapter. Ensure the selected credential contains a valid API key.`,
+          ],
         };
       }
 
@@ -593,7 +620,6 @@ export class AgentNodeExecutor extends BaseNodeExecutor<
       // Log what tools are configured on this agent node
       context.logger.debug(`Agent ${context.nodeId} - Tool configuration`, {
         addedToolsCount: params.addedTools?.length ?? 0,
-        enabledToolsCount: params.enabledTools?.length ?? 0,
         addedTools: params.addedTools
           ? JSON.stringify(params.addedTools).substring(0, 500)
           : 'undefined',
@@ -605,22 +631,12 @@ export class AgentNodeExecutor extends BaseNodeExecutor<
       let staticParamsMap = new Map<string, Record<string, unknown>>();
 
       if (params.addedTools && params.addedTools.length > 0) {
-        // New format: full tool instances with configuration
         const result = this.buildConfiguredTools(
           params.addedTools as AddedToolInstance[],
           context.logger,
         );
         configuredTools = result.tools;
         staticParamsMap = result.staticParamsMap;
-      } else if (params.enabledTools && params.enabledTools.length > 0) {
-        // Legacy format: just tool IDs (no static params, use base definitions as-is)
-        const baseDefs = this.toolRegistry.getDefinitionsForIds(params.enabledTools);
-        configuredTools = baseDefs.map((def) => ({
-          ...def,
-          instanceId: def.id,
-          staticParams: {},
-          baseToolId: def.id,
-        }));
       }
 
       context.logger.debug(`Agent ${context.nodeId} - Starting agent loop`, {
@@ -853,23 +869,43 @@ export class AgentNodeExecutor extends BaseNodeExecutor<
           const toolCall = allToolCalls[i];
           const toolRecord = iterationToolResults[i];
 
+          // Truncate large tool outputs to stay within token budget
+          let toolContent: string;
+          if (toolRecord.success) {
+            const fullOutput = JSON.stringify(toolRecord.output);
+            if (fullOutput.length > MAX_TOOL_OUTPUT_CHARS) {
+              toolContent =
+                fullOutput.substring(0, MAX_TOOL_OUTPUT_CHARS) +
+                `\n\n[Output truncated — ${fullOutput.length} chars total. Use more specific queries to get smaller results.]`;
+            } else {
+              toolContent = fullOutput;
+            }
+          } else {
+            toolContent = `Error: ${toolRecord.error}`;
+          }
+
           messages.push({
             role: 'tool',
             toolCallId: toolCall.id,
-            content: toolRecord.success
-              ? JSON.stringify(toolRecord.output)
-              : `Error: ${toolRecord.error}`,
+            content: toolContent,
           });
         }
 
         // Check stop condition
         if (stopCondition === 'tool_result') {
-          agentFinished = true;
-          finishReason = 'tool_result';
           const lastResult = iterationToolResults[iterationToolResults.length - 1];
-          finalResponse = lastResult.success
-            ? JSON.stringify(lastResult.output)
-            : `Tool execution failed: ${lastResult.error}`;
+          if (lastResult.success) {
+            agentFinished = true;
+            finishReason = 'tool_result';
+            finalResponse = JSON.stringify(lastResult.output);
+          } else {
+            // Tool errored — don't treat the error as the final answer.
+            // Let the agent continue so it can retry or recover.
+            context.logger.warn(
+              `Agent ${context.nodeId} - Tool error under tool_result stop condition, continuing`,
+              { toolId: lastResult.toolId, error: lastResult.error },
+            );
+          }
         }
       } else {
         // Agent provided final answer (text response)
@@ -909,7 +945,8 @@ export class AgentNodeExecutor extends BaseNodeExecutor<
   }
 
   /**
-   * Execute multiple tools in parallel with timeout
+   * Execute multiple tools in parallel with timeout.
+   * Caps concurrency at MAX_PARALLEL_TOOL_CALLS to avoid overwhelming external APIs.
    */
   private async executeToolsInParallel(
     toolCalls: AgentToolCall[],
@@ -921,22 +958,31 @@ export class AgentNodeExecutor extends BaseNodeExecutor<
     timeoutMs: number,
   ): Promise<ToolExecutionRecord[]> {
     context.logger.debug(
-      `Agent ${context.nodeId} - Executing ${toolCalls.length} tools in parallel`,
+      `Agent ${context.nodeId} - Executing ${toolCalls.length} tools in parallel (max ${MAX_PARALLEL_TOOL_CALLS} concurrent)`,
     );
 
-    const promises = toolCalls.map((toolCall) =>
-      this.executeToolWithTimeout(
-        toolCall,
-        configuredTools,
-        staticParamsMap,
-        context,
-        iteration,
-        maxIterations,
-        timeoutMs,
-      ),
-    );
+    const results: ToolExecutionRecord[] = [];
 
-    return Promise.all(promises);
+    // Process in batches to cap concurrency
+    for (let i = 0; i < toolCalls.length; i += MAX_PARALLEL_TOOL_CALLS) {
+      const batch = toolCalls.slice(i, i + MAX_PARALLEL_TOOL_CALLS);
+      const promises = batch.map((toolCall) =>
+        this.executeToolWithTimeout(
+          toolCall,
+          configuredTools,
+          staticParamsMap,
+          context,
+          iteration,
+          maxIterations,
+          timeoutMs,
+        ),
+      );
+
+      const batchResults = await Promise.all(promises);
+      results.push(...batchResults);
+    }
+
+    return results;
   }
 
   /**
@@ -1049,8 +1095,11 @@ export class AgentNodeExecutor extends BaseNodeExecutor<
   }
 
   /**
-   * Truncate conversation history if it exceeds the token budget
-   * Preserves the first message (task prompt) and recent messages
+   * Truncate conversation history if it exceeds the token budget.
+   * Preserves the first message (task prompt) and recent messages.
+   *
+   * IMPORTANT: tool_call assistant messages and their matching tool result messages
+   * are treated as atomic groups — we never remove one without the other.
    */
   private truncateConversationIfNeeded(
     messages: AgentMessage[],
@@ -1069,38 +1118,42 @@ export class AgentNodeExecutor extends BaseNodeExecutor<
       messageCount: messages.length,
     });
 
-    // Keep the first message (task prompt) and progressively remove old messages
-    // until we're under the token budget
+    // Parse messages into atomic groups:
+    // - A tool_call assistant message + its matching tool result messages = one group
+    // - A standalone message (user, text-only assistant) = one group
     const firstMessage = messages[0];
-    const remainingMessages = messages.slice(1);
+    const rest = messages.slice(1);
 
-    // Remove messages from the beginning (oldest) until under budget
-    while (remainingMessages.length > 1) {
-      const testMessages = [firstMessage, ...remainingMessages];
-      const testTokens = this.estimateConversationTokens(testMessages);
-
-      if (testTokens <= maxTokens * 0.9) {
-        // Leave 10% buffer
-        break;
-      }
-
-      // Remove the oldest message (after the first one)
-      // If it's an assistant message with tool calls, also remove the corresponding tool result
-      const removedMessage = remainingMessages.shift();
-
-      // If we removed an assistant message with tool calls, remove the tool result messages too
-      if (removedMessage?.toolCalls && removedMessage.toolCalls.length > 0) {
-        const toolCallIds = new Set(removedMessage.toolCalls.map((tc) => tc.id));
-        // Remove any tool result messages that correspond to the removed tool calls
-        while (
-          remainingMessages.length > 0 &&
-          remainingMessages[0].role === 'tool' &&
-          remainingMessages[0].toolCallId &&
-          toolCallIds.has(remainingMessages[0].toolCallId)
-        ) {
-          remainingMessages.shift();
+    type MessageGroup = { messages: AgentMessage[]; tokens: number };
+    const groups: MessageGroup[] = [];
+    let i = 0;
+    while (i < rest.length) {
+      const msg = rest[i];
+      if (msg.role === 'assistant' && msg.toolCalls && msg.toolCalls.length > 0) {
+        // Collect the assistant message + all following tool result messages
+        const group: AgentMessage[] = [msg];
+        const toolCallIds = new Set(msg.toolCalls.map((tc) => tc.id));
+        let j = i + 1;
+        while (j < rest.length && rest[j].role === 'tool' && rest[j].toolCallId && toolCallIds.has(rest[j].toolCallId!)) {
+          group.push(rest[j]);
+          j++;
         }
+        groups.push({ messages: group, tokens: this.estimateConversationTokens(group) });
+        i = j;
+      } else {
+        groups.push({ messages: [msg], tokens: this.estimateConversationTokens([msg]) });
+        i++;
       }
+    }
+
+    // Remove oldest groups (from front) until under budget, keeping at least the last group
+    const tokenBudget = maxTokens * 0.9; // 10% buffer
+    const firstMsgTokens = this.estimateConversationTokens([firstMessage]);
+    let totalTokens = firstMsgTokens + groups.reduce((sum, g) => sum + g.tokens, 0);
+
+    while (groups.length > 1 && totalTokens > tokenBudget) {
+      const removed = groups.shift()!;
+      totalTokens -= removed.tokens;
     }
 
     // Add a summary message to indicate truncation
@@ -1112,7 +1165,10 @@ export class AgentNodeExecutor extends BaseNodeExecutor<
 
     // Reconstruct messages array
     messages.length = 0;
-    messages.push(firstMessage, truncationNotice, ...remainingMessages);
+    messages.push(firstMessage, truncationNotice);
+    for (const group of groups) {
+      messages.push(...group.messages);
+    }
 
     const newEstimatedTokens = this.estimateConversationTokens(messages);
     context.logger.info(`Agent ${context.nodeId} - Conversation truncated`, {
@@ -1161,6 +1217,10 @@ When you have completed the task or have a final answer, respond with text only 
    * 1. Find the base tool ID for the actual executor
    * 2. Merge static params with the AI-provided input
    * 3. Record the tool execution to the database
+   *
+   * SECURITY: Only configured tools can be executed. If the LLM hallucinates a tool ID
+   * that isn't in the configured tools list, the call is rejected. This prevents bypassing
+   * static params (e.g. credentialId) by calling the raw base tool directly.
    */
   private async executeTool(
     toolCall: AgentToolCall,
@@ -1176,14 +1236,35 @@ When you have completed the task or have a final answer, respond with text only 
     // Find the configured tool (toolCall.toolId is the instanceId)
     const configuredTool = configuredTools.find((t) => t.id === toolCall.toolId);
 
-    // Get the base tool ID - either from configured tool or use the toolId directly (legacy)
-    const baseToolId = configuredTool?.baseToolId ?? toolCall.toolId;
+    // SECURITY: Reject calls to unconfigured tools to prevent static param bypass
+    if (!configuredTool) {
+      context.logger.warn(`Agent ${context.nodeId} - Rejected call to unconfigured tool`, {
+        toolId: toolCall.toolId,
+        configuredToolIds: configuredTools.map((t) => t.id),
+      });
+
+      const result: ToolExecutionRecord = {
+        toolId: toolCall.toolId,
+        toolName: toolCall.toolId,
+        input: toolCall.input,
+        error: `Tool '${toolCall.toolId}' is not configured on this agent. Available tools: ${configuredTools.map((t) => `${t.name} (${t.id})`).join(', ')}`,
+        success: false,
+        iteration,
+        executionTimeMs: Date.now() - startTime,
+      };
+
+      await this.recordToolExecutionToDb(context, result, startedAt);
+      return result;
+    }
+
+    // Get the base tool ID from configured tool
+    const baseToolId = configuredTool.baseToolId;
 
     const registeredTool = this.toolRegistry.get(baseToolId);
     if (!registeredTool) {
       const result: ToolExecutionRecord = {
         toolId: toolCall.toolId,
-        toolName: configuredTool?.name ?? toolCall.toolId,
+        toolName: configuredTool.name ?? toolCall.toolId,
         input: toolCall.input,
         error: `Tool '${baseToolId}' not found in registry`,
         success: false,
@@ -1224,11 +1305,25 @@ When you have completed the task or have a final answer, respond with text only 
 
       const executorResult = await registeredTool.executor(mergedInput, toolContext);
 
+      // Safe-stringify the output — handles circular references
+      let safeOutput = executorResult.output;
+      if (safeOutput !== undefined && safeOutput !== null && typeof safeOutput === 'object') {
+        try {
+          JSON.stringify(safeOutput);
+        } catch {
+          // Circular reference or other serialization issue
+          context.logger.warn(`Agent ${context.nodeId} - Tool output not serializable, using string fallback`, {
+            toolId: toolCall.toolId,
+          });
+          safeOutput = '[Tool output contained circular references and could not be serialized]';
+        }
+      }
+
       const result: ToolExecutionRecord = {
         toolId: toolCall.toolId,
-        toolName: configuredTool?.name ?? registeredTool.definition.name,
+        toolName: configuredTool.name ?? registeredTool.definition.name,
         input: mergedInput,
-        output: executorResult.output,
+        output: safeOutput,
         error: executorResult.error,
         success: executorResult.success,
         iteration,
@@ -1250,7 +1345,7 @@ When you have completed the task or have a final answer, respond with text only 
 
       const result: ToolExecutionRecord = {
         toolId: toolCall.toolId,
-        toolName: configuredTool?.name ?? registeredTool.definition.name,
+        toolName: configuredTool.name ?? registeredTool.definition.name,
         input: mergedInput,
         error: errorMessage,
         success: false,

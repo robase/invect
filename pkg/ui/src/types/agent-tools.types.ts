@@ -38,12 +38,8 @@ export type AgentToolDefinitionToDisplay<
 
 /**
  * Agent node data extensions for tools
- * Note: Backend stores tools as `enabledTools: string[]` (array of tool IDs)
- * Frontend needs to resolve these IDs to full tool definitions for display
  */
 export interface AgentNodeToolsData {
-  /** Tool IDs enabled for this agent (matches backend enabledTools param) */
-  enabledTools?: string[];
   /** Resolved tools for display (populated by frontend from API) */
   tools?: AgentToolDisplay[];
   /** Position of the tools appendix */

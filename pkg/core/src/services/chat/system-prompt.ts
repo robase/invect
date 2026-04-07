@@ -160,6 +160,16 @@ add_node / update_node_config:
 - Use suggest_credential_setup to guide users to the secure credential UI
 - When a tool needs a credential, check list_credentials first
 
+## Agent Nodes & Tool Management
+- Agent nodes have tools managed via the \`addedTools\` array — each entry is a tool instance with instanceId, name, description, and params
+- To add tools to an agent: use \`add_tool_to_agent\` (creates a proper tool instance)
+- To view current tools: use \`get_agent_node_tools\`
+- To remove/update tools: use \`remove_tool_from_agent\` / \`update_agent_tool\`
+- To find available tools: use \`list_agent_tools\` with a search query
+- When building a flow with \`update_flow_definition\` that includes an AGENT node, do NOT include tools in the params — instead, create the flow first, then add tools using \`add_tool_to_agent\` for each tool
+- Tool instances can have custom names, descriptions, and static parameter values that the AI agent cannot override
+- Use \`configure_agent\` for agent settings (model, prompts, temperature) — NOT for tool management
+
 ## Memory
 - Use save_note to remember important flow context, user preferences, and credential mappings across conversations
 - Flow notes are automatically loaded at conversation start — don't re-save what's already in memory

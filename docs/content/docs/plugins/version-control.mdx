@@ -5,6 +5,8 @@ description: Flow versioning and export/import with @invect/version-control.
 
 import { Callout } from 'fumadocs-ui/components/callout';
 
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
 The version control plugin adds enhanced flow version management — export, import, comparison, and restore capabilities beyond the built-in version history.
 
 <Callout type="info">
@@ -13,9 +15,12 @@ The version control plugin adds enhanced flow version management — export, imp
 
 ## Installation
 
-```bash
-pnpm add @invect/version-control
-```
+<Tabs items={['pnpm', 'npm', 'yarn', 'bun']}>
+  <Tab value="pnpm">```bash pnpm add @invect/version-control ```</Tab>
+  <Tab value="npm">```bash npm install @invect/version-control ```</Tab>
+  <Tab value="yarn">```bash yarn add @invect/version-control ```</Tab>
+  <Tab value="bun">```bash bun add @invect/version-control ```</Tab>
+</Tabs>
 
 ## Setup
 

@@ -159,7 +159,9 @@ function agentNode(
       provider: 'OPENAI',
       taskPrompt: 'Do the task',
       systemPrompt: 'You are a helpful assistant.',
-      enabledTools: ['math_eval'],
+      addedTools: [
+        { instanceId: 'inst_math', toolId: 'math_eval', name: 'Math Evaluate', description: 'Evaluate math expressions', params: {} },
+      ],
       maxIterations: 10,
       stopCondition: 'explicit_stop',
       temperature: 0,
@@ -240,7 +242,7 @@ describe('Agent Node + Tool Execution', () => {
     it('should call math_eval tool and return final response', async () => {
       // LLM requests math tool
       responseQueue.push(
-        toolCallResponse([{ id: 'call_1', name: 'math_eval', arguments: { expression: '6 * 7' } }]),
+        toolCallResponse([{ id: 'call_1', name: 'inst_math', arguments: { expression: '6 * 7' } }]),
       );
       // After receiving the tool result, LLM produces final text
       responseQueue.push(textResponse('The result of 6 * 7 is 42.'));
@@ -256,7 +258,7 @@ describe('Agent Node + Tool Execution', () => {
       expect(output.finalResponse).toBe('The result of 6 * 7 is 42.');
       expect(output.iterations).toBe(2);
       expect(output.toolResults).toHaveLength(1);
-      expect(output.toolResults[0].toolId).toBe('math_eval');
+      expect(output.toolResults[0].toolId).toBe('inst_math');
       expect(output.toolResults[0].success).toBe(true);
       expect(output.toolResults[0].output).toBe(42);
     });
@@ -264,7 +266,7 @@ describe('Agent Node + Tool Execution', () => {
     it('should send tool result back to LLM in correct message format', async () => {
       responseQueue.push(
         toolCallResponse([
-          { id: 'call_math', name: 'math_eval', arguments: { expression: '2 + 3' } },
+          { id: 'call_math', name: 'inst_math', arguments: { expression: '2 + 3' } },
         ]),
       );
       responseQueue.push(textResponse('5'));
@@ -298,11 +300,11 @@ describe('Agent Node + Tool Execution', () => {
     it('should support multiple tool-call rounds before final response', async () => {
       // Iteration 1: LLM calls math
       responseQueue.push(
-        toolCallResponse([{ id: 'c1', name: 'math_eval', arguments: { expression: '10 + 5' } }]),
+        toolCallResponse([{ id: 'c1', name: 'inst_math', arguments: { expression: '10 + 5' } }]),
       );
       // Iteration 2: LLM calls math again with the first result
       responseQueue.push(
-        toolCallResponse([{ id: 'c2', name: 'math_eval', arguments: { expression: '15 * 2' } }]),
+        toolCallResponse([{ id: 'c2', name: 'inst_math', arguments: { expression: '15 * 2' } }]),
       );
       // Iteration 3: LLM produces final answer
       responseQueue.push(textResponse('After two calculations: 10+5=15, 15*2=30.'));
@@ -331,8 +333,8 @@ describe('Agent Node + Tool Execution', () => {
       // LLM requests two math evaluations at once
       responseQueue.push(
         toolCallResponse([
-          { id: 'p1', name: 'math_eval', arguments: { expression: '3 + 4' } },
-          { id: 'p2', name: 'math_eval', arguments: { expression: '10 - 2' } },
+          { id: 'p1', name: 'inst_math', arguments: { expression: '3 + 4' } },
+          { id: 'p2', name: 'inst_math', arguments: { expression: '10 - 2' } },
         ]),
       );
       responseQueue.push(textResponse('Results: 7 and 8.'));
@@ -355,8 +357,8 @@ describe('Agent Node + Tool Execution', () => {
     it('should send all parallel tool results back in the same request', async () => {
       responseQueue.push(
         toolCallResponse([
-          { id: 'pa', name: 'math_eval', arguments: { expression: '1+1' } },
-          { id: 'pb', name: 'math_eval', arguments: { expression: '2+2' } },
+          { id: 'pa', name: 'inst_math', arguments: { expression: '1+1' } },
+          { id: 'pb', name: 'inst_math', arguments: { expression: '2+2' } },
         ]),
       );
       responseQueue.push(textResponse('Done'));
@@ -385,7 +387,7 @@ describe('Agent Node + Tool Execution', () => {
     it('explicit_stop: should loop until LLM responds with text (no tools)', async () => {
       // First iteration: tool call
       responseQueue.push(
-        toolCallResponse([{ id: 'es1', name: 'math_eval', arguments: { expression: '1+1' } }]),
+        toolCallResponse([{ id: 'es1', name: 'inst_math', arguments: { expression: '1+1' } }]),
       );
       // Second iteration: text response → stops the loop
       responseQueue.push(textResponse('All done.'));
@@ -402,7 +404,7 @@ describe('Agent Node + Tool Execution', () => {
 
     it('tool_result: should stop after the first tool execution', async () => {
       responseQueue.push(
-        toolCallResponse([{ id: 'tr1', name: 'math_eval', arguments: { expression: '9 * 9' } }]),
+        toolCallResponse([{ id: 'tr1', name: 'inst_math', arguments: { expression: '9 * 9' } }]),
       );
       // Should NOT be consumed — loop stops after tool result
       responseQueue.push(textResponse('Should not reach here'));
@@ -429,7 +431,7 @@ describe('Agent Node + Tool Execution', () => {
       for (let i = 0; i < 5; i++) {
         responseQueue.push(
           toolCallResponse([
-            { id: `mi_${i}`, name: 'math_eval', arguments: { expression: `${i}+1` } },
+            { id: `mi_${i}`, name: 'inst_math', arguments: { expression: `${i}+1` } },
           ]),
         );
       }
@@ -453,7 +455,7 @@ describe('Agent Node + Tool Execution', () => {
       for (let i = 0; i < 10; i++) {
         responseQueue.push(
           toolCallResponse([
-            { id: `cap_${i}`, name: 'math_eval', arguments: { expression: `${i}` } },
+            { id: `cap_${i}`, name: 'inst_math', arguments: { expression: `${i}` } },
           ]),
         );
       }
@@ -481,7 +483,7 @@ describe('Agent Node + Tool Execution', () => {
         toolCallResponse([
           {
             id: 'err1',
-            name: 'math_eval',
+            name: 'inst_math',
             arguments: { expression: 'not_valid_math!!!' },
           },
         ]),
@@ -679,7 +681,7 @@ describe('Agent Node + Tool Execution', () => {
   describe('execution traces', () => {
     it('should persist node execution traces for agent runs', async () => {
       responseQueue.push(
-        toolCallResponse([{ id: 'trace1', name: 'math_eval', arguments: { expression: '5+5' } }]),
+        toolCallResponse([{ id: 'trace1', name: 'inst_math', arguments: { expression: '5+5' } }]),
       );
       responseQueue.push(textResponse('Ten.'));
 
@@ -699,7 +701,7 @@ describe('Agent Node + Tool Execution', () => {
 
     it('should record tool execution metadata', async () => {
       responseQueue.push(
-        toolCallResponse([{ id: 'rec1', name: 'math_eval', arguments: { expression: '7*8' } }]),
+        toolCallResponse([{ id: 'rec1', name: 'inst_math', arguments: { expression: '7*8' } }]),
       );
       responseQueue.push(textResponse('56'));
 
@@ -712,7 +714,7 @@ describe('Agent Node + Tool Execution', () => {
       expect(output.toolResults).toHaveLength(1);
 
       const toolRecord = output.toolResults[0];
-      expect(toolRecord.toolId).toBe('math_eval');
+      expect(toolRecord.toolId).toBe('inst_math');
       expect(toolRecord.toolName).toBeTruthy();
       expect(toolRecord.input).toEqual({ expression: '7*8' });
       expect(toolRecord.output).toBe(56);
@@ -732,7 +734,7 @@ describe('Agent Node + Tool Execution', () => {
         toolCallResponse([
           {
             id: 'jl1',
-            name: 'json_logic',
+            name: 'inst_json',
             arguments: {
               rule: { '>': [{ var: 'age' }, 18] },
               data: { age: 25 },
@@ -742,13 +744,16 @@ describe('Agent Node + Tool Execution', () => {
       );
       // Then calls math
       responseQueue.push(
-        toolCallResponse([{ id: 'me1', name: 'math_eval', arguments: { expression: '25 - 18' } }]),
+        toolCallResponse([{ id: 'me1', name: 'inst_math', arguments: { expression: '25 - 18' } }]),
       );
       // Final text
       responseQueue.push(textResponse('Age 25 is adult, 7 years over 18.'));
 
       const result = await runAgentFlow({
-        nodes: [agentNode({ enabledTools: ['math_eval', 'json_logic'] })],
+        nodes: [agentNode({ addedTools: [
+          { instanceId: 'inst_math', toolId: 'math_eval', name: 'Math Evaluate', description: 'Evaluate math expressions', params: {} },
+          { instanceId: 'inst_json', toolId: 'json_logic', name: 'JSON Logic', description: 'Evaluate JSON logic', params: {} },
+        ] })],
         edges: [],
       });
 
@@ -758,15 +763,18 @@ describe('Agent Node + Tool Execution', () => {
       expect(output.toolResults).toHaveLength(2);
 
       const toolIds = output.toolResults.map((r) => r.toolId);
-      expect(toolIds).toContain('json_logic');
-      expect(toolIds).toContain('math_eval');
+      expect(toolIds).toContain('inst_json');
+      expect(toolIds).toContain('inst_math');
     });
 
     it('should pass enabled tool definitions to OpenAI in correct format', async () => {
       responseQueue.push(textResponse('No tools needed.'));
 
       await runAgentFlow({
-        nodes: [agentNode({ enabledTools: ['math_eval', 'json_logic'] })],
+        nodes: [agentNode({ addedTools: [
+          { instanceId: 'inst_math', toolId: 'math_eval', name: 'Math Evaluate', description: 'Evaluate math expressions', params: {} },
+          { instanceId: 'inst_json', toolId: 'json_logic', name: 'JSON Logic', description: 'Evaluate JSON logic', params: {} },
+        ] })],
         edges: [],
       });
 
@@ -781,8 +789,8 @@ describe('Agent Node + Tool Execution', () => {
       expect(tools.every((t) => t.type === 'function')).toBe(true);
 
       const toolNames = tools.map((t) => t.function.name);
-      expect(toolNames).toContain('math_eval');
-      expect(toolNames).toContain('json_logic');
+      expect(toolNames).toContain('inst_math');
+      expect(toolNames).toContain('inst_json');
 
       // Each tool should have a valid JSON Schema for parameters
       for (const tool of tools) {
@@ -800,7 +808,7 @@ describe('Agent Node + Tool Execution', () => {
       responseQueue.push(textResponse('I answered without tools.'));
 
       const result = await runAgentFlow({
-        nodes: [agentNode({ enabledTools: [] })],
+        nodes: [agentNode({ addedTools: [] })],
         edges: [],
       });
 
@@ -867,7 +875,7 @@ describe('Agent Node + Tool Execution', () => {
       // Agent uses math tool, then returns final answer
       responseQueue.push(
         toolCallResponse([
-          { id: 'chain1', name: 'math_eval', arguments: { expression: '100 / 4' } },
+          { id: 'chain1', name: 'inst_math', arguments: { expression: '100 / 4' } },
         ]),
       );
       responseQueue.push(textResponse('100 divided by 4 is 25.'));

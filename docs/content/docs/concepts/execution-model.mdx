@@ -3,43 +3,32 @@ title: Execution Model
 description: Deep dive into how flows execute — node ordering, data flow, and state management.
 ---
 
+import { Mermaid } from '../../../components/Mermaid';
+
 This page covers the internals of flow execution. For a practical overview, see [Flows > Execution](/docs/flows/execution).
 
 ## Flow execution pipeline
 
-```
-core.startFlowRun(flowId, inputs)
-  │
-  ├── FlowsService.getFlowById()
-  │   └── Load flow + latest version definition
-  │
-  ├── FlowOrchestrationService.initiateFlowRun()
-  │   │
-  │   ├── FlowRunsService.createFlowRun()
-  │   │   └── Create execution record (status: PENDING)
-  │   │
-  │   ├── GraphService.topologicalSort()
-  │   │   └── Determine node execution order from edges
-  │   │
-  │   └── For each node in topological order:
-  │       │
-  │       ├── NodeExecutionCoordinator.buildIncomingDataObject()
-  │       │   └── Collect upstream node outputs, keyed by referenceId
-  │       │
-  │       ├── NodeExecutionCoordinator.resolveTemplateParams()
-  │       │   └── Evaluate {{ }} expressions via QuickJS WASM
-  │       │
-  │       ├── executeNode()
-  │       │   ├── NodeExecutionService.createNodeExecution() (trace)
-  │       │   ├── Dispatch to action registry or legacy executor
-  │       │   │   ├── actionRegistry.get(type) → executeActionAsNode()
-  │       │   │   └── nodeRegistry.get(type) → AgentNodeExecutor.execute()
-  │       │   └── NodeExecutionService.updateNodeExecutionStatus()
-  │       │
-  │       └── Store output for downstream nodes
-  │
-  └── Return FlowRunResult
-```
+<Mermaid chart={`
+flowchart TD
+  A["core.startFlowRun(flowId, inputs)"] --> B["FlowsService.getFlowById()\nLoad flow + latest version definition"]
+  B --> C["FlowOrchestrationService.initiateFlowRun()"]
+  C --> D["FlowRunsService.createFlowRun()\nCreate execution record (status: PENDING)"]
+  D --> E["GraphService.topologicalSort()\nDetermine node execution order from edges"]
+  E --> F{"For each node\nin topological order"}
+  F --> G["buildIncomingDataObject()\nCollect upstream outputs, keyed by referenceId"]
+  G --> H["resolveTemplateParams()\nEvaluate expressions via QuickJS WASM"]
+  H --> I["executeNode()"]
+  I --> J["createNodeExecution() — trace"]
+  J --> K{"Dispatch"}
+  K -->|Action| L["actionRegistry.get(type)\nexecuteActionAsNode()"]
+  K -->|Agent| M["nodeRegistry.get(type)\nAgentNodeExecutor.execute()"]
+  L --> N["updateNodeExecutionStatus()"]
+  M --> N
+  N --> O["Store output for downstream nodes"]
+  O --> F
+  F -->|All done| P["Return FlowRunResult"]
+`} />
 
 ## Input data construction
 

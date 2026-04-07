@@ -6,14 +6,40 @@ description: Install Invect and run your first workflow in under 5 minutes.
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
 import { Callout } from 'fumadocs-ui/components/callout';
 
-This guide walks you through setting up Invect with Express and SQLite. For NestJS or Next.js, see [Installation](/docs/installation).
+The fastest way to get started is with the Invect CLI. It detects your framework, installs packages, generates database schemas, and runs migrations — all in one command.
+
+## Option A: Use the CLI (recommended)
+
+```bash
+npx invect-cli init
+```
+
+The interactive wizard will:
+
+1. Detect your framework (Express, NestJS, or Next.js)
+2. Ask for your database type (SQLite, PostgreSQL, or MySQL)
+3. Install `@invect/core` and the right framework adapter
+4. Create `invect.config.ts`
+5. Generate database schema files
+6. Run the initial migration
+
+After it finishes, start your server and open the Invect dashboard.
+
+<Callout type="info">
+  You can skip prompts with flags: `npx invect-cli init --framework express --database sqlite`
+</Callout>
+
+## Option B: Manual setup (Express + SQLite)
+
+If you prefer to set things up step by step, this section walks through Express with SQLite. For NestJS or Next.js, see [Installation](/docs/installation).
 
 ### Install the packages
 
-<Tabs items={['pnpm', 'npm', 'yarn']}>
+<Tabs items={['pnpm', 'npm', 'yarn', 'bun']}>
   <Tab value="pnpm">```bash pnpm add @invect/core @invect/express ```</Tab>
   <Tab value="npm">```bash npm install @invect/core @invect/express ```</Tab>
   <Tab value="yarn">```bash yarn add @invect/core @invect/express ```</Tab>
+  <Tab value="bun">```bash bun add @invect/core @invect/express ```</Tab>
 </Tabs>
 
 ### Set environment variables
@@ -68,7 +94,7 @@ npx invect-cli generate
 npx invect-cli migrate
 ```
 
-The CLI reads your config, generates Drizzle schema files for your database dialect, and applies them.
+The CLI reads your `invect.config.ts`, generates Drizzle schema files for your database dialect, and applies them. See [CLI Reference](/docs/reference/cli) for all options.
 
 ### Start the server
 
@@ -87,9 +113,12 @@ Open `http://localhost:3000/invect` — you should see the Invect dashboard.
 
 If you want the visual flow editor in a separate React app:
 
-```bash
-pnpm add @invect/ui
-```
+<Tabs items={['pnpm', 'npm', 'yarn', 'bun']}>
+  <Tab value="pnpm">```bash pnpm add @invect/ui ```</Tab>
+  <Tab value="npm">```bash npm install @invect/ui ```</Tab>
+  <Tab value="yarn">```bash yarn add @invect/ui ```</Tab>
+  <Tab value="bun">```bash bun add @invect/ui ```</Tab>
+</Tabs>
 
 ```tsx title="App.tsx"
 import { Invect } from '@invect/ui';

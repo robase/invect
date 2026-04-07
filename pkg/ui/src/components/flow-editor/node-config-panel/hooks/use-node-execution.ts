@@ -9,11 +9,11 @@ interface SaveOptions {
 
 // Flow actions interface
 interface FlowActions {
-  isDirty: boolean;
-  onSave: (options?: SaveOptions) => Promise<boolean>;
   onExecute: () => Promise<void>;
-  isSaving: boolean;
   isExecuting: boolean;
+  isDirty?: boolean;
+  onSave?: (options?: SaveOptions) => Promise<boolean>;
+  isSaving?: boolean;
 }
 
 interface ExecutionResult {
@@ -149,7 +149,7 @@ export function useNodeExecution({
 
     try {
       // Auto-save flow before running
-      if (flowActions) {
+      if (flowActions?.onSave) {
         const saveSucceeded = await flowActions.onSave({ skipSuccessToast: true });
         if (!saveSucceeded) {
           setRunError('Failed to save flow. Please fix any validation errors and try again.');

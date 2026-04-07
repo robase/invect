@@ -170,9 +170,9 @@ export const AgentNode = memo(({ id, data, selected }: NodeProps) => {
   const appendixBorderClass = isRunning
     ? 'border-primary'
     : isSuccess
-      ? 'border-green-500'
+      ? 'border-success'
       : isError
-        ? 'border-red-500'
+        ? 'border-destructive'
         : isSkipped
           ? 'border-dashed border-muted-foreground/50'
           : selected
@@ -194,9 +194,9 @@ export const AgentNode = memo(({ id, data, selected }: NodeProps) => {
           // Running state - animated gradient border
           isRunning && 'node-running-border animate-node-border rounded-xl',
           // Success state - green border
-          isSuccess && 'border-2 border-green-500',
+          isSuccess && 'border-2 border-success',
           // Error state - red border
-          isError && 'border-2 border-red-500',
+          isError && 'border-2 border-destructive',
           // Skipped state - greyed out with dashed border
           isSkipped && 'border-2 border-dashed border-muted-foreground/50 opacity-50',
           // Selection state - change existing border color to blue for visibility

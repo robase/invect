@@ -206,7 +206,6 @@ test.describe('Flow Editor Assistant And Tooling', () => {
           referenceId: 'linear_agent',
           params: {
             taskPrompt: 'Summarize the latest issue activity.',
-            enabledTools: [],
             addedTools: [],
             maxIterations: 3,
             stopCondition: 'explicit_stop',

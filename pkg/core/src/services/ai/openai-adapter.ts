@@ -217,6 +217,12 @@ export class OpenAIAdapter extends BaseProviderAdapter {
             this.logger.warn('Failed to parse tool arguments', {
               arguments: funcCall.function.arguments,
             });
+            // Signal the parse failure so the agent can see it and retry
+            parsedInput = {
+              _parseError:
+                'The tool arguments you provided were malformed JSON. Please retry with valid JSON.',
+              _rawArguments: (funcCall.function.arguments || '').substring(0, 500),
+            };
           }
 
           return {

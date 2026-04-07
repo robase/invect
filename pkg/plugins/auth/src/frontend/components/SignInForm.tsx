@@ -7,6 +7,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { useAuth } from '../providers/AuthProvider';
+import { Loader2 } from 'lucide-react';
 
 export interface SignInFormProps {
   /** Called after successful sign-in */
@@ -79,7 +80,7 @@ export function SignInForm({ onSuccess, className }: SignInFormProps) {
 
         {/* Error message */}
         {displayError && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400">
+          <div className="rounded-md border border-imp-destructive/30 bg-imp-destructive/10 px-3 py-2 text-sm text-imp-destructive">
             {displayError}
           </div>
         )}
@@ -88,9 +89,16 @@ export function SignInForm({ onSuccess, className }: SignInFormProps) {
         <button
           type="submit"
           disabled={isSigningIn}
-          className="inline-flex h-9 w-full items-center justify-center gap-2 whitespace-nowrap rounded-md bg-imp-foreground px-4 py-2 text-sm font-medium text-imp-background shadow transition-colors hover:bg-imp-foreground/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-imp-ring disabled:pointer-events-none disabled:opacity-50"
+          className="inline-flex h-9 w-full items-center justify-center gap-2 whitespace-nowrap rounded-md bg-imp-primary px-4 py-2 text-sm font-medium text-imp-primary-foreground shadow transition-colors hover:bg-imp-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-imp-ring disabled:pointer-events-none disabled:opacity-50"
         >
-          {isSigningIn ? 'Signing in…' : 'Login'}
+          {isSigningIn ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Signing in…
+            </>
+          ) : (
+            'Sign in'
+          )}
         </button>
       </div>
     </form>

@@ -104,11 +104,20 @@ async function seedDefaultCredentials(sf: ServiceFactory, config: InvectConfig):
 
       if (existingCred) {
         try {
+          // For OAuth2 credentials, merge the seed config with the existing
+          // config so that tokens obtained during authorization are preserved.
+          let mergedConfig = rest.config;
+          if (rest.authType === 'oauth2') {
+            const existingDecrypted = await credentialsService.get(existingCred.id);
+            const existingConfig = existingDecrypted.config ?? {};
+            mergedConfig = { ...existingConfig, ...rest.config };
+          }
+
           await credentialsService.update(existingCred.id, {
             name: rest.name,
             type: rest.type,
             authType: rest.authType as CredentialAuthType,
-            config: rest.config,
+            config: mergedConfig,
             description: rest.description,
             isShared: rest.isShared,
             metadata,

@@ -205,7 +205,6 @@ export interface AgentParams {
   taskPrompt: string;
   systemPrompt?: string;
   provider?: string;
-  enabledTools?: string[];
   addedTools?: AddedToolInstance[];
   maxIterations?: number;
   stopCondition?: 'explicit_stop' | 'tool_result' | 'max_iterations';

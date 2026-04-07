@@ -360,12 +360,16 @@ describe('agent node', () => {
       credentialId: 'anthropic-cred',
       model: 'claude-sonnet-4-0',
       taskPrompt: 'Handle ticket: {{ ticket }}',
-      enabledTools: ['http.request', 'core.javascript'],
+      addedTools: [
+        { instanceId: 'inst_http', toolId: 'http.request', name: 'HTTP Request', description: 'Make HTTP requests', params: {} },
+        { instanceId: 'inst_js', toolId: 'core.javascript', name: 'JavaScript', description: 'Run JavaScript', params: {} },
+      ],
       maxIterations: 15,
       stopCondition: 'explicit_stop',
       temperature: 0.3,
     });
-    expect(n.params).toHaveProperty('enabledTools', ['http.request', 'core.javascript']);
+    expect(n.params).toHaveProperty('addedTools');
+    expect((n.params.addedTools as unknown[]).length).toBe(2);
     expect(n.params).toHaveProperty('maxIterations', 15);
     expect(n.params).toHaveProperty('stopCondition', 'explicit_stop');
   });
@@ -398,7 +402,9 @@ describe('agent node', () => {
           credentialId: 'openai-cred',
           model: 'gpt-4o',
           taskPrompt: 'Research {{ topic }}',
-          enabledTools: ['http.request'],
+          addedTools: [
+            { instanceId: 'inst_http', toolId: 'http.request', name: 'HTTP Request', description: 'Make HTTP requests', params: {} },
+          ],
           maxIterations: 10,
         }),
         output('summary', { outputName: 'summary', outputValue: '{{ researcher }}' }),

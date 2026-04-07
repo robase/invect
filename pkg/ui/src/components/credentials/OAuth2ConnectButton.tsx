@@ -115,7 +115,6 @@ export function OAuth2ConnectButton({
       // Exchange code for tokens using the mutation (which invalidates credentials cache)
       try {
         const params = callbackParamsRef.current;
-        console.log('[OAuth2] Exchanging code for tokens...');
         const credential = await handleOAuth2CallbackMutation.mutateAsync({
           code,
           state,
@@ -124,11 +123,8 @@ export function OAuth2ConnectButton({
           redirectUri: params.redirectUri,
         });
 
-        console.log('[OAuth2] Credential created:', credential.id);
         setStatus('success');
-        console.log('[OAuth2] Calling onSuccess callback...', !!onSuccessRef.current);
         onSuccessRef.current?.(credential);
-        console.log('[OAuth2] onSuccess callback completed');
 
         // Reset to idle after showing success
         setTimeout(() => setStatus('idle'), 2000);
@@ -225,8 +221,8 @@ export function OAuth2ConnectButton({
         disabled={isDisabled}
         className={cn(
           'gap-2',
-          status === 'success' && 'bg-green-500/10 border-green-500/50 text-green-600',
-          status === 'error' && 'bg-red-500/10 border-red-500/50 text-red-600',
+          status === 'success' && 'bg-success/10 border-success/50 text-success',
+          status === 'error' && 'bg-destructive/10 border-destructive/50 text-destructive',
           className,
         )}
       >
@@ -244,7 +240,7 @@ export function OAuth2ConnectButton({
       </Button>
 
       {status === 'error' && errorMessage && (
-        <p className="text-[10px] text-red-500">{errorMessage}</p>
+        <p className="text-xs text-destructive">{errorMessage}</p>
       )}
     </div>
   );

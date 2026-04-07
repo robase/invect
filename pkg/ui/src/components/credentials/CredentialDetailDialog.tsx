@@ -16,6 +16,7 @@ import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import { ProviderIcon } from '../shared/ProviderIcon';
 import { getCredentialBranding, getCredentialProviderLabel } from '../../utils/credentialBranding';
@@ -225,7 +226,7 @@ function DetailsSection({
             {expired ? (
               <Badge
                 variant="secondary"
-                className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                className="bg-warning-muted text-warning"
               >
                 <AlertTriangle className="w-3 h-3 mr-1" />
                 Token Expired
@@ -233,7 +234,7 @@ function DetailsSection({
             ) : credential.isActive ? (
               <Badge
                 variant="secondary"
-                className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                className="bg-success-muted text-success"
               >
                 <CheckCircle2 className="w-3 h-3 mr-1" />
                 Active
@@ -368,11 +369,10 @@ function EditSection({
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="edit-type">Credential Type</Label>
-          <select
-            id="edit-type"
+          <Select
             value={editFormData.type ?? 'http-api'}
-            onChange={(e) => {
-              const newType = e.target.value as CredentialType;
+            onValueChange={(value) => {
+              const newType = value as CredentialType;
               if (newType === 'llm') {
                 setEditFormData({ ...editFormData, type: newType, authType: 'apiKey' });
               } else {
@@ -383,33 +383,40 @@ function EditSection({
                 setEditFormData({ ...editFormData, type: newType, authType: nextAuthType });
               }
             }}
-            className="flex h-9 w-full rounded-md border border-input bg-background dark:bg-input/30 px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
           >
-            <option value="http-api">HTTP API</option>
-            <option value="llm">LLM Provider</option>
-            <option value="database">Database</option>
-          </select>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="http-api">HTTP API</SelectItem>
+              <SelectItem value="llm">LLM Provider</SelectItem>
+              <SelectItem value="database">Database</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         {editFormData.type !== 'llm' && (
           <div className="space-y-2">
             <Label htmlFor="edit-authType">Auth Type</Label>
-            <select
-              id="edit-authType"
+            <Select
               value={editFormData.authType ?? 'bearer'}
-              onChange={(e) =>
+              onValueChange={(value) =>
                 setEditFormData({
                   ...editFormData,
-                  authType: e.target.value as CredentialAuthType,
+                  authType: value as CredentialAuthType,
                 })
               }
-              className="flex h-9 w-full rounded-md border border-input bg-background dark:bg-input/30 px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
             >
-              {getAuthTypesForType(editFormData.type || 'http-api').map((type) => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {getAuthTypesForType(editFormData.type || 'http-api').map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         )}
       </div>
@@ -431,22 +438,24 @@ function EditSection({
       {editFormData.type === 'llm' && (
         <div className="space-y-2">
           <Label htmlFor="edit-llmProvider">LLM Provider</Label>
-          <select
-            id="edit-llmProvider"
+          <Select
             value={(editFormData.metadata?.provider as string) || ''}
-            onChange={(e) =>
+            onValueChange={(value) =>
               setEditFormData({
                 ...editFormData,
-                metadata: { ...editFormData.metadata, provider: e.target.value },
+                metadata: { ...editFormData.metadata, provider: value },
               })
             }
-            className="flex h-9 w-full rounded-md border border-input bg-background dark:bg-input/30 px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
           >
-            <option value="">Select a provider…</option>
-            <option value="openai">OpenAI</option>
-            <option value="anthropic">Anthropic</option>
-            <option value="openrouter">OpenRouter</option>
-          </select>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select a provider…" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="openai">OpenAI</SelectItem>
+              <SelectItem value="anthropic">Anthropic</SelectItem>
+              <SelectItem value="openrouter">OpenRouter</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       )}
 
@@ -456,7 +465,7 @@ function EditSection({
           <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Credentials
           </h4>
-          <span className="text-[10px] text-muted-foreground">Leave empty to keep current</span>
+          <span className="text-xs text-muted-foreground">Leave empty to keep current</span>
         </div>
 
         {editFormData.type === 'llm' && (
@@ -700,8 +709,8 @@ function OAuth2AwareTestSection({
         <div
           className={`rounded-md px-3 py-2 text-sm ${
             testResult.success
-              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'
-              : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300'
+              ? 'bg-success/10 text-success'
+              : 'bg-destructive/10 text-destructive'
           }`}
         >
           {testResult.success
@@ -867,12 +876,12 @@ function OAuth2ConnectSection({
         </Button>
       </div>
       {status === 'error' && errorMessage && (
-        <div className="rounded-md px-3 py-2 text-sm bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300">
+        <div className="rounded-md px-3 py-2 text-sm bg-destructive/10 text-destructive">
           ✗ {errorMessage}
         </div>
       )}
       {status === 'success' && (
-        <div className="rounded-md px-3 py-2 text-sm bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">
+        <div className="rounded-md px-3 py-2 text-sm bg-success/10 text-success">
           ✓ Account connected successfully. You can now test the connection.
         </div>
       )}

@@ -67,7 +67,8 @@ export const updateFlowDefinitionTool: ChatToolDefinition = {
   description:
     'Update the flow definition (nodes and edges) by publishing a new version. ' +
     'Use this for creating new flows from scratch or making large-scale changes. ' +
-    'Provide the COMPLETE nodes and edges arrays — this replaces the entire definition.',
+    'Provide the COMPLETE nodes and edges arrays — this replaces the entire definition. ' +
+    'For AGENT nodes, do NOT include tools in params — create the flow first, then use add_tool_to_agent.',
   parameters: z.object({
     nodes: z.array(
       z.object({

@@ -302,7 +302,7 @@ export function AccessTable({
                       <button
                         type="button"
                         onClick={() => setPendingRemovalRow(row)}
-                        className="p-1 rounded text-imp-muted-foreground hover:bg-red-500/10 hover:text-red-500"
+                        className="p-1 rounded text-imp-muted-foreground hover:bg-imp-destructive/10 hover:text-imp-destructive"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>

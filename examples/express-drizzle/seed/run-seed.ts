@@ -1882,7 +1882,6 @@ After retrieving the emails, summarize what you found in a clear, helpful manner
           // Note: addedTools should be configured via the UI with the Gmail tool
           // which requires a Gmail OAuth2 credential (google_gmail provider)
           addedTools: [],
-          enabledTools: [], // Legacy field
           maxIterations: 5,
           stopCondition: 'explicit_stop' as const,
           temperature: 0.7,
@@ -2032,7 +2031,6 @@ After performing the actions, write a final summary of what you did.`,
           systemPrompt:
             'You are an automation assistant integrated with Linear.  Be concise and professional.  Always finish with a clear summary.',
           addedTools: [],
-          enabledTools: [],
           maxIterations: 8,
           stopCondition: 'explicit_stop' as const,
           temperature: 0.4,

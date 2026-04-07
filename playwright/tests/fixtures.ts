@@ -562,7 +562,6 @@ const TEST_FLOW_DEFINITIONS: Record<string, TestFlowDefinition> = {
           model: 'claude-sonnet-4-20250514',
           taskPrompt: 'Summarize the latest Linear issue activity.',
           systemPrompt: 'You are a concise Linear assistant.',
-          enabledTools: [],
           addedTools: [],
           maxIterations: 3,
           stopCondition: 'explicit_stop',

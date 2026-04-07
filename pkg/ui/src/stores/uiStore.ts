@@ -28,6 +28,9 @@ interface UIState {
 
   // Node sidebar (for adding nodes)
   nodeSidebarOpen: boolean;
+
+  // Bottom toolbar
+  toolbarCollapsed: boolean;
 }
 
 interface UIActions {
@@ -51,6 +54,9 @@ interface UIActions {
   toggleNodeSidebar: () => void;
   setNodeSidebarOpen: (open: boolean) => void;
 
+  // Bottom toolbar
+  toggleToolbarCollapsed: () => void;
+
   // Reset
   reset: () => void;
 }
@@ -65,6 +71,7 @@ const initialState: UIState = {
   validationPanelOpen: false,
   logsPanelOpen: false,
   nodeSidebarOpen: true,
+  toolbarCollapsed: false,
 };
 
 export const useUIStore: UseBoundStore<StoreApi<UIStore>> = create<UIStore>()(
@@ -139,6 +146,12 @@ export const useUIStore: UseBoundStore<StoreApi<UIStore>> = create<UIStore>()(
             state.nodeSidebarOpen = open;
           }),
 
+        // Bottom toolbar
+        toggleToolbarCollapsed: () =>
+          set((state) => {
+            state.toolbarCollapsed = !state.toolbarCollapsed;
+          }),
+
         // Reset
         reset: () => set(() => ({ ...initialState })),
       })),
@@ -149,6 +162,7 @@ export const useUIStore: UseBoundStore<StoreApi<UIStore>> = create<UIStore>()(
           sidebarCollapsed: state.sidebarCollapsed,
           activeSidebarTab: state.activeSidebarTab,
           nodeSidebarOpen: state.nodeSidebarOpen,
+          toolbarCollapsed: state.toolbarCollapsed,
         }),
       },
     ),

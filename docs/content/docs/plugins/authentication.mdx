@@ -3,13 +3,18 @@ title: Authentication
 description: Add user authentication with @invect/user-auth.
 ---
 
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
 The auth plugin wraps [Better Auth](https://better-auth.com) to provide user login, session management, and admin-only user creation. It's a backend + frontend package.
 
 ## Installation
 
-```bash
-pnpm add @invect/user-auth
-```
+<Tabs items={['pnpm', 'npm', 'yarn', 'bun']}>
+  <Tab value="pnpm">```bash pnpm add @invect/user-auth ```</Tab>
+  <Tab value="npm">```bash npm install @invect/user-auth ```</Tab>
+  <Tab value="yarn">```bash yarn add @invect/user-auth ```</Tab>
+  <Tab value="bun">```bash bun add @invect/user-auth ```</Tab>
+</Tabs>
 
 ## Backend setup
 
@@ -35,8 +40,8 @@ The `globalAdmins` array seeds admin users on startup. These are the only users 
 After adding the plugin, regenerate and apply the schema:
 
 ```bash
-pnpm dlx @invect/cli generate
-pnpm dlx @invect/cli migrate --push
+npx invect-cli generate
+npx invect-cli migrate --push
 ```
 
 ## What it does

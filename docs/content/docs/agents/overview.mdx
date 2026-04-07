@@ -4,25 +4,21 @@ description: Build iterative AI agents with tool calling and multi-step reasonin
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
+import { Mermaid } from '../../../components/Mermaid';
 
 The **Agent** node runs an iterative AI loop: send a prompt to an LLM, the model calls tools, Invect executes them and returns results, and the model continues until it reaches a conclusion. This is different from the [Model](/docs/nodes/core-nodes#model) node which makes a single API call.
 
 ## How agents work
 
-```
-┌─────────────────────────────────────────┐
-│              Agent Loop                  │
-│                                          │
-│  1. Send task prompt + tools to LLM      │
-│              ▼                           │
-│  2. LLM responds with text or tool call  │
-│              ▼                           │
-│  3. Execute tool, return result to LLM   │
-│              ▼                           │
-│  4. Repeat until stop condition          │
-│                                          │
-└─────────────────────────────────────────┘
-```
+<Mermaid chart={`
+flowchart TD
+  A["1. Send task prompt + tools to LLM"] --> B{"2. LLM response"}
+  B -->|Tool call| C["3. Execute tool(s)"]
+  C --> D["4. Return result to LLM"]
+  D --> A
+  B -->|Text response| E["Agent loop ends"]
+  B -->|Stop tool called| E
+`} />
 
 At each iteration, the LLM can:
 

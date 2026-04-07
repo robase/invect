@@ -3,13 +3,18 @@ title: Webhooks
 description: Trigger flows from external HTTP requests with @invect/webhooks.
 ---
 
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
 The webhooks plugin adds inbound webhook support — external services can trigger flow runs by making HTTP requests to unique webhook URLs.
 
 ## Installation
 
-```bash
-pnpm add @invect/webhooks
-```
+<Tabs items={['pnpm', 'npm', 'yarn', 'bun']}>
+  <Tab value="pnpm">```bash pnpm add @invect/webhooks ```</Tab>
+  <Tab value="npm">```bash npm install @invect/webhooks ```</Tab>
+  <Tab value="yarn">```bash yarn add @invect/webhooks ```</Tab>
+  <Tab value="bun">```bash bun add @invect/webhooks ```</Tab>
+</Tabs>
 
 ## Setup
 
@@ -28,11 +33,11 @@ export const invectConfig = defineConfig({
 
 The `webhookBaseUrl` is the public URL prefix used to generate webhook URLs displayed in the editor. Set this to your production URL so webhook URLs are correct.
 
-Regenerate the schema if needed:
+Regenerate the schema to add the webhook tables:
 
 ```bash
-pnpm dlx @invect/cli generate
-pnpm dlx @invect/cli migrate --push
+npx invect-cli generate
+npx invect-cli migrate --push
 ```
 
 ## How it works

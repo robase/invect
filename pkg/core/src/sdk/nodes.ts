@@ -137,7 +137,6 @@ export function httpRequest(
  *   credentialId: '{{env.OPENAI_CREDENTIAL}}',
  *   model: 'gpt-4o',
  *   taskPrompt: 'Research {{ topic }} and write a summary',
- *   enabledTools: ['http.request', 'core.javascript'],
  *   maxIterations: 15,
  *   stopCondition: 'explicit_stop',
  * })

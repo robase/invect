@@ -3,13 +3,18 @@ title: Access Control
 description: Add flow-level access control with @invect/rbac.
 ---
 
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
 The RBAC plugin adds flow-level access control. It depends on the auth plugin — users must be authenticated before RBAC can check their permissions.
 
 ## Installation
 
-```bash
-pnpm add @invect/rbac
-```
+<Tabs items={['pnpm', 'npm', 'yarn', 'bun']}>
+  <Tab value="pnpm">```bash pnpm add @invect/rbac ```</Tab>
+  <Tab value="npm">```bash npm install @invect/rbac ```</Tab>
+  <Tab value="yarn">```bash yarn add @invect/rbac ```</Tab>
+  <Tab value="bun">```bash bun add @invect/rbac ```</Tab>
+</Tabs>
 
 ## Setup
 
@@ -35,8 +40,8 @@ Plugin order matters: auth resolves the session first, then RBAC checks permissi
 Regenerate the schema to create the `flow_access` table:
 
 ```bash
-pnpm dlx @invect/cli generate
-pnpm dlx @invect/cli migrate --push
+npx invect-cli generate
+npx invect-cli migrate --push
 ```
 
 ## How it works
