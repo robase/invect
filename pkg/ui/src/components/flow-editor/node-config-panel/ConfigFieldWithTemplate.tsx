@@ -207,6 +207,7 @@ export const ConfigFieldWithTemplate = ({
       const optionEntries = (field.options ?? []).map((option) => ({
         label: option.label,
         value: String(option.value),
+        description: option.description,
       }));
       const hasCurrentValue = stringValue
         ? optionEntries.some((option) => option.value === stringValue)
@@ -214,7 +215,9 @@ export const ConfigFieldWithTemplate = ({
       const renderOptions =
         hasCurrentValue || !stringValue
           ? optionEntries
-          : [{ label: stringValue, value: stringValue }, ...optionEntries];
+          : [{ label: stringValue, value: stringValue, description: undefined }, ...optionEntries];
+
+      const hasDescriptions = renderOptions.some((o) => o.description);
 
       // Use searchable combobox for selects with many options (e.g. model lists)
       const SEARCHABLE_THRESHOLD = 10;
@@ -246,12 +249,23 @@ export const ConfigFieldWithTemplate = ({
             <SelectTrigger id={field.name} className="font-mono text-xs">
               <SelectValue placeholder={field.placeholder} />
             </SelectTrigger>
-            <SelectContent className="z-[80] font-mono text-xs" container={portalContainer}>
+            <SelectContent className="z-[80] text-xs" container={portalContainer}>
               {renderOptions
                 .filter((option) => option.value !== '')
                 .map((option) => (
                   <SelectItem key={option.value} value={option.value}>
-                    {option.value}
+                    {hasDescriptions ? (
+                      <div className="flex flex-col gap-0.5 py-0.5">
+                        <span className="font-medium">{option.label}</span>
+                        {option.description && (
+                          <span className="text-[11px] text-muted-foreground font-normal leading-tight">
+                            {option.description}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      option.value
+                    )}
                   </SelectItem>
                 ))}
             </SelectContent>

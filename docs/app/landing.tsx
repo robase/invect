@@ -302,7 +302,7 @@ export default function LandingPage() {
         <nav>
           <div className="container">
             <a href="#" className="logo">
-              invect<span>.</span>
+              invect
             </a>
             <ul className="nav-links">
               <li>
@@ -319,7 +319,10 @@ export default function LandingPage() {
               </li>
               <li>
                 <a href="https://github.com/robase/invect" className="btn-nav">
-                  GitHub →
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
+                  </svg>
+                  GitHub
                 </a>
               </li>
             </ul>
@@ -358,6 +361,40 @@ export default function LandingPage() {
                 Visual flow editor, AI agent nodes, native batch processing via OpenAI &amp;
                 Anthropic — drop it into your app in&nbsp;minutes.
               </p>
+              <div
+                className="install-bar"
+                onClick={(e) => {
+                  navigator.clipboard.writeText('npx invect-cli init');
+                  const el = (e.currentTarget as HTMLElement).querySelector('.copy-label');
+                  if (el) {
+                    el.textContent = 'Copied!';
+                    setTimeout(() => {
+                      el.textContent = 'Copy';
+                    }, 1500);
+                  }
+                }}
+              >
+                <code>
+                  <span className="install-muted">$</span> <span className="install-cmd">npx</span>{' '}
+                  <span className="install-pkg">invect-cli</span> init
+                </code>
+                <span className="copy-label copy-icon">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  </svg>
+                  <span>Copy</span>
+                </span>
+              </div>
               <div className="hero-actions">
                 <Link href="/docs/quick-start" className="btn-primary">
                   <svg
@@ -376,21 +413,11 @@ export default function LandingPage() {
                   Get Started
                 </Link>
                 <a href="https://github.com/robase/invect" className="btn-secondary">
-                  View on GitHub
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
+                  </svg>
+                  GitHub
                 </a>
-              </div>
-              <div
-                className="install-bar"
-                onClick={(e) => {
-                  navigator.clipboard.writeText('npx invect-cli init');
-                  const el = (e.currentTarget as HTMLElement).querySelector('.copy-label');
-                  if (el) {
-                    el.textContent = 'Copied!';
-                  }
-                }}
-              >
-                <code>npx invect-cli init</code>
-                <span className="copy-label copy-icon">📋</span>
               </div>
             </div>
           </div>
@@ -970,7 +997,7 @@ const landingStyles = `
   .landing .nav-links { display: flex; align-items: center; gap: 32px; list-style: none; }
   .landing .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.2s; }
   .landing .nav-links a:hover { color: var(--text); }
-  .landing .nav-links .btn-nav { background: transparent; color: var(--text); padding: 8px 18px; border: 1px solid var(--border); border-radius: var(--radius); font-weight: 500; transition: border-color 0.2s, background 0.2s; }
+  .landing .nav-links .btn-nav { display: inline-flex; align-items: center; gap: 6px; background: transparent; color: var(--text); padding: 8px 18px; border: 1px solid var(--border); border-radius: var(--radius); font-weight: 500; transition: border-color 0.2s, background 0.2s; }
   .landing .nav-links .btn-nav:hover { background: var(--bg-subtle); border-color: var(--text-muted); }
 
   /* Hero */
@@ -999,9 +1026,15 @@ const landingStyles = `
   .landing .btn-secondary { display: inline-flex; align-items: center; gap: 8px; background: transparent; color: var(--text); padding: 12px 24px; border: 1px solid var(--border); border-radius: var(--radius); font-weight: 500; font-size: 14px; text-decoration: none; transition: background 0.2s, border-color 0.2s; font-family: inherit; cursor: pointer; }
   .landing .btn-secondary:hover { background: var(--bg-subtle); border-color: var(--accent); }
 
-  .landing .install-bar { display: inline-flex; align-items: center; gap: 12px; background: var(--bg-subtle); border: 1px solid var(--border); padding: 10px 18px; font-size: 14px; color: var(--text-muted); cursor: pointer; transition: border-color 0.2s; border-radius: var(--radius); }
-  .landing .install-bar:hover { border-color: var(--accent); }
-  .landing .install-bar code { color: var(--text); }
+  .landing .install-bar { display: inline-flex; align-items: center; gap: 16px; background: var(--bg-subtle); border: 1px solid var(--border); padding: 14px 24px; font-size: 16px; color: var(--text-muted); cursor: pointer; transition: border-color 0.2s, background 0.2s; border-radius: var(--radius); margin-bottom: 24px; font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', ui-monospace, monospace; }
+  .landing .install-bar:hover { border-color: var(--accent); background: color-mix(in srgb, var(--bg-subtle) 80%, var(--accent) 8%); }
+  .landing .install-bar code { color: var(--text); font-family: inherit; font-size: inherit; }
+  .landing .install-bar .install-muted { color: var(--text-muted); opacity: 0.5; }
+  .landing .install-bar .install-cmd { color: var(--accent); }
+  .landing .install-bar .install-pkg { color: #e879a8; }
+  :root.dark .landing .install-bar .install-pkg { color: #f0abcb; }
+  .landing .install-bar .copy-icon { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-sans, system-ui, sans-serif); font-size: 13px; color: var(--text-muted); opacity: 0.7; transition: opacity 0.2s; }
+  .landing .install-bar:hover .copy-icon { opacity: 1; }
 
   /* Section common */
   .landing .section-label { font-size: 12px; text-transform: uppercase; letter-spacing: 2px; color: var(--accent); margin-bottom: 12px; }

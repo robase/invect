@@ -174,18 +174,18 @@ export function SwitchCasesField({ value, onChange, nodeId, inputData }: SwitchC
               </Button>
             </div>
           </div>
-          <div className="text-[10px] text-muted-foreground font-mono pl-5">
-            slug: {c.slug}
-            {hasEdgesForHandle(c.slug) && (
-              <Lock className="inline-block w-2.5 h-2.5 ml-1 opacity-50" />
-            )}
-          </div>
           <div className="pl-5">
             <CodeMirrorJsEditor
               value={c.expression}
               onChange={(val) => handleUpdateCase(index, 'expression', val)}
               placeholder='priority === "high"'
               inputData={inputData}
+              hideGutter
+              hideToolbar
+              hideResize
+              defaultHeight={76}
+              minHeight={76}
+              maxHeight={76}
             />
           </div>
         </div>

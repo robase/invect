@@ -111,7 +111,7 @@ export interface ParamField {
   required?: boolean;
   /** When true, field is hidden from the config panel */
   hidden?: boolean;
-  options?: { label: string; value: string | number }[];
+  options?: { label: string; value: string | number; description?: string }[];
   /** Show in collapsed "More Options" section */
   extended?: boolean;
   /**

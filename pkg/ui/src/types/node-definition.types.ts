@@ -22,7 +22,7 @@ export interface NodeParamField {
   description?: string;
   placeholder?: string;
   defaultValue?: unknown;
-  options?: { label: string; value: string | number }[]; // For select
+  options?: { label: string; value: string | number; description?: string }[]; // For select
   required?: boolean;
   hidden?: boolean; // For internal params
   disabled?: boolean;

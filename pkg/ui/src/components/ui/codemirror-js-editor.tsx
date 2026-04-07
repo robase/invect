@@ -48,6 +48,12 @@ interface CodeMirrorJsEditorProps {
    * Top-level keys are variable names; nested object keys drive property completions.
    */
   inputData?: Record<string, unknown>;
+  /** Hide the left gutter (line numbers / fold indicators). Default: false. */
+  hideGutter?: boolean;
+  /** Hide the top toolbar (word wrap, format buttons). Default: false. */
+  hideToolbar?: boolean;
+  /** Hide the bottom resize drag handle. Default: false. */
+  hideResize?: boolean;
 }
 
 /**
@@ -113,6 +119,9 @@ export function CodeMirrorJsEditor({
   minHeight = 120,
   maxHeight = 600,
   inputData,
+  hideGutter = false,
+  hideToolbar = false,
+  hideResize = false,
 }: CodeMirrorJsEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -152,7 +161,7 @@ export function CodeMirrorJsEditor({
       bracketMatching(),
       closeBrackets(),
       indentOnInput(),
-      foldGutter(),
+      ...(hideGutter ? [] : [foldGutter()]),
       history(),
       autocompletion({
         override: [
@@ -177,7 +186,7 @@ export function CodeMirrorJsEditor({
       ...(placeholder ? [cmPlaceholder(placeholder)] : []),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps -- inputDataCompletionSource is stable (created once via useMemo)
-    [placeholder, inputDataCompletionSource],
+    [placeholder, inputDataCompletionSource, hideGutter],
   );
 
   const themeExtension = useMemo(
@@ -202,14 +211,12 @@ export function CodeMirrorJsEditor({
         },
         '.cm-content': {
           padding: '8px 0',
-          minHeight: '120px',
+          minHeight: hideGutter ? undefined : '120px',
         },
         '.cm-line': {
           padding: '0 8px',
         },
-        '.cm-gutters': {
-          minWidth: '28px',
-        },
+        '.cm-gutters': hideGutter ? { display: 'none' } : { minWidth: '28px' },
         '&.cm-focused': {
           outline: 'none',
         },
@@ -239,7 +246,7 @@ export function CodeMirrorJsEditor({
           fontSize: '11px',
         },
       }),
-    [palette],
+    [palette, hideGutter],
   );
 
   // Recreate editor when theme or base extensions change
@@ -358,64 +365,68 @@ export function CodeMirrorJsEditor({
       style={{ height: editorHeight }}
     >
       {/* Toolbar */}
-      <div className="flex items-center gap-0.5 px-1.5 py-1 border-b border-border bg-muted/40 shrink-0">
-        <div className="flex-1" />
-        <TooltipProvider delayDuration={300}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={() => setWordWrap((w) => !w)}
-                className={cn(
-                  'flex items-center justify-center w-5 h-5 rounded transition-colors',
-                  wordWrap
-                    ? 'text-foreground bg-muted'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted',
-                )}
-              >
-                <WrapText className="w-3 h-3" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="text-xs">
-              {wordWrap ? 'Disable word wrap' : 'Enable word wrap'}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-        <TooltipProvider delayDuration={300}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={handleFormat}
-                disabled={isFormatting}
-                className="flex items-center justify-center w-5 h-5 rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40"
-              >
-                <WandSparkles className="w-3 h-3" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="text-xs">
-              Format code
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
+      {!hideToolbar && (
+        <div className="flex items-center gap-0.5 px-1.5 py-1 border-b border-border bg-muted/40 shrink-0">
+          <div className="flex-1" />
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => setWordWrap((w) => !w)}
+                  className={cn(
+                    'flex items-center justify-center w-5 h-5 rounded transition-colors',
+                    wordWrap
+                      ? 'text-foreground bg-muted'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                  )}
+                >
+                  <WrapText className="w-3 h-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">
+                {wordWrap ? 'Disable word wrap' : 'Enable word wrap'}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={handleFormat}
+                  disabled={isFormatting}
+                  className="flex items-center justify-center w-5 h-5 rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40"
+                >
+                  <WandSparkles className="w-3 h-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">
+                Format code
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      )}
 
       {/* Editor — fills space between toolbar and resize handle */}
       <div ref={containerRef} className="flex-1 min-h-0 overflow-hidden" />
 
       {/* Resize drag handle */}
-      <div
-        className="shrink-0 h-2 cursor-ns-resize flex items-center justify-center group select-none border-t border-border bg-muted/30 hover:bg-muted/60 transition-colors"
-        onPointerDown={handleDragHandlePointerDown}
-        onPointerMove={handleDragHandlePointerMove}
-        onPointerUp={handleDragHandlePointerUp}
-        onPointerCancel={handleDragHandlePointerUp}
-      >
-        {/* Grip dots */}
-        <div className="flex gap-0.5 opacity-40 group-hover:opacity-70 transition-opacity">
-          <div className="w-4 h-0.5 rounded-full bg-foreground" />
+      {!hideResize && (
+        <div
+          className="shrink-0 h-2 cursor-ns-resize flex items-center justify-center group select-none border-t border-border bg-muted/30 hover:bg-muted/60 transition-colors"
+          onPointerDown={handleDragHandlePointerDown}
+          onPointerMove={handleDragHandlePointerMove}
+          onPointerUp={handleDragHandlePointerUp}
+          onPointerCancel={handleDragHandlePointerUp}
+        >
+          {/* Grip dots */}
+          <div className="flex gap-0.5 opacity-40 group-hover:opacity-70 transition-opacity">
+            <div className="w-4 h-0.5 rounded-full bg-foreground" />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

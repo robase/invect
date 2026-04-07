@@ -55,8 +55,16 @@ export const switchAction = defineAction({
         description:
           'How to handle multiple matching cases. "First match" stops at the first truthy case. "All matches" activates every truthy branch.',
         options: [
-          { label: 'First match', value: 'first' },
-          { label: 'All matches', value: 'all' },
+          {
+            label: 'First match',
+            value: 'first',
+            description: 'Stops at the first truthy case and routes execution to that branch only.',
+          },
+          {
+            label: 'All matches',
+            value: 'all',
+            description: 'Activates every branch whose expression evaluates to true.',
+          },
         ],
         defaultValue: 'first',
       },
