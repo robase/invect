@@ -40,7 +40,9 @@ const MULTI_OUTPUT_HANDLE_SPACING = 24; // px between each output handle
 
 /** Compute node height based on output count. Must match react-flow-renderer.service.ts */
 function getNodeHeight(outputCount: number): number {
-  if (outputCount <= 2) {return 60;}
+  if (outputCount <= 2) {
+    return 60;
+  }
   return MULTI_OUTPUT_PADDING * 2 + (outputCount - 1) * MULTI_OUTPUT_HANDLE_SPACING;
 }
 

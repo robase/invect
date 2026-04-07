@@ -188,4 +188,79 @@ describe('core.switch action', () => {
     expect(switchAction.dynamicOutputs).toBe(true);
     expect(switchAction.excludeFromTools).toBe(true);
   });
+
+  // ------- matchMode: 'all' tests -------
+
+  it('matchMode all: should activate multiple matching branches', async () => {
+    const result = await switchAction.execute(
+      {
+        matchMode: 'all',
+        cases: [
+          { slug: 'even', label: 'Even', expression: 'num % 2 === 0' },
+          { slug: 'positive', label: 'Positive', expression: 'num > 0' },
+          { slug: 'big', label: 'Big', expression: 'num > 100' },
+        ],
+      },
+      makeContext({ num: 42 }),
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.outputVariables!.even).toBeDefined();
+    expect(result.outputVariables!.positive).toBeDefined();
+    expect(result.outputVariables!.big).toBeUndefined();
+    expect(result.outputVariables!.default).toBeUndefined();
+  });
+
+  it('matchMode all: should fall through to default when nothing matches', async () => {
+    const result = await switchAction.execute(
+      {
+        matchMode: 'all',
+        cases: [
+          { slug: 'a', label: 'A', expression: 'false' },
+          { slug: 'b', label: 'B', expression: 'false' },
+        ],
+      },
+      makeContext({}),
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.outputVariables!.default).toBeDefined();
+    expect(result.outputVariables!.a).toBeUndefined();
+    expect(result.outputVariables!.b).toBeUndefined();
+  });
+
+  it('matchMode all: should activate all branches when all match', async () => {
+    const result = await switchAction.execute(
+      {
+        matchMode: 'all',
+        cases: [
+          { slug: 'first', label: 'First', expression: 'true' },
+          { slug: 'second', label: 'Second', expression: 'true' },
+        ],
+      },
+      makeContext({}),
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.outputVariables!.first).toBeDefined();
+    expect(result.outputVariables!.second).toBeDefined();
+    expect(result.outputVariables!.default).toBeUndefined();
+  });
+
+  it('matchMode first: defaults to first-match behavior', async () => {
+    const result = await switchAction.execute(
+      {
+        matchMode: 'first',
+        cases: [
+          { slug: 'first', label: 'First', expression: 'true' },
+          { slug: 'second', label: 'Second', expression: 'true' },
+        ],
+      },
+      makeContext({}),
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.outputVariables!.first).toBeDefined();
+    expect(result.outputVariables!.second).toBeUndefined();
+  });
 });

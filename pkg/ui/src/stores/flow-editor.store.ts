@@ -5,6 +5,7 @@ import type { Node, Edge, NodeChange, EdgeChange } from '@xyflow/react';
 import { applyNodeChanges, applyEdgeChanges, addEdge, type Connection } from '@xyflow/react';
 import type { LayoutAlgorithm } from '~/utils/layoutUtils';
 import type { ReactFlowNodeData } from '@invect/core/types';
+import { computeSnapshot } from '~/utils/flowTransformations';
 
 export type LayoutDirection = 'TB' | 'LR' | 'BT' | 'RL';
 
@@ -56,8 +57,12 @@ export interface FlowEditorState {
   nodesReinitializedAfterRegistry: boolean;
   definitionsLoadedTime: number | null;
 
-  // Dirty tracking
-  isDirty: boolean;
+  // Dirty tracking (content-based)
+  // currentSnapshot: serialized InvectDefinition from the latest structural mutation
+  // lastSavedSnapshot: serialized InvectDefinition from the last save or server sync
+  // isDirty is derived: currentSnapshot !== lastSavedSnapshot
+  currentSnapshot: string | null;
+  lastSavedSnapshot: string | null;
   lastSavedVersionId: string | null;
   initialDataLoaded: boolean;
 
@@ -165,7 +170,8 @@ const initialState: FlowEditorState = {
   allNodesHaveDefinitions: false,
   nodesReinitializedAfterRegistry: false,
   definitionsLoadedTime: null,
-  isDirty: false,
+  currentSnapshot: null,
+  lastSavedSnapshot: null,
   lastSavedVersionId: null,
   initialDataLoaded: false,
   selectedNodeId: null,
@@ -207,7 +213,7 @@ export const useFlowEditorStore: UseBoundStore<StoreApi<FlowEditorStore>> =
             set((state) => {
               state.nodes = nodes;
               if (state.initialDataLoaded) {
-                state.isDirty = true;
+                state.currentSnapshot = computeSnapshot(state.nodes, state.edges);
               }
             }),
 
@@ -215,7 +221,13 @@ export const useFlowEditorStore: UseBoundStore<StoreApi<FlowEditorStore>> =
             set((state) => {
               state.nodes = applyNodeChanges(changes, state.nodes) as Node[];
               if (state.initialDataLoaded) {
-                state.isDirty = true;
+                // Only recompute snapshot for structural changes (not select/dimensions)
+                const hasStructural = changes.some(
+                  (c) => c.type !== 'select' && c.type !== 'dimensions',
+                );
+                if (hasStructural) {
+                  state.currentSnapshot = computeSnapshot(state.nodes, state.edges);
+                }
               }
             }),
 
@@ -227,14 +239,14 @@ export const useFlowEditorStore: UseBoundStore<StoreApi<FlowEditorStore>> =
                   ...state.nodes[nodeIndex],
                   data: { ...state.nodes[nodeIndex].data, ...data },
                 };
-                state.isDirty = true;
+                state.currentSnapshot = computeSnapshot(state.nodes, state.edges);
               }
             }),
 
           addNode: (node) =>
             set((state) => {
               state.nodes.push(node);
-              state.isDirty = true;
+              state.currentSnapshot = computeSnapshot(state.nodes, state.edges);
             }),
 
           removeNode: (nodeId) =>
@@ -242,7 +254,7 @@ export const useFlowEditorStore: UseBoundStore<StoreApi<FlowEditorStore>> =
               state.nodes = state.nodes.filter((n) => n.id !== nodeId);
               // Also remove connected edges
               state.edges = state.edges.filter((e) => e.source !== nodeId && e.target !== nodeId);
-              state.isDirty = true;
+              state.currentSnapshot = computeSnapshot(state.nodes, state.edges);
               if (state.selectedNodeId === nodeId) {
                 state.selectedNodeId = null;
                 state.configPanelOpen = false;
@@ -254,7 +266,7 @@ export const useFlowEditorStore: UseBoundStore<StoreApi<FlowEditorStore>> =
               const idSet = new Set(nodeIds);
               state.nodes = state.nodes.filter((n) => !idSet.has(n.id));
               state.edges = state.edges.filter((e) => !idSet.has(e.source) && !idSet.has(e.target));
-              state.isDirty = true;
+              state.currentSnapshot = computeSnapshot(state.nodes, state.edges);
               if (state.selectedNodeId && idSet.has(state.selectedNodeId)) {
                 state.selectedNodeId = null;
                 state.configPanelOpen = false;
@@ -269,7 +281,7 @@ export const useFlowEditorStore: UseBoundStore<StoreApi<FlowEditorStore>> =
               state.nodes.push(...newNodes);
               // Add new edges
               state.edges.push(...newEdges);
-              state.isDirty = true;
+              state.currentSnapshot = computeSnapshot(state.nodes, state.edges);
               state.selectedNodeId = null;
               state.configPanelOpen = false;
             }),
@@ -279,7 +291,7 @@ export const useFlowEditorStore: UseBoundStore<StoreApi<FlowEditorStore>> =
             set((state) => {
               state.edges = edges;
               if (state.initialDataLoaded) {
-                state.isDirty = true;
+                state.currentSnapshot = computeSnapshot(state.nodes, state.edges);
               }
             }),
 
@@ -287,26 +299,30 @@ export const useFlowEditorStore: UseBoundStore<StoreApi<FlowEditorStore>> =
             set((state) => {
               state.edges = applyEdgeChanges(changes, state.edges) as Edge[];
               if (state.initialDataLoaded) {
-                state.isDirty = true;
+                // Only recompute for structural changes (not select)
+                const hasStructural = changes.some((c) => c.type !== 'select');
+                if (hasStructural) {
+                  state.currentSnapshot = computeSnapshot(state.nodes, state.edges);
+                }
               }
             }),
 
           addEdge: (edge) =>
             set((state) => {
               state.edges.push(edge);
-              state.isDirty = true;
+              state.currentSnapshot = computeSnapshot(state.nodes, state.edges);
             }),
 
           onConnect: (connection) =>
             set((state) => {
               state.edges = addEdge(connection, state.edges);
-              state.isDirty = true;
+              state.currentSnapshot = computeSnapshot(state.nodes, state.edges);
             }),
 
           removeEdge: (edgeId) =>
             set((state) => {
               state.edges = state.edges.filter((e) => e.id !== edgeId);
-              state.isDirty = true;
+              state.currentSnapshot = computeSnapshot(state.nodes, state.edges);
             }),
 
           removeEdgesBySourceHandle: (nodeId: string, handleId: string) =>
@@ -314,7 +330,7 @@ export const useFlowEditorStore: UseBoundStore<StoreApi<FlowEditorStore>> =
               state.edges = state.edges.filter(
                 (e) => !(e.source === nodeId && e.sourceHandle === handleId),
               );
-              state.isDirty = true;
+              state.currentSnapshot = computeSnapshot(state.nodes, state.edges);
             }),
 
           setEdgesReady: (ready) =>
@@ -397,20 +413,24 @@ export const useFlowEditorStore: UseBoundStore<StoreApi<FlowEditorStore>> =
           // Sync with server data - called when React Query fetches new data
           syncFromServer: (nodes, edges, versionId, flowName) =>
             set((state) => {
+              const incomingSnapshot = computeSnapshot(nodes, edges);
+
               // Only sync if:
               // 1. We haven't loaded initial data yet
-              // 2. OR this is a different version than what we have
-              // 3. AND we haven't made local changes
+              // 2. OR this is a different version than what we have AND we haven't diverged
+              //    (content-based: current snapshot still matches last saved = no local changes)
+              const isDirty =
+                state.currentSnapshot !== null && state.currentSnapshot !== state.lastSavedSnapshot;
               const shouldSync =
-                !state.initialDataLoaded ||
-                (state.lastSavedVersionId !== versionId && !state.isDirty);
+                !state.initialDataLoaded || (state.lastSavedVersionId !== versionId && !isDirty);
 
               if (shouldSync) {
                 state.nodes = nodes;
                 state.edges = edges;
+                state.currentSnapshot = incomingSnapshot;
+                state.lastSavedSnapshot = incomingSnapshot;
                 state.lastSavedVersionId = versionId;
                 state.initialDataLoaded = true;
-                state.isDirty = false;
                 if (flowName) {
                   state.flowName = flowName;
                 }
@@ -419,20 +439,23 @@ export const useFlowEditorStore: UseBoundStore<StoreApi<FlowEditorStore>> =
 
           markSaved: (versionId) =>
             set((state) => {
-              state.isDirty = false;
+              state.lastSavedSnapshot = state.currentSnapshot;
               state.lastSavedVersionId = versionId;
             }),
 
           markDirty: () =>
             set((state) => {
               if (state.initialDataLoaded) {
-                state.isDirty = true;
+                // Force snapshot recomputation (for cases where external code
+                // needs to explicitly mark dirty without a structural mutation)
+                state.currentSnapshot = computeSnapshot(state.nodes, state.edges);
               }
             }),
 
           resetDirty: (savedVersionId) =>
             set((state) => {
-              state.isDirty = false;
+              // Align snapshots so isDirty becomes false
+              state.lastSavedSnapshot = state.currentSnapshot;
               if (savedVersionId) {
                 state.lastSavedVersionId = savedVersionId;
               }
@@ -450,8 +473,8 @@ export const useFlowEditorStore: UseBoundStore<StoreApi<FlowEditorStore>> =
           setLayoutedNodes: (nodes) =>
             set((state) => {
               state.nodes = nodes;
-              // Layout changes are saved, so mark dirty
-              state.isDirty = true;
+              // Layout changes are saved, so recompute snapshot
+              state.currentSnapshot = computeSnapshot(state.nodes, state.edges);
             }),
 
           markInitialLayoutApplied: () =>
@@ -566,7 +589,10 @@ const _unsubscribeEdgeReadiness = useFlowEditorStore.subscribe((state, prevState
 export const useNodes = () => useFlowEditorStore((s) => s.nodes);
 export const useEdges = () => useFlowEditorStore((s) => s.edges);
 export const useEdgesReady = () => useFlowEditorStore((s) => s.edgesReady);
-export const useIsDirty = () => useFlowEditorStore((s) => s.isDirty);
+export const useIsDirty = () =>
+  useFlowEditorStore(
+    (s) => s.currentSnapshot !== null && s.currentSnapshot !== s.lastSavedSnapshot,
+  );
 export const useSelectedNodeId = () => useFlowEditorStore((s) => s.selectedNodeId);
 export const useConfigPanelOpen = () => useFlowEditorStore((s) => s.configPanelOpen);
 export const useFlowName = () => useFlowEditorStore((s) => s.flowName);
@@ -649,6 +675,6 @@ export const useFlowStats = () =>
   useFlowEditorStore((s) => ({
     nodeCount: s.nodes.length,
     edgeCount: s.edges.length,
-    isDirty: s.isDirty,
+    isDirty: s.currentSnapshot !== null && s.currentSnapshot !== s.lastSavedSnapshot,
     isLoading: s.isLoading,
   }));

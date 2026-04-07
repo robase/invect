@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import type { Node, Edge } from '@xyflow/react';
 import { useFlowReactFlowData, useCreateFlowVersion } from '../../api/flows.api';
 import { useExecuteFlow } from '../../api/executions.api';
-import { useFlowEditorStore, type LayoutDirection } from './flow-editor.store';
+import { useFlowEditorStore, useIsDirty, type LayoutDirection } from './flow-editor.store';
 import { transformToInvectDefinition } from '~/utils/flowTransformations';
 import { applyLayout, type LayoutAlgorithm } from '~/utils/layoutUtils';
 
@@ -58,7 +58,6 @@ export function useFlowEditor({ flowId, version, basePath = '' }: UseFlowEditorO
   const {
     nodes,
     edges,
-    isDirty,
     flowName,
     currentLayout,
     layoutDirection,
@@ -68,6 +67,9 @@ export function useFlowEditor({ flowId, version, basePath = '' }: UseFlowEditorO
     setLoading,
     setError,
   } = store;
+
+  // Content-based dirty detection (derived from snapshot comparison)
+  const isDirty = useIsDirty();
 
   // Initialize flow ID in store
   useEffect(() => {

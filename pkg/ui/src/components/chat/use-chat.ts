@@ -317,9 +317,9 @@ function handleUiAction(action: string, data: Record<string, unknown>, ctx: UiAc
         break;
       }
 
-      // Reset dirty flag so syncFromServer accepts the new data
-      const editorStore = useFlowEditorStore.getState();
-      editorStore.resetDirty();
+      // DO NOT call resetDirty() here — let syncFromServer's content-based guard decide.
+      // If the user has unsaved local changes, syncFromServer will reject the incoming
+      // data (snapshot mismatch). If the user has no local changes, it will apply cleanly.
 
       // Invalidate React Query caches to trigger refetch
       queryClient.invalidateQueries({ queryKey: queryKeys.reactFlow(flowId) });

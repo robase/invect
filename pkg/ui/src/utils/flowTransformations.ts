@@ -69,6 +69,20 @@ export function transformToInvectDefinition(nodes: Node[], edges: Edge[]): Invec
 }
 
 /**
+ * Compute a serialized snapshot of the flow definition for dirty-checking.
+ * Uses `transformToInvectDefinition` to strip ReactFlow-internal state
+ * (selected, measured, executionStatus, etc.), then JSON.stringify for
+ * cheap string equality comparison.
+ *
+ * This is only called inside Zustand store actions (on structural mutations
+ * and saves), NOT inside selectors — so it doesn't run on every render.
+ */
+export function computeSnapshot(nodes: Node[], edges: Edge[]): string {
+  const definition = transformToInvectDefinition(nodes, edges);
+  return JSON.stringify(definition);
+}
+
+/**
  * Validate that a InvectDefinition has required fields
  */
 function _validateInvectDefinition(definition: InvectDefinition): {

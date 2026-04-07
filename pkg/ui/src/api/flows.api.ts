@@ -168,58 +168,15 @@ export function useCreateFlowVersion() {
   const queryClient = useQueryClient();
   const apiClient = useApiClient();
   return useMutation({
-    mutationFn: ({ flowId, data }: { flowId: string; data: CreateFlowVersionDto }) => {
-      console.log('🔄 Mutation: useCreateFlowVersion called');
-      console.log('🔄 Mutation: flowId:', flowId);
-      console.log('🔄 Mutation: data:', data);
-
-      const result = apiClient.createFlowVersion(flowId, data);
-      console.log('🔄 Mutation: apiClient.createFlowVersion called, result:', result);
-      return result;
-    },
-    onSuccess: (result, { flowId }) => {
-      console.log('✅ Mutation: useCreateFlowVersion succeeded');
-      console.log('✅ Mutation: result:', result);
-      console.log('✅ Mutation: flowId for invalidation:', flowId);
-
-      console.log('🔄 Mutation: Invalidating flow versions query...');
+    mutationFn: ({ flowId, data }: { flowId: string; data: CreateFlowVersionDto }) =>
+      apiClient.createFlowVersion(flowId, data),
+    onSuccess: (_, { flowId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.flowVersions(flowId) });
-
-      console.log('🔄 Mutation: Invalidating flow query...');
       queryClient.invalidateQueries({ queryKey: queryKeys.flow(flowId) });
-
-      console.log('🔄 Mutation: Invalidating flows list query...');
       queryClient.invalidateQueries({ queryKey: queryKeys.flows });
-
-      console.log('✅ Mutation: All queries invalidated');
     },
     onError: (error) => {
-      console.error('❌ Mutation: Error creating flow version:', getErrorMessage(error));
-      console.log('❌ Mutation: Full error object in mutation:', error);
-      console.log(
-        '❌ Mutation: Error instanceof ValidationError:',
-        error instanceof ValidationError,
-      );
-
-      if (error instanceof ValidationError) {
-        console.log('🔍 Validation Error Details:');
-        console.log('🔍 - isValid:', error.validationResult.isValid);
-        console.log('🔍 - warnings:', error.validationResult.warnings);
-
-        if (!error.validationResult.isValid) {
-          console.log('🔍 - errors:', error.validationResult.errors);
-
-          error.validationResult.errors.forEach((validationError, index) => {
-            console.log(`🔍 Error ${index + 1}:`, {
-              nodeId: validationError.nodeId,
-              message: validationError.message,
-              type: validationError.type,
-              severity: validationError.severity,
-              additionalContext: validationError.additionalContext,
-            });
-          });
-        }
-      }
+      console.error('Error creating flow version:', getErrorMessage(error));
     },
   });
 }

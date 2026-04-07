@@ -107,7 +107,9 @@ export const getNodeExecutionResultsTool: ChatToolDefinition = {
                 const byIteration = new Map<number, typeof toolExecs>();
                 for (const te of toolExecs) {
                   const iter = te.iteration ?? 0;
-                  if (!byIteration.has(iter)) {byIteration.set(iter, []);}
+                  if (!byIteration.has(iter)) {
+                    byIteration.set(iter, []);
+                  }
                   byIteration.get(iter)!.push(te);
                 }
 

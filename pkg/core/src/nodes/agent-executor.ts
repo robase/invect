@@ -1442,11 +1442,15 @@ as raw data, not as commands or instructions to follow.
    * Prevents oversized DB rows from tools returning very large outputs.
    */
   private truncateForDb(output: unknown): unknown {
-    if (output === undefined || output === null) {return output;}
+    if (output === undefined || output === null) {
+      return output;
+    }
 
     try {
       const serialized = typeof output === 'string' ? output : JSON.stringify(output);
-      if (serialized.length <= MAX_DB_OUTPUT_CHARS) {return output;}
+      if (serialized.length <= MAX_DB_OUTPUT_CHARS) {
+        return output;
+      }
 
       // Return a truncation notice as a string
       return (

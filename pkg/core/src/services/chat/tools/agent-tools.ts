@@ -214,7 +214,7 @@ export const getToolDetailsTool: ChatToolDefinition = {
 
       const paramDetails = Object.entries(properties).map(([name, prop]) => ({
         name,
-        type: (prop.type ?? prop.anyOf) ? 'union' : 'unknown',
+        type: prop.type ?? (prop.anyOf ? 'union' : 'unknown'),
         required: required.includes(name),
         description: prop.description,
         ...(prop.default !== undefined ? { default: prop.default } : {}),

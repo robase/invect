@@ -51,7 +51,9 @@ export function RunControls({
             <TooltipTrigger asChild>
               <button
                 onClick={() => {
-                  if (!isActive) {onToggleActive();}
+                  if (!isActive) {
+                    onToggleActive();
+                  }
                 }}
                 disabled={isTogglingActive}
                 className={cn(
@@ -75,7 +77,9 @@ export function RunControls({
             <TooltipTrigger asChild>
               <button
                 onClick={() => {
-                  if (isActive) {onToggleActive();}
+                  if (isActive) {
+                    onToggleActive();
+                  }
                 }}
                 disabled={isTogglingActive}
                 className={cn(

@@ -25,13 +25,14 @@ const switchCaseSchema = z.object({
 
 const paramsSchema = z.object({
   cases: z.array(switchCaseSchema).min(1).max(4),
+  matchMode: z.enum(['first', 'all']).default('first'),
 });
 
 export const switchAction = defineAction({
   id: 'core.switch',
   name: 'Switch',
   description:
-    'Multi-way conditional branching. Evaluates JS expressions top-to-bottom, routes to the first match or default.',
+    'Multi-way conditional branching. Evaluates JS expressions top-to-bottom. In "first match" mode, routes to the first match or default. In "all matches" mode, activates every matching branch.',
   provider: CORE_PROVIDER,
   icon: 'GitFork',
   excludeFromTools: true,
@@ -47,18 +48,31 @@ export const switchAction = defineAction({
     schema: paramsSchema,
     fields: [
       {
+        name: 'matchMode',
+        label: 'Match Mode',
+        type: 'select' as const,
+        required: false,
+        description:
+          'How to handle multiple matching cases. "First match" stops at the first truthy case. "All matches" activates every truthy branch.',
+        options: [
+          { label: 'First match', value: 'first' },
+          { label: 'All matches', value: 'all' },
+        ],
+        defaultValue: 'first',
+      },
+      {
         name: 'cases',
         label: 'Cases',
         type: 'switch-cases' as const,
         required: true,
         description:
-          'Each case has a label and a JS expression. First truthy match wins. Upstream data available as local variables by reference ID.',
+          'Each case has a label and a JS expression. Upstream data available as local variables by reference ID.',
       },
     ],
   },
 
   async execute(params, context) {
-    const { cases } = params;
+    const { cases, matchMode = 'first' } = params;
     const evaluationData = (context.incomingData as Record<string, unknown>) ?? {};
 
     context.logger.debug('Switch evaluating cases', {
@@ -70,6 +84,7 @@ export const switchAction = defineAction({
 
     let matchedSlug: string | undefined;
     let matchedLabel: string | undefined;
+    const matchedSlugs: string[] = [];
     const caseResults: Array<{
       slug: string;
       label: string;
@@ -83,9 +98,14 @@ export const switchAction = defineAction({
         const matched = Boolean(result);
         caseResults.push({ slug: c.slug, label: c.label, matched });
 
-        if (matched && !matchedSlug) {
-          matchedSlug = c.slug;
-          matchedLabel = c.label;
+        if (matched) {
+          if (!matchedSlug) {
+            matchedSlug = c.slug;
+            matchedLabel = c.label;
+          }
+          if (matchMode === 'all') {
+            matchedSlugs.push(c.slug);
+          }
         }
       } catch (error) {
         const msg =
@@ -102,16 +122,25 @@ export const switchAction = defineAction({
       }
     }
 
-    const matchedHandle = matchedSlug ?? 'default';
-
     // Passthrough — switch output equals input
     const passthroughData = JSON.stringify(evaluationData);
 
-    // Only the matched handle gets an entry. The coordinator uses the
-    // absence of a handle key to determine which branches to skip.
-    const outputVariables: Record<string, { value: unknown; type: 'string' | 'object' }> = {
-      [matchedHandle]: { type: 'object', value: passthroughData },
-    };
+    // Build outputVariables based on match mode.
+    // The coordinator uses the absence of a handle key to skip branches.
+    const outputVariables: Record<string, { value: unknown; type: 'string' | 'object' }> = {};
+
+    if (matchMode === 'all') {
+      if (matchedSlugs.length > 0) {
+        for (const slug of matchedSlugs) {
+          outputVariables[slug] = { type: 'object', value: passthroughData };
+        }
+      } else {
+        outputVariables['default'] = { type: 'object', value: passthroughData };
+      }
+    } else {
+      const matchedHandle = matchedSlug ?? 'default';
+      outputVariables[matchedHandle] = { type: 'object', value: passthroughData };
+    }
 
     return {
       success: true,
@@ -119,8 +148,19 @@ export const switchAction = defineAction({
       outputVariables,
       metadata: {
         caseResults,
-        matchedSlug: matchedHandle,
-        matchedLabel: matchedLabel ?? 'default',
+        matchMode,
+        matchedSlug:
+          matchMode === 'all'
+            ? matchedSlugs.length > 0
+              ? matchedSlugs.join(', ')
+              : 'default'
+            : (matchedSlug ?? 'default'),
+        matchedLabel:
+          matchMode === 'all'
+            ? matchedSlugs.length > 0
+              ? `${matchedSlugs.length} matches`
+              : 'default'
+            : (matchedLabel ?? 'default'),
       },
     };
   },

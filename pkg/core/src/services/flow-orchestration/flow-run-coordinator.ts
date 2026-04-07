@@ -420,6 +420,10 @@ export class FlowRunCoordinator {
     for (const nodeExecution of existingNodeExecutions) {
       if (nodeExecution.status === NodeExecutionStatus.SUCCESS && nodeExecution.outputs) {
         nodeOutputs.set(nodeExecution.nodeId, nodeExecution.outputs);
+        // Replay branch-skipping for branching nodes (if_else, switch) that
+        // executed before the batch pause. Their downstream skipped nodes have
+        // no persisted SKIPPED record, so we must reconstruct the skip set.
+        this.handleBranchSkipping(nodeExecution.nodeId, nodeExecution, edges, skippedNodeIds);
       } else if (nodeExecution.status === NodeExecutionStatus.SKIPPED) {
         skippedNodeIds.add(nodeExecution.nodeId);
       } else if (nodeExecution.status === NodeExecutionStatus.BATCH_SUBMITTED) {
@@ -550,6 +554,8 @@ export class FlowRunCoordinator {
 
         if (trace.status === NodeExecutionStatus.SUCCESS && trace.outputs) {
           nodeOutputs.set(nodeId, trace.outputs);
+          // Unified branch-skipping for branching nodes (if_else, switch, etc.)
+          this.handleBranchSkipping(nodeId, trace, edges, skippedNodeIds);
         } else if (trace.status === NodeExecutionStatus.FAILED) {
           hasFailure = true;
         }
