@@ -21,5 +21,11 @@
     "paths": {}
   },
   "include": ["src/**/*"],
-  "exclude": ["dist", "node_modules"]
+  "exclude": ["dist", "node_modules", "tests", "coverage"],
+  "watchOptions": {
+    "watchFile": "useFsEvents",
+    "watchDirectory": "useFsEvents",
+    "fallbackPolling": "dynamicPriority",
+    "excludeDirectories": ["**/.git", "**/coverage", "**/dist", "**/node_modules"]
+  }
 }
