@@ -21,10 +21,11 @@
  * ```
  */
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Invect, type InvectProps } from '../Invect';
 import { createDemoApiClient, type DemoData } from './demo-api-client';
 import type { ApiClient } from '../api/client';
+import { useChatStore } from '../components/chat/chat.store';
 
 export interface DemoInvectProps extends Omit<InvectProps, 'apiBaseUrl' | 'apiClient'> {
   /** Static data to power the demo UI */
@@ -37,6 +38,14 @@ export interface DemoInvectProps extends Omit<InvectProps, 'apiBaseUrl' | 'apiCl
  */
 export function DemoInvect({ data, useMemoryRouter = true, ...rest }: DemoInvectProps) {
   const mockClient = useMemo(() => createDemoApiClient(data) as unknown as ApiClient, [data]);
+
+  // Open chat panel and pre-select Anthropic + Claude Sonnet 4.6 for the demo
+  const setOpen = useChatStore((s) => s.setOpen);
+  const updateSettings = useChatStore((s) => s.updateSettings);
+  useEffect(() => {
+    setOpen(true);
+    updateSettings({ credentialId: 'cred-anthropic', model: 'claude-sonnet-4-6' });
+  }, [setOpen, updateSettings]);
 
   return <Invect apiClient={mockClient} useMemoryRouter={useMemoryRouter} {...rest} />;
 }

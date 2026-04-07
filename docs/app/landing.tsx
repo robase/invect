@@ -309,7 +309,7 @@ export default function LandingPage() {
                 <a href="#features">Features</a>
               </li>
               <li>
-                <a href="#quickstart">Quickstart</a>
+                <Link href="/docs/getting-started/quickstart">Quickstart</Link>
               </li>
               <li>
                 <Link href="/docs">Docs</Link>
@@ -357,10 +357,7 @@ export default function LandingPage() {
                 </span>{' '}
                 app
               </h1>
-              <p>
-                Visual flow editor, AI agent nodes, native batch processing via OpenAI &amp;
-                Anthropic — drop it into your app in&nbsp;minutes.
-              </p>
+              <p>Build on a canvas. Ship as code. Same workflow, same engine.</p>
               <div
                 className="install-bar"
                 onClick={(e) => {
@@ -396,7 +393,7 @@ export default function LandingPage() {
                 </span>
               </div>
               <div className="hero-actions">
-                <Link href="/docs/quick-start" className="btn-primary">
+                <Link href="/docs/getting-started/quickstart" className="btn-primary">
                   <svg
                     width="18"
                     height="18"
@@ -442,204 +439,28 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Features */}
-        <section className="features" id="features">
-          <div className="container">
-            <p className="section-label">Features</p>
-            <h2 className="section-title">Everything you need to orchestrate</h2>
-            <p className="section-desc">
-              Build, run, and monitor workflows — from simple automations to AI
-              agent&nbsp;pipelines.
-            </p>
-            <div className="features-grid">
-              <Link href="/docs/concepts" className="feature-card">
-                <div className="feature-icon purple">⚡</div>
-                <h3>Visual Flow Editor</h3>
-                <p>Drag-and-drop workflow builder with real-time execution&nbsp;monitoring.</p>
-              </Link>
-              <Link href="/docs/agents" className="feature-card">
-                <div className="feature-icon green">🤖</div>
-                <h3>AI Agent Nodes</h3>
-                <p>
-                  Built-in AI agents with iterative tool-calling loops using OpenAI and
-                  Anthropic&nbsp;APIs.
-                </p>
-              </Link>
-              <Link href="/docs/actions" className="feature-card">
-                <div className="feature-icon orange">🔌</div>
-                <h3>50+ Built-in Actions</h3>
-                <p>
-                  Gmail, Slack, GitHub, Google Drive, Linear, Postgres, and more — ready
-                  to&nbsp;use.
-                </p>
-              </Link>
-              <Link href="/docs/concepts" className="feature-card">
-                <div className="feature-icon pink">🔨</div>
-                <h3>AI-Assisted Flow Builder</h3>
-                <p>
-                  Describe what you need in plain language — the chat assistant wires up nodes,
-                  configs, and&nbsp;connections.
-                </p>
-              </Link>
-              <Link href="/docs/concepts" className="feature-card">
-                <div className="feature-icon blue">📦</div>
-                <h3>Batch Processing</h3>
-                <p>Cut AI costs 50% with native OpenAI and Anthropic batch API support.</p>
-              </Link>
-              <Link href="/docs/database" className="feature-card">
-                <div className="feature-icon yellow">🗃️</div>
-                <h3>Multi-Database</h3>
-                <p>
-                  Works out of the box with SQLite, PostgreSQL, and MySQL. Bring your
-                  own&nbsp;database.
-                </p>
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        {/* Quickstart */}
-        <section className="code-section" id="quickstart">
-          <div className="container">
-            <div>
-              <p className="section-label">Quickstart</p>
-              <h2 className="section-title">Five lines to workflows</h2>
-              <p className="section-desc">
-                Add Invect to any Express, NestJS, or Next.js app. The framework-agnostic core means
-                your workflows run everywhere.
-              </p>
-              <p className="section-desc" style={{ marginTop: '-32px' }}>
-                The React frontend mounts as a single component — drop it in and get a full flow
-                editor, execution viewer, and credential&nbsp;manager.
-              </p>
-              <Link
-                href="/docs/quick-start"
-                className="btn-secondary"
-                style={{ marginTop: '8px', display: 'inline-block' }}
-              >
-                Read the full guide →
-              </Link>
-            </div>
-            <div>
-              <div className="code-block">
-                <div className="code-header">
-                  <span className="code-dot red" />
-                  <span className="code-dot yellow" />
-                  <span className="code-dot green" />
-                  <span>server.ts</span>
-                </div>
-                <pre
-                  dangerouslySetInnerHTML={{
-                    __html: `<span class="keyword">import</span> express <span class="keyword">from</span> <span class="string">'express'</span>;
-<span class="keyword">import</span> { <span class="type">createInvectRouter</span> } <span class="keyword">from</span> <span class="string">'@invect/express'</span>;
-
-<span class="keyword">const</span> app = <span class="func">express</span>();
-
-app.<span class="func">use</span>(<span class="string">'/invect'</span>, <span class="func">createInvectRouter</span>({
-  <span class="type">database</span>: {
-    <span class="type">type</span>: <span class="string">'sqlite'</span>,
-    <span class="type">connectionString</span>: <span class="string">'file:./dev.db'</span>,
-  },
-}));
-
-app.<span class="func">listen</span>(<span class="string">3000</span>);`,
-                  }}
-                />
-              </div>
-              <div className="code-block" style={{ marginTop: '16px' }}>
-                <div className="code-header">
-                  <span className="code-dot red" />
-                  <span className="code-dot yellow" />
-                  <span className="code-dot green" />
-                  <span>App.tsx</span>
-                </div>
-                <pre
-                  dangerouslySetInnerHTML={{
-                    __html: `<span class="keyword">import</span> { <span class="type">Invect</span> } <span class="keyword">from</span> <span class="string">'@invect/ui'</span>;
-<span class="keyword">import</span> <span class="string">'@invect/ui/styles'</span>;
-
-<span class="keyword">export default</span> () =&gt; (
-  &lt;<span class="type">Invect</span> <span class="func">apiBaseUrl</span>=<span class="string">"http://localhost:3000/invect"</span> /&gt;
-);`,
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        </section>
-
         {/* Why Invect */}
-        <section className="why-section">
+        <section className="why-section" id="features">
           <div className="container">
             <p className="section-label">Why Invect</p>
-            <h2 className="section-title">Not another LangChain wrapper</h2>
-            <p className="section-desc">
-              Invect is a real workflow engine — not a chain-of-prompts library with a UI bolted on.
-            </p>
+            <h2 className="section-title">
+              An open-source workflow engine that lives inside your app, not next to&nbsp;it
+            </h2>
             <div className="why-grid">
               <div className="why-item">
                 <div className="why-item-text">
-                  <h3>A real execution engine</h3>
+                  <h3>It&apos;s a library, not a platform</h3>
                   <p>
-                    Each node receives the merged output of every upstream node — no rigid
-                    &quot;input→output&quot;&nbsp;chains.
+                    You <code>npm install</code> it into your Express, NestJS, or Next.js app. It
+                    uses your database, your auth, your deployment pipeline. No separate server to
+                    maintain, no vendor lock-in, no &quot;outgrowing&quot; the&nbsp;tool.
                   </p>
                   <ul>
-                    <li>Reference any upstream node by name in templates</li>
-                    <li>Conditional branching, loops, and parallel paths are first-class</li>
-                    <li>Pause mid-flow for batch API results, then resume automatically</li>
+                    <li>Mount alongside your existing routes — same server, same&nbsp;database</li>
+                    <li>Scale horizontally the same way you scale the rest of your&nbsp;app</li>
+                    <li>No per-execution pricing — it&apos;s a library, not a&nbsp;service</li>
                   </ul>
-                  <Link href="/docs/concepts" className="why-link">
-                    Learn about the execution model →
-                  </Link>
-                </div>
-                <div className="why-code">
-                  <div className="code-header">
-                    <span className="code-dot red" />
-                    <span className="code-dot yellow" />
-                    <span className="code-dot green" />
-                    <span>node config</span>
-                  </div>
-                  <pre
-                    dangerouslySetInnerHTML={{
-                      __html: `<span class="comment">// Every node sees all upstream outputs</span>
-<span class="comment">// as a single merged object:</span>
-{
-  <span class="string">"fetch_users"</span>:  [{ <span class="string">"id"</span>: 1, ... }],
-  <span class="string">"get_config"</span>:   { <span class="string">"env"</span>: <span class="string">"prod"</span> },
-  <span class="string">"api_response"</span>: { <span class="string">"status"</span>: 200 }
-}
-
-<span class="comment">// Use any upstream value in templates:</span>
-<span class="string">"Process {{ fetch_users.length }} users</span>
-<span class="string"> in {{ get_config.env }}"</span>`,
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="why-item">
-                <div className="why-item-text">
-                  <h3>Embed it, don&apos;t replace anything</h3>
-                  <p>
-                    Invect isn&apos;t a standalone platform you deploy separately. It&apos;s a
-                    library you mount into your existing app — your admin panel, your backoffice,
-                    your internal tool.
-                  </p>
-                  <ul>
-                    <li>
-                      Mount the Express router, NestJS module, or Next.js actions into your existing
-                      app
-                    </li>
-                    <li>
-                      The React frontend is a single <code>&lt;Invect /&gt;</code> component — drop
-                      it into any page
-                    </li>
-                    <li>
-                      Uses your existing database (SQLite, Postgres, MySQL) — no separate infra
-                    </li>
-                  </ul>
-                  <Link href="/docs/integrations/express" className="why-link">
+                  <Link href="/docs/installation/express" className="why-link">
                     See integration guides →
                   </Link>
                 </div>
@@ -673,20 +494,116 @@ app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <spa
 
               <div className="why-item">
                 <div className="why-item-text">
-                  <h3>Execute flows directly in code</h3>
+                  <h3>Not another LangChain wrapper</h3>
                   <p>
-                    The visual editor is optional. Every operation is a typed method — build flows
-                    in the UI, trigger them from anywhere in your&nbsp;codebase.
+                    Invect has a custom-built execution engine from the ground up. Topological sort
+                    determines node order. If/else branches auto-prune unreachable subgraphs — no
+                    wasted API calls. It&apos;s an orchestration runtime, not a thin layer over
+                    someone else&apos;s&nbsp;abstractions.
                   </p>
                   <ul>
                     <li>
-                      Call <code>core.startFlowRun(flowId, inputs)</code> from any server-side code
+                      Smart branching — inactive paths and their downstream nodes are&nbsp;skipped
                     </li>
-                    <li>Trigger from queue consumers, webhooks, cron jobs, or CLI scripts</li>
-                    <li>Use the result synchronously — no callbacks or polling</li>
+                    <li>
+                      Upstream outputs auto-aggregated by node name into downstream&nbsp;inputs
+                    </li>
+                    <li>
+                      Full JavaScript expressions in config params via QuickJS WASM&nbsp;sandbox
+                    </li>
                   </ul>
-                  <Link href="/docs/programmatic-usage" className="why-link">
-                    See the programmatic API →
+                  <Link href="/docs/concepts" className="why-link">
+                    Learn about the execution model →
+                  </Link>
+                </div>
+                <div className="why-code">
+                  <div className="code-header">
+                    <span className="code-dot red" />
+                    <span className="code-dot yellow" />
+                    <span className="code-dot green" />
+                    <span>node config</span>
+                  </div>
+                  <pre
+                    dangerouslySetInnerHTML={{
+                      __html: `<span class="comment">// Every node sees all upstream outputs</span>
+<span class="comment">// as a single merged object:</span>
+{
+  <span class="string">"fetch_users"</span>:  [{ <span class="string">"id"</span>: 1, ... }],
+  <span class="string">"get_config"</span>:   { <span class="string">"env"</span>: <span class="string">"prod"</span> },
+  <span class="string">"api_response"</span>: { <span class="string">"status"</span>: 200 }
+}
+
+<span class="comment">// Use full JS in any param field:</span>
+<span class="string">"Process {{ fetch_users.filter(</span>
+<span class="string">  u =&gt; u.active).length }} users</span>
+<span class="string"> in {{ get_config.env }}"</span>`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="why-item">
+                <div className="why-item-text">
+                  <h3>Native batch processing</h3>
+                  <p>
+                    Flows automatically pause for OpenAI and Anthropic batch jobs, then resume when
+                    results arrive. Batch APIs are 50% cheaper — and no other flow builder handles
+                    this&nbsp;natively.
+                  </p>
+                  <ul>
+                    <li>
+                      <code>PAUSED_FOR_BATCH</code> is a first-class execution&nbsp;state
+                    </li>
+                    <li>Background polling handles the full batch lifecycle&nbsp;automatically</li>
+                    <li>No custom polling infrastructure or webhooks&nbsp;required</li>
+                  </ul>
+                  <Link href="/docs/concepts" className="why-link">
+                    Learn about batch processing →
+                  </Link>
+                </div>
+                <div className="why-code">
+                  <div className="code-header">
+                    <span className="code-dot red" />
+                    <span className="code-dot yellow" />
+                    <span className="code-dot green" />
+                    <span>execution timeline</span>
+                  </div>
+                  <pre
+                    dangerouslySetInnerHTML={{
+                      __html: `<span class="comment">// Flow execution with batch processing</span>
+
+<span class="type">Node 1</span>  ✓  Fetch data
+<span class="type">Node 2</span>  ✓  Transform inputs
+<span class="type">Node 3</span>  ⏸  AI Model <span class="comment">(batch submitted)</span>
+         <span class="string">→ flow pauses automatically</span>
+         <span class="string">→ polling checks batch status</span>
+         <span class="string">→ batch completes after ~20 min</span>
+         <span class="string">→ flow resumes from Node 3</span>
+<span class="type">Node 4</span>  ✓  Process results
+<span class="type">Node 5</span>  ✓  Send notification
+
+<span class="comment">// 50% cheaper than real-time API calls.</span>
+<span class="comment">// Zero custom infrastructure.</span>`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="why-item">
+                <div className="why-item-text">
+                  <h3>Version-pinned execution</h3>
+                  <p>
+                    Every flow save creates an immutable version. Pin production to version 5 while
+                    you iterate on version 6. Webhooks and crons bind to the version they were
+                    created with — editing the latest version can&apos;t break&nbsp;prod.
+                  </p>
+                  <ul>
+                    <li>Run any historical version on&nbsp;demand</li>
+                    <li>Roll back instantly if something goes&nbsp;wrong</li>
+                    <li>Full audit trail of every flow&nbsp;change</li>
+                  </ul>
+                  <Link href="/docs/concepts" className="why-link">
+                    Learn about flow versioning →
                   </Link>
                 </div>
                 <div className="why-code">
@@ -699,7 +616,6 @@ app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <spa
                   <pre
                     dangerouslySetInnerHTML={{
                       __html: `<span class="keyword">import</span> { <span class="type">Invect</span> } <span class="keyword">from</span> <span class="string">'@invect/core'</span>;
-<span class="keyword">import</span> { <span class="type">Kafka</span> } <span class="keyword">from</span> <span class="string">'kafkajs'</span>;
 
 <span class="keyword">const</span> core = <span class="keyword">new</span> <span class="type">Invect</span>({ <span class="type">database</span>: {
   <span class="type">type</span>: <span class="string">'postgres'</span>,
@@ -707,19 +623,15 @@ app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <spa
 }});
 <span class="keyword">await</span> core.<span class="func">initialize</span>();
 
-<span class="keyword">const</span> kafka = <span class="keyword">new</span> <span class="type">Kafka</span>({ <span class="type">brokers</span>: [<span class="string">'localhost:9092'</span>] });
-<span class="keyword">const</span> consumer = kafka.<span class="func">consumer</span>({ <span class="type">groupId</span>: <span class="string">'orders'</span> });
-<span class="keyword">await</span> consumer.<span class="func">subscribe</span>({ <span class="type">topic</span>: <span class="string">'new-orders'</span> });
+<span class="comment">// Run the tested, pinned version in prod</span>
+<span class="keyword">const</span> result = <span class="keyword">await</span> core.<span class="func">startFlowRun</span>(
+  flowId,
+  { order },
+  { <span class="type">version</span>: <span class="string">5</span> }  <span class="comment">// immutable — always the same</span>
+);
 
-<span class="keyword">await</span> consumer.<span class="func">run</span>({
-  <span class="func">eachMessage</span>: <span class="keyword">async</span> ({ message }) =&gt; {
-    <span class="keyword">const</span> order = JSON.<span class="func">parse</span>(message.value);
-    <span class="keyword">const</span> result = <span class="keyword">await</span> core.<span class="func">startFlowRun</span>(
-      <span class="string">'order-processing'</span>, { order }
-    );
-    console.<span class="func">log</span>(result.status); <span class="comment">// use the result inline</span>
-  },
-});`,
+<span class="comment">// Meanwhile, iterate freely on version 6</span>
+<span class="comment">// in the visual editor. Prod is unaffected.</span>`,
                     }}
                   />
                 </div>
@@ -727,81 +639,22 @@ app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <spa
 
               <div className="why-item">
                 <div className="why-item-text">
-                  <h3>Test workflows like any other code</h3>
+                  <h3>Deploy anywhere</h3>
                   <p>
-                    Because Invect is a library, your workflows are testable with standard tooling.
-                    No mock servers, no Docker containers running a workflow engine — just
-                    instantiate, run,&nbsp;assert.
-                  </p>
-                  <ul>
-                    <li>Spin up an in-memory SQLite instance per test suite</li>
-                    <li>Assert on flow outputs, node execution order, and side effects</li>
-                    <li>Run in CI with zero external dependencies</li>
-                  </ul>
-                  <Link href="/docs/programmatic-usage" className="why-link">
-                    See the programmatic API →
-                  </Link>
-                </div>
-                <div className="why-code">
-                  <div className="code-header">
-                    <span className="code-dot red" />
-                    <span className="code-dot yellow" />
-                    <span className="code-dot green" />
-                    <span>flows.test.ts</span>
-                  </div>
-                  <pre
-                    dangerouslySetInnerHTML={{
-                      __html: `<span class="keyword">import</span> { describe, it, expect, beforeAll } <span class="keyword">from</span> <span class="string">'vitest'</span>;
-<span class="keyword">import</span> { <span class="type">Invect</span> } <span class="keyword">from</span> <span class="string">'@invect/core'</span>;
-
-<span class="func">describe</span>(<span class="string">'order processing'</span>, () =&gt; {
-  <span class="keyword">let</span> core: <span class="type">Invect</span>;
-
-  <span class="func">beforeAll</span>(<span class="keyword">async</span> () =&gt; {
-    core = <span class="keyword">new</span> <span class="type">Invect</span>({ <span class="type">database</span>: {
-      <span class="type">type</span>: <span class="string">'sqlite'</span>,
-      <span class="type">connectionString</span>: <span class="string">':memory:'</span>,
-    }});
-    <span class="keyword">await</span> core.<span class="func">initialize</span>();
-    <span class="keyword">await</span> <span class="func">seedTestFlow</span>(core);
-  });
-
-  <span class="func">it</span>(<span class="string">'routes high-value orders to review'</span>, <span class="keyword">async</span> () =&gt; {
-    <span class="keyword">const</span> result = <span class="keyword">await</span> core.<span class="func">startFlowRun</span>(
-      flowId, { total: 10_000, riskScore: 0.8 }
-    );
-    <span class="func">expect</span>(result.output.route).<span class="func">toBe</span>(<span class="string">'manual_review'</span>);
-  });
-
-  <span class="func">it</span>(<span class="string">'auto-approves low-risk orders'</span>, <span class="keyword">async</span> () =&gt; {
-    <span class="keyword">const</span> result = <span class="keyword">await</span> core.<span class="func">startFlowRun</span>(
-      flowId, { total: 25, riskScore: 0.1 }
-    );
-    <span class="func">expect</span>(result.output.route).<span class="func">toBe</span>(<span class="string">'auto_approved'</span>);
-  });
-});`,
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="why-item">
-                <div className="why-item-text">
-                  <h3>Scales with your infrastructure, not your bill</h3>
-                  <p>
-                    Hosted workflow tools charge per execution. Self-hosted alternatives need a
-                    separate Docker deployment to manage. Invect runs in your existing&nbsp;process.
+                    SQLite for local dev, PostgreSQL for production, serverless on Vercel, Docker
+                    on-prem. Not vendor-locked — run in air-gapped networks with zero
+                    external&nbsp;dependencies.
                   </p>
                   <ul>
                     <li>
-                      No per-task or per-execution pricing — it&apos;s a library, not a&nbsp;service
+                      Extend without forking — plugins add DB tables, auth, RBAC, and
+                      API&nbsp;routes
                     </li>
-                    <li>No extra containers, sidecars, or orchestrators to operate</li>
                     <li>
-                      Throughput is bounded by your app&apos;s compute, not an external
-                      platform&apos;s&nbsp;limits
+                      Call <code>core.startFlowRun()</code> from queue workers, cron jobs, or
+                      CLI&nbsp;scripts
                     </li>
-                    <li>Scale horizontally the same way you scale the rest of your&nbsp;app</li>
+                    <li>Test workflows in CI with in-memory SQLite — no Docker&nbsp;required</li>
                   </ul>
                 </div>
                 <div className="why-code">
@@ -841,7 +694,7 @@ Windmill     →  dedicated server
             <p className="section-label">Integrations</p>
             <h2 className="section-title">Works with your stack</h2>
             <div className="framework-logos">
-              <Link href="/docs/integrations/express" className="framework-item">
+              <Link href="/docs/installation/express" className="framework-item">
                 <div className="framework-icon">
                   <svg width="24" height="24" viewBox="0 0 128 128" fill="none">
                     <path
@@ -852,7 +705,7 @@ Windmill     →  dedicated server
                 </div>
                 Express
               </Link>
-              <Link href="/docs/integrations/nestjs" className="framework-item">
+              <Link href="/docs/installation/nestjs" className="framework-item">
                 <div className="framework-icon">
                   <svg width="24" height="24" viewBox="0 0 128 128" fill="none">
                     <path
@@ -863,7 +716,7 @@ Windmill     →  dedicated server
                 </div>
                 NestJS
               </Link>
-              <Link href="/docs/integrations/nextjs" className="framework-item">
+              <Link href="/docs/installation/nextjs" className="framework-item">
                 <div className="framework-icon">
                   <svg width="24" height="24" viewBox="0 0 128 128" fill="none">
                     <path
@@ -893,7 +746,7 @@ Windmill     →  dedicated server
                 </div>
                 React
               </div>
-              <Link href="/docs/database" className="framework-item">
+              <Link href="/docs/reference/database-schema" className="framework-item">
                 <div className="framework-icon">
                   <svg
                     width="24"
@@ -926,7 +779,7 @@ Windmill     →  dedicated server
                 in&nbsp;minutes.
               </p>
               <div className="cta-buttons">
-                <Link href="/docs/quick-start" className="btn-primary">
+                <Link href="/docs/getting-started/quickstart" className="btn-primary">
                   <svg
                     width="18"
                     height="18"

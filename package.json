@@ -2,7 +2,6 @@
   "name": "invect",
   "version": "0.0.1",
   "private": true,
-  "packageManager": "pnpm@10.12.1",
   "description": "Complete workflow management system with React frontend and NestJS backend",
   "keywords": [
     "Invect",
@@ -130,6 +129,7 @@
     "node": ">=18.0.0",
     "npm": ">=8.0.0"
   },
+  "packageManager": "pnpm@10.12.1",
   "pnpm": {
     "overrides": {
       "@types/react": "18.3.7",

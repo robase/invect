@@ -191,6 +191,7 @@ export function createDemoApiClient(data: DemoData = {}): Record<string, unknown
     // Chat
     getChatStatus: async () => ({ enabled: true }),
     getChatModels: async () => [
+      { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', provider: 'anthropic' },
       { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', provider: 'anthropic' },
       { id: 'gpt-4o', name: 'GPT-4o', provider: 'openai' },
     ],
