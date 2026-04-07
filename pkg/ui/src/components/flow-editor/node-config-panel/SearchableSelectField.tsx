@@ -84,7 +84,7 @@ export function SearchableSelectField({
           )}
         >
           <span className="truncate">{displayLabel ?? placeholder}</span>
-          <ChevronsUpDown className="ml-auto h-3 w-3 shrink-0 opacity-50" />
+          <ChevronsUpDown className="w-3 h-3 ml-auto opacity-50 shrink-0" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
@@ -110,10 +110,10 @@ export function SearchableSelectField({
                       key={option.value}
                       value={option.value}
                       onSelect={() => handleSelect(option.value)}
-                      className="text-xs font-mono"
+                      className="font-mono text-xs"
                     >
                       <span className="truncate">{option.label}</span>
-                      {value === option.value && <Check className="ml-auto h-3 w-3 shrink-0" />}
+                      {value === option.value && <Check className="w-3 h-3 ml-auto shrink-0" />}
                     </CommandItem>
                   ))}
               </CommandGroup>

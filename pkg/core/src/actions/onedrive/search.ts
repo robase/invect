@@ -19,7 +19,12 @@ const paramsSchema = z.object({
 export const onedriveSearchAction = defineAction({
   id: 'onedrive.search',
   name: 'Search Files',
-  description: 'Search for files and folders in OneDrive by name or content.',
+  description:
+    'Search for files and folders in OneDrive by name or content (GET /me/drive/root/search(q=\'{query}\')). Use when you need to find files matching a keyword across the entire drive.\n\n'
+    + 'Example response:\n'
+    + '```json\n'
+    + '{"id": "0123456789abc!123", "name": "Contoso Project", "size": 4096, "folder": {}, "webUrl": "https://onedrive.live.com/..."}\n'
+    + '```',
   provider: ONEDRIVE_PROVIDER,
   actionCategory: 'read',
 

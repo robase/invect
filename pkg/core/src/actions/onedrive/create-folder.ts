@@ -21,7 +21,11 @@ export const onedriveCreateFolderAction = defineAction({
   id: 'onedrive.create_folder',
   name: 'Create Folder',
   description:
-    'Create a new folder in OneDrive. Optionally specify a parent folder, otherwise creates in root.',
+    'Create a new folder in OneDrive (POST /me/drive/items/{parent-id}/children). Use when you need to organize files by creating a new directory. Renames automatically on conflict.\n\n'
+    + 'Example response:\n'
+    + '```json\n'
+    + '{"id": "ACEA49D1-...", "name": "New Folder", "folder": {"childCount": 0}, "size": 0, "createdDateTime": "2025-01-15T14:34:00Z", "webUrl": "https://onedrive.live.com/..."}\n'
+    + '```',
   provider: ONEDRIVE_PROVIDER,
   actionCategory: 'write',
 

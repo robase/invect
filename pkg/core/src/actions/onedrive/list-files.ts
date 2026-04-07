@@ -20,7 +20,11 @@ export const onedriveListFilesAction = defineAction({
   id: 'onedrive.list_files',
   name: 'List Files',
   description:
-    'List files and folders in OneDrive. Lists root contents by default, or the contents of a specific folder.',
+    'List files and folders in OneDrive (GET /me/drive/root/children or /me/drive/items/{id}/children). Use when you need to browse or enumerate the contents of a folder.\n\n'
+    + 'Example response:\n'
+    + '```json\n'
+    + '{"id": "01NKDM7HM...", "name": "Documents", "size": 0, "folder": {"childCount": 4}, "lastModifiedDateTime": "2025-01-15T10:30:00Z", "webUrl": "https://onedrive.live.com/..."}\n'
+    + '```',
   provider: ONEDRIVE_PROVIDER,
   actionCategory: 'read',
 

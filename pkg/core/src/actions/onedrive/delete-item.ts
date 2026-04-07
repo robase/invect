@@ -1,7 +1,7 @@
 /**
  * onedrive.delete_item — Delete a file or folder from OneDrive
  *
- * Permanently deletes a file or folder by its item ID.
+ * Deletes a file or folder by its item ID, moving it to the recycle bin.
  * Requires a Microsoft OneDrive OAuth2 credential.
  */
 
@@ -19,7 +19,12 @@ const paramsSchema = z.object({
 export const onedriveDeleteItemAction = defineAction({
   id: 'onedrive.delete_item',
   name: 'Delete Item',
-  description: 'Permanently delete a file or folder from OneDrive. This action cannot be undone.',
+  description:
+    'Delete a file or folder from OneDrive (DELETE /me/drive/items/{item-id}). Moves the item to the recycle bin. Use when you need to remove a file or folder.\n\n'
+    + 'Example response:\n'
+    + '```json\n'
+    + '{"itemId": "01NKDM7HM...", "deleted": true}\n'
+    + '```',
   provider: ONEDRIVE_PROVIDER,
   actionCategory: 'delete',
 
