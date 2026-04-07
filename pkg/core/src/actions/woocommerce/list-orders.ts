@@ -13,19 +13,31 @@ const paramsSchema = z.object({
   credentialId: z.string().min(1, 'WooCommerce credential is required'),
   perPage: z.number().int().min(1).max(100).optional().default(10),
   status: z
-    .enum(['any', 'pending', 'processing', 'completed', 'cancelled'])
+    .enum([
+      'any',
+      'pending',
+      'processing',
+      'on-hold',
+      'completed',
+      'cancelled',
+      'refunded',
+      'failed',
+      'trash',
+    ])
     .optional()
     .default('any'),
+  search: z.string().optional().default(''),
 });
 
 export const woocommerceListOrdersAction = defineAction({
   id: 'woocommerce.list_orders',
   name: 'List Orders',
   description:
-    'List orders from a WooCommerce store (GET /wp-json/wc/v3/orders). Use when you need to review recent orders, check payment or fulfillment status.\n\n' +
+    'List orders from a WooCommerce store (GET /wp-json/wc/v3/orders). Use when you need to review recent orders, check payment or fulfillment status, or search for specific orders. ' +
+    'Call with optional `status` (pending, processing, on-hold, completed, cancelled, refunded, failed), `search` (keyword), and `perPage` (1–100).\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '[{"id": 727, "status": "processing", "total": "29.99", "currency": "USD", "billing": {"first_name": "John", "email": "john@example.com"}, "line_items": [{"name": "T-Shirt", "quantity": 1}]}]\n' +
+    '[{"id": 727, "status": "processing", "total": "29.99", "currency": "USD", "date_created": "2024-01-15T10:30:00", "billing": {"first_name": "John", "email": "john@example.com"}, "line_items": [{"name": "T-Shirt", "quantity": 1}]}]\n' +
     '```',
   provider: WOOCOMMERCE_PROVIDER,
   actionCategory: 'read',
@@ -69,15 +81,27 @@ export const woocommerceListOrdersAction = defineAction({
           { label: 'Any', value: 'any' },
           { label: 'Pending', value: 'pending' },
           { label: 'Processing', value: 'processing' },
+          { label: 'On Hold', value: 'on-hold' },
           { label: 'Completed', value: 'completed' },
           { label: 'Cancelled', value: 'cancelled' },
+          { label: 'Refunded', value: 'refunded' },
+          { label: 'Failed', value: 'failed' },
+          { label: 'Trash', value: 'trash' },
         ],
+      },
+      {
+        name: 'search',
+        label: 'Search',
+        type: 'text',
+        description: 'Keyword to search orders (matches billing name, email, or order number)',
+        extended: true,
+        aiProvided: true,
       },
     ],
   },
 
   async execute(params, context) {
-    const { credentialId, perPage, status } = params;
+    const { credentialId, perPage, status, search } = params;
 
     let credential = context.credential;
     if (!credential && context.functions?.getCredential) {
@@ -100,13 +124,16 @@ export const woocommerceListOrdersAction = defineAction({
 
     const basicAuth = btoa(`${consumerKey}:${consumerSecret}`);
 
-    context.logger.debug('Executing WooCommerce list orders', { perPage, status });
+    context.logger.debug('Executing WooCommerce list orders', { perPage, status, search });
 
     try {
       const url = new URL(`${siteUrl}/wp-json/wc/v3/orders`);
       url.searchParams.set('per_page', String(perPage));
       if (status !== 'any') {
         url.searchParams.set('status', status);
+      }
+      if (search) {
+        url.searchParams.set('search', search);
       }
 
       const response = await fetch(url.toString(), {

@@ -6,6 +6,7 @@ import { ScrollArea } from '../../../ui/scroll-area';
 import { Button } from '../../../ui/button';
 import { Badge } from '../../../ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../../../ui/collapsible';
+import { Separator } from '../../../ui/separator';
 import { cn } from '../../../../lib/utils';
 import {
   Plus,
@@ -349,6 +350,10 @@ export const AgentToolsPanel = memo(function AgentToolsPanel({
               toolsByProvider={toolsByProvider}
               getInstanceCount={getInstanceCount}
               onAddTool={handleAddTool}
+              addedTools={addedTools}
+              getToolForInstance={getToolForInstance}
+              onSelectInstance={(instanceId) => setActiveView(`instance-${instanceId}`)}
+              onRemoveTool={handleRemoveTool}
             />
           ) : selectedInstance ? (
             <ToolInstanceView
@@ -399,6 +404,10 @@ function ToolDiscoveryView({
   toolsByProvider,
   getInstanceCount,
   onAddTool,
+  addedTools,
+  getToolForInstance,
+  onSelectInstance,
+  onRemoveTool,
 }: {
   searchQuery: string;
   onSearchChange: (query: string) => void;
@@ -408,6 +417,10 @@ function ToolDiscoveryView({
   >;
   getInstanceCount: (toolId: string) => number;
   onAddTool: (tool: ToolDefinition) => void;
+  addedTools: AddedToolInstance[];
+  getToolForInstance: (instance: AddedToolInstance) => ToolDefinition | undefined;
+  onSelectInstance: (instanceId: string) => void;
+  onRemoveTool: (instanceId: string) => void;
 }) {
   // Track collapsed groups (all groups start expanded)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
@@ -442,6 +455,63 @@ function ToolDiscoveryView({
 
   return (
     <div className="space-y-3">
+      {/* ── Added Tools Grid ──────────────────────────────── */}
+      {addedTools.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h4 className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">
+              Added Tools
+            </h4>
+            <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">
+              {addedTools.length}
+            </Badge>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {addedTools.map((instance) => {
+              const tool = getToolForInstance(instance);
+              const bgColor =
+                tool?.provider?.id === 'core' || tool?.provider?.id === 'triggers'
+                  ? 'bg-accent text-primary'
+                  : 'bg-muted text-muted-foreground';
+              return (
+                <div
+                  key={instance.instanceId}
+                  className="relative flex items-center gap-2 p-2 transition-all border rounded-lg cursor-pointer group border-border hover:border-primary/50 hover:bg-accent/50"
+                  onClick={() => onSelectInstance(instance.instanceId)}
+                >
+                  <div
+                    className={cn(
+                      'flex h-7 w-7 shrink-0 items-center justify-center rounded-md',
+                      bgColor,
+                    )}
+                  >
+                    <ProviderIcon
+                      providerId={tool?.provider?.id}
+                      svgIcon={tool?.provider?.svgIcon}
+                      icon={tool?.provider?.icon}
+                      className="w-4 h-4"
+                    />
+                  </div>
+                  <span className="flex-1 min-w-0 text-xs font-medium truncate">
+                    {instance.name}
+                  </span>
+                  <button
+                    className="absolute hidden p-0.5 rounded group-hover:flex top-1 right-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemoveTool(instance.instanceId);
+                    }}
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <Separator className="mt-1" />
+        </div>
+      )}
+
       {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 pointer-events-none text-muted-foreground" />

@@ -42,6 +42,7 @@ export const linearUpdateIssueAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'linear',
+    requiredScopes: ['write'],
     description: 'Linear OAuth2 credential with write scope',
   },
 
@@ -62,7 +63,9 @@ export const linearUpdateIssueAction = defineAction({
         type: 'text',
         required: true,
         placeholder: 'e.g. abc123 or TEAM-123',
-        description: 'The ID of the issue to update.',
+        description:
+          'The UUID or human-readable key (e.g. "TEAM-123") of the issue to update. ' +
+          'Use linear.list_issues to find issue IDs — do not guess.',
         aiProvided: true,
       },
       {

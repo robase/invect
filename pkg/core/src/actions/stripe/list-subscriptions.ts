@@ -16,7 +16,20 @@ const paramsSchema = z.object({
   credentialId: z.string().min(1, 'Stripe credential is required'),
   limit: z.number().int().min(1).max(100).optional().default(10),
   customer: z.string().optional().default(''),
-  status: z.enum(['active', 'past_due', 'canceled', 'all']).optional().default('all'),
+  status: z
+    .enum([
+      'active',
+      'past_due',
+      'canceled',
+      'unpaid',
+      'trialing',
+      'paused',
+      'incomplete',
+      'incomplete_expired',
+      'all',
+    ])
+    .optional()
+    .default('all'),
 });
 
 export const stripeListSubscriptionsAction = defineAction({
@@ -33,9 +46,8 @@ export const stripeListSubscriptionsAction = defineAction({
 
   credential: {
     required: true,
-    type: 'oauth2',
-    oauth2Provider: 'stripe',
-    description: 'Stripe credential with API key or OAuth access token',
+    type: 'api_key',
+    description: 'Stripe secret API key (starts with sk_live_ or sk_test_)',
   },
 
   params: {
@@ -75,8 +87,13 @@ export const stripeListSubscriptionsAction = defineAction({
         options: [
           { label: 'All', value: 'all' },
           { label: 'Active', value: 'active' },
+          { label: 'Trialing', value: 'trialing' },
           { label: 'Past Due', value: 'past_due' },
+          { label: 'Unpaid', value: 'unpaid' },
           { label: 'Canceled', value: 'canceled' },
+          { label: 'Paused', value: 'paused' },
+          { label: 'Incomplete', value: 'incomplete' },
+          { label: 'Incomplete Expired', value: 'incomplete_expired' },
         ],
         description: 'Filter subscriptions by status',
         extended: true,

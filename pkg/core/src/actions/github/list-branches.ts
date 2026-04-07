@@ -26,7 +26,7 @@ export const githubListBranchesAction = defineAction({
     'List branches in a GitHub repository (GET /repos/{owner}/{repo}/branches). Use when you need to discover branch names or check protection status.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '[{"name": "main", "protected": true, "sha": "6dcb09b5..."}, {"name": "feature", "protected": false, "sha": "abc123..."}]\n' +
+    '{"branches": [{"name": "main", "protected": true, "sha": "6dcb09b5..."}, {"name": "feature", "protected": false, "sha": "abc123..."}], "totalReturned": 2}\n' +
     '```',
   provider: GITHUB_PROVIDER,
   actionCategory: 'read',
@@ -35,6 +35,7 @@ export const githubListBranchesAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'github',
+    requiredScopes: ['repo'],
     description: 'GitHub OAuth2 credential with repo scope',
   },
 

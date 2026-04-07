@@ -20,7 +20,8 @@ export const gitlabListProjectsAction = defineAction({
   id: 'gitlab.list_projects',
   name: 'List Projects',
   description:
-    'List GitLab projects the authenticated user has access to (GET /api/v4/projects?membership=true). Use when the user needs to discover available repositories or find a project ID.\n\n' +
+    'List GitLab projects the authenticated user has access to (GET /api/v4/projects?membership=true). Use when the user needs to discover available repositories or find a project ID. ' +
+    'No required params beyond credentials; optionally set `perPage` (default 20).\n\n' +
     'Example response:\n' +
     '```json\n' +
     '{"projects": [{"id": 1, "name": "my-app", "fullPath": "group/my-app", "url": "https://gitlab.com/group/my-app", "visibility": "private", "defaultBranch": "main"}], "totalCount": 5}\n' +
@@ -133,6 +134,8 @@ export const gitlabListProjectsAction = defineAction({
         last_activity_at: string;
       }>;
 
+      const totalFromHeader = response.headers.get('x-total');
+
       return {
         success: true,
         output: {
@@ -151,7 +154,8 @@ export const gitlabListProjectsAction = defineAction({
             createdAt: p.created_at,
             lastActivityAt: p.last_activity_at,
           })),
-          totalCount: projects.length,
+          totalCount: totalFromHeader ? parseInt(totalFromHeader, 10) : projects.length,
+          returnedCount: projects.length,
         },
       };
     } catch (error) {

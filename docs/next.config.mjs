@@ -15,6 +15,7 @@ const config = {
     unoptimized: true,
   },
   outputFileTracingRoot: __dirname,
+  transpilePackages: ['@invect/ui', '@invect/core'],
 };
 
 export default withMDX(config);

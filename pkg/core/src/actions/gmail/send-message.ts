@@ -97,7 +97,6 @@ export const gmailSendMessageAction = defineAction({
       'https://www.googleapis.com/auth/gmail.readonly',
       'https://www.googleapis.com/auth/gmail.compose',
       'https://www.googleapis.com/auth/gmail.modify',
-      'https://www.googleapis.com/auth/gmail.labels',
     ],
     description: 'Gmail OAuth2 credential with send permissions',
   },
@@ -253,7 +252,7 @@ export const gmailSendMessageAction = defineAction({
         const errorText = await response.text();
         return {
           success: false,
-          error: `Gmail send failed: ${response.status} ${response.statusText} - ${errorText}`,
+          error: `Gmail API error (${response.status}): ${response.statusText} - ${errorText}`,
         };
       }
 
@@ -282,7 +281,7 @@ export const gmailSendMessageAction = defineAction({
       };
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      return { success: false, error: `Gmail send failed: ${msg}` };
+      return { success: false, error: `Gmail API error: ${msg}` };
     }
   },
 });

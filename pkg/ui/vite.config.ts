@@ -99,7 +99,7 @@ export default defineConfig(({ mode }) => ({
       copyDtsFiles: true,
       exclude: ['src/**/*.test.*', 'src/**/*.spec.*'],
     }),
-    extractInlinedFonts(),
+    // extractInlinedFonts(), // temporarily disabled
   ],
   resolve: {
     tsconfigPaths: true,
@@ -110,9 +110,12 @@ export default defineConfig(({ mode }) => ({
     copyPublicDir: false,
     sourcemap: mode !== 'development',
     lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
+      entry: {
+        index: resolve(__dirname, 'src/index.ts'),
+        demo: resolve(__dirname, 'src/demo/index.ts'),
+      },
       formats: ['es'],
-      fileName: 'index',
+      fileName: (format, entryName) => `${entryName}.js`,
       cssFileName: 'index',
     },
     rolldownOptions: {

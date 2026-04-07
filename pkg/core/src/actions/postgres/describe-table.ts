@@ -20,7 +20,12 @@ export const postgresDescribeTableAction = defineAction({
   id: 'postgres.describe_table',
   name: 'Describe Table',
   description:
-    'Retrieve column definitions, data types, nullability, defaults, and key constraints for a PostgreSQL table.',
+    'Retrieve column definitions, data types, nullability, defaults, and key constraints for a PostgreSQL table. ' +
+    'Use when you need to understand the schema of a specific table before writing queries or inserting data.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"tableName": "users", "columns": [{"column_name": "id", "data_type": "integer", "is_nullable": "NO", "is_primary_key": true, "foreign_key": null}], "columnCount": 5, "primaryKeyColumns": ["id"]}\n' +
+    '```',
   provider: POSTGRES_PROVIDER,
   actionCategory: 'read',
   tags: [
@@ -60,6 +65,7 @@ export const postgresDescribeTableAction = defineAction({
         required: true,
         placeholder: 'e.g. users',
         description: 'Name of the table to describe.',
+        aiProvided: true,
       },
       {
         name: 'schemaName',
@@ -68,6 +74,7 @@ export const postgresDescribeTableAction = defineAction({
         defaultValue: 'public',
         description: 'PostgreSQL schema the table belongs to.',
         extended: true,
+        aiProvided: true,
       },
     ],
   },
@@ -104,7 +111,7 @@ export const postgresDescribeTableAction = defineAction({
 
     try {
       // Columns
-      const columnsQuery = `
+      const columns = await sql`
         SELECT
           c.column_name,
           c.data_type,
@@ -115,25 +122,25 @@ export const postgresDescribeTableAction = defineAction({
           c.numeric_precision,
           c.ordinal_position
         FROM information_schema.columns c
-        WHERE c.table_schema = '${schemaName}'
-          AND c.table_name   = '${tableName}'
+        WHERE c.table_schema = ${schemaName}
+          AND c.table_name   = ${tableName}
         ORDER BY c.ordinal_position
       `;
 
       // Primary key columns
-      const pkQuery = `
+      const pkCols = await sql`
         SELECT kcu.column_name
         FROM information_schema.table_constraints tc
         JOIN information_schema.key_column_usage kcu
           ON tc.constraint_name = kcu.constraint_name
          AND tc.table_schema    = kcu.table_schema
-        WHERE tc.table_schema    = '${schemaName}'
-          AND tc.table_name      = '${tableName}'
+        WHERE tc.table_schema    = ${schemaName}
+          AND tc.table_name      = ${tableName}
           AND tc.constraint_type = 'PRIMARY KEY'
       `;
 
       // Foreign keys
-      const fkQuery = `
+      const fkCols = await sql`
         SELECT
           kcu.column_name,
           ccu.table_name  AS foreign_table_name,
@@ -146,16 +153,10 @@ export const postgresDescribeTableAction = defineAction({
         JOIN information_schema.constraint_column_usage ccu
           ON ccu.constraint_name = tc.constraint_name
          AND ccu.table_schema    = tc.table_schema
-        WHERE tc.table_schema    = '${schemaName}'
-          AND tc.table_name      = '${tableName}'
+        WHERE tc.table_schema    = ${schemaName}
+          AND tc.table_name      = ${tableName}
           AND tc.constraint_type = 'FOREIGN KEY'
       `;
-
-      const [columns, pkCols, fkCols] = await Promise.all([
-        sql.unsafe(columnsQuery),
-        sql.unsafe(pkQuery),
-        sql.unsafe(fkQuery),
-      ]);
 
       const pkSet = new Set(
         (pkCols as unknown as { column_name: string }[]).map((r) => r.column_name),

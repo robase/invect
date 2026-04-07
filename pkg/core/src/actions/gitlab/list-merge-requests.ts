@@ -22,7 +22,8 @@ export const gitlabListMergeRequestsAction = defineAction({
   id: 'gitlab.list_merge_requests',
   name: 'List Merge Requests',
   description:
-    'List merge requests in a GitLab project (GET /api/v4/projects/:id/merge_requests). Use when the user wants to review open MRs, check CI status, or audit merged code.\n\n' +
+    'List merge requests in a GitLab project (GET /api/v4/projects/:id/merge_requests). Use when the user wants to review open MRs, check CI status, or audit merged code. ' +
+    'Call with `projectId`; optionally filter by `state` (opened/closed/merged/all) and set `perPage` (default 20).\n\n' +
     'Example response:\n' +
     '```json\n' +
     '{"mergeRequests": [{"iid": 10, "title": "Add feature", "state": "opened", "url": "https://gitlab.com/g/p/-/merge_requests/10", "sourceBranch": "feature/x", "targetBranch": "main"}], "totalCount": 8}\n' +
@@ -161,6 +162,8 @@ export const gitlabListMergeRequestsAction = defineAction({
         merged_at: string | null;
       }>;
 
+      const totalFromHeader = response.headers.get('x-total');
+
       return {
         success: true,
         output: {
@@ -181,7 +184,8 @@ export const gitlabListMergeRequestsAction = defineAction({
             updatedAt: mr.updated_at,
             mergedAt: mr.merged_at,
           })),
-          totalCount: mergeRequests.length,
+          totalCount: totalFromHeader ? parseInt(totalFromHeader, 10) : mergeRequests.length,
+          returnedCount: mergeRequests.length,
         },
       };
     } catch (error) {

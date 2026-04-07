@@ -2,8 +2,8 @@
  * linkedin.create_post — Create a LinkedIn post
  *
  * Publishes a text post on behalf of the authenticated user using the
- * UGC Posts API. The personId (LinkedIn URN sub) is required and can be
- * obtained from the linkedin.get_profile action.
+ * Posts API (v2/posts). The personId (LinkedIn URN sub) is required and
+ * can be obtained from the linkedin.get_profile action.
  * Requires a LinkedIn OAuth2 credential with w_member_social scope.
  */
 
@@ -23,10 +23,10 @@ export const linkedinCreatePostAction = defineAction({
   id: 'linkedin.create_post',
   name: 'Create Post',
   description:
-    'Create a text post on LinkedIn (POST /v2/ugcPosts). Use when the user wants to publish a text post to their LinkedIn feed. Requires the person ID from Get Profile.\n\n' +
+    'Create a text post on LinkedIn (POST /rest/posts). Call with `personId` (from Get Profile) and `text` content. Visibility defaults to PUBLIC.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"id": "urn:li:ugcPost:6935678123456", "author": "urn:li:person:abc123", "lifecycleState": "PUBLISHED"}\n' +
+    '{"postId": "urn:li:share:6935678123456", "author": "urn:li:person:abc123", "text": "Post content"}\n' +
     '```',
   provider: LINKEDIN_PROVIDER,
   actionCategory: 'write',
@@ -35,6 +35,7 @@ export const linkedinCreatePostAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'linkedin',
+    requiredScopes: ['w_member_social'],
     description: 'LinkedIn OAuth2 credential with w_member_social scope',
   },
 
@@ -65,7 +66,7 @@ export const linkedinCreatePostAction = defineAction({
         type: 'textarea',
         required: true,
         placeholder: 'Excited to share...',
-        description: 'The text content of the post. Supports Nunjucks templating.',
+        description: 'The text content of the post. Supports template expressions.',
         aiProvided: true,
       },
     ],
@@ -100,24 +101,23 @@ export const linkedinCreatePostAction = defineAction({
 
     const body = {
       author: `urn:li:person:${personId}`,
+      commentary: text,
+      visibility: 'PUBLIC',
+      distribution: {
+        feedDistribution: 'MAIN_FEED',
+        targetEntities: [],
+        thirdPartyDistributionChannels: [],
+      },
       lifecycleState: 'PUBLISHED',
-      specificContent: {
-        'com.linkedin.ugc.ShareContent': {
-          shareCommentary: { text },
-          shareMediaCategory: 'NONE',
-        },
-      },
-      visibility: {
-        'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC',
-      },
     };
 
     try {
-      const response = await fetch(`${LINKEDIN_API}/v2/ugcPosts`, {
+      const response = await fetch(`${LINKEDIN_API}/rest/posts`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
+          'LinkedIn-Version': '202401',
           'X-Restli-Protocol-Version': '2.0.0',
         },
         body: JSON.stringify(body),
@@ -131,12 +131,13 @@ export const linkedinCreatePostAction = defineAction({
         };
       }
 
-      const result = (await response.json()) as { id: string };
+      // Posts API returns 201 with x-restli-id header containing the post URN
+      const postId = response.headers.get('x-restli-id') ?? '';
 
       return {
         success: true,
         output: {
-          postId: result.id,
+          postId,
           author: `urn:li:person:${personId}`,
           text,
         },

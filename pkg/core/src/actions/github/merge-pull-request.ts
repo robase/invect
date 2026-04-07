@@ -38,6 +38,7 @@ export const githubMergePullRequestAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'github',
+    requiredScopes: ['repo'],
     description: 'GitHub OAuth2 credential with repo scope',
   },
 

@@ -24,7 +24,24 @@ export const DEFAULT_TOOL_TIMEOUT_MS = 30000;
 export const DEFAULT_MAX_CONVERSATION_TOKENS = 100000;
 
 /**
- * Approximate tokens per character (for estimation)
+ * Approximate tokens per character by provider family.
+ *
+ * OpenAI (GPT-4o, o-series): ~0.25 tok/char — BPE tokenizer, fairly efficient
+ * Anthropic (Claude):         ~0.30 tok/char — slightly less compact
+ * Fallback:                   ~0.30 tok/char — conservative default
+ *
+ * These are rough estimates used only for conversation truncation budgeting.
+ * Precision is not critical; the goal is to avoid blowing context limits.
+ */
+export const TOKENS_PER_CHAR_BY_PROVIDER: Record<string, number> = {
+  OPENAI: 0.25,
+  ANTHROPIC: 0.3,
+  OPENROUTER: 0.28, // mix of providers; split the difference
+};
+export const DEFAULT_TOKENS_PER_CHAR = 0.3; // conservative fallback
+
+/**
+ * @deprecated Use TOKENS_PER_CHAR_BY_PROVIDER with provider-aware lookup instead.
  */
 export const APPROX_TOKENS_PER_CHAR = 0.25;
 

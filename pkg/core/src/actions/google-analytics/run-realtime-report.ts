@@ -23,7 +23,9 @@ export const googleAnalyticsRunRealtimeReportAction = defineAction({
   id: 'google_analytics.run_realtime_report',
   name: 'Run Realtime Report',
   description:
-    'Run a GA4 realtime report (properties.runRealtimeReport). Use when the user wants to see live metrics like current active users or real-time page views.\n\n' +
+    'Run a GA4 realtime report (properties.runRealtimeReport). Use when the user wants to see live metrics from the last 30 minutes, like current active users or real-time page views. ' +
+    'Call with `propertyId` and comma-separated `metrics` (e.g. activeUsers, screenPageViews, conversions). ' +
+    'Optional `dimensions` (e.g. city, country, unifiedScreenName) for grouping.\n\n' +
     'Example response:\n' +
     '```json\n' +
     '{"metricHeaders": [{"name": "activeUsers"}], "rows": [{"metricValues": [{"value": "42"}]}], "rowCount": 1}\n' +
@@ -35,11 +37,8 @@ export const googleAnalyticsRunRealtimeReportAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'google',
-    requiredScopes: [
-      'https://www.googleapis.com/auth/analytics.readonly',
-      'https://www.googleapis.com/auth/analytics',
-    ],
-    description: 'Google OAuth2 credential with Analytics scope',
+    requiredScopes: ['https://www.googleapis.com/auth/analytics.readonly'],
+    description: 'Google OAuth2 credential with Analytics read-only scope',
   },
 
   params: {
@@ -50,7 +49,7 @@ export const googleAnalyticsRunRealtimeReportAction = defineAction({
         label: 'Google Credential',
         type: 'text',
         required: true,
-        description: 'Google OAuth2 credential with Analytics scope',
+        description: 'Google OAuth2 credential with Analytics read-only scope',
         aiProvided: false,
       },
       {

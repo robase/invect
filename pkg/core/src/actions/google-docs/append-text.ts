@@ -21,7 +21,7 @@ export const googleDocsAppendTextAction = defineAction({
   id: 'google_docs.append_text',
   name: 'Append Text',
   description:
-    'Append text to the end of a Google Docs document (documents.batchUpdate with insertText). Use when the user wants to add content at the end of an existing doc.\n\n' +
+    'Append text to the end of a Google Docs document (documents.batchUpdate with insertText). Call with `documentId` and `text` to add content at the end of an existing doc.\n\n' +
     'Example response:\n' +
     '```json\n' +
     '{"documentId": "1abc...", "appendedAt": 42, "textLength": 156}\n' +
@@ -56,7 +56,8 @@ export const googleDocsAppendTextAction = defineAction({
         label: 'Document ID',
         type: 'text',
         required: true,
-        description: 'The ID of the Google Docs document',
+        placeholder: '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms',
+        description: 'The ID of the Google Docs document to append text to',
         aiProvided: true,
       },
       {
@@ -104,7 +105,7 @@ export const googleDocsAppendTextAction = defineAction({
         const errorText = await docResponse.text();
         return {
           success: false,
-          error: `Google Docs API error: ${docResponse.status} - ${errorText}`,
+          error: `Google Docs API error (${docResponse.status}): ${errorText}`,
         };
       }
 
@@ -138,7 +139,7 @@ export const googleDocsAppendTextAction = defineAction({
         const errorText = await response.text();
         return {
           success: false,
-          error: `Google Docs API error: ${response.status} - ${errorText}`,
+          error: `Google Docs API error (${response.status}): ${errorText}`,
         };
       }
 

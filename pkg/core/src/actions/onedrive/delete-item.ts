@@ -20,8 +20,8 @@ export const onedriveDeleteItemAction = defineAction({
   id: 'onedrive.delete_item',
   name: 'Delete Item',
   description:
-    'Delete a file or folder from OneDrive (DELETE /me/drive/items/{item-id}). Moves the item to the recycle bin. Use when you need to remove a file or folder.\n\n' +
-    'Example response:\n' +
+    'Delete a file or folder from OneDrive (DELETE /me/drive/items/{item-id}). Moves the item to the recycle bin. Use when you need to remove a file or folder. The Graph API returns 204 No Content on success.\n\n' +
+    'Action output:\n' +
     '```json\n' +
     '{"itemId": "01NKDM7HM...", "deleted": true}\n' +
     '```',
@@ -31,8 +31,9 @@ export const onedriveDeleteItemAction = defineAction({
   credential: {
     required: true,
     type: 'oauth2',
-    oauth2Provider: 'microsoft_onedrive',
-    description: 'Microsoft OneDrive OAuth2 credential',
+    oauth2Provider: 'microsoft',
+    requiredScopes: ['Files.ReadWrite'],
+    description: 'Microsoft OAuth2 credential with Files.ReadWrite scope',
   },
 
   params: {
@@ -40,10 +41,11 @@ export const onedriveDeleteItemAction = defineAction({
     fields: [
       {
         name: 'credentialId',
-        label: 'OneDrive Credential',
+        label: 'Microsoft Credential',
         type: 'text',
         required: true,
-        description: 'Microsoft OneDrive OAuth2 credential for authentication',
+        description:
+          'Microsoft OAuth2 credential for authentication (requires Files.ReadWrite scope)',
         aiProvided: false,
       },
       {

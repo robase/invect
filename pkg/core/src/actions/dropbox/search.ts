@@ -22,7 +22,7 @@ export const dropboxSearchAction = defineAction({
   id: 'dropbox.search',
   name: 'Search',
   description:
-    'Search for files and folders in Dropbox by name or content (POST /2/files/search_v2). Use when you need to find files matching a keyword across the entire Dropbox account.\n\n' +
+    'Search for files and folders in Dropbox by name or content (POST /2/files/search_v2). Use when you need to find files matching a keyword across the entire Dropbox account. Call with `query` (search string) and optional `maxResults` (1–1000, default 25).\n\n' +
     'Example response:\n' +
     '```json\n' +
     '{"matches": [{"metadata": {"metadata": {".tag": "file", "name": "report.pdf", "path_display": "/Documents/report.pdf", "id": "id:a4ayc..."}}}], "has_more": false}\n' +
@@ -34,6 +34,7 @@ export const dropboxSearchAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'dropbox',
+    requiredScopes: ['files.metadata.read'],
     description: 'Dropbox OAuth2 credential with files.metadata.read scope',
   },
 

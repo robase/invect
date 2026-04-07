@@ -22,7 +22,8 @@ export const googleDriveCreateFolderAction = defineAction({
   id: 'google_drive.create_folder',
   name: 'Create Folder',
   description:
-    'Create a new folder in Google Drive (files.create with folder mimeType). Use when the user wants to organize files into a new folder.\n\n' +
+    'Create a new folder in Google Drive (files.create with folder mimeType). Use when the user wants to organize files into a new folder. ' +
+    'Call with `name`; optional `parentFolderId` to nest under an existing folder, and `description`.\n\n' +
     'Example response:\n' +
     '```json\n' +
     '{"id": "1abc", "name": "My Folder", "mimeType": "application/vnd.google-apps.folder", "webViewLink": "https://drive.google.com/drive/folders/1abc"}\n' +

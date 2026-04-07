@@ -37,6 +37,36 @@ const defaultLayoutOptions = {
 };
 
 /**
+ * Derive explicit source handle ordering from node params.
+ * This ensures ELK gets deterministic port positions matching the rendered
+ * handle order, regardless of edge iteration order.
+ */
+function deriveSourceHandles(
+  node: Node,
+): Array<{ id: string; type: 'source'; position: 'right' }> | undefined {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = node.data as Record<string, any> | undefined;
+  const nodeType = data?.type ?? node.type;
+
+  if (nodeType === 'core.switch' && Array.isArray(data?.params?.cases)) {
+    const cases = data.params.cases as Array<{ slug: string }>;
+    return [
+      ...cases.map((c) => ({ id: c.slug, type: 'source' as const, position: 'right' as const })),
+      { id: 'default', type: 'source' as const, position: 'right' as const },
+    ];
+  }
+
+  if (nodeType === 'core.if_else') {
+    return [
+      { id: 'true_output', type: 'source' as const, position: 'right' as const },
+      { id: 'false_output', type: 'source' as const, position: 'right' as const },
+    ];
+  }
+
+  return undefined;
+}
+
+/**
  * Main layout function that applies the selected algorithm
  */
 export const applyLayout = async (
@@ -63,6 +93,16 @@ export const applyLayout = async (
       return { nodes: layoutedNodes as Node[], edges };
     }
     case 'elkjs': {
+      // Enrich branching nodes with explicit source handle ordering so ELK
+      // places ports in the correct top-to-bottom order (matching the rendered handles).
+      const enrichedNodes = nodes.map((node) => {
+        const sourceHandles = deriveSourceHandles(node);
+        if (sourceHandles) {
+          return { ...node, sourceHandles } as ElkLayoutNode;
+        }
+        return node;
+      }) as ElkLayoutNode[];
+
       // Use ElkJS layout with port/handle support for better edge routing
       // Let the @invect/layouts package defaults handle spacing and wrapping
       const elkDirection =
@@ -73,7 +113,7 @@ export const applyLayout = async (
             : direction === 'TB'
               ? 'DOWN'
               : 'UP';
-      const layoutedNodes = await applyElkLayoutFromPackage(nodes as ElkLayoutNode[], edges, {
+      const layoutedNodes = await applyElkLayoutFromPackage(enrichedNodes, edges, {
         direction: elkDirection,
         // Only pass nodeWidth/nodeHeight, let package defaults handle everything else
         nodeWidth: defaultLayoutOptions.nodeWidth,

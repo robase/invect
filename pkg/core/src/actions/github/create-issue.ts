@@ -39,6 +39,7 @@ export const githubCreateIssueAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'github',
+    requiredScopes: ['repo'],
     description: 'GitHub OAuth2 credential with repo scope',
   },
 
@@ -85,7 +86,7 @@ export const githubCreateIssueAction = defineAction({
         label: 'Body',
         type: 'textarea',
         placeholder: 'Describe the issue in detail...',
-        description: 'Issue body (Markdown supported). Supports Nunjucks templating.',
+        description: 'Issue body (Markdown supported). Supports template expressions.',
         aiProvided: true,
       },
       {
@@ -110,7 +111,9 @@ export const githubCreateIssueAction = defineAction({
         name: 'milestone',
         label: 'Milestone',
         type: 'number',
-        description: 'Milestone number to associate with the issue',
+        description:
+          'Milestone number (integer) to associate with the issue. ' +
+          'Use the GitHub API to list milestones and get milestone numbers — do not guess.',
         extended: true,
         aiProvided: true,
       },

@@ -35,7 +35,8 @@ function parseIfJson(value: unknown): unknown {
 export const inputAction = defineAction({
   id: 'core.input',
   name: 'Input',
-  description: 'Define a flow input variable with an optional default value',
+  description:
+    'Define a flow input variable with an optional default value. Use as the entry point of a flow to accept runtime data. If the caller supplies the named variable, that value is used; otherwise the configured default is emitted.',
   provider: CORE_PROVIDER,
   excludeFromTools: true,
   icon: 'LogIn',

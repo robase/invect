@@ -23,7 +23,8 @@ export const gitlabCreateIssueAction = defineAction({
   id: 'gitlab.create_issue',
   name: 'Create Issue',
   description:
-    'Create a new issue in a GitLab project (POST /api/v4/projects/:id/issues). Use when the user wants to file a bug, task, or feature request.\n\n' +
+    'Create a new issue in a GitLab project (POST /api/v4/projects/:id/issues). Use when the user wants to file a bug, task, or feature request. ' +
+    'Call with `projectId`, `title`, and optionally `description` and `labels`.\n\n' +
     'Example response:\n' +
     '```json\n' +
     '{"issueId": 1, "issueIid": 42, "url": "https://gitlab.com/group/project/-/issues/42", "title": "Bug: broken", "state": "opened", "labels": ["bug"]}\n' +
@@ -83,7 +84,8 @@ export const gitlabCreateIssueAction = defineAction({
         label: 'Description',
         type: 'textarea',
         placeholder: 'Describe the issue in detail...',
-        description: 'Issue description (Markdown supported). Supports Nunjucks templating.',
+        description:
+          'Issue description (Markdown supported). Supports template expressions ({{ variable }}).',
         aiProvided: true,
       },
       {

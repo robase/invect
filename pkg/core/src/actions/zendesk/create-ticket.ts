@@ -24,10 +24,10 @@ export const zendeskCreateTicketAction = defineAction({
   id: 'zendesk.create_ticket',
   name: 'Create Ticket',
   description:
-    'Create a new support ticket in Zendesk (POST /api/v2/tickets). Use when the user wants to open a support ticket with subject, description, priority, and type.\n\n' +
+    'Create a new support ticket in Zendesk (POST /api/v2/tickets). Use when the user wants to open a support ticket. Call with `subject` and `description` (ticket body text); optionally set `priority` (urgent/high/normal/low), `type` (problem/incident/question/task), and `requesterEmail`.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"ticket": {"id": 35436, "subject": "Help!", "status": "new", "priority": "normal", "requester_id": 123}}\n' +
+    '{"id": 35436, "subject": "Help!", "status": "new", "priority": "normal", "requester_id": 123, "created_at": "2024-01-15T10:00:00Z"}\n' +
     '```',
   provider: ZENDESK_PROVIDER,
   actionCategory: 'write',
@@ -36,6 +36,7 @@ export const zendeskCreateTicketAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'zendesk',
+    requiredScopes: ['write'],
     description: 'Zendesk OAuth2 credential with ticket write access',
   },
 
@@ -153,7 +154,7 @@ export const zendeskCreateTicketAction = defineAction({
 
     const ticket: Record<string, unknown> = {
       subject,
-      description,
+      comment: { body: description },
       priority,
       type,
     };

@@ -21,6 +21,7 @@ const paramsSchema = z.object({
   startDateTime: z.string().optional(),
   endDateTime: z.string().optional(),
   timeZone: z.string().optional().default(''),
+  attendees: z.array(z.string()).optional().default([]),
   sendUpdates: z.enum(['all', 'externalOnly', 'none']).optional().default('none'),
 });
 
@@ -111,7 +112,7 @@ export const googleCalendarUpdateEventAction = defineAction({
         label: 'Calendar ID',
         type: 'text',
         defaultValue: 'primary',
-        description: 'Calendar ID',
+        description: "Calendar ID (use 'primary' for the default calendar)",
         extended: true,
         aiProvided: true,
       },
@@ -138,6 +139,16 @@ export const googleCalendarUpdateEventAction = defineAction({
         extended: true,
         aiProvided: true,
       },
+      {
+        name: 'attendees',
+        label: 'Attendees',
+        type: 'text',
+        placeholder: 'user@example.com, other@example.com',
+        description:
+          'Comma-separated list of attendee email addresses. Replaces existing attendees.',
+        extended: true,
+        aiProvided: true,
+      },
     ],
   },
 
@@ -154,6 +165,7 @@ export const googleCalendarUpdateEventAction = defineAction({
       startDateTime,
       endDateTime,
       timeZone,
+      attendees,
       sendUpdates,
     } = params;
 
@@ -188,6 +200,9 @@ export const googleCalendarUpdateEventAction = defineAction({
       }
       if (endDateTime) {
         patch.end = { dateTime: endDateTime, ...(timeZone ? { timeZone } : {}) };
+      }
+      if (attendees && attendees.length > 0) {
+        patch.attendees = attendees.map((email) => ({ email: email.trim() }));
       }
 
       const url = new URL(

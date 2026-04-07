@@ -23,10 +23,12 @@ export const shopifyCreateProductAction = defineAction({
   id: 'shopify.create_product',
   name: 'Create Product',
   description:
-    'Create a new product in a Shopify store (POST /admin/api/.../products.json). Use when you need to add a new product to the catalog.\n\n' +
+    'Create a new product in a Shopify store (POST /admin/api/.../products.json). ' +
+    'Call with `shop`, `title` (required), and optional `bodyHtml`, `vendor`, `productType`, `tags`. ' +
+    'Products are created with status "draft" by default. Use when you need to add a new product to the catalog.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"product": {"id": 1072481062, "title": "Burton Custom Freestyle 151", "vendor": "Burton", "product_type": "Snowboard", "status": "draft", "variants": [{"id": 1070325053, "price": "0.00"}]}}\n' +
+    '{"id": 1072481062, "title": "Burton Custom Freestyle 151", "vendor": "Burton", "product_type": "Snowboard", "status": "draft", "variants": [{"id": 1070325053, "price": "0.00"}]}\n' +
     '```',
   provider: SHOPIFY_PROVIDER,
   actionCategory: 'write',
@@ -36,7 +38,8 @@ export const shopifyCreateProductAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'shopify',
-    description: 'Shopify OAuth2 credential for store access',
+    requiredScopes: ['write_products'],
+    description: 'Shopify OAuth2 credential with write_products scope',
   },
 
   params: {
@@ -119,7 +122,7 @@ export const shopifyCreateProductAction = defineAction({
       return { success: false, error: 'No valid access token.' };
     }
 
-    const baseUrl = `https://${encodeURIComponent(shop)}.myshopify.com/admin/api/2024-01`;
+    const baseUrl = `https://${encodeURIComponent(shop)}.myshopify.com/admin/api/2025-01`;
 
     context.logger.debug('Executing Shopify create product', { shop, title });
 

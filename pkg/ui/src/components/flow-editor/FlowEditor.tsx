@@ -23,6 +23,7 @@ import {
   type Node,
 } from '@xyflow/react';
 import { UniversalNode, AgentNode, type ToolDefinition, type AddedToolInstance } from '../nodes';
+import { getNodeComponent } from '../nodes/nodeRegistry';
 import { NodeConfigPanel } from './node-config-panel/NodeConfigPanel';
 import { ToolConfigPanel } from './ToolConfigPanel';
 import { ChatPanel, ChatToggleButton, ChatPromptOverlay } from '~/components/chat';
@@ -336,14 +337,15 @@ export function FlowWorkbenchView({
   const isShiftKeyHeldRef = useRef(false);
   const dragEndTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Tool panel state for Agent nodes
-  const [toolSelectorPanelOpen, setToolSelectorPanelOpen] = useState(false);
-  const [toolConfigPanelOpen, setToolConfigPanelOpen] = useState(false);
-  const [toolPanelNodeId, setToolPanelNodeId] = useState<string | null>(null);
-  const [selectedToolInstanceId, setSelectedToolInstanceId] = useState<string | null>(null);
-
-  // Tracks which tool instance to pre-select when opening the config panel from AgentToolsBox
-  const [configPanelToolInstanceId, setConfigPanelToolInstanceId] = useState<string | null>(null);
+  // Tool panel state — lives in Zustand store (survives unmount, accessible from anywhere)
+  const toolSelectorPanelOpen = useFlowEditorStore((s) => s.toolSelectorOpen);
+  const toolConfigPanelOpen = useFlowEditorStore((s) => s.toolConfigOpen);
+  const toolPanelNodeId = useFlowEditorStore((s) => s.toolPanelNodeId);
+  const selectedToolInstanceId = useFlowEditorStore((s) => s.selectedToolInstanceId);
+  const configPanelToolInstanceId = useFlowEditorStore((s) => s.configPanelToolInstanceId);
+  const closeToolSelector = useFlowEditorStore((s) => s.closeToolSelector);
+  const closeToolConfig = useFlowEditorStore((s) => s.closeToolConfig);
+  const setConfigPanelToolInstanceId = useFlowEditorStore((s) => s.setConfigPanelToolInstanceId);
 
   // Sidebar mode: "nodes" (default) or "actions" (when editing agent tools)
   const sidebarMode = toolSelectorPanelOpen ? ('actions' as const) : ('nodes' as const);
@@ -571,23 +573,24 @@ export function FlowWorkbenchView({
 
   // Close tool selector (returns sidebar to nodes mode)
   const handleCloseToolSelector = useCallback(() => {
-    setToolSelectorPanelOpen(false);
-    setToolConfigPanelOpen(false);
-    setSelectedToolInstanceId(null);
-    setToolPanelNodeId(null);
-  }, []);
+    closeToolSelector();
+  }, [closeToolSelector]);
 
   // Close tool config panel
   const handleCloseToolConfig = useCallback(() => {
-    setToolConfigPanelOpen(false);
-    setSelectedToolInstanceId(null);
-  }, []);
+    closeToolConfig();
+  }, [closeToolConfig]);
 
   // Handle selecting a tool instance for configuration (from selector panel)
-  const handleSelectToolInstance = useCallback((instance: AddedToolInstance) => {
-    setSelectedToolInstanceId(instance.instanceId);
-    setToolConfigPanelOpen(true);
-  }, []);
+  const openToolConfig = useFlowEditorStore((s) => s.openToolConfig);
+  const handleSelectToolInstance = useCallback(
+    (instance: AddedToolInstance) => {
+      if (toolPanelNodeId) {
+        openToolConfig(toolPanelNodeId, instance.instanceId);
+      }
+    },
+    [toolPanelNodeId, openToolConfig],
+  );
 
   // Keep refs in sync with callbacks
   openToolSelectorRef.current = handleOpenToolSelector;
@@ -663,11 +666,16 @@ export function FlowWorkbenchView({
       });
       // If we just removed the tool that's being configured, close config panel
       if (selectedToolInstanceId === instanceId) {
-        setToolConfigPanelOpen(false);
-        setSelectedToolInstanceId(null);
+        closeToolConfig();
       }
     },
-    [toolPanelNodeId, getAddedToolsForNode, selectedToolInstanceId, updateNodeData],
+    [
+      toolPanelNodeId,
+      getAddedToolsForNode,
+      selectedToolInstanceId,
+      updateNodeData,
+      closeToolConfig,
+    ],
   );
 
   const handleUpdateToolInNode = useCallback(
@@ -926,7 +934,7 @@ export function FlowWorkbenchView({
     };
     for (const def of nodeDefinitions) {
       if (!(def.type in mapping)) {
-        mapping[def.type] = UniversalNode;
+        mapping[def.type] = getNodeComponent(def.type);
       }
     }
     return mapping;

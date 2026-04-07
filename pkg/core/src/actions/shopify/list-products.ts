@@ -19,10 +19,12 @@ export const shopifyListProductsAction = defineAction({
   id: 'shopify.list_products',
   name: 'List Products',
   description:
-    'List products from a Shopify store (GET /admin/api/.../products.json). Use when you need to browse or search the product catalog.\n\n' +
+    'List products from a Shopify store (GET /admin/api/.../products.json). ' +
+    'Call with `shop` (store subdomain) and optional `limit` (1–250, default 50). ' +
+    'Use when you need to browse the product catalog or check inventory.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"products": [{"id": 632910392, "title": "IPod Nano", "vendor": "Apple", "product_type": "Electronics", "status": "active", "variants": [{"id": 808950810, "price": "199.00"}]}]}\n' +
+    '{"products": [{"id": 632910392, "title": "IPod Nano", "vendor": "Apple", "product_type": "Electronics", "status": "active", "variants": [{"id": 808950810, "price": "199.00"}]}], "count": 1}\n' +
     '```',
   provider: SHOPIFY_PROVIDER,
   actionCategory: 'read',
@@ -32,7 +34,8 @@ export const shopifyListProductsAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'shopify',
-    description: 'Shopify OAuth2 credential for store access',
+    requiredScopes: ['read_products'],
+    description: 'Shopify OAuth2 credential with read_products scope',
   },
 
   params: {
@@ -84,7 +87,7 @@ export const shopifyListProductsAction = defineAction({
       return { success: false, error: 'No valid access token.' };
     }
 
-    const baseUrl = `https://${encodeURIComponent(shop)}.myshopify.com/admin/api/2024-01`;
+    const baseUrl = `https://${encodeURIComponent(shop)}.myshopify.com/admin/api/2025-01`;
 
     context.logger.debug('Executing Shopify list products', { shop, limit });
 

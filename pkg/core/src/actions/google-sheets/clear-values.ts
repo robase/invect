@@ -21,10 +21,11 @@ export const googleSheetsClearValuesAction = defineAction({
   id: 'google_sheets.clear_values',
   name: 'Clear Values',
   description:
-    'Clear all cell values in a range of a Google Sheets spreadsheet (spreadsheets.values.clear). Use when the user wants to erase data while keeping formatting.\n\n' +
+    'Clear all cell values in a range of a Google Sheets spreadsheet (spreadsheets.values.clear). Use when the user wants to erase data while keeping formatting and data validation intact.\n\n' +
+    'Call with `spreadsheetId` and `range` (A1 notation, e.g. "Sheet1!A1:D10"). Only values are cleared; formatting, conditional formatting, and data validation are preserved.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"clearedRange": "Sheet1!A1:D10"}\n' +
+    '{"spreadsheetId": "1abc...", "clearedRange": "Sheet1!A1:D10"}\n' +
     '```',
   provider: GOOGLE_SHEETS_PROVIDER,
   actionCategory: 'delete',
@@ -56,6 +57,7 @@ export const googleSheetsClearValuesAction = defineAction({
         label: 'Spreadsheet ID',
         type: 'text',
         required: true,
+        placeholder: '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms',
         description: 'The ID of the Google Sheets spreadsheet',
         aiProvided: true,
       },

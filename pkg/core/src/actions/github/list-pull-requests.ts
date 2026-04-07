@@ -30,7 +30,7 @@ export const githubListPullRequestsAction = defineAction({
     'List pull requests in a GitHub repository (GET /repos/{owner}/{repo}/pulls). Use when you need to browse, filter, or review open/closed pull requests.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '[{"number": 1347, "title": "Amazing new feature", "state": "open", "user": "octocat", "head": "feature-branch", "base": "main"}]\n' +
+    '{"pullRequests": [{"number": 1347, "title": "Amazing new feature", "state": "open", "author": "octocat", "headBranch": "feature-branch", "baseBranch": "main"}], "totalReturned": 1}\n' +
     '```',
   provider: GITHUB_PROVIDER,
   actionCategory: 'read',
@@ -39,6 +39,7 @@ export const githubListPullRequestsAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'github',
+    requiredScopes: ['repo'],
     description: 'GitHub OAuth2 credential with repo scope',
   },
 

@@ -22,7 +22,8 @@ export const gitlabListIssuesAction = defineAction({
   id: 'gitlab.list_issues',
   name: 'List Issues',
   description:
-    'List issues in a GitLab project (GET /api/v4/projects/:id/issues). Use when the user wants to review open bugs, triage tasks, or check issue status.\n\n' +
+    'List issues in a GitLab project (GET /api/v4/projects/:id/issues). Use when the user wants to review open bugs, triage tasks, or check issue status. ' +
+    'Call with `projectId`; optionally filter by `state` (opened/closed/all) and set `perPage` (default 20).\n\n' +
     'Example response:\n' +
     '```json\n' +
     '{"issues": [{"iid": 42, "title": "Bug report", "state": "opened", "url": "https://gitlab.com/g/p/-/issues/42", "labels": ["bug"], "author": "jane"}], "totalCount": 15}\n' +
@@ -157,6 +158,8 @@ export const gitlabListIssuesAction = defineAction({
         closed_at: string | null;
       }>;
 
+      const totalFromHeader = response.headers.get('x-total');
+
       return {
         success: true,
         output: {
@@ -174,7 +177,8 @@ export const gitlabListIssuesAction = defineAction({
             updatedAt: i.updated_at,
             closedAt: i.closed_at,
           })),
-          totalCount: issues.length,
+          totalCount: totalFromHeader ? parseInt(totalFromHeader, 10) : issues.length,
+          returnedCount: issues.length,
         },
       };
     } catch (error) {

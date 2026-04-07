@@ -65,7 +65,7 @@ export const googleCalendarDeleteEventAction = defineAction({
         label: 'Calendar ID',
         type: 'text',
         defaultValue: 'primary',
-        description: 'Calendar ID',
+        description: "Calendar ID (use 'primary' for the default calendar)",
         extended: true,
         aiProvided: true,
       },

@@ -21,10 +21,10 @@ export const zendeskSearchAction = defineAction({
   id: 'zendesk.search',
   name: 'Search',
   description:
-    'Search Zendesk tickets, users, or organizations (GET /api/v2/search.json). Use when the user wants to find tickets or other resources using Zendesk search syntax (e.g. type:ticket status:open).\n\n' +
+    'Search Zendesk tickets, users, or organizations (GET /api/v2/search.json). Use when the user wants to find resources by criteria. Call with `query` using Zendesk search syntax — e.g. `type:ticket status:open`, `type:ticket priority:urgent assignee:me`, `type:user email:foo@bar.com`. Optional `perPage` (1–100).\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"results": [{"id": 35436, "result_type": "ticket", "subject": "Help!", "status": "open"}], "count": 5}\n' +
+    '{"results": [{"id": 35436, "result_type": "ticket", "subject": "Help!", "status": "open", "priority": "high"}], "count": 5, "nextPage": "https://..."  }\n' +
     '```',
   provider: ZENDESK_PROVIDER,
   actionCategory: 'read',
@@ -33,6 +33,7 @@ export const zendeskSearchAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'zendesk',
+    requiredScopes: ['read'],
     description: 'Zendesk OAuth2 credential with read access',
   },
 
@@ -63,7 +64,7 @@ export const zendeskSearchAction = defineAction({
         required: true,
         placeholder: 'e.g. type:ticket status:open priority:high',
         description:
-          'Zendesk search query. Supports syntax like type:ticket, status:open, assignee:me.',
+          'Zendesk search query. Supports syntax like type:ticket, status:open, assignee:me, priority:urgent, created>2024-01-01, tags:billing.',
         aiProvided: true,
       },
       {

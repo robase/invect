@@ -13,16 +13,26 @@ const paramsSchema = z.object({
   credentialId: z.string().min(1, 'Freshdesk credential is required'),
   domain: z.string().min(1, 'Freshdesk domain is required'),
   perPage: z.number().int().min(1).max(100).optional().default(30),
+  page: z.number().int().min(1).optional().default(1),
+  orderBy: z.enum(['created_at', 'due_by', 'updated_at', 'status']).optional(),
+  orderType: z.enum(['asc', 'desc']).optional(),
+  updatedSince: z.string().optional(),
+  filter: z.enum(['new_and_my_open', 'watching', 'spam', 'deleted']).optional(),
+  email: z.string().optional(),
+  requesterId: z.number().int().optional(),
 });
 
 export const freshdeskListTicketsAction = defineAction({
   id: 'freshdesk.list_tickets',
   name: 'List Tickets',
   description:
-    'List tickets from a Freshdesk helpdesk (GET /api/v2/tickets). Use when the user wants to retrieve a paginated list of support tickets.\n\n' +
+    'List tickets from a Freshdesk helpdesk (GET /api/v2/tickets). Use when the user wants to retrieve a paginated list of support tickets. ' +
+    'Supports filters: `filter` (new_and_my_open, watching, spam, deleted), `email`, `requester_id`, `updated_since` (ISO 8601). ' +
+    'Sort with `order_by` (created_at, due_by, updated_at, status) and `order_type` (asc, desc). Default sort is `created_at desc`. ' +
+    'Only tickets from the last 30 days are returned by default; use `updated_since` for older tickets. Max 300 pages (30,000 tickets).\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '[{"id": 1, "subject": "Issue", "status": 2, "priority": 1, "requester_id": 123}]\n' +
+    '[{"id": 1, "subject": "Issue with billing", "status": 2, "priority": 1, "requester_id": 123, "group_id": 5, "type": "Problem", "created_at": "2025-01-15T10:00:00Z", "updated_at": "2025-01-16T08:30:00Z"}]\n' +
     '```',
   provider: FRESHDESK_PROVIDER,
   actionCategory: 'read',
@@ -64,11 +74,97 @@ export const freshdeskListTicketsAction = defineAction({
         aiProvided: true,
         extended: true,
       },
+      {
+        name: 'page',
+        label: 'Page',
+        type: 'number',
+        defaultValue: 1,
+        description: 'Page number for pagination (starts at 1)',
+        aiProvided: true,
+        extended: true,
+      },
+      {
+        name: 'orderBy',
+        label: 'Order By',
+        type: 'select',
+        description: 'Field to sort tickets by',
+        aiProvided: true,
+        extended: true,
+        options: [
+          { label: 'Created At', value: 'created_at' },
+          { label: 'Due By', value: 'due_by' },
+          { label: 'Updated At', value: 'updated_at' },
+          { label: 'Status', value: 'status' },
+        ],
+      },
+      {
+        name: 'orderType',
+        label: 'Order Type',
+        type: 'select',
+        description: 'Sort direction (ascending or descending)',
+        aiProvided: true,
+        extended: true,
+        options: [
+          { label: 'Ascending', value: 'asc' },
+          { label: 'Descending', value: 'desc' },
+        ],
+      },
+      {
+        name: 'updatedSince',
+        label: 'Updated Since',
+        type: 'text',
+        placeholder: '2025-01-01T00:00:00Z',
+        description: 'Return tickets updated after this ISO 8601 timestamp',
+        aiProvided: true,
+        extended: true,
+      },
+      {
+        name: 'filter',
+        label: 'Filter',
+        type: 'select',
+        description: 'Predefined ticket filter',
+        aiProvided: true,
+        extended: true,
+        options: [
+          { label: 'New & My Open', value: 'new_and_my_open' },
+          { label: 'Watching', value: 'watching' },
+          { label: 'Spam', value: 'spam' },
+          { label: 'Deleted', value: 'deleted' },
+        ],
+      },
+      {
+        name: 'email',
+        label: 'Requester Email',
+        type: 'text',
+        placeholder: 'customer@example.com',
+        description: 'Filter tickets by requester email address',
+        aiProvided: true,
+        extended: true,
+      },
+      {
+        name: 'requesterId',
+        label: 'Requester ID',
+        type: 'number',
+        description: 'Filter tickets by requester user ID',
+        aiProvided: true,
+        extended: true,
+      },
     ],
   },
 
   async execute(params, context) {
-    const { credentialId, domain, perPage } = params;
+    const {
+      credentialId,
+      domain,
+      perPage,
+      page,
+      orderBy,
+      orderType,
+      updatedSince,
+      filter,
+      email,
+      requesterId,
+    } = params;
 
     let credential = context.credential;
     if (!credential && context.functions?.getCredential) {
@@ -99,7 +195,17 @@ export const freshdeskListTicketsAction = defineAction({
     context.logger.debug('Listing Freshdesk tickets', { domain, perPage });
 
     try {
-      const response = await fetch(`${baseUrl}/api/v2/tickets?per_page=${perPage}`, {
+      const queryParams = new URLSearchParams();
+      queryParams.set('per_page', String(perPage));
+      if (page !== undefined) {queryParams.set('page', String(page));}
+      if (orderBy) {queryParams.set('order_by', orderBy);}
+      if (orderType) {queryParams.set('order_type', orderType);}
+      if (updatedSince) {queryParams.set('updated_since', updatedSince);}
+      if (filter) {queryParams.set('filter', filter);}
+      if (email) {queryParams.set('email', email);}
+      if (requesterId !== undefined) {queryParams.set('requester_id', String(requesterId));}
+
+      const response = await fetch(`${baseUrl}/api/v2/tickets?${queryParams.toString()}`, {
         headers: {
           Authorization: authHeader,
           'Content-Type': 'application/json',

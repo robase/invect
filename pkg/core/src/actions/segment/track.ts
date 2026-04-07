@@ -24,7 +24,9 @@ export const segmentTrackAction = defineAction({
   id: 'segment.track',
   name: 'Track Event',
   description:
-    'Track an analytics event for a user via Segment (POST /v1/track). Use when the user wants to record a business event like a purchase, signup, or feature usage.\n\n' +
+    'Track an analytics event for a user via Segment (POST /v1/track). Use when the user wants to record a business event like a purchase, signup, or feature usage. ' +
+    'Call with `userId`, `event` (e.g. "Order Completed"), and an optional `properties` JSON object with event-specific data. ' +
+    'An optional ISO 8601 `timestamp` overrides the server default. Note: only `userId` is supported; `anonymousId`-only calls are not yet available.\n\n' +
     'Example response:\n' +
     '```json\n' +
     '{"acknowledged": true, "userId": "user-123", "event": "Order Completed"}\n' +

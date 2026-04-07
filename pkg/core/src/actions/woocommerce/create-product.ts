@@ -14,18 +14,23 @@ const paramsSchema = z.object({
   name: z.string().min(1, 'Product name is required'),
   regularPrice: z.string().min(1, 'Regular price is required'),
   type: z.enum(['simple', 'grouped', 'external', 'variable']).optional().default('simple'),
+  status: z.enum(['draft', 'pending', 'private', 'publish']).optional().default('publish'),
   description: z.string().optional().default(''),
   shortDescription: z.string().optional().default(''),
+  sku: z.string().optional().default(''),
+  salePrice: z.string().optional().default(''),
+  stockQuantity: z.number().int().optional(),
 });
 
 export const woocommerceCreateProductAction = defineAction({
   id: 'woocommerce.create_product',
   name: 'Create Product',
   description:
-    'Create a new product in a WooCommerce store (POST /wp-json/wc/v3/products). Use when you need to add a new product to the catalog.\n\n' +
+    'Create a new product in a WooCommerce store (POST /wp-json/wc/v3/products). Use when you need to add a new product to the catalog. ' +
+    'Call with `name` and `regularPrice` (required); optional `type`, `status`, `sku`, `salePrice`, `stockQuantity`, `description`, and `shortDescription`.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"id": 794, "name": "Premium Quality T-Shirt", "type": "simple", "status": "publish", "regular_price": "21.99", "permalink": "https://example.com/product/premium-quality-t-shirt"}\n' +
+    '{"id": 794, "name": "Premium Quality T-Shirt", "type": "simple", "status": "publish", "sku": "WOO-TSHIRT-001", "regular_price": "21.99", "permalink": "https://example.com/product/premium-quality-t-shirt"}\n' +
     '```',
   provider: WOOCOMMERCE_PROVIDER,
   actionCategory: 'write',
@@ -96,11 +101,62 @@ export const woocommerceCreateProductAction = defineAction({
         extended: true,
         aiProvided: true,
       },
+      {
+        name: 'status',
+        label: 'Status',
+        type: 'select',
+        defaultValue: 'publish',
+        description: 'Product publication status',
+        extended: true,
+        aiProvided: true,
+        options: [
+          { label: 'Published', value: 'publish' },
+          { label: 'Draft', value: 'draft' },
+          { label: 'Pending Review', value: 'pending' },
+          { label: 'Private', value: 'private' },
+        ],
+      },
+      {
+        name: 'sku',
+        label: 'SKU',
+        type: 'text',
+        description: 'Stock keeping unit (unique product identifier)',
+        extended: true,
+        aiProvided: true,
+      },
+      {
+        name: 'salePrice',
+        label: 'Sale Price',
+        type: 'text',
+        placeholder: '19.99',
+        description: 'Product sale price as a string (e.g. "19.99")',
+        extended: true,
+        aiProvided: true,
+      },
+      {
+        name: 'stockQuantity',
+        label: 'Stock Quantity',
+        type: 'number',
+        description: 'Number of items in stock (enables stock management)',
+        extended: true,
+        aiProvided: true,
+      },
     ],
   },
 
   async execute(params, context) {
-    const { credentialId, name, regularPrice, type, description, shortDescription } = params;
+    const {
+      credentialId,
+      name,
+      regularPrice,
+      type,
+      status,
+      description,
+      shortDescription,
+      sku,
+      salePrice,
+      stockQuantity,
+    } = params;
 
     let credential = context.credential;
     if (!credential && context.functions?.getCredential) {
@@ -125,9 +181,10 @@ export const woocommerceCreateProductAction = defineAction({
 
     context.logger.debug('Executing WooCommerce create product', { name, type });
 
-    const product: Record<string, string> = {
+    const product: Record<string, unknown> = {
       name,
       type,
+      status,
       regular_price: regularPrice,
     };
     if (description) {
@@ -135,6 +192,16 @@ export const woocommerceCreateProductAction = defineAction({
     }
     if (shortDescription) {
       product.short_description = shortDescription;
+    }
+    if (sku) {
+      product.sku = sku;
+    }
+    if (salePrice) {
+      product.sale_price = salePrice;
+    }
+    if (stockQuantity !== undefined) {
+      product.manage_stock = true;
+      product.stock_quantity = stockQuantity;
     }
 
     try {

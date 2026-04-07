@@ -66,6 +66,9 @@ export {
   GITLAB_PROVIDER,
   RESEND_PROVIDER,
   SENDGRID_PROVIDER,
+  NOTION_PROVIDER,
+  CLOUDWATCH_PROVIDER,
+  PAGERDUTY_PROVIDER,
 } from './providers';
 
 // Registry
@@ -124,6 +127,9 @@ export { googleAnalyticsActions } from './google-analytics';
 export { gitlabActions } from './gitlab';
 export { resendActions } from './resend';
 export { sendgridActions } from './sendgrid';
+export { notionActions } from './notion';
+export { cloudwatchActions } from './cloudwatch';
+export { pagerdutyActions } from './pagerduty';
 
 // ── Convenience: all built-in actions ───────────────────────────────────
 
@@ -166,6 +172,9 @@ import { googleAnalyticsActions } from './google-analytics';
 import { gitlabActions } from './gitlab';
 import { resendActions } from './resend';
 import { sendgridActions } from './sendgrid';
+import { notionActions } from './notion';
+import { cloudwatchActions } from './cloudwatch';
+import { pagerdutyActions } from './pagerduty';
 
 /** Every built-in action across all providers. */
 export const allBuiltinActions: ActionDefinition[] = [
@@ -207,6 +216,9 @@ export const allBuiltinActions: ActionDefinition[] = [
   ...gitlabActions,
   ...resendActions,
   ...sendgridActions,
+  ...notionActions,
+  ...cloudwatchActions,
+  ...pagerdutyActions,
 ];
 
 // ── Registration helper ─────────────────────────────────────────────────

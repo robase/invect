@@ -23,10 +23,10 @@ export const hubspotSearchObjectsAction = defineAction({
   id: 'hubspot.search_objects',
   name: 'Search Objects',
   description:
-    'Search HubSpot CRM objects by text query (POST /crm/v3/objects/{objectType}/search). Use when the user wants to find contacts, companies, deals, or tickets matching a search term.\n\n' +
+    'Search HubSpot CRM objects by text query (POST /crm/v3/objects/{objectType}/search). Use when the user wants to find contacts, companies, deals, or tickets matching a keyword. Pass `objectType` and a `query` string; the API searches default text properties for that object type. Results are paginated — use the `paging.next.after` value from the response to fetch subsequent pages.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"total": 5, "results": [{"id": "501", "properties": {"email": "jane@example.com"}}]}\n' +
+    '{"total": 2, "results": [{"id": "501", "properties": {"email": "jane@example.com", "firstname": "Jane"}, "createdAt": "2024-01-17T19:55:04.281Z", "updatedAt": "2024-09-11T13:27:39.356Z", "archived": false}], "paging": {"next": {"after": "10"}}}\n' +
     '```',
   provider: HUBSPOT_PROVIDER,
   actionCategory: 'read',
@@ -35,6 +35,12 @@ export const hubspotSearchObjectsAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'hubspot',
+    requiredScopes: [
+      'crm.objects.contacts.read',
+      'crm.objects.companies.read',
+      'crm.objects.deals.read',
+      'crm.objects.tickets.read',
+    ],
     description: 'HubSpot OAuth2 credential',
   },
 

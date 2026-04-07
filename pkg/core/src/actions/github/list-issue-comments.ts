@@ -26,7 +26,7 @@ export const githubListIssueCommentsAction = defineAction({
     'List comments on a GitHub issue or pull request (GET /repos/{owner}/{repo}/issues/{issue_number}/comments). Use when you need to read the discussion thread on an issue.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '[{"id": 1, "body": "Great work!", "user": "octocat", "created_at": "2024-01-01T00:00:00Z"}]\n' +
+    '{"comments": [{"commentId": 1, "body": "Great work!", "author": "octocat", "createdAt": "2024-01-01T00:00:00Z"}], "totalReturned": 1}\n' +
     '```',
   provider: GITHUB_PROVIDER,
   actionCategory: 'read',
@@ -35,6 +35,7 @@ export const githubListIssueCommentsAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'github',
+    requiredScopes: ['repo'],
     description: 'GitHub OAuth2 credential with repo scope',
   },
 

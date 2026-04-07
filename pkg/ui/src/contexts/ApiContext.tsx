@@ -11,13 +11,17 @@ const ApiContext = createContext<ApiContextValue | undefined>(undefined);
 export interface ApiProviderProps {
   children: React.ReactNode;
   baseURL?: string;
+  /** Pre-configured API client instance. When provided, baseURL is ignored. */
+  apiClient?: ApiClient;
 }
 
 export const ApiProvider: React.FC<ApiProviderProps> = ({
   children,
   baseURL = 'http://localhost:3000/invect',
+  apiClient: externalClient,
 }) => {
-  const apiClient = useMemo(() => new ApiClient(baseURL), [baseURL]);
+  const internalClient = useMemo(() => new ApiClient(baseURL), [baseURL]);
+  const apiClient = externalClient ?? internalClient;
 
   const value = useMemo(
     () => ({

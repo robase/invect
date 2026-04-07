@@ -21,10 +21,10 @@ export const intercomListContactsAction = defineAction({
   id: 'intercom.list_contacts',
   name: 'List Contacts',
   description:
-    'List contacts in Intercom (POST /contacts/search). Use when the user wants to browse their Intercom contact list with pagination.\n\n' +
+    'List all contacts in Intercom (POST /contacts/search with empty query). Returns contacts with pagination but does not support filtering — use for browsing the full contact list. Call with an optional `limit` (1–150, default 25).\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"type": "list", "data": [{"id": "abc123", "role": "user", "email": "jane@example.com"}], "total_count": 50}\n' +
+    '{"contacts": [{"id": "abc123", "role": "user", "email": "jane@example.com", "name": "Jane Doe"}], "count": 25, "totalCount": 50, "hasMore": true}\n' +
     '```',
   provider: INTERCOM_PROVIDER,
   actionCategory: 'read',
@@ -93,7 +93,7 @@ export const intercomListContactsAction = defineAction({
           Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
           Accept: 'application/json',
-          'Intercom-Version': '2.11',
+          'Intercom-Version': '2.12',
         },
         body: JSON.stringify({
           query: { operator: 'AND', value: [] },

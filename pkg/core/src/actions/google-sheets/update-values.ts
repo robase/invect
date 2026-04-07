@@ -23,7 +23,8 @@ export const googleSheetsUpdateValuesAction = defineAction({
   id: 'google_sheets.update_values',
   name: 'Update Values',
   description:
-    'Write values to a range in a Google Sheets spreadsheet (spreadsheets.values.update). Use when the user wants to update or overwrite cells in a spreadsheet.\n\n' +
+    'Write values to a range in a Google Sheets spreadsheet (spreadsheets.values.update). Use when the user wants to overwrite existing cells with new data.\n\n' +
+    'Call with `spreadsheetId`, `range` (A1 notation, e.g. "Sheet1!A1:B2"), and `values` (2D JSON array, e.g. [["Name", "Age"], ["Alice", 30]]). Optionally set `valueInputOption` (USER_ENTERED to parse formulas, or RAW for literal values).\n\n' +
     'Example response:\n' +
     '```json\n' +
     '{"updatedRange": "Sheet1!A1:B2", "updatedRows": 2, "updatedColumns": 2, "updatedCells": 4}\n' +
@@ -58,6 +59,7 @@ export const googleSheetsUpdateValuesAction = defineAction({
         label: 'Spreadsheet ID',
         type: 'text',
         required: true,
+        placeholder: '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms',
         description: 'The ID of the Google Sheets spreadsheet',
         aiProvided: true,
       },

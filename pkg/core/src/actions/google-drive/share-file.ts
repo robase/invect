@@ -25,7 +25,8 @@ export const googleDriveShareFileAction = defineAction({
   id: 'google_drive.share_file',
   name: 'Share File',
   description:
-    'Share a file in Google Drive by creating a permission (permissions.create). Use when the user wants to grant access to a file for a user, group, domain, or publicly.\n\n' +
+    'Share a file in Google Drive by creating a permission (permissions.create). Use when the user wants to grant access to a file for a user, group, domain, or publicly. ' +
+    'Call with `fileId`, `role` (reader/commenter/writer/organizer), `type` (user/group/domain/anyone), and `emailAddress` for user/group sharing.\n\n' +
     'Example response:\n' +
     '```json\n' +
     '{"permissionId": "12345", "fileId": "1abc", "role": "writer", "type": "user", "emailAddress": "user@example.com"}\n' +

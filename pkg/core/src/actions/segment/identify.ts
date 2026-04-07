@@ -23,7 +23,9 @@ export const segmentIdentifyAction = defineAction({
   id: 'segment.identify',
   name: 'Identify User',
   description:
-    'Identify a user and set traits via Segment (POST /v1/identify). Use when the user wants to associate profile attributes like email, name, or plan with a user ID.\n\n' +
+    'Identify a user and set traits via Segment (POST /v1/identify). Use when the user wants to associate profile attributes like email, name, or plan with a user ID. ' +
+    'Call with `userId` and an optional `traits` JSON object (e.g. `{"email": "...", "plan": "pro"}`). ' +
+    'An optional ISO 8601 `timestamp` overrides the server default. Note: only `userId` is supported; `anonymousId`-only calls are not yet available.\n\n' +
     'Example response:\n' +
     '```json\n' +
     '{"acknowledged": true, "userId": "user-123"}\n' +

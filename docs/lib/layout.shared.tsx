@@ -12,6 +12,10 @@ export function baseOptions(): BaseLayoutProps {
         active: 'nested-url',
       },
       {
+        text: 'Demo',
+        url: '/demo',
+      },
+      {
         text: 'GitHub',
         url: 'https://github.com/robase/invect',
         external: true,

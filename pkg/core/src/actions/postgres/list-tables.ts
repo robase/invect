@@ -20,7 +20,12 @@ export const postgresListTablesAction = defineAction({
   id: 'postgres.list_tables',
   name: 'List Tables',
   description:
-    'List all tables (and optionally views) in a PostgreSQL schema with estimated row counts and column counts.',
+    'List all tables (and optionally views) in a PostgreSQL schema with estimated row counts and column counts. ' +
+    'Use when you need to discover what tables exist in a database before querying or describing them.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"tables": [{"table_name": "users", "table_type": "BASE TABLE", "column_count": 5, "estimated_row_count": 1200}], "schema": "public", "tableCount": 1}\n' +
+    '```',
   provider: POSTGRES_PROVIDER,
   actionCategory: 'read',
   tags: ['postgres', 'postgresql', 'sql', 'database', 'tables', 'schema', 'list', 'db'],
@@ -48,6 +53,7 @@ export const postgresListTablesAction = defineAction({
         type: 'text',
         defaultValue: 'public',
         description: 'PostgreSQL schema to list tables from.',
+        aiProvided: true,
       },
       {
         name: 'includeViews',
@@ -56,6 +62,7 @@ export const postgresListTablesAction = defineAction({
         defaultValue: false,
         description: 'Also include views in the results.',
         extended: true,
+        aiProvided: true,
       },
     ],
   },
@@ -93,7 +100,7 @@ export const postgresListTablesAction = defineAction({
     try {
       const tableTypes = includeViews ? ['BASE TABLE', 'VIEW'] : ['BASE TABLE'];
 
-      const query = `
+      const result = await sql`
         SELECT
           t.table_name,
           t.table_type,
@@ -103,17 +110,16 @@ export const postgresListTablesAction = defineAction({
         LEFT JOIN (
           SELECT table_name, COUNT(*)::int AS column_count
           FROM information_schema.columns
-          WHERE table_schema = '${schemaName}'
+          WHERE table_schema = ${schemaName}
           GROUP BY table_name
         ) c ON c.table_name = t.table_name
         LEFT JOIN pg_stat_user_tables s
-          ON s.relname = t.table_name AND s.schemaname = '${schemaName}'
-        WHERE t.table_schema = '${schemaName}'
-          AND t.table_type = ANY(ARRAY[${tableTypes.map((t) => `'${t}'`).join(',')}])
+          ON s.relname = t.table_name AND s.schemaname = ${schemaName}
+        WHERE t.table_schema = ${schemaName}
+          AND t.table_type = ANY(${tableTypes})
         ORDER BY t.table_name
       `;
 
-      const result = await sql.unsafe(query);
       const tables = Array.isArray(result) ? result : [];
 
       return {

@@ -70,6 +70,13 @@ export interface FlowEditorState {
   selectedNodeId: string | null;
   configPanelOpen: boolean;
 
+  // Tool panel state (Agent nodes)
+  toolSelectorOpen: boolean;
+  toolConfigOpen: boolean;
+  toolPanelNodeId: string | null;
+  selectedToolInstanceId: string | null;
+  configPanelToolInstanceId: string | null;
+
   // Layout state
   currentLayout: LayoutAlgorithm;
   layoutDirection: LayoutDirection;
@@ -118,6 +125,13 @@ export interface FlowEditorActions {
   selectNode: (nodeId: string | null) => void;
   openConfigPanel: (nodeId: string) => void;
   closeConfigPanel: () => void;
+
+  // Tool panel (Agent nodes)
+  openToolSelector: (nodeId: string) => void;
+  closeToolSelector: () => void;
+  openToolConfig: (nodeId: string, instanceId: string) => void;
+  closeToolConfig: () => void;
+  setConfigPanelToolInstanceId: (id: string | null) => void;
 
   // Sync with server data
   syncFromServer: (nodes: Node[], edges: Edge[], versionId: string, flowName?: string) => void;
@@ -176,6 +190,11 @@ const initialState: FlowEditorState = {
   initialDataLoaded: false,
   selectedNodeId: null,
   configPanelOpen: false,
+  toolSelectorOpen: false,
+  toolConfigOpen: false,
+  toolPanelNodeId: null,
+  selectedToolInstanceId: null,
+  configPanelToolInstanceId: null,
   currentLayout: 'elkjs',
   layoutDirection: 'LR',
   initialLayoutApplied: false,
@@ -410,6 +429,39 @@ export const useFlowEditorStore: UseBoundStore<StoreApi<FlowEditorStore>> =
               state.configPanelOpen = false;
             }),
 
+          // Tool panel (Agent nodes)
+          openToolSelector: (nodeId) =>
+            set((state) => {
+              state.toolSelectorOpen = true;
+              state.toolPanelNodeId = nodeId;
+            }),
+
+          closeToolSelector: () =>
+            set((state) => {
+              state.toolSelectorOpen = false;
+              state.toolConfigOpen = false;
+              state.selectedToolInstanceId = null;
+              state.toolPanelNodeId = null;
+            }),
+
+          openToolConfig: (nodeId, instanceId) =>
+            set((state) => {
+              state.toolPanelNodeId = nodeId;
+              state.selectedToolInstanceId = instanceId;
+              state.toolConfigOpen = true;
+            }),
+
+          closeToolConfig: () =>
+            set((state) => {
+              state.toolConfigOpen = false;
+              state.selectedToolInstanceId = null;
+            }),
+
+          setConfigPanelToolInstanceId: (id) =>
+            set((state) => {
+              state.configPanelToolInstanceId = id;
+            }),
+
           // Sync with server data - called when React Query fetches new data
           syncFromServer: (nodes, edges, versionId, flowName) =>
             set((state) => {
@@ -595,6 +647,12 @@ export const useIsDirty = () =>
   );
 export const useSelectedNodeId = () => useFlowEditorStore((s) => s.selectedNodeId);
 export const useConfigPanelOpen = () => useFlowEditorStore((s) => s.configPanelOpen);
+export const useToolSelectorOpen = () => useFlowEditorStore((s) => s.toolSelectorOpen);
+export const useToolConfigOpen = () => useFlowEditorStore((s) => s.toolConfigOpen);
+export const useToolPanelNodeId = () => useFlowEditorStore((s) => s.toolPanelNodeId);
+export const useSelectedToolInstanceId = () => useFlowEditorStore((s) => s.selectedToolInstanceId);
+export const useConfigPanelToolInstanceId = () =>
+  useFlowEditorStore((s) => s.configPanelToolInstanceId);
 export const useFlowName = () => useFlowEditorStore((s) => s.flowName);
 export const useCurrentLayout = () => useFlowEditorStore((s) => s.currentLayout);
 export const useLayoutDirection = () => useFlowEditorStore((s) => s.layoutDirection);

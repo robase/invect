@@ -24,7 +24,7 @@ export const teamsSendMessageAction = defineAction({
   id: 'microsoft_teams.send_message',
   name: 'Send Message',
   description:
-    'Send a message to a Microsoft Teams channel (POST /teams/{team-id}/channels/{channel-id}/messages). Use when you need to post a notification, update, or message to a Teams channel.\n\n' +
+    'Send a message to a Microsoft Teams channel (POST /teams/{team-id}/channels/{channel-id}/messages). Call with `teamId`, `channelId`, and `content` (HTML by default, or set `contentType` to "text" for plain text). Use when you need to post a notification, update, or message to a Teams channel.\n\n' +
     'Example response:\n' +
     '```json\n' +
     '{"id": "1616990032035", "createdDateTime": "2025-01-15T10:30:00Z", "from": {"user": {"displayName": "Bot"}}, "body": {"contentType": "html", "content": "Hello World"}}\n' +
@@ -36,7 +36,8 @@ export const teamsSendMessageAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'microsoft',
-    description: 'Microsoft Teams OAuth2 credential',
+    requiredScopes: ['ChannelMessage.Send'],
+    description: 'Microsoft Teams OAuth2 credential with ChannelMessage.Send scope',
   },
 
   params: {

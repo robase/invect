@@ -27,10 +27,10 @@ export const teamsListChannelsAction = defineAction({
   id: 'microsoft_teams.list_channels',
   name: 'List Channels',
   description:
-    'List channels in a Microsoft Team (GET /teams/{team-id}/channels). Use when you need to find a channel ID before sending messages or reading channel history.\n\n' +
+    'List channels in a Microsoft Team (GET /teams/{team-id}/channels). Call with `teamId` to retrieve all channels including standard, private, and shared. Use when you need to find a channel ID before sending messages or reading channel history.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"id": "19:561fbdbbfca8...@thread.tacv2", "displayName": "General", "description": "Main channel", "membershipType": "standard"}\n' +
+    '{"channels": [{"id": "19:561fbdbbfca8...@thread.tacv2", "displayName": "General", "description": "Main channel", "membershipType": "standard"}], "count": 1}\n' +
     '```',
   provider: MICROSOFT_TEAMS_PROVIDER,
   actionCategory: 'read',
@@ -39,7 +39,8 @@ export const teamsListChannelsAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'microsoft',
-    description: 'Microsoft Teams OAuth2 credential',
+    requiredScopes: ['Channel.ReadBasic.All'],
+    description: 'Microsoft Teams OAuth2 credential with Channel.ReadBasic.All scope',
   },
 
   params: {

@@ -17,7 +17,8 @@ const paramsSchema = z.object({
 export const outputAction = defineAction({
   id: 'core.output',
   name: 'Flow Output',
-  description: 'Return data from the flow',
+  description:
+    'Return a named output value from the flow. Use as the terminal node to define what data the flow produces for callers. The output value supports {{ expression }} template syntax to reference upstream node data.',
   provider: CORE_PROVIDER,
   excludeFromTools: true,
   icon: 'LogOut',
@@ -32,7 +33,7 @@ export const outputAction = defineAction({
         type: 'textarea',
         required: true,
         description:
-          'The value to output from the flow. Use Nunjucks templates to reference upstream data.',
+          'The value to output from the flow. Use {{ expression }} templates to reference upstream node data.',
         placeholder: '{{ model_node.data.variables.modelOutput.value }}',
       },
       {

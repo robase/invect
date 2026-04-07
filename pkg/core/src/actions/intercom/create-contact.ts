@@ -145,7 +145,7 @@ export const intercomCreateContactAction = defineAction({
           Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
           Accept: 'application/json',
-          'Intercom-Version': '2.11',
+          'Intercom-Version': '2.12',
         },
         body: JSON.stringify(body),
       });

@@ -19,10 +19,12 @@ export const shopifyGetProductAction = defineAction({
   id: 'shopify.get_product',
   name: 'Get Product',
   description:
-    'Get a single product by ID from a Shopify store (GET /admin/api/.../products/{id}.json). Use when you need full details for a specific product including variants, images, and options.\n\n' +
+    'Get a single product by ID from a Shopify store (GET /admin/api/.../products/{id}.json). ' +
+    'Call with `shop` (store subdomain) and `productId` (numeric product ID). ' +
+    'Use when you need full details for a specific product including variants, images, and options.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"product": {"id": 632910392, "title": "IPod Nano", "body_html": "<p>Description</p>", "vendor": "Apple", "status": "active", "variants": [{"id": 808950810, "price": "199.00", "sku": "IPOD2008PINK"}]}}\n' +
+    '{"id": 632910392, "title": "IPod Nano", "body_html": "<p>Description</p>", "vendor": "Apple", "status": "active", "variants": [{"id": 808950810, "price": "199.00", "sku": "IPOD2008PINK"}]}\n' +
     '```',
   provider: SHOPIFY_PROVIDER,
   actionCategory: 'read',
@@ -32,7 +34,8 @@ export const shopifyGetProductAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'shopify',
-    description: 'Shopify OAuth2 credential for store access',
+    requiredScopes: ['read_products'],
+    description: 'Shopify OAuth2 credential with read_products scope',
   },
 
   params: {
@@ -83,7 +86,7 @@ export const shopifyGetProductAction = defineAction({
       return { success: false, error: 'No valid access token.' };
     }
 
-    const baseUrl = `https://${encodeURIComponent(shop)}.myshopify.com/admin/api/2024-01`;
+    const baseUrl = `https://${encodeURIComponent(shop)}.myshopify.com/admin/api/2025-01`;
 
     context.logger.debug('Executing Shopify get product', { shop, productId });
 

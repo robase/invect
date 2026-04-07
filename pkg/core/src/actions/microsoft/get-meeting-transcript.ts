@@ -116,6 +116,7 @@ export const microsoftGetMeetingTranscriptAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'microsoft',
+    requiredScopes: ['OnlineMeetingTranscript.Read.All'],
     description: 'Microsoft 365 OAuth2 credential with OnlineMeetingTranscript.Read.All scope',
   },
 

@@ -7,6 +7,8 @@ interface UseNodeConfigStateOptions {
   node: Node<Record<string, unknown>> | null;
   nodeType: string;
   definition?: NodeDefinition;
+  /** Callback to persist params back to Zustand. Required for backend resolution writes. */
+  onParamsChange?: (nodeId: string, params: Record<string, unknown>) => void;
 }
 
 interface UseNodeConfigStateResult {
@@ -31,16 +33,23 @@ function buildDefaultParams(definition?: NodeDefinition): Record<string, unknown
   }, {});
 }
 
+/**
+ * Hook for node configuration state — reads params from the node (Zustand)
+ * and provides validation, backend config resolution, and field update.
+ *
+ * After Phase 1.3 refactor: `values` is derived from node.data.params (Zustand),
+ * NOT stored locally. This eliminates the dual-source-of-truth problem.
+ */
 export function useNodeConfigState({
   node,
   nodeType,
   definition,
+  onParamsChange,
 }: UseNodeConfigStateOptions): UseNodeConfigStateResult {
   const nodeDefinitionResolver = useResolveNodeDefinition();
   const nodeId = node?.id ?? null;
 
   const [activeDefinition, setActiveDefinition] = useState<NodeDefinition | undefined>(definition);
-  const [values, setValues] = useState<Record<string, unknown>>({});
   const [warnings, setWarnings] = useState<string[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
 
@@ -50,9 +59,17 @@ export function useNodeConfigState({
   >(() => {
     // noop placeholder until ready
   });
+
+  // Read params directly from the node (Zustand is the single source of truth)
   const nodeParams = node?.data?.params as Record<string, unknown> | undefined;
-  const nodeParamsSignature = useMemo(() => JSON.stringify(nodeParams ?? {}), [nodeParams]);
+  const defaults = useMemo(() => buildDefaultParams(definition), [definition]);
+  const values = useMemo(() => ({ ...defaults, ...nodeParams }), [defaults, nodeParams]);
+
   const hasNode = Boolean(node);
+
+  // Stable ref for onParamsChange to avoid re-creating resolveDefinition
+  const onParamsChangeRef = useRef(onParamsChange);
+  onParamsChangeRef.current = onParamsChange;
 
   const resolveDefinition = useCallback(
     (params: Record<string, unknown>, change?: { field: string; value: unknown }) => {
@@ -73,9 +90,13 @@ export function useNodeConfigState({
             }
 
             setActiveDefinition(response.definition ?? definition);
-            setValues(response.params ?? params);
             setWarnings(response.warnings ?? []);
             setErrors(response.errors ?? []);
+
+            // Write resolved params back to Zustand (e.g. provider detection sets model list)
+            if (response.params && nodeId && onParamsChangeRef.current) {
+              onParamsChangeRef.current(nodeId, response.params);
+            }
           },
           onError: (error) => {
             if (requestId !== lastRequestIdRef.current) {
@@ -100,57 +121,45 @@ export function useNodeConfigState({
     setActiveDefinition(definition);
   }, [definition]);
 
+  // Reset transient state when node changes; trigger initial backend resolution if needed
+  const nodeParamsSignature = useMemo(() => JSON.stringify(nodeParams ?? {}), [nodeParams]);
   useEffect(() => {
     if (!hasNode) {
-      setValues({});
       setWarnings([]);
       setErrors([]);
       lastRequestIdRef.current = 0;
       return;
     }
 
-    const defaults = buildDefaultParams(definition);
-    const params = { ...defaults, ...nodeParams };
-
-    setValues(params);
     setWarnings([]);
     setErrors([]);
 
     // Call the backend config resolution when the node has a credential
     // that needs provider detection (e.g. model selection, batch processing toggle).
-    // This works for both legacy enum-based types and action-based nodes with onConfigUpdate.
     const credentialId =
-      typeof params.credentialId === 'string' && params.credentialId
-        ? params.credentialId
+      typeof values.credentialId === 'string' && values.credentialId
+        ? values.credentialId
         : undefined;
     if (credentialId) {
-      resolveDefinitionRef.current(params, { field: 'credentialId', value: credentialId });
+      resolveDefinitionRef.current(values, { field: 'credentialId', value: credentialId });
     }
   }, [hasNode, nodeId, nodeParamsSignature, nodeType]);
 
   // Fields that should trigger a backend config update when changed
-  // Other fields (like prompt, temperature) don't need to call the API
   const FIELDS_REQUIRING_CONFIG_UPDATE = new Set(['credentialId', 'provider']);
 
-  const updateField = useCallback((fieldName: string, value: unknown) => {
-    setValues((previous) => {
-      if (previous[fieldName] === value) {
-        return previous;
-      }
-
-      const next = {
-        ...previous,
-        [fieldName]: value,
-      };
+  const updateField = useCallback(
+    (fieldName: string, value: unknown) => {
+      // Compute next params from current values
+      const next = { ...values, [fieldName]: value };
 
       // Only call the backend config update for fields that need dynamic resolution
-      // (e.g., credentialId changes need to fetch new model list and toggle batch processing)
       if (FIELDS_REQUIRING_CONFIG_UPDATE.has(fieldName)) {
         resolveDefinitionRef.current(next, { field: fieldName, value });
       }
-      return next;
-    });
-  }, []);
+    },
+    [values],
+  );
 
   return {
     definition: activeDefinition,

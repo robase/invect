@@ -46,7 +46,7 @@ export const githubListReposAction = defineAction({
     'List repositories for the authenticated user or an organisation (GET /user/repos, GET /orgs/{org}/repos). Use when you need to discover or browse repositories.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '[{"name": "hello-world", "full_name": "octocat/hello-world", "private": false, "language": "JavaScript", "stars": 80, "forks": 9}]\n' +
+    '{"repositories": [{"name": "hello-world", "fullName": "octocat/hello-world", "private": false, "language": "JavaScript", "stars": 80, "forks": 9}], "count": 1}\n' +
     '```',
   provider: GITHUB_PROVIDER,
   actionCategory: 'read',
@@ -55,6 +55,7 @@ export const githubListReposAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'github',
+    requiredScopes: ['repo'],
     description: 'GitHub OAuth2 credential with repo scope',
   },
 

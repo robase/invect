@@ -751,6 +751,9 @@ export const configureAgentTool: ChatToolDefinition = {
       }
       const node = agentResult.node;
 
+      // Merge params — preserve addedTools (never overwrite tool config here)
+      const existingParams = node.params ?? {};
+
       // Validate credentialId exists before saving
       if (definedUpdates.credentialId) {
         try {
@@ -763,8 +766,38 @@ export const configureAgentTool: ChatToolDefinition = {
         }
       }
 
-      // Merge params — preserve addedTools (never overwrite tool config here)
-      const existingParams = node.params ?? {};
+      // Soft model/provider consistency check
+      let warnings: string[] | undefined;
+      const model = (definedUpdates.model as string) ?? (existingParams.model as string);
+      if (model) {
+        const modelLower = model.toLowerCase();
+        const credId =
+          (definedUpdates.credentialId as string) ?? (existingParams.credentialId as string);
+        if (credId) {
+          try {
+            const cred = await invect.credentials.get(credId);
+            const provider = cred?.config?.provider as string | undefined;
+            if (provider) {
+              const providerLower = provider.toLowerCase();
+              // Basic prefix-based check
+              const mismatch =
+                (providerLower.includes('openai') && modelLower.startsWith('claude')) ||
+                (providerLower.includes('anthropic') &&
+                  (modelLower.startsWith('gpt') ||
+                    modelLower.startsWith('o1') ||
+                    modelLower.startsWith('o3')));
+              if (mismatch) {
+                warnings = [
+                  `Model "${model}" may not match credential provider "${provider}". This will fail at runtime if the provider doesn't support this model.`,
+                ];
+              }
+            }
+          } catch {
+            // Best-effort — don't fail the tool on lookup errors
+          }
+        }
+      }
+
       // Strip any tool-related keys that might have leaked into the updates
       delete definedUpdates.addedTools;
       node.params = {
@@ -780,6 +813,7 @@ export const configureAgentTool: ChatToolDefinition = {
           nodeId,
           updatedFields: Object.keys(definedUpdates),
           versionNumber: version.version,
+          ...(warnings && { warnings }),
         },
         uiAction: {
           action: 'refresh_flow',
@@ -788,6 +822,107 @@ export const configureAgentTool: ChatToolDefinition = {
       };
     } catch (error: unknown) {
       return { success: false, error: `Failed to configure agent: ${(error as Error).message}` };
+    }
+  },
+};
+
+// =====================================
+// copy_agent_tools
+// =====================================
+
+export const copyAgentToolsTool: ChatToolDefinition = {
+  id: 'copy_agent_tools',
+  name: 'Copy Agent Tools',
+  description:
+    'Copy all tool instances from one AGENT node to another. ' +
+    'Tool instances are deep-cloned with new instanceIds. ' +
+    'Existing tools on the target node are preserved (the copied tools are appended). ' +
+    'Both nodes can be in the same or different flows.',
+  parameters: z.object({
+    sourceNodeId: z.string().describe('The AGENT node ID to copy tools from'),
+    targetNodeId: z.string().describe('The AGENT node ID to copy tools to'),
+    sourceFlowId: z
+      .string()
+      .optional()
+      .describe('Flow ID of the source node. Defaults to the current flow.'),
+    targetFlowId: z
+      .string()
+      .optional()
+      .describe('Flow ID of the target node. Defaults to the current flow.'),
+  }),
+  async execute(params: unknown, ctx: ChatToolContext): Promise<ChatToolResult> {
+    const { sourceNodeId, targetNodeId, sourceFlowId, targetFlowId } = params as {
+      sourceNodeId: string;
+      targetNodeId: string;
+      sourceFlowId?: string;
+      targetFlowId?: string;
+    };
+    const invect = ctx.invect;
+    const currentFlowId = ctx.chatContext.flowId;
+
+    const srcFlowId = sourceFlowId ?? currentFlowId;
+    const tgtFlowId = targetFlowId ?? currentFlowId;
+
+    if (!srcFlowId) {
+      return { success: false, error: 'No flow is currently open. Provide sourceFlowId.' };
+    }
+    if (!tgtFlowId) {
+      return { success: false, error: 'No flow is currently open. Provide targetFlowId.' };
+    }
+
+    try {
+      // Load source flow and find agent node
+      const srcDef = await loadLatestDefinition(invect, srcFlowId);
+      const srcResult = unwrapAgentNode(findAgentNode(srcDef.nodes, sourceNodeId));
+      if (!srcResult.node) {
+        return srcResult.errorResult;
+      }
+
+      const sourceTools: AddedToolInstance[] =
+        (srcResult.node.params?.addedTools as AddedToolInstance[]) ?? [];
+      if (sourceTools.length === 0) {
+        return { success: false, error: 'Source agent node has no tools to copy.' };
+      }
+
+      // Load target flow (may be the same flow)
+      const tgtDef =
+        tgtFlowId === srcFlowId ? srcDef : await loadLatestDefinition(invect, tgtFlowId);
+      const tgtResult = unwrapAgentNode(findAgentNode(tgtDef.nodes, targetNodeId));
+      if (!tgtResult.node) {
+        return tgtResult.errorResult;
+      }
+
+      // Deep-clone tools with new instanceIds
+      const existingTools: AddedToolInstance[] =
+        (tgtResult.node.params?.addedTools as AddedToolInstance[]) ?? [];
+      const clonedTools: AddedToolInstance[] = sourceTools.map((tool) => ({
+        ...structuredClone(tool),
+        instanceId: crypto.randomUUID(),
+      }));
+
+      tgtResult.node.params = {
+        ...tgtResult.node.params,
+        addedTools: [...existingTools, ...clonedTools],
+      };
+
+      const version = await saveNewVersion(invect, tgtFlowId, tgtDef.nodes, tgtDef.edges);
+
+      return {
+        success: true,
+        data: {
+          copiedCount: clonedTools.length,
+          copiedToolNames: clonedTools.map((t) => t.name),
+          targetNodeId,
+          totalToolsOnTarget: existingTools.length + clonedTools.length,
+          versionNumber: version.version,
+        },
+        uiAction: {
+          action: 'refresh_flow',
+          data: { flowId: tgtFlowId, selectNodeId: targetNodeId },
+        },
+      };
+    } catch (error: unknown) {
+      return { success: false, error: `Failed to copy tools: ${(error as Error).message}` };
     }
   },
 };
@@ -804,4 +939,5 @@ export const agentNodeTools: ChatToolDefinition[] = [
   removeToolFromAgentTool,
   updateAgentToolTool,
   configureAgentTool,
+  copyAgentToolsTool,
 ];

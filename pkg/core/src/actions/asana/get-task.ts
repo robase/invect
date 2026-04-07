@@ -32,6 +32,7 @@ export const asanaGetTaskAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'asana',
+    requiredScopes: ['tasks:read'],
     description: 'Asana OAuth2 credential',
   },
 

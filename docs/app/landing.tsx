@@ -10,270 +10,285 @@ export default function LandingPage() {
   useEffect(() => {
     let cleanup: (() => void) | undefined;
     import('three')
-      .then((THREE) => {
-        const canvas = canvasRef.current;
-        const wrap = wrapRef.current;
-        if (!canvas || !wrap) {
-          return;
-        }
-
-        const scene = new THREE.Scene();
-        const frustum = 7;
-        let W = wrap.clientWidth;
-        let H = wrap.clientHeight;
-        let aspect = W / H;
-
-        const camera = new THREE.OrthographicCamera(
-          -frustum * aspect,
-          frustum * aspect,
-          frustum,
-          -frustum,
-          0.1,
-          100,
-        );
-
-        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-        renderer.setSize(W, H);
-        renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-        renderer.setClearColor(0x000000, 0);
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.2;
-
-        // Theme detection
-        const isDark = () => document.documentElement.classList.contains('dark');
-        let dark = isDark();
-
-        // Invect palette colours
-        const LIGHT_PRIMARY = 0x5b5bd6; // #5b5bd6
-        const DARK_PRIMARY = 0x7b7bde; // #7b7bde
-        const LIGHT_ACCENT = 0x8b8be8; // lighter indigo for fill light
-        const DARK_ACCENT = 0x9b9bf0; // brighter indigo for fill in dark
-
-        // Dramatic lighting — strong coloured keys, faint ambient
-        const light1 = new THREE.PointLight(dark ? DARK_PRIMARY : LIGHT_PRIMARY, 160, 40, 2);
-        const light2 = new THREE.PointLight(dark ? DARK_ACCENT : LIGHT_ACCENT, 90, 40, 2);
-        const rimLight = new THREE.PointLight(dark ? 0xc4b5fd : 0x8b8be8, 60, 40, 2);
-        const topLight = new THREE.PointLight(dark ? DARK_ACCENT : LIGHT_ACCENT, 50, 30, 2);
-        topLight.position.set(0, 12, 0);
-        const ambient = new THREE.AmbientLight(dark ? 0x2a2a4a : 0xddddf0, dark ? 0.08 : 0.18);
-        const lightRadius = 8;
-        let lightAngle = 0;
-        const lightY = 6;
-        scene.add(light1, light2, rimLight, topLight, ambient);
-
-        // Watch for theme changes
-        const themeObserver = new MutationObserver(() => {
-          const nowDark = isDark();
-          if (nowDark === dark) {
+      .then(
+        ({
+          Scene,
+          OrthographicCamera,
+          WebGLRenderer,
+          ACESFilmicToneMapping,
+          PointLight,
+          AmbientLight,
+          MeshPhongMaterial,
+          FrontSide,
+          Mesh,
+          BufferGeometry,
+          Float32BufferAttribute,
+          Vector3,
+        }) => {
+          const canvas = canvasRef.current;
+          const wrap = wrapRef.current;
+          if (!canvas || !wrap) {
             return;
           }
-          dark = nowDark;
-          light1.color.setHex(dark ? DARK_PRIMARY : LIGHT_PRIMARY);
-          light2.color.setHex(dark ? DARK_ACCENT : LIGHT_ACCENT);
-          rimLight.color.setHex(dark ? 0xc4b5fd : 0x8b8be8);
-          topLight.color.setHex(dark ? DARK_ACCENT : LIGHT_ACCENT);
-          ambient.color.setHex(dark ? 0x2a2a4a : 0xddddf0);
-          ambient.intensity = dark ? 0.08 : 0.18;
-          mat.color.setHex(dark ? 0xe8e8f8 : 0xffffff);
-          mat.roughness = dark ? 0.25 : 0.3;
-          mat.metalness = dark ? 0.1 : 0.05;
-        });
-        themeObserver.observe(document.documentElement, {
-          attributes: true,
-          attributeFilter: ['class'],
-        });
 
-        const s = 1.5,
-          h = 6;
-        const twistAngle = -Math.PI / 4;
+          const scene = new Scene();
+          const frustum = 7;
+          let W = wrap.clientWidth;
+          let H = wrap.clientHeight;
+          let aspect = W / H;
 
-        const bottomVertsBase: number[][] = [
-          [-s, -h, s],
-          [s, -h, s],
-          [s, -h, -s],
-          [-s, -h, -s],
-        ];
-        const topVertsBase: number[][] = [
-          [-s, h, s],
-          [s, h, s],
-          [s, h, -s],
-          [-s, h, -s],
-        ];
-
-        const topVerts = topVertsBase.map(([x, y, z]) => [
-          Math.cos(twistAngle) * x - Math.sin(twistAngle) * z,
-          y,
-          Math.sin(twistAngle) * x + Math.cos(twistAngle) * z,
-        ]);
-        const bottomVerts = bottomVertsBase.map(([x, y, z]) => [
-          Math.cos(-twistAngle) * x - Math.sin(-twistAngle) * z,
-          y,
-          Math.sin(-twistAngle) * x + Math.cos(-twistAngle) * z,
-        ]);
-
-        function buildGeometry(bv: number[][], tv: number[][], positive: boolean) {
-          const all = [
-            ...bv.map((v) => new THREE.Vector3(...(v as [number, number, number]))),
-            ...tv.map((v) => new THREE.Vector3(...(v as [number, number, number]))),
-          ];
-          const faces: number[][] = [
-            [0, 2, 1],
-            [0, 3, 2],
-            [4, 5, 6],
-            [4, 6, 7],
-          ];
-          const sides = [
-            [0, 1, 5, 4],
-            [2, 3, 7, 6],
-            [1, 2, 6, 5],
-            [3, 0, 4, 7],
-          ];
-          for (const [a, b, c, d] of sides) {
-            if (positive) {
-              faces.push([a, b, d], [b, c, d]);
-            } else {
-              faces.push([a, b, c], [a, c, d]);
-            }
-          }
-          const positions: number[] = [];
-          for (const tri of faces) {
-            for (const idx of tri) {
-              positions.push(all[idx].x, all[idx].y, all[idx].z);
-            }
-          }
-          const geo = new THREE.BufferGeometry();
-          geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-          geo.computeVertexNormals();
-          return geo;
-        }
-
-        const mat = new THREE.MeshStandardMaterial({
-          color: dark ? 0xe8e8f8 : 0xffffff,
-          roughness: dark ? 0.25 : 0.3,
-          metalness: dark ? 0.1 : 0.05,
-          side: THREE.FrontSide,
-        });
-
-        const mesh = new THREE.Mesh(buildGeometry(bottomVerts, topVerts, twistAngle >= 0), mat);
-        scene.add(mesh);
-
-        const baseDist = 12,
-          baseRotX = Math.PI / 12,
-          baseRotY = Math.PI / 2;
-        let mouseX = 0,
-          mouseY = 0,
-          scrollYVal = 0;
-        let tiltX = 0,
-          tiltY = 0;
-        let smoothMX = 0,
-          smoothMY = 0,
-          smoothTX = 0,
-          smoothTY = 0;
-        const isMobile = /Mobi|Android/i.test(navigator.userAgent);
-
-        const onMouse = (e: MouseEvent) => {
-          mouseX = (e.clientX / window.innerWidth) * 2 - 1;
-          mouseY = (e.clientY / window.innerHeight) * 2 - 1;
-        };
-        const onScroll = () => {
-          scrollYVal = window.pageYOffset || document.documentElement.scrollTop;
-        };
-        const onOrientation = (e: DeviceOrientationEvent) => {
-          if (e.gamma !== null) {
-            tiltX = Math.max(-1, Math.min(1, e.gamma / 30));
-          }
-          if (e.beta !== null) {
-            tiltY = Math.max(-1, Math.min(1, (e.beta - 45) / 30));
-          }
-        };
-
-        if (!isMobile) {
-          window.addEventListener('mousemove', onMouse);
-        }
-        window.addEventListener('scroll', onScroll);
-        if (isMobile && window.DeviceOrientationEvent) {
-          window.addEventListener('deviceorientation', onOrientation);
-        }
-
-        function lerp(a: number, b: number, t: number) {
-          return a + (b - a) * t;
-        }
-
-        let rafId: number;
-        function animate(time: number) {
-          rafId = requestAnimationFrame(animate);
-          const t = time * 0.001;
-          const lerpSpeed = 0.04;
-          if (isMobile) {
-            smoothTX = lerp(smoothTX, tiltX, lerpSpeed);
-            smoothTY = lerp(smoothTY, tiltY, lerpSpeed);
-          } else {
-            smoothMX = lerp(smoothMX, mouseX, lerpSpeed);
-            smoothMY = lerp(smoothMY, mouseY, lerpSpeed);
-          }
-
-          const idleDriftX = Math.sin(t * 0.3) * 0.04;
-          const idleDriftY = Math.cos(t * 0.2) * 0.06;
-          const inputX = isMobile ? smoothTX : smoothMX;
-          const inputY = isMobile ? smoothTY : smoothMY;
-          const scrollOffset = scrollYVal * 0.0003;
-
-          const rotX = baseRotX + inputY * 0.15 + idleDriftX + scrollOffset;
-          const rotY = baseRotY + inputX * 0.2 + idleDriftY;
-
-          camera.position.set(
-            baseDist * Math.cos(rotX) * Math.sin(rotY),
-            baseDist * Math.sin(rotX),
-            baseDist * Math.cos(rotX) * Math.cos(rotY),
-          );
-          camera.lookAt(0, 0, 0);
-          camera.updateMatrixWorld();
-
-          lightAngle += 0.003;
-          light1.position.set(
-            lightRadius * Math.cos(lightAngle),
-            lightY,
-            lightRadius * Math.sin(lightAngle),
-          );
-          light2.position.set(
-            lightRadius * Math.cos(lightAngle + Math.PI),
-            lightY * 0.8,
-            lightRadius * Math.sin(lightAngle + Math.PI),
-          );
-          rimLight.position.set(
-            lightRadius * Math.sin(lightAngle * 0.7),
-            -lightY * 0.6,
-            lightRadius * Math.cos(lightAngle * 0.7),
+          const camera = new OrthographicCamera(
+            -frustum * aspect,
+            frustum * aspect,
+            frustum,
+            -frustum,
+            0.1,
+            100,
           );
 
-          mesh.rotation.y = Math.sin(t * 0.5) * 0.2;
-          renderer.render(scene, camera);
-        }
-        animate(0);
-
-        const ro = new ResizeObserver(() => {
-          W = wrap.clientWidth;
-          H = wrap.clientHeight;
-          aspect = W / H;
-          camera.left = -frustum * aspect;
-          camera.right = frustum * aspect;
-          camera.top = frustum;
-          camera.bottom = -frustum;
-          camera.updateProjectionMatrix();
+          const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true });
           renderer.setSize(W, H);
-        });
-        ro.observe(wrap);
+          renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+          renderer.setClearColor(0x000000, 0);
+          renderer.toneMapping = ACESFilmicToneMapping;
+          renderer.toneMappingExposure = 1.2;
 
-        cleanup = () => {
-          cancelAnimationFrame(rafId);
-          ro.disconnect();
-          themeObserver.disconnect();
-          window.removeEventListener('mousemove', onMouse);
-          window.removeEventListener('scroll', onScroll);
-          window.removeEventListener('deviceorientation', onOrientation);
-          renderer.dispose();
-        };
-      })
+          // Theme detection
+          const isDark = () => document.documentElement.classList.contains('dark');
+          let dark = isDark();
+
+          // Invect palette colours
+          const LIGHT_PRIMARY = 0x5b5bd6; // #5b5bd6
+          const DARK_PRIMARY = 0x7b7bde; // #7b7bde
+          const LIGHT_ACCENT = 0x8b8be8; // lighter indigo for fill light
+          const DARK_ACCENT = 0x9b9bf0; // brighter indigo for fill in dark
+
+          // Dramatic lighting — strong coloured keys, faint ambient
+          const light1 = new PointLight(dark ? DARK_PRIMARY : LIGHT_PRIMARY, 160, 40, 2);
+          const light2 = new PointLight(dark ? DARK_ACCENT : LIGHT_ACCENT, 90, 40, 2);
+          const rimLight = new PointLight(dark ? 0xc4b5fd : 0x8b8be8, 60, 40, 2);
+          const topLight = new PointLight(dark ? DARK_ACCENT : LIGHT_ACCENT, 50, 30, 2);
+          topLight.position.set(0, 12, 0);
+          const ambient = new AmbientLight(dark ? 0x2a2a4a : 0xddddf0, dark ? 0.08 : 0.18);
+          const lightRadius = 8;
+          let lightAngle = 0;
+          const lightY = 6;
+          scene.add(light1, light2, rimLight, topLight, ambient);
+
+          // Watch for theme changes
+          const themeObserver = new MutationObserver(() => {
+            const nowDark = isDark();
+            if (nowDark === dark) {
+              return;
+            }
+            dark = nowDark;
+            light1.color.setHex(dark ? DARK_PRIMARY : LIGHT_PRIMARY);
+            light2.color.setHex(dark ? DARK_ACCENT : LIGHT_ACCENT);
+            rimLight.color.setHex(dark ? 0xc4b5fd : 0x8b8be8);
+            topLight.color.setHex(dark ? DARK_ACCENT : LIGHT_ACCENT);
+            ambient.color.setHex(dark ? 0x2a2a4a : 0xddddf0);
+            ambient.intensity = dark ? 0.08 : 0.18;
+            mat.color.setHex(dark ? 0xe8e8f8 : 0xffffff);
+            mat.shininess = dark ? 100 : 80;
+            mat.specular.setHex(dark ? 0x4444aa : 0x333366);
+          });
+          themeObserver.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['class'],
+          });
+
+          const s = 1.5,
+            h = 6;
+          const twistAngle = -Math.PI / 4;
+
+          const bottomVertsBase: number[][] = [
+            [-s, -h, s],
+            [s, -h, s],
+            [s, -h, -s],
+            [-s, -h, -s],
+          ];
+          const topVertsBase: number[][] = [
+            [-s, h, s],
+            [s, h, s],
+            [s, h, -s],
+            [-s, h, -s],
+          ];
+
+          const topVerts = topVertsBase.map(([x, y, z]) => [
+            Math.cos(twistAngle) * x - Math.sin(twistAngle) * z,
+            y,
+            Math.sin(twistAngle) * x + Math.cos(twistAngle) * z,
+          ]);
+          const bottomVerts = bottomVertsBase.map(([x, y, z]) => [
+            Math.cos(-twistAngle) * x - Math.sin(-twistAngle) * z,
+            y,
+            Math.sin(-twistAngle) * x + Math.cos(-twistAngle) * z,
+          ]);
+
+          function buildGeometry(bv: number[][], tv: number[][], positive: boolean) {
+            const all = [
+              ...bv.map((v) => new Vector3(...(v as [number, number, number]))),
+              ...tv.map((v) => new Vector3(...(v as [number, number, number]))),
+            ];
+            const faces: number[][] = [
+              [0, 2, 1],
+              [0, 3, 2],
+              [4, 5, 6],
+              [4, 6, 7],
+            ];
+            const sides = [
+              [0, 1, 5, 4],
+              [2, 3, 7, 6],
+              [1, 2, 6, 5],
+              [3, 0, 4, 7],
+            ];
+            for (const [a, b, c, d] of sides) {
+              if (positive) {
+                faces.push([a, b, d], [b, c, d]);
+              } else {
+                faces.push([a, b, c], [a, c, d]);
+              }
+            }
+            const positions: number[] = [];
+            for (const tri of faces) {
+              for (const idx of tri) {
+                positions.push(all[idx].x, all[idx].y, all[idx].z);
+              }
+            }
+            const geo = new BufferGeometry();
+            geo.setAttribute('position', new Float32BufferAttribute(positions, 3));
+            geo.computeVertexNormals();
+            return geo;
+          }
+
+          const mat = new MeshPhongMaterial({
+            color: dark ? 0xe8e8f8 : 0xffffff,
+            shininess: dark ? 100 : 80,
+            specular: dark ? 0x4444aa : 0x333366,
+            side: FrontSide,
+          });
+
+          const mesh = new Mesh(buildGeometry(bottomVerts, topVerts, twistAngle >= 0), mat);
+          scene.add(mesh);
+
+          const baseDist = 12,
+            baseRotX = Math.PI / 12,
+            baseRotY = Math.PI / 2;
+          let mouseX = 0,
+            mouseY = 0,
+            scrollYVal = 0;
+          let tiltX = 0,
+            tiltY = 0;
+          let smoothMX = 0,
+            smoothMY = 0,
+            smoothTX = 0,
+            smoothTY = 0;
+          const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+
+          const onMouse = (e: MouseEvent) => {
+            mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+            mouseY = (e.clientY / window.innerHeight) * 2 - 1;
+          };
+          const onScroll = () => {
+            scrollYVal = window.pageYOffset || document.documentElement.scrollTop;
+          };
+          const onOrientation = (e: DeviceOrientationEvent) => {
+            if (e.gamma !== null) {
+              tiltX = Math.max(-1, Math.min(1, e.gamma / 30));
+            }
+            if (e.beta !== null) {
+              tiltY = Math.max(-1, Math.min(1, (e.beta - 45) / 30));
+            }
+          };
+
+          if (!isMobile) {
+            window.addEventListener('mousemove', onMouse);
+          }
+          window.addEventListener('scroll', onScroll);
+          if (isMobile && window.DeviceOrientationEvent) {
+            window.addEventListener('deviceorientation', onOrientation);
+          }
+
+          function lerp(a: number, b: number, t: number) {
+            return a + (b - a) * t;
+          }
+
+          let rafId: number;
+          function animate(time: number) {
+            rafId = requestAnimationFrame(animate);
+            const t = time * 0.001;
+            const lerpSpeed = 0.04;
+            if (isMobile) {
+              smoothTX = lerp(smoothTX, tiltX, lerpSpeed);
+              smoothTY = lerp(smoothTY, tiltY, lerpSpeed);
+            } else {
+              smoothMX = lerp(smoothMX, mouseX, lerpSpeed);
+              smoothMY = lerp(smoothMY, mouseY, lerpSpeed);
+            }
+
+            const idleDriftX = Math.sin(t * 0.3) * 0.04;
+            const idleDriftY = Math.cos(t * 0.2) * 0.06;
+            const inputX = isMobile ? smoothTX : smoothMX;
+            const inputY = isMobile ? smoothTY : smoothMY;
+            const scrollOffset = scrollYVal * 0.0003;
+
+            const rotX = baseRotX + inputY * 0.15 + idleDriftX + scrollOffset;
+            const rotY = baseRotY + inputX * 0.2 + idleDriftY;
+
+            camera.position.set(
+              baseDist * Math.cos(rotX) * Math.sin(rotY),
+              baseDist * Math.sin(rotX),
+              baseDist * Math.cos(rotX) * Math.cos(rotY),
+            );
+            camera.lookAt(0, 0, 0);
+            camera.updateMatrixWorld();
+
+            lightAngle += 0.003;
+            light1.position.set(
+              lightRadius * Math.cos(lightAngle),
+              lightY,
+              lightRadius * Math.sin(lightAngle),
+            );
+            light2.position.set(
+              lightRadius * Math.cos(lightAngle + Math.PI),
+              lightY * 0.8,
+              lightRadius * Math.sin(lightAngle + Math.PI),
+            );
+            rimLight.position.set(
+              lightRadius * Math.sin(lightAngle * 0.7),
+              -lightY * 0.6,
+              lightRadius * Math.cos(lightAngle * 0.7),
+            );
+
+            mesh.rotation.y = Math.sin(t * 0.5) * 0.2;
+            renderer.render(scene, camera);
+          }
+          animate(0);
+
+          const ro = new ResizeObserver(() => {
+            W = wrap.clientWidth;
+            H = wrap.clientHeight;
+            aspect = W / H;
+            camera.left = -frustum * aspect;
+            camera.right = frustum * aspect;
+            camera.top = frustum;
+            camera.bottom = -frustum;
+            camera.updateProjectionMatrix();
+            renderer.setSize(W, H);
+          });
+          ro.observe(wrap);
+
+          cleanup = () => {
+            cancelAnimationFrame(rafId);
+            ro.disconnect();
+            themeObserver.disconnect();
+            window.removeEventListener('mousemove', onMouse);
+            window.removeEventListener('scroll', onScroll);
+            window.removeEventListener('deviceorientation', onOrientation);
+            renderer.dispose();
+          };
+        },
+      )
       .catch(() => {});
 
     return () => cleanup?.();
@@ -298,6 +313,9 @@ export default function LandingPage() {
               </li>
               <li>
                 <Link href="/docs">Docs</Link>
+              </li>
+              <li>
+                <Link href="/demo">Demo</Link>
               </li>
               <li>
                 <a href="https://github.com/robase/invect" className="btn-nav">
@@ -992,6 +1010,8 @@ const landingStyles = `
 
   /* Features */
   .landing .features { padding: 100px 0; border-top: 1px solid var(--border); }
+
+
   .landing .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
   .landing .feature-card { background: var(--bg-card); border: 1px solid var(--border); padding: 32px 28px; transition: border-color 0.2s, transform 0.2s; text-decoration: none; color: inherit; display: block; border-radius: var(--radius); }
   .landing .feature-card:hover { border-color: var(--accent); transform: translateY(-2px); }

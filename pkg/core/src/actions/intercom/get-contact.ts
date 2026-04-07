@@ -90,7 +90,7 @@ export const intercomGetContactAction = defineAction({
         headers: {
           Authorization: `Bearer ${accessToken}`,
           Accept: 'application/json',
-          'Intercom-Version': '2.11',
+          'Intercom-Version': '2.12',
         },
       });
 

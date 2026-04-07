@@ -20,10 +20,10 @@ export const zendeskListTicketsAction = defineAction({
   id: 'zendesk.list_tickets',
   name: 'List Tickets',
   description:
-    'List tickets from a Zendesk instance (GET /api/v2/tickets). Use when the user wants to retrieve recent support tickets sorted by newest first.\n\n' +
+    'List tickets from a Zendesk instance (GET /api/v2/tickets). Use when the user wants to retrieve a paginated list of support tickets sorted by newest first. Call with optional `perPage` (1–100, default 25). Note: does not support query filtering — use `zendesk.search` instead.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"tickets": [{"id": 35436, "subject": "Help!", "status": "open", "priority": "normal"}], "meta": {"has_more": true}}\n' +
+    '{"tickets": [{"id": 35436, "subject": "Help!", "status": "open", "priority": "normal", "requester_id": 123}], "count": 1, "meta": {"has_more": true}}\n' +
     '```',
   provider: ZENDESK_PROVIDER,
   actionCategory: 'read',
@@ -32,6 +32,7 @@ export const zendeskListTicketsAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'zendesk',
+    requiredScopes: ['read'],
     description: 'Zendesk OAuth2 credential with ticket read access',
   },
 

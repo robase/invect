@@ -20,10 +20,10 @@ export const intercomListConversationsAction = defineAction({
   id: 'intercom.list_conversations',
   name: 'List Conversations',
   description:
-    'List conversations in Intercom (GET /conversations). Use when the user wants to browse recent conversations, check open threads, or find conversations by state.\n\n' +
+    'List recent conversations in Intercom (GET /conversations). Use when the user wants to browse all recent conversations. Returns conversations ordered by most recent, with pagination via `perPage` (1–150, default 20). Does not support filtering by state.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"conversations": [{"id": "123", "title": "Help needed", "state": "open", "open": true}], "total_count": 25}\n' +
+    '{"conversations": [{"id": "123", "title": "Help needed", "state": "open", "open": true, "read": true}], "count": 20, "totalCount": 25, "hasMore": true}\n' +
     '```',
   provider: INTERCOM_PROVIDER,
   actionCategory: 'read',
@@ -93,7 +93,7 @@ export const intercomListConversationsAction = defineAction({
         headers: {
           Authorization: `Bearer ${accessToken}`,
           Accept: 'application/json',
-          'Intercom-Version': '2.11',
+          'Intercom-Version': '2.12',
         },
       });
 

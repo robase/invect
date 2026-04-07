@@ -36,6 +36,7 @@ export const twitterCreateTweetAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'twitter',
+    requiredScopes: ['tweet.write', 'users.read', 'offline.access'],
     description: 'Twitter OAuth2 credential with tweet.write scope',
   },
 

@@ -21,10 +21,10 @@ export const hubspotGetContactAction = defineAction({
   id: 'hubspot.get_contact',
   name: 'Get Contact',
   description:
-    'Get a single contact by ID from HubSpot CRM (GET /crm/v3/objects/contacts/{contactId}). Use when the user wants to look up a specific contact by their HubSpot ID.\n\n' +
+    'Get a single contact by ID from HubSpot CRM (GET /crm/v3/objects/contacts/{contactId}). Use when the user wants to look up a specific contact by their HubSpot record ID. Pass the `contactId` and optionally a comma-separated `properties` list to select which fields are returned. To look up a contact by email instead, use `hubspot.search_objects` with objectType=contacts.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"id": "501", "properties": {"email": "jane@example.com", "firstname": "Jane"}, "createdAt": "2024-01-01T00:00:00.000Z"}\n' +
+    '{"id": "501", "properties": {"email": "jane@example.com", "firstname": "Jane", "lastname": "Doe"}, "createdAt": "2024-01-01T00:00:00.000Z", "updatedAt": "2024-06-01T00:00:00.000Z", "archived": false}\n' +
     '```',
   provider: HUBSPOT_PROVIDER,
   actionCategory: 'read',
@@ -33,6 +33,7 @@ export const hubspotGetContactAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'hubspot',
+    requiredScopes: ['crm.objects.contacts.read'],
     description: 'HubSpot OAuth2 credential',
   },
 

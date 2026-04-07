@@ -25,7 +25,9 @@ export const googleAnalyticsRunReportAction = defineAction({
   id: 'google_analytics.run_report',
   name: 'Run Report',
   description:
-    'Run a GA4 report for a property (properties.runReport). Use when the user wants to query historical analytics data like sessions, page views, or user counts.\n\n' +
+    'Run a GA4 report for a property (properties.runReport). Use when the user wants to query historical analytics data like sessions, page views, or user counts. ' +
+    'Call with `propertyId`, `startDate`/`endDate` (e.g. "7daysAgo"/"today"), and comma-separated `metrics` (e.g. sessions, activeUsers, screenPageViews, conversions). ' +
+    'Optional `dimensions` (e.g. date, city, country, sessionSource, pagePath) for grouping.\n\n' +
     'Example response:\n' +
     '```json\n' +
     '{"metricHeaders": [{"name": "sessions"}], "rows": [{"dimensionValues": [{"value": "2025-03-15"}], "metricValues": [{"value": "1234"}]}], "rowCount": 7}\n' +
@@ -37,11 +39,8 @@ export const googleAnalyticsRunReportAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'google',
-    requiredScopes: [
-      'https://www.googleapis.com/auth/analytics.readonly',
-      'https://www.googleapis.com/auth/analytics',
-    ],
-    description: 'Google OAuth2 credential with Analytics scope',
+    requiredScopes: ['https://www.googleapis.com/auth/analytics.readonly'],
+    description: 'Google OAuth2 credential with Analytics read-only scope',
   },
 
   params: {
@@ -52,7 +51,7 @@ export const googleAnalyticsRunReportAction = defineAction({
         label: 'Google Credential',
         type: 'text',
         required: true,
-        description: 'Google OAuth2 credential with Analytics scope',
+        description: 'Google OAuth2 credential with Analytics read-only scope',
         aiProvided: false,
       },
       {

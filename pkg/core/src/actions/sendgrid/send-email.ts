@@ -49,7 +49,7 @@ export const sendgridSendEmailAction = defineAction({
   id: 'sendgrid.send_email',
   name: 'Send Email',
   description:
-    'Send a transactional email via SendGrid (POST /v3/mail/send). Use when the user wants to send an email with HTML/text content or a dynamic template. Returns HTTP 202 Accepted with no response body — the x-message-id header contains the tracking ID.',
+    'Send a transactional email via SendGrid (POST /v3/mail/send). Call with `to`, `subject`, and either `html`/`text` body or a `templateId` with `dynamicTemplateData`. Supports `cc`, `bcc`, `replyTo`, and scheduled sending via `sendAt` (Unix timestamp, up to 72h ahead). The `from` address must be a verified sender or domain.\n\nReturns HTTP 202 Accepted with no JSON body. The `x-message-id` header contains the tracking ID.\n\nExample output:\n```json\n{"message": "Email sent successfully to user@example.com", "messageId": "abc123def456", "statusCode": 202}\n```',
   provider: SENDGRID_PROVIDER,
   actionCategory: 'write',
   tags: ['sendgrid', 'twilio', 'email', 'send', 'transactional', 'mail', 'notify'],

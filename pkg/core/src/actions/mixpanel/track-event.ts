@@ -9,6 +9,7 @@
 import { defineAction } from '../define-action';
 import { MIXPANEL_PROVIDER } from '../providers';
 import { z } from 'zod/v4';
+import { randomUUID } from 'node:crypto';
 
 const MIXPANEL_API = 'https://api.mixpanel.com';
 
@@ -126,6 +127,7 @@ export const mixpanelTrackEventAction = defineAction({
         time: timestamp
           ? Math.floor(new Date(timestamp).getTime() / 1000)
           : Math.floor(Date.now() / 1000),
+        $insert_id: randomUUID(),
       };
 
       if (properties) {
@@ -138,8 +140,8 @@ export const mixpanelTrackEventAction = defineAction({
       }
 
       const url = projectId
-        ? `${MIXPANEL_API}/import?project_id=${encodeURIComponent(projectId)}`
-        : `${MIXPANEL_API}/import`;
+        ? `${MIXPANEL_API}/import?strict=1&project_id=${encodeURIComponent(projectId)}`
+        : `${MIXPANEL_API}/import?strict=1`;
 
       const response = await fetch(url, {
         method: 'POST',

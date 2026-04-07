@@ -57,6 +57,7 @@ export class OpenAIAdapter extends BaseProviderAdapter {
 
     this.client = new OpenAI({
       apiKey: this.apiKey,
+      maxRetries: 3, // Retry on 429 (rate limit), 500, 503 with exponential backoff
       ...(baseURL && { baseURL }),
     });
   }
@@ -450,8 +451,21 @@ export class OpenAIAdapter extends BaseProviderAdapter {
         case 'expired':
         case 'cancelled':
           return { status: BatchStatus.FAILED, error: `Batch ${batch.status}` };
-        default:
+        default: {
+          // Client-side timeout: OpenAI's completion_window is 24h.
+          // If a batch is still processing after 25h, fail it.
+          if (batch.created_at) {
+            const createdAt = new Date(batch.created_at * 1000); // Unix timestamp
+            const processingTimeHours = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60);
+            if (processingTimeHours > 25) {
+              return {
+                status: BatchStatus.FAILED,
+                error: `Batch processing timeout: ${processingTimeHours.toFixed(1)} hours (exceeds 24h completion window)`,
+              };
+            }
+          }
           return { status: BatchStatus.PROCESSING };
+        }
       }
     } catch (error) {
       throw this.wrapError(error, 'batch polling');

@@ -33,6 +33,7 @@ export const jiraAddCommentAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'jira',
+    requiredScopes: ['write:jira-work'],
     description: 'Jira OAuth2 credential',
   },
 

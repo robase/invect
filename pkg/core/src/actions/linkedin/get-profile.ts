@@ -32,7 +32,8 @@ export const linkedinGetProfileAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'linkedin',
-    description: 'LinkedIn OAuth2 credential with openid and profile scopes',
+    requiredScopes: ['openid', 'profile', 'email'],
+    description: 'LinkedIn OAuth2 credential with openid, profile, and email scopes',
   },
 
   params: {

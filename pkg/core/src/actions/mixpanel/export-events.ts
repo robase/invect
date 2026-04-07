@@ -86,7 +86,8 @@ export const mixpanelExportEventsAction = defineAction({
         label: 'Limit',
         type: 'text',
         placeholder: '1000',
-        description: 'Maximum number of events to return (optional, default: all)',
+        description:
+          'Maximum number of events to return (optional, default: all). The API caps at 100,000.',
         extended: true,
         aiProvided: true,
       },
@@ -123,6 +124,8 @@ export const mixpanelExportEventsAction = defineAction({
       };
     }
 
+    const projectId = credential.config?.projectId as string;
+
     context.logger.debug('Exporting Mixpanel events', { fromDate, toDate, event });
 
     try {
@@ -130,6 +133,10 @@ export const mixpanelExportEventsAction = defineAction({
         from_date: fromDate,
         to_date: toDate,
       });
+
+      if (projectId) {
+        queryParams.set('project_id', projectId);
+      }
 
       if (event) {
         queryParams.set('event', JSON.stringify([event]));

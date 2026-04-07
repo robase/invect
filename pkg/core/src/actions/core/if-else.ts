@@ -23,7 +23,8 @@ const paramsSchema = z.object({
 export const ifElseAction = defineAction({
   id: 'core.if_else',
   name: 'If / Else',
-  description: 'Conditional branching — evaluates a JavaScript expression',
+  description:
+    'Conditional branching — evaluates a JavaScript expression against incoming upstream data and routes execution to either the True or False output branch. Upstream node outputs are available as local variables by their reference ID (e.g. `user_data.age >= 18`). The input data is passed through unchanged to the active branch.',
   provider: CORE_PROVIDER,
   icon: 'GitBranch',
   excludeFromTools: true,

@@ -25,7 +25,7 @@ export const githubListReleasesAction = defineAction({
     'List releases in a GitHub repository (GET /repos/{owner}/{repo}/releases). Use when you need to browse release history, download assets, or check version tags.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '[{"id": 1, "tag_name": "v1.0.0", "name": "Version 1.0", "draft": false, "prerelease": false, "published_at": "2024-01-01T00:00:00Z"}]\n' +
+    '{"releases": [{"releaseId": 1, "tagName": "v1.0.0", "name": "Version 1.0", "draft": false, "prerelease": false, "publishedAt": "2024-01-01T00:00:00Z"}], "totalReturned": 1}\n' +
     '```',
   provider: GITHUB_PROVIDER,
   actionCategory: 'read',
@@ -34,6 +34,7 @@ export const githubListReleasesAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'github',
+    requiredScopes: ['repo'],
     description: 'GitHub OAuth2 credential with repo scope',
   },
 

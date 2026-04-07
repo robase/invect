@@ -29,7 +29,8 @@ export const salesforceListObjectsAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'salesforce',
-    description: 'Salesforce OAuth2 credential',
+    requiredScopes: ['api'],
+    description: 'Salesforce OAuth2 credential with API access',
   },
 
   params: {

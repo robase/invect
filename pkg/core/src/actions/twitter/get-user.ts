@@ -33,6 +33,7 @@ export const twitterGetUserAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'twitter',
+    requiredScopes: ['users.read', 'offline.access'],
     description: 'Twitter OAuth2 credential with users.read scope',
   },
 

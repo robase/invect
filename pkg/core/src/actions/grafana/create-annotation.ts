@@ -16,7 +16,7 @@ const paramsSchema = z.object({
   text: z.string().min(1, 'Annotation text is required'),
   dashboardUid: z.string().optional().default(''),
   panelId: z.number().int().optional(),
-  tags: z.array(z.string()).optional().default([]),
+  tags: z.string().optional().default(''),
   time: z.number().int().optional(),
   timeEnd: z.number().int().optional(),
 });
@@ -145,8 +145,14 @@ export const grafanaCreateAnnotationAction = defineAction({
     if (panelId !== undefined) {
       body.panelId = panelId;
     }
-    if (tags && tags.length > 0) {
-      body.tags = tags;
+    if (tags) {
+      const parsedTags = tags
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean);
+      if (parsedTags.length > 0) {
+        body.tags = parsedTags;
+      }
     }
     if (time !== undefined) {
       body.time = time;

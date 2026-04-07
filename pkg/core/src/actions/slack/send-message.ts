@@ -25,10 +25,11 @@ export const slackSendMessageAction = defineAction({
   id: 'slack.send_message',
   name: 'Send Message',
   description:
-    'Send a message to a Slack channel or DM (chat.postMessage). Use when the user wants to post a message, notification, or reply to a Slack channel.\n\n' +
+    'Send a message to a Slack channel or DM (chat.postMessage). Use when the user wants to post a message, notification, or reply to a Slack channel. ' +
+    'Call with `channel` (channel ID like C01ABC23DEF or name with #), `text` (supports mrkdwn formatting), and optionally `threadTs` to reply in a thread.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"ok": true, "channel": "C01ABC23DEF", "ts": "1234567890.123456", "message": {"text": "Hello!"}}\n' +
+    '{"ok": true, "channel": "C01ABC23DEF", "ts": "1503435956.000247", "message": {"text": "Hello!", "type": "message", "subtype": "bot_message"}}\n' +
     '```',
   provider: SLACK_PROVIDER,
   actionCategory: 'write',
@@ -37,6 +38,7 @@ export const slackSendMessageAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'slack',
+    requiredScopes: ['chat:write'],
     description: 'Slack OAuth2 credential with chat:write scope',
   },
 

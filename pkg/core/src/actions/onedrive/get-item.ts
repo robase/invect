@@ -20,10 +20,10 @@ export const onedriveGetItemAction = defineAction({
   id: 'onedrive.get_item',
   name: 'Get Item',
   description:
-    'Get metadata for a file or folder in OneDrive by its item ID (GET /me/drive/items/{item-id}). Use when you need file size, modification date, download URL, or other properties.\n\n' +
+    'Get metadata for a file or folder in OneDrive by its item ID (GET /me/drive/items/{item-id}). Use when you need file size, modification date, download URL, or other properties. The response includes `@microsoft.graph.downloadUrl` for files.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"id": "01NKDM7HM...", "name": "report.docx", "size": 157286400, "createdDateTime": "2025-01-10T08:00:00Z", "webUrl": "https://onedrive.live.com/...", "file": {"mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}}\n' +
+    '{"id": "01NKDM7HM...", "name": "report.docx", "size": 157286400, "createdDateTime": "2025-01-10T08:00:00Z", "webUrl": "https://onedrive.live.com/...", "@microsoft.graph.downloadUrl": "https://...", "file": {"mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}}\n' +
     '```',
   provider: ONEDRIVE_PROVIDER,
   actionCategory: 'read',
@@ -31,8 +31,9 @@ export const onedriveGetItemAction = defineAction({
   credential: {
     required: true,
     type: 'oauth2',
-    oauth2Provider: 'microsoft_onedrive',
-    description: 'Microsoft OneDrive OAuth2 credential',
+    oauth2Provider: 'microsoft',
+    requiredScopes: ['Files.Read'],
+    description: 'Microsoft OAuth2 credential with Files.Read scope',
   },
 
   params: {
@@ -40,10 +41,10 @@ export const onedriveGetItemAction = defineAction({
     fields: [
       {
         name: 'credentialId',
-        label: 'OneDrive Credential',
+        label: 'Microsoft Credential',
         type: 'text',
         required: true,
-        description: 'Microsoft OneDrive OAuth2 credential for authentication',
+        description: 'Microsoft OAuth2 credential for authentication (requires Files.Read scope)',
         aiProvided: false,
       },
       {

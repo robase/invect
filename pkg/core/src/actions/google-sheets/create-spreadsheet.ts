@@ -21,7 +21,8 @@ export const googleSheetsCreateSpreadsheetAction = defineAction({
   id: 'google_sheets.create_spreadsheet',
   name: 'Create Spreadsheet',
   description:
-    'Create a new Google Sheets spreadsheet (spreadsheets.create). Use when the user wants to create a fresh spreadsheet with optional named sheets.\n\n' +
+    'Create a new Google Sheets spreadsheet (spreadsheets.create). Use when the user wants to create a fresh spreadsheet, optionally with named sheet tabs.\n\n' +
+    'Call with `title` (spreadsheet name). Optionally pass `sheetTitles` (JSON array of tab names, e.g. ["Sheet1", "Data", "Summary"]).\n\n' +
     'Example response:\n' +
     '```json\n' +
     '{"spreadsheetId": "1abc...", "title": "My Sheet", "url": "https://docs.google.com/spreadsheets/d/1abc...", "sheets": [{"sheetId": 0, "title": "Sheet1"}]}\n' +

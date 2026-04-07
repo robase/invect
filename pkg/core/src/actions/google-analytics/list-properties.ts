@@ -31,11 +31,8 @@ export const googleAnalyticsListPropertiesAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'google',
-    requiredScopes: [
-      'https://www.googleapis.com/auth/analytics.readonly',
-      'https://www.googleapis.com/auth/analytics',
-    ],
-    description: 'Google OAuth2 credential with Analytics scope',
+    requiredScopes: ['https://www.googleapis.com/auth/analytics.readonly'],
+    description: 'Google OAuth2 credential with Analytics read-only scope',
   },
 
   params: {
@@ -46,7 +43,7 @@ export const googleAnalyticsListPropertiesAction = defineAction({
         label: 'Google Credential',
         type: 'text',
         required: true,
-        description: 'Google OAuth2 credential with Analytics scope',
+        description: 'Google OAuth2 credential with Analytics read-only scope',
         aiProvided: false,
       },
     ],

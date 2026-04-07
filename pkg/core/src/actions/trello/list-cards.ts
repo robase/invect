@@ -33,6 +33,7 @@ export const trelloListCardsAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'trello',
+    requiredScopes: ['read'],
     description: 'Trello OAuth2 credential',
   },
 

@@ -22,10 +22,10 @@ export const hubspotListDealsAction = defineAction({
   id: 'hubspot.list_deals',
   name: 'List Deals',
   description:
-    'List deals from HubSpot CRM (GET /crm/v3/objects/deals). Use when the user wants to retrieve a paginated list of deals with selected properties.\n\n' +
+    'List deals from HubSpot CRM (GET /crm/v3/objects/deals). Use when the user wants to retrieve a paginated list of deals. Pass `limit` (1–100) and optionally `properties` as a comma-separated list of fields to include. To paginate, use the `paging.next.after` value from the previous response as a query param in subsequent calls.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"results": [{"id": "101", "properties": {"dealname": "Big deal", "amount": "50000"}}], "paging": {"next": {"after": "102"}}}\n' +
+    '{"results": [{"id": "101", "properties": {"dealname": "Big deal", "amount": "50000", "dealstage": "contractsent", "closedate": "2024-12-07"}, "createdAt": "2024-01-01T00:00:00.000Z", "updatedAt": "2024-06-01T00:00:00.000Z", "archived": false}], "paging": {"next": {"after": "102"}}}\n' +
     '```',
   provider: HUBSPOT_PROVIDER,
   actionCategory: 'read',
@@ -34,6 +34,7 @@ export const hubspotListDealsAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'hubspot',
+    requiredScopes: ['crm.objects.deals.read'],
     description: 'HubSpot OAuth2 credential',
   },
 

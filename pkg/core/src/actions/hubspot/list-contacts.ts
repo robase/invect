@@ -22,10 +22,10 @@ export const hubspotListContactsAction = defineAction({
   id: 'hubspot.list_contacts',
   name: 'List Contacts',
   description:
-    'List contacts from HubSpot CRM (GET /crm/v3/objects/contacts). Use when the user wants to retrieve a paginated list of contacts.\n\n' +
+    'List contacts from HubSpot CRM (GET /crm/v3/objects/contacts). Use when the user wants to retrieve a paginated list of contacts. Pass `limit` (1–100) and optionally `properties` as a comma-separated list of fields to include. To paginate, use the `paging.next.after` value from the previous response as a query param in subsequent calls.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"results": [{"id": "501", "properties": {"email": "jane@example.com", "firstname": "Jane"}}], "paging": {"next": {"after": "502"}}}\n' +
+    '{"results": [{"id": "501", "properties": {"email": "jane@example.com", "firstname": "Jane", "lastname": "Doe"}, "createdAt": "2022-06-01T14:31:48.469Z", "updatedAt": "2025-07-07T20:27:17.947Z", "archived": false}], "paging": {"next": {"after": "502"}}}\n' +
     '```',
   provider: HUBSPOT_PROVIDER,
   actionCategory: 'read',
@@ -34,6 +34,7 @@ export const hubspotListContactsAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'hubspot',
+    requiredScopes: ['crm.objects.contacts.read'],
     description: 'HubSpot OAuth2 credential',
   },
 

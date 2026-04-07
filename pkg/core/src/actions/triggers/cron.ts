@@ -24,7 +24,15 @@ const paramsSchema = z.object({
 export const cronTriggerAction = defineAction({
   id: 'trigger.cron',
   name: 'Cron Trigger',
-  description: 'Start this flow on a recurring schedule using a cron expression',
+  description:
+    'Start this flow on a recurring schedule using a cron expression. ' +
+    'This is a flow entry-point node — AI agents should not invoke it directly. ' +
+    'Configure the cron expression (5-field standard, e.g. "0 9 * * 1-5" for weekdays at 9 AM) and an IANA timezone in the flow editor. ' +
+    'Optionally set static inputs to include with every trigger.\n\n' +
+    'Output shape:\n' +
+    '```json\n' +
+    '{"scheduledTime": "2025-01-15T09:00:00.000Z", "expression": "0 9 * * 1-5", "timezone": "America/New_York", "staticInputs": {}}\n' +
+    '```',
   provider: TRIGGERS_PROVIDER,
   icon: 'Clock',
   noInput: true,
@@ -39,6 +47,7 @@ export const cronTriggerAction = defineAction({
         label: 'Cron Expression',
         type: 'text',
         required: true,
+        aiProvided: false,
         description:
           'Cron schedule (e.g. "0 * * * *" for every hour, "0 9 * * 1-5" for weekdays at 9am)',
         placeholder: '0 * * * *',
@@ -47,6 +56,7 @@ export const cronTriggerAction = defineAction({
         name: 'timezone',
         label: 'Timezone',
         type: 'text',
+        aiProvided: false,
         description: 'IANA timezone (e.g. "America/New_York", "Europe/London"). Defaults to UTC.',
         defaultValue: 'UTC',
         placeholder: 'UTC',
@@ -55,6 +65,7 @@ export const cronTriggerAction = defineAction({
         name: 'staticInputs',
         label: 'Static Inputs',
         type: 'json',
+        aiProvided: false,
         description: 'Optional JSON object of static values to include with every cron trigger',
         placeholder: '{ "environment": "production" }',
         extended: true,

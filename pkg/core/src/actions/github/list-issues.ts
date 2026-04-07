@@ -30,7 +30,7 @@ export const githubListIssuesAction = defineAction({
     'List issues in a GitHub repository (GET /repos/{owner}/{repo}/issues). Use when you need to browse, filter, or audit open/closed issues.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '[{"number": 1347, "title": "Found a bug", "state": "open", "user": "octocat", "labels": ["bug"], "created_at": "2024-01-01T00:00:00Z"}]\n' +
+    '{"issues": [{"number": 1347, "title": "Found a bug", "state": "open", "author": "octocat", "labels": ["bug"], "createdAt": "2024-01-01T00:00:00Z"}], "totalReturned": 1}\n' +
     '```',
   provider: GITHUB_PROVIDER,
   actionCategory: 'read',
@@ -39,6 +39,7 @@ export const githubListIssuesAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'github',
+    requiredScopes: ['repo'],
     description: 'GitHub OAuth2 credential with repo scope',
   },
 

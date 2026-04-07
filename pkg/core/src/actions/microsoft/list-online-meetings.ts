@@ -58,6 +58,7 @@ export const microsoftListOnlineMeetingsAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'microsoft',
+    requiredScopes: ['OnlineMeetings.Read'],
     description: 'Microsoft 365 OAuth2 credential with OnlineMeetings.Read scope',
   },
 

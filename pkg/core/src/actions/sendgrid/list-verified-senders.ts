@@ -22,10 +22,10 @@ export const sendgridListVerifiedSendersAction = defineAction({
   id: 'sendgrid.list_verified_senders',
   name: 'List Verified Senders',
   description:
-    'List all verified single sender identities (GET /v3/verified_senders). Use when the user wants to discover which "from" addresses are available for sending.\n\n' +
+    'List all verified single sender identities (GET /v3/verified_senders). Call with optional `limit` and `offset` for pagination. Use when the user wants to discover which "from" email addresses are available for sending, or to verify a sender exists before calling `sendgrid.send_email`.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"results": [{"id": 1234, "from_email": "sender@example.com", "from_name": "My Company", "verified": true}]}\n' +
+    '{"results": [{"id": 1234, "from_email": "sender@example.com", "from_name": "My Company", "reply_to": "reply@example.com", "address": "123 Main St", "verified": true}]}\n' +
     '```',
   provider: SENDGRID_PROVIDER,
   actionCategory: 'read',

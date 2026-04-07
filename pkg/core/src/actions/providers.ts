@@ -22,6 +22,7 @@ export const CORE_PROVIDER: ProviderDef = {
  */
 export const HTTP_PROVIDER: ProviderDef = {
   ...CORE_PROVIDER,
+  docsUrl: 'https://developer.mozilla.org/en-US/docs/Web/HTTP',
 };
 
 export const GMAIL_PROVIDER: ProviderDef = {
@@ -31,7 +32,7 @@ export const GMAIL_PROVIDER: ProviderDef = {
   category: 'email',
   nodeCategory: 'Integrations',
   description: 'Google Gmail integration',
-  docsUrl: 'https://developers.google.com/gmail/api',
+  docsUrl: 'https://developers.google.com/workspace/gmail/api/reference/rest',
 };
 
 export const SLACK_PROVIDER: ProviderDef = {
@@ -41,7 +42,7 @@ export const SLACK_PROVIDER: ProviderDef = {
   category: 'messaging',
   nodeCategory: 'Integrations',
   description: 'Slack workspace messaging and channel management',
-  docsUrl: 'https://api.slack.com/methods',
+  docsUrl: 'https://docs.slack.dev/reference/methods',
 };
 
 export const GITHUB_PROVIDER: ProviderDef = {
@@ -101,7 +102,7 @@ export const LINEAR_PROVIDER: ProviderDef = {
   category: 'development',
   nodeCategory: 'Integrations',
   description: 'Linear issue tracking and project management',
-  docsUrl: 'https://developers.linear.app/docs',
+  docsUrl: 'https://linear.app/developers/graphql',
 };
 
 export const POSTGRES_PROVIDER: ProviderDef = {
@@ -111,7 +112,7 @@ export const POSTGRES_PROVIDER: ProviderDef = {
   nodeCategory: 'Data',
   category: 'database',
   description: 'Connect to PostgreSQL databases to query, insert, and inspect data',
-  docsUrl: 'https://www.postgresql.org/docs/',
+  docsUrl: 'https://www.postgresql.org/docs/current/sql-commands.html',
 };
 
 export const TRIGGERS_PROVIDER: ProviderDef = {
@@ -121,6 +122,7 @@ export const TRIGGERS_PROVIDER: ProviderDef = {
   category: 'core',
   nodeCategory: 'Triggers',
   description: 'Flow trigger nodes — define how a flow is started',
+  docsUrl: 'https://docs.invect.dev/docs/triggers',
 };
 
 export const MICROSOFT_PROVIDER: ProviderDef = {
@@ -220,7 +222,7 @@ export const ONEDRIVE_PROVIDER: ProviderDef = {
   category: 'storage',
   nodeCategory: 'Integrations',
   description: 'Microsoft OneDrive file storage and management via Graph API',
-  docsUrl: 'https://learn.microsoft.com/en-us/onedrive/developer/rest-api/',
+  docsUrl: 'https://learn.microsoft.com/en-us/graph/api/resources/driveitem?view=graph-rest-1.0',
 };
 
 export const STRIPE_PROVIDER: ProviderDef = {
@@ -330,7 +332,8 @@ export const SEGMENT_PROVIDER: ProviderDef = {
   category: 'custom',
   nodeCategory: 'Integrations',
   description: 'Segment analytics — track events, identify users, and manage data',
-  docsUrl: 'https://segment.com/docs/connections/sources/catalog/libraries/server/http-api/',
+  docsUrl:
+    'https://www.twilio.com/docs/segment/connections/sources/catalog/libraries/server/http-api/',
 };
 
 export const MIXPANEL_PROVIDER: ProviderDef = {
@@ -381,4 +384,34 @@ export const SENDGRID_PROVIDER: ProviderDef = {
   nodeCategory: 'Integrations',
   description: 'Twilio SendGrid email API — transactional and marketing email delivery',
   docsUrl: 'https://www.twilio.com/docs/sendgrid/api-reference',
+};
+
+export const NOTION_PROVIDER: ProviderDef = {
+  id: 'notion',
+  name: 'Notion',
+  icon: 'FileText',
+  category: 'utility',
+  nodeCategory: 'Integrations',
+  description: 'Notion workspace — pages, databases, and search',
+  docsUrl: 'https://developers.notion.com/reference/intro',
+};
+
+export const CLOUDWATCH_PROVIDER: ProviderDef = {
+  id: 'cloudwatch',
+  name: 'CloudWatch Logs',
+  icon: 'Cloud',
+  category: 'development',
+  nodeCategory: 'Integrations',
+  description: 'AWS CloudWatch Logs Insights — run and retrieve log analytics queries',
+  docsUrl: 'https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/Welcome.html',
+};
+
+export const PAGERDUTY_PROVIDER: ProviderDef = {
+  id: 'pagerduty',
+  name: 'PagerDuty',
+  icon: 'Bell',
+  category: 'development',
+  nodeCategory: 'Integrations',
+  description: 'PagerDuty incident management — list, create, and manage incidents and services',
+  docsUrl: 'https://developer.pagerduty.com/api-reference/e65c5833eeb07-pager-duty-api',
 };

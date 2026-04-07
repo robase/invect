@@ -20,7 +20,8 @@ export const googleDriveGetFileAction = defineAction({
   id: 'google_drive.get_file',
   name: 'Get File',
   description:
-    'Retrieve metadata of a file in Google Drive by its ID (files.get). Use when the user wants to get details about a specific file.\n\n' +
+    'Retrieve metadata of a file in Google Drive by its ID (files.get). Use when the user wants to get details about a specific file such as name, size, MIME type, and view link. ' +
+    'Call with `fileId` to retrieve file metadata.\n\n' +
     'Example response:\n' +
     '```json\n' +
     '{"id": "1abc", "name": "Report.pdf", "mimeType": "application/pdf", "size": "12345", "webViewLink": "https://drive.google.com/file/d/1abc/view"}\n' +

@@ -41,6 +41,7 @@ export const githubCreateOrUpdateFileAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'github',
+    requiredScopes: ['repo'],
     description: 'GitHub OAuth2 credential with repo scope',
   },
 
@@ -88,7 +89,7 @@ export const githubCreateOrUpdateFileAction = defineAction({
         type: 'textarea',
         required: true,
         placeholder: '# Hello World',
-        description: 'File content (plain text). Supports Nunjucks templating.',
+        description: 'File content (plain text). Supports template expressions.',
         aiProvided: true,
       },
       {

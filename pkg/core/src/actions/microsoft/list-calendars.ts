@@ -48,6 +48,7 @@ export const microsoftListCalendarsAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'microsoft',
+    requiredScopes: ['Calendars.Read'],
     description: 'Microsoft 365 OAuth2 credential with Calendars.Read scope',
   },
 

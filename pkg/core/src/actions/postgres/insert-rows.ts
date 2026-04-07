@@ -25,7 +25,12 @@ export const postgresInsertRowsAction = defineAction({
   id: 'postgres.insert_rows',
   name: 'Insert Rows',
   description:
-    'Insert one or more rows into a PostgreSQL table from a JSON array. Returns the inserted rows.',
+    'Insert one or more rows into a PostgreSQL table from a JSON array. Returns the inserted rows via RETURNING *. ' +
+    'Use when you need to add new records to a table. Pass `rows` as a JSON array of objects where keys match column names.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"inserted": [{"id": 1, "name": "Alice", "age": 30}], "insertedCount": 1}\n' +
+    '```',
   provider: POSTGRES_PROVIDER,
   actionCategory: 'write',
   tags: ['postgres', 'postgresql', 'sql', 'database', 'insert', 'rows', 'write', 'add', 'db'],
@@ -54,6 +59,7 @@ export const postgresInsertRowsAction = defineAction({
         required: true,
         placeholder: 'e.g. users',
         description: 'Target table for the insert.',
+        aiProvided: true,
       },
       {
         name: 'schemaName',
@@ -62,6 +68,7 @@ export const postgresInsertRowsAction = defineAction({
         defaultValue: 'public',
         description: 'PostgreSQL schema the table belongs to.',
         extended: true,
+        aiProvided: true,
       },
       {
         name: 'rows',
@@ -70,7 +77,8 @@ export const postgresInsertRowsAction = defineAction({
         required: true,
         placeholder: '[{"name": "Alice", "age": 30}]',
         description:
-          'JSON array of objects to insert. Keys must match column names. Supports Nunjucks templates.',
+          'JSON array of objects to insert. Keys must match column names. Supports template expressions.',
+        aiProvided: true,
       },
       {
         name: 'onConflict',
@@ -83,6 +91,7 @@ export const postgresInsertRowsAction = defineAction({
         ],
         description: 'Behaviour when a unique/PK constraint is violated.',
         extended: true,
+        aiProvided: true,
       },
     ],
   },

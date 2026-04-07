@@ -23,7 +23,9 @@ export const segmentGroupAction = defineAction({
   id: 'segment.group',
   name: 'Group User',
   description:
-    'Associate a user with a group via Segment (POST /v1/group). Use when the user wants to link a user to a company, team, or account and set group-level traits.\n\n' +
+    'Associate a user with a group via Segment (POST /v1/group). Use when the user wants to link a user to a company, team, or account and set group-level traits. ' +
+    'Call with `userId`, `groupId`, and an optional `traits` JSON object (e.g. `{"name": "Acme Corp", "plan": "enterprise"}`). ' +
+    'Note: only `userId` is supported; `anonymousId`-only calls are not yet available.\n\n' +
     'Example response:\n' +
     '```json\n' +
     '{"acknowledged": true, "userId": "user-123", "groupId": "group-456"}\n' +

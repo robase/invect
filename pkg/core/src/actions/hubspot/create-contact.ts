@@ -24,10 +24,10 @@ export const hubspotCreateContactAction = defineAction({
   id: 'hubspot.create_contact',
   name: 'Create Contact',
   description:
-    'Create a new contact in HubSpot CRM (POST /crm/v3/objects/contacts). Use when the user wants to add a person to their HubSpot CRM with email, name, phone, and company.\n\n' +
+    'Create a new contact in HubSpot CRM (POST /crm/v3/objects/contacts). Use when the user wants to add a person to their CRM. Pass `email` (required, primary unique identifier), plus optional `firstname`, `lastname`, `phone`, and `company`.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"id": "501", "properties": {"email": "jane@example.com", "firstname": "Jane"}, "createdAt": "2024-01-01T00:00:00.000Z"}\n' +
+    '{"id": "501", "properties": {"email": "jane@example.com", "firstname": "Jane", "lastname": "Doe"}, "createdAt": "2024-01-01T00:00:00.000Z", "updatedAt": "2024-01-01T00:00:00.000Z", "archived": false}\n' +
     '```',
   provider: HUBSPOT_PROVIDER,
   actionCategory: 'write',
@@ -36,6 +36,7 @@ export const hubspotCreateContactAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'hubspot',
+    requiredScopes: ['crm.objects.contacts.write'],
     description: 'HubSpot OAuth2 credential',
   },
 

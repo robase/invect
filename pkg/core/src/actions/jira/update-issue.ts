@@ -24,8 +24,11 @@ export const jiraUpdateIssueAction = defineAction({
   id: 'jira.update_issue',
   name: 'Update Issue',
   description:
-    "Update an existing Jira issue (PUT /rest/api/3/issue/{issueIdOrKey}). Use when the user wants to modify an issue's summary, description, or transition its status. Returns 204 on success for field updates.\n\n" +
-    'Status transitions use GET/POST /rest/api/3/issue/{id}/transitions automatically.',
+    "Update an existing Jira issue (PUT /rest/api/3/issue/{issueIdOrKey}). Use when the user wants to modify an issue's summary, description, or transition its status. Returns 204 on success for field updates. Status transitions use GET/POST /rest/api/3/issue/{id}/transitions automatically.\n\n" +
+    'Example response:\n' +
+    '```json\n' +
+    '{"issueIdOrKey": "PROJ-123", "updated": true, "fieldsUpdated": ["summary"], "statusTransitioned": false}\n' +
+    '```',
   provider: JIRA_PROVIDER,
   actionCategory: 'write',
 
@@ -33,6 +36,7 @@ export const jiraUpdateIssueAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'jira',
+    requiredScopes: ['write:jira-work'],
     description: 'Jira OAuth2 credential',
   },
 
@@ -72,6 +76,7 @@ export const jiraUpdateIssueAction = defineAction({
         placeholder: 'New summary (leave empty to keep current)',
         description: 'Updated issue summary. Leave empty to keep existing.',
         aiProvided: true,
+        extended: true,
       },
       {
         name: 'description',
@@ -81,6 +86,7 @@ export const jiraUpdateIssueAction = defineAction({
         description:
           'Updated description (plain text, converted to ADF). Leave empty to keep existing.',
         aiProvided: true,
+        extended: true,
       },
       {
         name: 'status',

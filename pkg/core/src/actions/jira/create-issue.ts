@@ -35,6 +35,7 @@ export const jiraCreateIssueAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'jira',
+    requiredScopes: ['write:jira-work'],
     description: 'Jira OAuth2 credential',
   },
 
@@ -83,6 +84,7 @@ export const jiraCreateIssueAction = defineAction({
         placeholder: 'Detailed description of the issue...',
         description: 'Issue description (plain text, converted to ADF automatically)',
         aiProvided: true,
+        extended: true,
       },
       {
         name: 'issueType',
@@ -98,6 +100,7 @@ export const jiraCreateIssueAction = defineAction({
         ],
         description: 'The type of issue to create',
         aiProvided: true,
+        extended: true,
       },
     ],
   },

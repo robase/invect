@@ -58,7 +58,12 @@ function buildAuthHeader(
 export const httpRequestAction = defineAction({
   id: 'http.request',
   name: 'HTTP Request',
-  description: 'Make HTTP requests to external APIs, REST endpoints, or webhooks',
+  description:
+    'Make an HTTP request to any URL (GET, POST, PUT, PATCH, DELETE). Use when the user needs to call an external REST API, fetch a webpage, submit a form, or trigger a webhook. Call with `url` and `method`; optionally provide `body` (JSON string — ignored for GET), `headers` (key-value object), and a credential for auth (supports Bearer token, Basic, API Key, OAuth2, or custom header auth).\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"data": {"id": 1, "name": "Example"}, "status": 200, "headers": {"content-type": "application/json"}, "ok": true}\n' +
+    '```',
   provider: HTTP_PROVIDER,
 
   credential: {
@@ -74,6 +79,7 @@ export const httpRequestAction = defineAction({
         name: 'method',
         label: 'Method',
         type: 'select',
+        description: 'HTTP method to use for the request',
         required: true,
         defaultValue: 'GET',
         options: [
@@ -89,6 +95,7 @@ export const httpRequestAction = defineAction({
         name: 'url',
         label: 'URL',
         type: 'text',
+        description: 'Full URL to send the request to (including https://)',
         required: true,
         aiProvided: true,
       },
@@ -96,7 +103,7 @@ export const httpRequestAction = defineAction({
         name: 'body',
         label: 'Body',
         type: 'textarea',
-        description: 'Request body (JSON or text)',
+        description: 'Request body (JSON or text). Ignored for GET requests.',
         aiProvided: true,
       },
       {
@@ -121,6 +128,7 @@ export const httpRequestAction = defineAction({
         defaultValue: 30000,
         description: 'Request timeout in milliseconds',
         extended: true,
+        aiProvided: false,
       },
     ],
   },

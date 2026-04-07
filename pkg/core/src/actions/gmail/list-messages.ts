@@ -103,7 +103,6 @@ export const gmailListMessagesAction = defineAction({
       'https://www.googleapis.com/auth/gmail.readonly',
       'https://www.googleapis.com/auth/gmail.compose',
       'https://www.googleapis.com/auth/gmail.modify',
-      'https://www.googleapis.com/auth/gmail.labels',
     ],
     description: 'Gmail OAuth2 credential for authentication',
   },
@@ -222,7 +221,7 @@ export const gmailListMessagesAction = defineAction({
         const errorText = await listResponse.text();
         return {
           success: false,
-          error: `Gmail API error: ${listResponse.status} ${listResponse.statusText} - ${errorText}`,
+          error: `Gmail API error (${listResponse.status}): ${listResponse.statusText} - ${errorText}`,
         };
       }
 

@@ -35,10 +35,11 @@ export const slackListChannelsAction = defineAction({
   id: 'slack.list_channels',
   name: 'List Channels',
   description:
-    'List channels in a Slack workspace (conversations.list). Use when you need to discover channel IDs, browse available channels, or find a channel to post to.\n\n' +
+    'List channels in a Slack workspace (conversations.list). Use when you need to discover channel IDs, browse available channels, or find a channel to post to. ' +
+    'Call with optional `types` (public_channel, private_channel), `excludeArchived` (default true), and `limit` (1–1000, default 100). Returns channel IDs, names, topics, and member counts.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"channels": [{"id": "C01ABC23DEF", "name": "general", "isPrivate": false, "numMembers": 42, "topic": "Company-wide"}], "count": 1}\n' +
+    '{"channels": [{"id": "C012AB3CD", "name": "general", "isPrivate": false, "numMembers": 4, "topic": "Company-wide announcements"}], "count": 1, "hasMore": false}\n' +
     '```',
   provider: SLACK_PROVIDER,
   actionCategory: 'read',
@@ -47,7 +48,8 @@ export const slackListChannelsAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'slack',
-    description: 'Slack OAuth2 credential with channels:read scope',
+    requiredScopes: ['channels:read', 'groups:read'],
+    description: 'Slack OAuth2 credential with channels:read and groups:read scopes',
   },
 
   params: {

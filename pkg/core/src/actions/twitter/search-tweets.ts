@@ -35,6 +35,7 @@ export const twitterSearchTweetsAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'twitter',
+    requiredScopes: ['tweet.read', 'offline.access'],
     description: 'Twitter OAuth2 credential with tweet.read scope',
   },
 

@@ -22,7 +22,8 @@ export const googleDriveSearchFilesAction = defineAction({
   id: 'google_drive.search_files',
   name: 'Search Files',
   description:
-    'Search for files in Google Drive using query syntax (files.list with q parameter). Use when the user wants to find files by name, type, or other criteria.\n\n' +
+    'Search for files in Google Drive using query syntax (files.list with q parameter). Use when the user wants to find files by name, type, or other criteria. ' +
+    "Call with `searchQuery` using Drive search syntax (e.g. \"name contains 'report' and mimeType='application/pdf'\"); optional `maxResults` and `supportsAllDrives`.\n\n" +
     'Example response:\n' +
     '```json\n' +
     '{"files": [{"id": "1abc", "name": "Report.pdf", "mimeType": "application/pdf", "modifiedTime": "2025-03-15T10:00:00Z"}], "fileCount": 1, "hasMore": false}\n' +

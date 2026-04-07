@@ -24,7 +24,7 @@ export const dropboxListFolderAction = defineAction({
   id: 'dropbox.list_folder',
   name: 'List Folder',
   description:
-    'List files and folders in a Dropbox directory (POST /2/files/list_folder). Use when you need to browse or enumerate the contents of a folder. An empty path lists the root.\n\n' +
+    'List files and folders in a Dropbox directory (POST /2/files/list_folder). Use when you need to browse or enumerate the contents of a folder. Call with `path` (empty string for root), optional `limit` (1–2000, default 100), and optional `recursive` flag.\n\n' +
     'Example response:\n' +
     '```json\n' +
     '{"entries": [{".tag": "file", "name": "report.pdf", "path_display": "/Documents/report.pdf", "id": "id:a4ayc...", "size": 7212}], "has_more": false}\n' +
@@ -36,6 +36,7 @@ export const dropboxListFolderAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'dropbox',
+    requiredScopes: ['files.metadata.read'],
     description: 'Dropbox OAuth2 credential with files.metadata.read scope',
   },
 

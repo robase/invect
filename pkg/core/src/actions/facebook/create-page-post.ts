@@ -10,7 +10,7 @@ import { defineAction } from '../define-action';
 import { FACEBOOK_PROVIDER } from '../providers';
 import { z } from 'zod/v4';
 
-const FACEBOOK_API = 'https://graph.facebook.com/v19.0';
+const FACEBOOK_API = 'https://graph.facebook.com/v21.0';
 
 const paramsSchema = z.object({
   credentialId: z.string().min(1, 'Facebook credential is required'),
@@ -35,7 +35,9 @@ export const facebookCreatePagePostAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'facebook',
-    description: 'Facebook OAuth2 credential with pages_manage_posts scope',
+    requiredScopes: ['pages_manage_posts', 'pages_read_engagement', 'pages_show_list'],
+    description:
+      'Facebook OAuth2 credential with pages_manage_posts, pages_read_engagement, and pages_show_list scopes',
   },
 
   params: {

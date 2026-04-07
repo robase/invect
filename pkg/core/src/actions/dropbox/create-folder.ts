@@ -22,7 +22,7 @@ export const dropboxCreateFolderAction = defineAction({
   id: 'dropbox.create_folder',
   name: 'Create Folder',
   description:
-    "Create a new folder in Dropbox (POST /2/files/create_folder_v2). Use when you need to organize files by creating a new directory in the user's Dropbox.\n\n" +
+    "Create a new folder in Dropbox (POST /2/files/create_folder_v2). Use when you need to organize files by creating a new directory in the user's Dropbox. Call with `path` (full path for the new folder); optional `autorename` avoids conflicts.\n\n" +
     'Example response:\n' +
     '```json\n' +
     '{"metadata": {"name": "New Folder", "path_display": "/Documents/New Folder", "id": "id:a4ayc_80_OEA..."}}\n' +
@@ -34,6 +34,7 @@ export const dropboxCreateFolderAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'dropbox',
+    requiredScopes: ['files.content.write'],
     description: 'Dropbox OAuth2 credential with files.content.write scope',
   },
 

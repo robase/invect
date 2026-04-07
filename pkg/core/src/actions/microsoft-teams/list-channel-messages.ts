@@ -30,10 +30,10 @@ export const teamsListChannelMessagesAction = defineAction({
   id: 'microsoft_teams.list_channel_messages',
   name: 'List Channel Messages',
   description:
-    'List recent messages from a Microsoft Teams channel (GET /teams/{team-id}/channels/{channel-id}/messages). Use when you need to read channel history or find specific messages.\n\n' +
+    'List recent messages from a Microsoft Teams channel (GET /teams/{team-id}/channels/{channel-id}/messages). Call with `teamId`, `channelId`, and optional `top` (1–50, default 25) to control page size. Use when you need to read channel history or find specific messages.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"id": "1616965872395", "createdDateTime": "2025-01-15T10:30:00Z", "from": {"user": {"displayName": "Alice"}}, "body": {"contentType": "html", "content": "Hello <at id=\\"0\\">Bob</at>"}}\n' +
+    '{"messages": [{"id": "1616965872395", "createdDateTime": "2025-01-15T10:30:00Z", "from": {"user": {"displayName": "Alice"}}, "body": {"contentType": "html", "content": "Hello"}}], "count": 1}\n' +
     '```',
   provider: MICROSOFT_TEAMS_PROVIDER,
   actionCategory: 'read',
@@ -42,7 +42,8 @@ export const teamsListChannelMessagesAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'microsoft',
-    description: 'Microsoft Teams OAuth2 credential',
+    requiredScopes: ['ChannelMessage.Read.All'],
+    description: 'Microsoft Teams OAuth2 credential with ChannelMessage.Read.All scope',
   },
 
   params: {

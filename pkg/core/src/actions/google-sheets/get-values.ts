@@ -26,7 +26,8 @@ export const googleSheetsGetValuesAction = defineAction({
   id: 'google_sheets.get_values',
   name: 'Get Values',
   description:
-    'Read values from a range in a Google Sheets spreadsheet (spreadsheets.values.get). Use when the user wants to retrieve data from a spreadsheet.\n\n' +
+    'Read values from a range in a Google Sheets spreadsheet (spreadsheets.values.get). Use when the user wants to retrieve cell data from a specific sheet range.\n\n' +
+    'Call with `spreadsheetId` and `range` (A1 notation, e.g. "Sheet1!A1:D10"). Optionally set `majorDimension` (ROWS or COLUMNS) and `valueRenderOption` (FORMATTED_VALUE, UNFORMATTED_VALUE, or FORMULA).\n\n' +
     'Example response:\n' +
     '```json\n' +
     '{"range": "Sheet1!A1:D3", "values": [["Name", "Age"], ["Alice", 30]], "rowCount": 2, "columnCount": 2}\n' +

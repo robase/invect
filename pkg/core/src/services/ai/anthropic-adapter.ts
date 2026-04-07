@@ -55,6 +55,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
 
     this.client = new Anthropic({
       apiKey: this.apiKey,
+      maxRetries: 3, // Retry on 429 (rate limit), 500, 503 with exponential backoff
     });
   }
 
@@ -292,9 +293,15 @@ export class AnthropicAdapter extends BaseProviderAdapter {
   private buildPromptRequest(
     request: PromptRequest | BatchRequest,
   ): Anthropic.MessageCreateParamsNonStreaming {
+    // Anthropic enforces strict max_tokens limits per model (e.g., 4096 for Haiku,
+    // 8192 for Sonnet). The user-provided maxTokens is typically the *model context*
+    // size (e.g., 200000), not the output token budget. Using it directly causes
+    // "max_tokens exceeds model limit" errors. Cap at a safe default for prompt
+    // (non-agent) requests; agent requests set max_tokens independently.
+    const maxOutputTokens = request.maxTokens ? Math.min(request.maxTokens, 8192) : 4096;
     const params: Anthropic.MessageCreateParamsNonStreaming = {
       model: request.model,
-      max_tokens: request.maxTokens ? request.maxTokens / 2 : 4000,
+      max_tokens: maxOutputTokens,
       temperature: request.temperature,
       system: request.systemPrompt,
       messages: [{ role: 'user', content: request.prompt }],

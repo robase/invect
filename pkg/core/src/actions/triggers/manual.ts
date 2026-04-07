@@ -43,8 +43,14 @@ export const manualTriggerAction = defineAction({
   id: 'trigger.manual',
   name: 'Manual Trigger',
   description:
-    'Start this flow manually from the UI or via the API. ' +
-    'Optionally define expected input fields with default values.',
+    'Start this flow manually from the UI, REST API, or programmatically via startFlowRun(). ' +
+    "Optionally define expected input fields (name + defaultValue) to validate and document the flow's interface. " +
+    'When input definitions are set, only those variables are extracted from flowInputs (with defaults applied); otherwise all flowInputs pass through. ' +
+    'This is a flow entry-point node — AI agents should not invoke it directly.\n\n' +
+    'Output shape (passthrough mode):\n' +
+    '```json\n' +
+    '{"topic": "hello world", "count": 5}\n' +
+    '```',
   provider: TRIGGERS_PROVIDER,
   icon: 'Play',
   noInput: true,
@@ -70,6 +76,7 @@ export const manualTriggerAction = defineAction({
         name: 'inputDefinitions',
         label: 'Input Fields',
         type: 'json',
+        aiProvided: false,
         description:
           'Optional list of expected inputs. ' +
           'Each entry should have a "name" and an optional "defaultValue". ' +

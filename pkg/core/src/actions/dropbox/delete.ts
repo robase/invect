@@ -21,7 +21,7 @@ export const dropboxDeleteAction = defineAction({
   id: 'dropbox.delete',
   name: 'Delete',
   description:
-    "Delete a file or folder in Dropbox (POST /2/files/delete_v2). Use when you need to permanently remove a file or folder from the user's Dropbox.\n\n" +
+    "Delete a file or folder in Dropbox (POST /2/files/delete_v2). Use when you need to permanently remove a file or folder from the user's Dropbox. Call with `path` (full Dropbox path to the file or folder to delete).\n\n" +
     'Example response:\n' +
     '```json\n' +
     '{"metadata": {".tag": "file", "name": "old-file.pdf", "path_display": "/Documents/old-file.pdf", "id": "id:a4ayc_80_OEA..."}}\n' +
@@ -33,6 +33,7 @@ export const dropboxDeleteAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'dropbox',
+    requiredScopes: ['files.content.write'],
     description: 'Dropbox OAuth2 credential with files.content.write scope',
   },
 

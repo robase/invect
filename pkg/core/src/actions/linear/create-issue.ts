@@ -3,7 +3,7 @@
  *
  * Creates a new issue in a Linear team using the GraphQL API.
  * Supports title, description, priority, assignee, label, and estimate.
- * Requires a Linear OAuth2 credential with write and issues:create scopes.
+ * Requires a Linear OAuth2 credential with write scope.
  */
 
 import { defineAction } from '../define-action';
@@ -42,7 +42,8 @@ export const linearCreateIssueAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'linear',
-    description: 'Linear OAuth2 credential with write and issues:create scopes',
+    requiredScopes: ['write'],
+    description: 'Linear OAuth2 credential with write scope',
   },
 
   params: {
@@ -62,7 +63,9 @@ export const linearCreateIssueAction = defineAction({
         type: 'text',
         required: true,
         placeholder: 'e.g. abc123',
-        description: 'The ID of the team to create the issue in. Use List Teams to find team IDs.',
+        description:
+          'The UUID of the team to create the issue in. ' +
+          'Use linear.list_teams to find team IDs — do not guess.',
         aiProvided: true,
       },
       {
@@ -102,7 +105,9 @@ export const linearCreateIssueAction = defineAction({
         label: 'Assignee ID',
         type: 'text',
         placeholder: 'e.g. user-id-123',
-        description: 'User ID to assign the issue to.',
+        description:
+          'UUID of the user to assign the issue to. ' +
+          'Use the Linear API to look up user IDs — do not use email addresses.',
         aiProvided: true,
       },
       {
@@ -110,7 +115,9 @@ export const linearCreateIssueAction = defineAction({
         label: 'State ID',
         type: 'text',
         placeholder: 'e.g. state-id-123',
-        description: 'Workflow state ID to set on the issue. Leave empty for the default state.',
+        description:
+          'UUID of the workflow state to set on the issue. ' +
+          'Leave empty for the default state. Use the Linear API to list workflow states.',
         extended: true,
         aiProvided: true,
       },

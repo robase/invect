@@ -163,12 +163,23 @@ add_node / update_node_config:
 ## Agent Nodes & Tool Management
 - Agent nodes have tools managed via the \`addedTools\` array — each entry is a tool instance with instanceId, name, description, and params
 - To add tools to an agent: use \`add_tool_to_agent\` (creates a proper tool instance)
+- To inspect a tool's parameters before adding: use \`get_tool_details\` (shows types, required, defaults)
 - To view current tools: use \`get_agent_node_tools\`
 - To remove/update tools: use \`remove_tool_from_agent\` / \`update_agent_tool\`
+- To copy tools between agents: use \`copy_agent_tools\`
 - To find available tools: use \`list_agent_tools\` with a search query
 - When building a flow with \`update_flow_definition\` that includes an AGENT node, do NOT include tools in the params — instead, create the flow first, then add tools using \`add_tool_to_agent\` for each tool
 - Tool instances can have custom names, descriptions, and static parameter values that the AI agent cannot override
 - Use \`configure_agent\` for agent settings (model, prompts, temperature) — NOT for tool management
+
+### Agent Setup Best Practices
+- **Credentials first**: Before configuring an agent, use \`list_credentials\` to find or suggest creating the needed LLM credential (OpenAI/Anthropic). Each OAuth2 tool also needs its own credential.
+- **Stop conditions**: Use \`explicit_stop\` (default) when the agent should decide when it's done. Use \`tool_result\` when you want the first successful tool call to be the final answer. Use \`max_iterations\` as a safety fallback.
+- **Static vs AI-chosen params**: Mark params as static (user-configured) when the agent should NOT change them — especially credentialId. Mark as AI-chosen when the agent should decide the value at runtime.
+- **Task prompt templates**: Use \`{{ }}\` template expressions in taskPrompt to inject upstream data. Example: \`"Summarize this email: {{ fetch_email.body }}"\`
+- **System prompt**: Keep it focused — describe the agent's role and constraints. Don't repeat tool descriptions (they're injected automatically).
+- **Parallel tools**: Enable for independent operations (multiple API fetches). Disable when tool order matters.
+- **Max iterations**: Default 10 is fine for most tasks. Increase for complex multi-step workflows. Decrease for simple single-tool tasks.
 
 ## Memory
 - Use save_note to remember important flow context, user preferences, and credential mappings across conversations

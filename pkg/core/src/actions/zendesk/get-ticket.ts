@@ -20,10 +20,10 @@ export const zendeskGetTicketAction = defineAction({
   id: 'zendesk.get_ticket',
   name: 'Get Ticket',
   description:
-    'Get a single Zendesk ticket by ID (GET /api/v2/tickets/{ticketId}). Use when the user wants to retrieve full details of a specific support ticket.\n\n' +
+    'Get a single Zendesk ticket by ID (GET /api/v2/tickets/{ticketId}). Use when the user wants to retrieve full details of a specific support ticket including its status, priority, requester, assignee, tags, and description. Call with `ticketId`.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"ticket": {"id": 35436, "subject": "Help!", "status": "open", "priority": "normal", "requester_id": 123}}\n' +
+    '{"id": 35436, "subject": "Help!", "status": "open", "priority": "normal", "requester_id": 123, "assignee_id": 235323, "tags": ["billing"], "created_at": "2024-01-15T10:00:00Z"}\n' +
     '```',
   provider: ZENDESK_PROVIDER,
   actionCategory: 'read',
@@ -32,6 +32,7 @@ export const zendeskGetTicketAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'zendesk',
+    requiredScopes: ['read'],
     description: 'Zendesk OAuth2 credential with ticket read access',
   },
 

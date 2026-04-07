@@ -25,7 +25,8 @@ export const gitlabCreateMergeRequestAction = defineAction({
   id: 'gitlab.create_merge_request',
   name: 'Create Merge Request',
   description:
-    'Create a merge request in a GitLab project (POST /api/v4/projects/:id/merge_requests). Use when the user wants to open a merge request for code review.\n\n' +
+    'Create a merge request in a GitLab project (POST /api/v4/projects/:id/merge_requests). Use when the user wants to open a merge request for code review. ' +
+    'Call with `projectId`, `sourceBranch`, `targetBranch`, and `title`; optionally include `description`.\n\n' +
     'Example response:\n' +
     '```json\n' +
     '{"mergeRequestId": 1, "mergeRequestIid": 10, "url": "https://gitlab.com/group/project/-/merge_requests/10", "title": "Add feature", "state": "opened", "sourceBranch": "feature/x", "targetBranch": "main"}\n' +
@@ -105,7 +106,7 @@ export const gitlabCreateMergeRequestAction = defineAction({
         type: 'textarea',
         placeholder: 'Describe the changes...',
         description:
-          'Merge request description (Markdown supported). Supports Nunjucks templating.',
+          'Merge request description (Markdown supported). Supports template expressions ({{ variable }}).',
         aiProvided: true,
       },
     ],

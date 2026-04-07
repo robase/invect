@@ -31,6 +31,7 @@ export const jiraListProjectsAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'jira',
+    requiredScopes: ['read:jira-work'],
     description: 'Jira OAuth2 credential',
   },
 
@@ -57,7 +58,7 @@ export const jiraListProjectsAction = defineAction({
     ],
   },
 
-  tags: ['jira', 'atlassian', 'issues', 'project-management'],
+  tags: ['jira', 'atlassian', 'issues', 'project-management', 'list', 'read'],
 
   async execute(params, context) {
     const { credentialId, cloudId } = params;

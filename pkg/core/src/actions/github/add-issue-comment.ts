@@ -35,6 +35,7 @@ export const githubAddIssueCommentAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'github',
+    requiredScopes: ['repo'],
     description: 'GitHub OAuth2 credential with repo scope',
   },
 
@@ -81,7 +82,7 @@ export const githubAddIssueCommentAction = defineAction({
         type: 'textarea',
         required: true,
         placeholder: 'Great work on this! 🎉',
-        description: 'Comment body (Markdown supported). Supports Nunjucks templating.',
+        description: 'Comment body (Markdown supported). Supports template expressions.',
         aiProvided: true,
       },
     ],

@@ -283,7 +283,7 @@ export const OAUTH2_PROVIDERS: Record<string, OAuth2ProviderDefinition> = {
     defaultScopes: ['read', 'write', 'issues:create', 'comments:create'],
     scopeSeparator: ',',
     supportsRefresh: true,
-    docsUrl: 'https://developers.linear.app/docs/oauth/authentication',
+    docsUrl: 'https://linear.app/developers/oauth-2-0-authentication',
     category: 'project_management',
   },
 

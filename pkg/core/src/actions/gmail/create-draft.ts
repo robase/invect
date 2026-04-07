@@ -84,7 +84,6 @@ export const gmailCreateDraftAction = defineAction({
       'https://www.googleapis.com/auth/gmail.readonly',
       'https://www.googleapis.com/auth/gmail.compose',
       'https://www.googleapis.com/auth/gmail.modify',
-      'https://www.googleapis.com/auth/gmail.labels',
     ],
     description: 'Gmail OAuth2 credential with compose permissions',
   },
@@ -234,7 +233,7 @@ export const gmailCreateDraftAction = defineAction({
         const errorText = await response.text();
         return {
           success: false,
-          error: `Gmail draft creation failed: ${response.status} ${response.statusText} - ${errorText}`,
+          error: `Gmail API error (${response.status}): ${response.statusText} - ${errorText}`,
         };
       }
 
@@ -262,7 +261,7 @@ export const gmailCreateDraftAction = defineAction({
       };
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      return { success: false, error: `Gmail draft creation failed: ${msg}` };
+      return { success: false, error: `Gmail API error: ${msg}` };
     }
   },
 });

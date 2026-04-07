@@ -22,7 +22,7 @@ export const googleDocsInsertTextAction = defineAction({
   id: 'google_docs.insert_text',
   name: 'Insert Text',
   description:
-    'Insert text at a specific position in a Google Docs document (documents.batchUpdate with insertText). Use when the user wants to add text at a precise location.\n\n' +
+    'Insert text at a specific position in a Google Docs document (documents.batchUpdate with insertText). Call with `documentId`, `text`, and optional `index` (1-based position, defaults to beginning). Use when the user wants to add text at a precise location.\n\n' +
     'Example response:\n' +
     '```json\n' +
     '{"documentId": "1abc...", "insertedAt": 1, "textLength": 42}\n' +
@@ -57,7 +57,8 @@ export const googleDocsInsertTextAction = defineAction({
         label: 'Document ID',
         type: 'text',
         required: true,
-        description: 'The ID of the Google Docs document',
+        placeholder: '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms',
+        description: 'The ID of the Google Docs document to insert text into',
         aiProvided: true,
       },
       {
@@ -128,7 +129,7 @@ export const googleDocsInsertTextAction = defineAction({
         const errorText = await response.text();
         return {
           success: false,
-          error: `Google Docs API error: ${response.status} - ${errorText}`,
+          error: `Google Docs API error (${response.status}): ${errorText}`,
         };
       }
 

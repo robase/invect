@@ -20,10 +20,12 @@ export const shopifyListOrdersAction = defineAction({
   id: 'shopify.list_orders',
   name: 'List Orders',
   description:
-    'List orders from a Shopify store (GET /admin/api/.../orders.json). Use when you need to review recent orders, check fulfillment status, or look up order history.\n\n' +
+    'List orders from a Shopify store (GET /admin/api/.../orders.json). ' +
+    'Call with `shop` and optional `limit` (1–250, default 50) and `status` (any/open/closed/cancelled, default any). ' +
+    'Use when you need to review recent orders, check fulfillment status, or look up order history.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"orders": [{"id": 450789469, "name": "#1001", "total_price": "598.94", "financial_status": "paid", "fulfillment_status": null, "created_at": "2024-01-09T17:28:06-05:00"}]}\n' +
+    '{"orders": [{"id": 450789469, "name": "#1001", "total_price": "598.94", "financial_status": "paid", "fulfillment_status": null, "created_at": "2024-01-09T17:28:06-05:00"}], "count": 1}\n' +
     '```',
   provider: SHOPIFY_PROVIDER,
   actionCategory: 'read',
@@ -33,7 +35,8 @@ export const shopifyListOrdersAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'shopify',
-    description: 'Shopify OAuth2 credential for store access',
+    requiredScopes: ['read_orders'],
+    description: 'Shopify OAuth2 credential with read_orders scope',
   },
 
   params: {
@@ -100,7 +103,7 @@ export const shopifyListOrdersAction = defineAction({
       return { success: false, error: 'No valid access token.' };
     }
 
-    const baseUrl = `https://${encodeURIComponent(shop)}.myshopify.com/admin/api/2024-01`;
+    const baseUrl = `https://${encodeURIComponent(shop)}.myshopify.com/admin/api/2025-01`;
 
     context.logger.debug('Executing Shopify list orders', { shop, limit, status });
 

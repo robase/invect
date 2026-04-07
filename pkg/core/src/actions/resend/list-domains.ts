@@ -16,16 +16,18 @@ const RESEND_API_BASE = 'https://api.resend.com';
 const paramsSchema = z.object({
   credentialId: z.string().min(1, 'Resend credential is required'),
   limit: z.number().int().min(1).max(100).optional(),
+  after: z.string().optional().default(''),
+  before: z.string().optional().default(''),
 });
 
 export const resendListDomainsAction = defineAction({
   id: 'resend.list_domains',
   name: 'List Domains',
   description:
-    'List all configured sending domains and their verification status (GET /domains). Use when the user wants to check which domains are available for sending emails.\n\n' +
+    'List all configured sending domains and their verification status (GET /domains). Call with an optional `limit` (1–100); paginate with `after` or `before` cursor IDs. Use when the user wants to check which domains are available for sending emails.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"data": [{"id": "d91cd9bd-1176-453e-8fc1-35364d380206", "name": "example.com", "status": "not_started", "region": "us-east-1"}]}\n' +
+    '{"data": [{"id": "d91cd9bd-1176-453e-8fc1-35364d380206", "name": "example.com", "status": "not_started", "created_at": "2023-04-26T20:21:26.347Z", "region": "us-east-1", "capabilities": {"sending": "enabled", "receiving": "disabled"}}]}\n' +
     '```',
   provider: RESEND_PROVIDER,
   actionCategory: 'read',
@@ -56,11 +58,30 @@ export const resendListDomainsAction = defineAction({
         extended: true,
         aiProvided: true,
       },
+      {
+        name: 'after',
+        label: 'After (cursor)',
+        type: 'text',
+        required: false,
+        description: 'Domain ID to paginate after (fetch next page). Cannot be used with `before`.',
+        extended: true,
+        aiProvided: true,
+      },
+      {
+        name: 'before',
+        label: 'Before (cursor)',
+        type: 'text',
+        required: false,
+        description:
+          'Domain ID to paginate before (fetch previous page). Cannot be used with `after`.',
+        extended: true,
+        aiProvided: true,
+      },
     ],
   },
 
   async execute(params, context) {
-    const { credentialId, limit } = params;
+    const { credentialId, limit, after, before } = params;
 
     let credential = context.credential;
     if (!credential && context.functions?.getCredential) {
@@ -84,6 +105,12 @@ export const resendListDomainsAction = defineAction({
     const queryParams = new URLSearchParams();
     if (limit) {
       queryParams.set('limit', String(limit));
+    }
+    if (after) {
+      queryParams.set('after', after);
+    }
+    if (before) {
+      queryParams.set('before', before);
     }
 
     const qs = queryParams.toString();

@@ -241,7 +241,7 @@ export interface ActionExecutionContext {
    * gracefully degrade when these are not available (e.g. tool mode).
    */
   functions?: {
-    /** Render a Nunjucks template against variables */
+    /** Render a template expression against variables */
     runTemplateReplacement?: (
       template: string,
       variables: Record<string, unknown>,

@@ -23,10 +23,10 @@ export const sendgridGetStatsAction = defineAction({
   id: 'sendgrid.get_stats',
   name: 'Get Email Stats',
   description:
-    'Retrieve global email sending statistics (GET /v3/stats). Use when the user wants to analyze email performance — deliveries, opens, clicks, bounces, and spam reports.\n\n' +
+    'Retrieve global email sending statistics (GET /v3/stats). Call with `startDate` (YYYY-MM-DD, required), optional `endDate`, and `aggregatedBy` (day/week/month). Use when the user wants to analyze email performance metrics over a date range — requests, deliveries, opens, clicks, bounces, spam reports, and unique counts.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '[{"date": "2024-01-01", "stats": [{"metrics": {"requests": 100, "delivered": 98, "opens": 45, "clicks": 12, "bounces": 2}}]}]\n' +
+    '[{"date": "2024-01-01", "stats": [{"metrics": {"requests": 100, "delivered": 98, "opens": 45, "unique_opens": 30, "clicks": 12, "bounces": 2, "spam_reports": 0}}]}]\n' +
     '```',
   provider: SENDGRID_PROVIDER,
   actionCategory: 'read',

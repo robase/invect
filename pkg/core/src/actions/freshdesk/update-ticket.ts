@@ -16,16 +16,24 @@ const paramsSchema = z.object({
   status: z.number().int().min(2).max(5).optional(),
   priority: z.number().int().min(1).max(4).optional(),
   subject: z.string().optional(),
+  description: z.string().optional(),
+  type: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  groupId: z.number().int().optional(),
+  responderId: z.number().int().optional(),
 });
 
 export const freshdeskUpdateTicketAction = defineAction({
   id: 'freshdesk.update_ticket',
   name: 'Update Ticket',
   description:
-    'Update an existing Freshdesk ticket (PUT /api/v2/tickets/{ticketId}). Use when the user wants to change a ticket\u2019s status, priority, or subject.\n\n' +
+    'Update an existing Freshdesk ticket (PUT /api/v2/tickets/{id}). Use when the user wants to change a ticket\u2019s fields. ' +
+    'Supports: `status` (2=Open, 3=Pending, 4=Resolved, 5=Closed), `priority` (1–4), `subject`, `description`, ' +
+    '`type`, `tags`, `group_id`, `responder_id`. At least one field must be provided. ' +
+    'Note: outbound ticket subject and description cannot be updated.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"id": 1, "subject": "Issue", "status": 4, "priority": 3}\n' +
+    '{"id": 1, "subject": "Updated subject", "status": 4, "priority": 3, "group_id": 5, "responder_id": 42, "tags": ["escalated"], "updated_at": "2025-01-16T12:00:00Z"}\n' +
     '```',
   provider: FRESHDESK_PROVIDER,
   actionCategory: 'write',
@@ -103,11 +111,66 @@ export const freshdeskUpdateTicketAction = defineAction({
         aiProvided: true,
         extended: true,
       },
+      {
+        name: 'description',
+        label: 'Description',
+        type: 'textarea',
+        description:
+          'New ticket description/body in HTML or plain text (leave empty to keep current)',
+        aiProvided: true,
+        extended: true,
+      },
+      {
+        name: 'type',
+        label: 'Type',
+        type: 'text',
+        placeholder: 'Problem',
+        description: 'New ticket type (e.g. Question, Incident, Problem)',
+        aiProvided: true,
+        extended: true,
+      },
+      {
+        name: 'tags',
+        label: 'Tags',
+        type: 'json',
+        placeholder: '["billing", "urgent"]',
+        description: 'Replace the ticket tags with this array',
+        aiProvided: true,
+        extended: true,
+      },
+      {
+        name: 'groupId',
+        label: 'Group ID',
+        type: 'number',
+        description: 'Reassign ticket to this agent group',
+        aiProvided: true,
+        extended: true,
+      },
+      {
+        name: 'responderId',
+        label: 'Responder ID',
+        type: 'number',
+        description: 'Reassign ticket to this agent',
+        aiProvided: true,
+        extended: true,
+      },
     ],
   },
 
   async execute(params, context) {
-    const { credentialId, domain, ticketId, status, priority, subject } = params;
+    const {
+      credentialId,
+      domain,
+      ticketId,
+      status,
+      priority,
+      subject,
+      description,
+      type,
+      tags,
+      groupId,
+      responderId,
+    } = params;
 
     let credential = context.credential;
     if (!credential && context.functions?.getCredential) {
@@ -144,6 +207,21 @@ export const freshdeskUpdateTicketAction = defineAction({
     }
     if (subject !== undefined && subject !== '') {
       body.subject = subject;
+    }
+    if (description !== undefined && description !== '') {
+      body.description = description;
+    }
+    if (type !== undefined && type !== '') {
+      body.type = type;
+    }
+    if (tags !== undefined) {
+      body.tags = tags;
+    }
+    if (groupId !== undefined) {
+      body.group_id = groupId;
+    }
+    if (responderId !== undefined) {
+      body.responder_id = responderId;
     }
 
     if (Object.keys(body).length === 0) {

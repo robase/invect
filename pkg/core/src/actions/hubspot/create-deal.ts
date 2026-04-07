@@ -24,10 +24,10 @@ export const hubspotCreateDealAction = defineAction({
   id: 'hubspot.create_deal',
   name: 'Create Deal',
   description:
-    'Create a new deal in HubSpot CRM (POST /crm/v3/objects/deals). Use when the user wants to track a new sales opportunity with name, amount, stage, and pipeline.\n\n' +
+    'Create a new deal in HubSpot CRM (POST /crm/v3/objects/deals). Use when the user wants to track a new sales opportunity. Pass `dealname` (required), plus optional `amount`, `dealstage` (internal name, e.g. "appointmentscheduled"), `pipeline` (defaults to default pipeline), and `closedate` (ISO 8601).\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"id": "101", "properties": {"dealname": "New deal", "amount": "50000", "dealstage": "contractsent"}, "createdAt": "2024-01-01T00:00:00.000Z"}\n' +
+    '{"id": "101", "properties": {"dealname": "New deal", "amount": "50000", "dealstage": "contractsent", "pipeline": "default"}, "createdAt": "2024-01-01T00:00:00.000Z", "updatedAt": "2024-01-01T00:00:00.000Z", "archived": false}\n' +
     '```',
   provider: HUBSPOT_PROVIDER,
   actionCategory: 'write',
@@ -36,6 +36,7 @@ export const hubspotCreateDealAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'hubspot',
+    requiredScopes: ['crm.objects.deals.write'],
     description: 'HubSpot OAuth2 credential',
   },
 

@@ -31,8 +31,9 @@ export const onedriveListFilesAction = defineAction({
   credential: {
     required: true,
     type: 'oauth2',
-    oauth2Provider: 'microsoft_onedrive',
-    description: 'Microsoft OneDrive OAuth2 credential',
+    oauth2Provider: 'microsoft',
+    requiredScopes: ['Files.Read'],
+    description: 'Microsoft OAuth2 credential with Files.Read scope',
   },
 
   params: {
@@ -40,10 +41,10 @@ export const onedriveListFilesAction = defineAction({
     fields: [
       {
         name: 'credentialId',
-        label: 'OneDrive Credential',
+        label: 'Microsoft Credential',
         type: 'text',
         required: true,
-        description: 'Microsoft OneDrive OAuth2 credential for authentication',
+        description: 'Microsoft OAuth2 credential for authentication (requires Files.Read scope)',
         aiProvided: false,
       },
       {

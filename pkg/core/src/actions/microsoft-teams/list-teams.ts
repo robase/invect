@@ -26,10 +26,10 @@ export const teamsListTeamsAction = defineAction({
   id: 'microsoft_teams.list_teams',
   name: 'List Teams',
   description:
-    'List Microsoft Teams the authenticated user is a member of (GET /me/joinedTeams). Use when you need to discover available teams before listing channels or sending messages.\n\n' +
+    'List Microsoft Teams the authenticated user is a member of (GET /me/joinedTeams). Use when you need to discover available teams before listing channels or sending messages. Returns an array of teams with their IDs and display names.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"id": "172b0cce-e65d-...", "displayName": "Contoso Team", "description": "Engineering team", "isArchived": false}\n' +
+    '{"teams": [{"id": "172b0cce-e65d-44ce-9a49-91d9f2e8493a", "displayName": "Contoso Team", "description": "Engineering team"}], "count": 1}\n' +
     '```',
   provider: MICROSOFT_TEAMS_PROVIDER,
   actionCategory: 'read',
@@ -38,7 +38,8 @@ export const teamsListTeamsAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'microsoft',
-    description: 'Microsoft Teams OAuth2 credential',
+    requiredScopes: ['Team.ReadBasic.All'],
+    description: 'Microsoft Teams OAuth2 credential with Team.ReadBasic.All scope',
   },
 
   params: {

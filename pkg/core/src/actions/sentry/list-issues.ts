@@ -15,7 +15,7 @@ const SENTRY_API_BASE = 'https://sentry.io/api/0';
 const paramsSchema = z.object({
   credentialId: z.string().min(1, 'Sentry credential is required'),
   organizationSlug: z.string().min(1, 'Organization slug is required'),
-  projectSlug: z.string().optional().default(''),
+  projectId: z.string().optional().default(''),
   query: z.string().optional().default('is:unresolved'),
   statsPeriod: z.enum(['', '24h', '14d']).optional().default('24h'),
   cursor: z.string().optional().default(''),
@@ -61,12 +61,14 @@ export const sentryListIssuesAction = defineAction({
         aiProvided: true,
       },
       {
-        name: 'projectSlug',
-        label: 'Project Slug',
+        name: 'projectId',
+        label: 'Project ID',
         type: 'text',
-        placeholder: 'my-project',
-        description: 'Filter issues to a specific project slug. Leave empty for all projects.',
+        placeholder: '123456',
+        description:
+          'Numeric project ID to filter issues. Use sentry.list_projects to find IDs. Leave empty for all projects.',
         aiProvided: true,
+        extended: true,
       },
       {
         name: 'query',
@@ -107,7 +109,7 @@ export const sentryListIssuesAction = defineAction({
   tags: ['sentry', 'issues', 'list', 'errors', 'monitoring', 'development', 'oauth2'],
 
   async execute(params, context) {
-    const { credentialId, organizationSlug, projectSlug, query, statsPeriod, cursor } = params;
+    const { credentialId, organizationSlug, projectId, query, statsPeriod, cursor } = params;
 
     let credential = context.credential;
     if (!credential && context.functions?.getCredential) {
@@ -129,7 +131,7 @@ export const sentryListIssuesAction = defineAction({
       };
     }
 
-    context.logger.debug('Listing Sentry issues', { organizationSlug, projectSlug, query });
+    context.logger.debug('Listing Sentry issues', { organizationSlug, projectId, query });
 
     try {
       const url = new URL(
@@ -138,8 +140,8 @@ export const sentryListIssuesAction = defineAction({
       if (query) {
         url.searchParams.set('query', query);
       }
-      if (projectSlug) {
-        url.searchParams.set('project', projectSlug);
+      if (projectId) {
+        url.searchParams.set('project', projectId);
       }
       if (statsPeriod) {
         url.searchParams.set('statsPeriod', statsPeriod);

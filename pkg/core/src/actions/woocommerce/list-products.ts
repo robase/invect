@@ -12,16 +12,20 @@ import { z } from 'zod/v4';
 const paramsSchema = z.object({
   credentialId: z.string().min(1, 'WooCommerce credential is required'),
   perPage: z.number().int().min(1).max(100).optional().default(10),
+  search: z.string().optional().default(''),
+  category: z.string().optional().default(''),
+  status: z.enum(['any', 'draft', 'pending', 'private', 'publish']).optional().default('any'),
 });
 
 export const woocommerceListProductsAction = defineAction({
   id: 'woocommerce.list_products',
   name: 'List Products',
   description:
-    'List products from a WooCommerce store (GET /wp-json/wc/v3/products). Use when you need to browse the product catalog or check stock/pricing.\n\n' +
+    'List products from a WooCommerce store (GET /wp-json/wc/v3/products). Use when you need to browse the product catalog, check stock/pricing, or search for specific products. ' +
+    'Call with optional `search` (keyword), `category` (category ID), and `status` (draft, pending, private, publish) filters; `perPage` controls page size (1–100).\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '[{"id": 794, "name": "Premium Quality T-Shirt", "type": "simple", "status": "publish", "regular_price": "21.99", "stock_status": "instock"}]\n' +
+    '[{"id": 794, "name": "Premium Quality T-Shirt", "type": "simple", "status": "publish", "regular_price": "21.99", "stock_status": "instock", "sku": "WOO-TSHIRT-001"}]\n' +
     '```',
   provider: WOOCOMMERCE_PROVIDER,
   actionCategory: 'read',
@@ -53,11 +57,43 @@ export const woocommerceListProductsAction = defineAction({
         extended: true,
         aiProvided: true,
       },
+      {
+        name: 'search',
+        label: 'Search',
+        type: 'text',
+        description: 'Keyword to search products by name',
+        extended: true,
+        aiProvided: true,
+      },
+      {
+        name: 'category',
+        label: 'Category ID',
+        type: 'text',
+        description: 'Filter by product category ID',
+        extended: true,
+        aiProvided: true,
+      },
+      {
+        name: 'status',
+        label: 'Status',
+        type: 'select',
+        defaultValue: 'any',
+        description: 'Filter by product status',
+        extended: true,
+        aiProvided: true,
+        options: [
+          { label: 'Any', value: 'any' },
+          { label: 'Draft', value: 'draft' },
+          { label: 'Pending', value: 'pending' },
+          { label: 'Private', value: 'private' },
+          { label: 'Published', value: 'publish' },
+        ],
+      },
     ],
   },
 
   async execute(params, context) {
-    const { credentialId, perPage } = params;
+    const { credentialId, perPage, search, category, status } = params;
 
     let credential = context.credential;
     if (!credential && context.functions?.getCredential) {
@@ -80,10 +116,21 @@ export const woocommerceListProductsAction = defineAction({
 
     const basicAuth = btoa(`${consumerKey}:${consumerSecret}`);
 
-    context.logger.debug('Executing WooCommerce list products', { perPage });
+    context.logger.debug('Executing WooCommerce list products', {
+      perPage,
+      search,
+      category,
+      status,
+    });
 
     try {
-      const response = await fetch(`${siteUrl}/wp-json/wc/v3/products?per_page=${perPage}`, {
+      const url = new URL(`${siteUrl}/wp-json/wc/v3/products`);
+      url.searchParams.set('per_page', String(perPage));
+      if (search) {url.searchParams.set('search', search);}
+      if (category) {url.searchParams.set('category', category);}
+      if (status && status !== 'any') {url.searchParams.set('status', status);}
+
+      const response = await fetch(url.toString(), {
         headers: {
           Authorization: `Basic ${basicAuth}`,
           'Content-Type': 'application/json',

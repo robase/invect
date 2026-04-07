@@ -20,8 +20,8 @@ export const salesforceUpdateRecordAction = defineAction({
   id: 'salesforce.update_record',
   name: 'Update Record',
   description:
-    'Update an existing Salesforce SObject record (PATCH /sobjects/{objectType}/{recordId}). Use when the user wants to modify fields on an Account, Contact, Lead, or Opportunity. Returns 204 on success.\n\n' +
-    'Example response:\n' +
+    'Update an existing Salesforce SObject record (PATCH /sobjects/{objectType}/{recordId}). Use when the user wants to modify fields on an Account, Contact, Lead, or Opportunity. Salesforce returns 204 No Content on success; this action returns a synthetic confirmation.\n\n' +
+    'Example response (synthetic):\n' +
     '```json\n' +
     '{"id": "001xx000003DGbY", "updated": true}\n' +
     '```',
@@ -32,7 +32,8 @@ export const salesforceUpdateRecordAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'salesforce',
-    description: 'Salesforce OAuth2 credential',
+    requiredScopes: ['api'],
+    description: 'Salesforce OAuth2 credential with API access',
   },
 
   params: {

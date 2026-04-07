@@ -23,7 +23,7 @@ export const googleDocsReplaceTextAction = defineAction({
   id: 'google_docs.replace_text',
   name: 'Replace Text',
   description:
-    'Find and replace text in a Google Docs document (documents.batchUpdate with replaceAllText). Use when the user wants to substitute all occurrences of a string.\n\n' +
+    'Find and replace text in a Google Docs document (documents.batchUpdate with replaceAllText). Call with `documentId`, `findText`, and `replaceText`; optional `matchCase` for case-sensitive search. Replaces all occurrences in the document.\n\n' +
     'Example response:\n' +
     '```json\n' +
     '{"documentId": "1abc...", "findText": "old", "replaceText": "new", "occurrencesChanged": 3}\n' +
@@ -58,7 +58,8 @@ export const googleDocsReplaceTextAction = defineAction({
         label: 'Document ID',
         type: 'text',
         required: true,
-        description: 'The ID of the Google Docs document',
+        placeholder: '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms',
+        description: 'The ID of the Google Docs document to find and replace text in',
         aiProvided: true,
       },
       {
@@ -137,7 +138,7 @@ export const googleDocsReplaceTextAction = defineAction({
         const errorText = await response.text();
         return {
           success: false,
-          error: `Google Docs API error: ${response.status} - ${errorText}`,
+          error: `Google Docs API error (${response.status}): ${errorText}`,
         };
       }
 

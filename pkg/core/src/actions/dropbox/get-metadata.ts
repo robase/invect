@@ -21,7 +21,7 @@ export const dropboxGetMetadataAction = defineAction({
   id: 'dropbox.get_metadata',
   name: 'Get Metadata',
   description:
-    'Get metadata for a file or folder in Dropbox (POST /2/files/get_metadata). Use when you need file size, modification dates, or to check if a path exists.\n\n' +
+    'Get metadata for a file or folder in Dropbox (POST /2/files/get_metadata). Use when you need file size, modification dates, or to check if a path exists. Call with `path` (full Dropbox path or file ID).\n\n' +
     'Example response:\n' +
     '```json\n' +
     '{".tag": "file", "name": "report.pdf", "path_display": "/Documents/report.pdf", "id": "id:a4ayc...", "size": 7212, "server_modified": "2025-05-12T15:50:38Z"}\n' +
@@ -33,6 +33,7 @@ export const dropboxGetMetadataAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'dropbox',
+    requiredScopes: ['files.metadata.read'],
     description: 'Dropbox OAuth2 credential with files.metadata.read scope',
   },
 

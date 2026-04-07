@@ -21,10 +21,10 @@ export const linkedinGetCompanyAction = defineAction({
   id: 'linkedin.get_company',
   name: 'Get Company',
   description:
-    'Get information about a LinkedIn company/organization by its numeric ID (GET /v2/organizations/{id}). Use when you need company details like name, description, website, or employee count.\n\n' +
+    'Get information about a LinkedIn company/organization by its numeric ID (GET /v2/organizations/{id}). Call with `organizationId`. Requires rw_organization_admin scope for full details; non-admin access returns limited fields.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"id": 12345678, "localizedName": "Acme Inc", "vanityName": "acme", "localizedDescription": "Technology company", "localizedWebsite": "https://acme.com"}\n' +
+    '{"id": 12345678, "name": "Acme Inc", "vanityName": "acme", "description": "Technology company", "website": "https://acme.com", "staffCountRange": {"start": 51, "end": 200}}\n' +
     '```',
   provider: LINKEDIN_PROVIDER,
   actionCategory: 'read',
@@ -33,7 +33,8 @@ export const linkedinGetCompanyAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'linkedin',
-    description: 'LinkedIn OAuth2 credential',
+    requiredScopes: ['rw_organization_admin'],
+    description: 'LinkedIn OAuth2 credential with rw_organization_admin scope for full org details',
   },
 
   params: {

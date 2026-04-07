@@ -78,7 +78,16 @@ export function NodeConfigPanel({
   const nodeParams = nodeData?.params ?? {};
   const definition = node ? getNodeDefinition(nodeType) : undefined;
 
+  // Callback for backend resolution to write params back to Zustand
+  const handleResolvedParams = useCallback(
+    (nid: string, params: Record<string, unknown>) => {
+      updateNodeDataInStore(nid, { params } as Partial<ReactFlowNodeData>);
+    },
+    [updateNodeDataInStore],
+  );
+
   // Node configuration state (validation, dynamic fields)
+  // values are derived from node.data.params (Zustand) — single source of truth
   const {
     definition: activeDefinition,
     values: formValues,
@@ -86,7 +95,12 @@ export function NodeConfigPanel({
     errors: configErrors,
     updateField,
     isUpdating: isConfigUpdating,
-  } = useNodeConfigState({ node: node ?? null, nodeType, definition });
+  } = useNodeConfigState({
+    node: node ?? null,
+    nodeType,
+    definition,
+    onParamsChange: handleResolvedParams,
+  });
 
   const flowActions = useFlowActions();
   const executeFlowToNodeMutation = useExecuteFlowToNode();
@@ -303,12 +317,14 @@ export function NodeConfigPanel({
       if (!nodeId) {
         return;
       }
-      updateField(fieldName, value);
+      // Write to Zustand (single source of truth)
       const currentNode = storeNodes.find((n) => n.id === nodeId);
       const currentParams = (currentNode?.data as ReactFlowNodeData | undefined)?.params ?? {};
-      // Use type assertion since we're merging params dynamically
       const newParams = { ...currentParams, [fieldName]: value } as ReactFlowNodeData['params'];
       updateNodeDataInStore(nodeId, { params: newParams });
+
+      // Trigger backend resolution for credential/provider changes
+      updateField(fieldName, value);
     },
     [nodeId, updateNodeDataInStore, updateField, storeNodes],
   );

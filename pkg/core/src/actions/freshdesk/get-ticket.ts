@@ -13,16 +13,19 @@ const paramsSchema = z.object({
   credentialId: z.string().min(1, 'Freshdesk credential is required'),
   domain: z.string().min(1, 'Freshdesk domain is required'),
   ticketId: z.string().min(1, 'Ticket ID is required'),
+  include: z.string().optional(),
 });
 
 export const freshdeskGetTicketAction = defineAction({
   id: 'freshdesk.get_ticket',
   name: 'Get Ticket',
   description:
-    'Get a Freshdesk ticket by ID including conversations (GET /api/v2/tickets/{ticketId}?include=conversations). Use when the user wants to retrieve full details of a specific support ticket.\n\n' +
+    'Get a Freshdesk ticket by ID (GET /api/v2/tickets/{id}). Use when the user wants to retrieve full details of a specific support ticket. ' +
+    'Pass `include` to embed extra data: "conversations" (up to 10, costs 2 credits), "requester" (email, name, phone), ' +
+    '"company" (id, name), "stats" (closed_at, resolved_at, first_responded_at). Comma-separate multiple values.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"id": 1, "subject": "Issue", "status": 2, "priority": 1, "requester_id": 123, "conversations": []}\n' +
+    '{"id": 1, "subject": "Issue with billing", "description_text": "Details...", "status": 2, "priority": 1, "requester_id": 123, "group_id": 5, "type": "Problem", "tags": ["billing"], "created_at": "2025-01-15T10:00:00Z", "conversations": []}\n' +
     '```',
   provider: FRESHDESK_PROVIDER,
   actionCategory: 'read',
@@ -64,11 +67,21 @@ export const freshdeskGetTicketAction = defineAction({
         description: 'The numeric ID of the Freshdesk ticket',
         aiProvided: true,
       },
+      {
+        name: 'include',
+        label: 'Include',
+        type: 'text',
+        placeholder: 'conversations,requester,company,stats',
+        description:
+          'Comma-separated list of related data to embed: conversations, requester, company, stats (each costs extra API credits)',
+        aiProvided: true,
+        extended: true,
+      },
     ],
   },
 
   async execute(params, context) {
-    const { credentialId, domain, ticketId } = params;
+    const { credentialId, domain, ticketId, include } = params;
 
     let credential = context.credential;
     if (!credential && context.functions?.getCredential) {
@@ -99,15 +112,17 @@ export const freshdeskGetTicketAction = defineAction({
     context.logger.debug('Getting Freshdesk ticket', { domain, ticketId });
 
     try {
-      const response = await fetch(
-        `${baseUrl}/api/v2/tickets/${encodeURIComponent(ticketId)}?include=conversations`,
-        {
-          headers: {
-            Authorization: authHeader,
-            'Content-Type': 'application/json',
-          },
+      const queryParams = new URLSearchParams();
+      if (include) {queryParams.set('include', include);}
+      const qs = queryParams.toString();
+      const url = `${baseUrl}/api/v2/tickets/${encodeURIComponent(ticketId)}${qs ? `?${qs}` : ''}`;
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: authHeader,
+          'Content-Type': 'application/json',
         },
-      );
+      });
 
       if (!response.ok) {
         const errorText = await response.text();

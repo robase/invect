@@ -20,6 +20,7 @@ import { Flow } from './routes/flow';
 import { FlowRuns } from './routes/flow-runs';
 import { Credentials } from './routes/credentials';
 import { FlowRouteLayout } from './routes/flow-route-layout';
+import type { ApiClient } from './api/client';
 import './app.css';
 import { AppSideMenu } from './components/side-menu/side-menu';
 
@@ -30,6 +31,8 @@ export interface InvectProps {
   useMemoryRouter?: boolean; // Use MemoryRouter instead of BrowserRouter (useful for testing)
   /** Frontend plugins that contribute sidebar items, routes, panel tabs, header actions, etc. */
   plugins?: InvectFrontendPlugin[];
+  /** Pre-configured API client instance (e.g. for demo mode). When provided, apiBaseUrl is ignored. */
+  apiClient?: ApiClient;
 }
 
 // Create a default QueryClient if none is provided
@@ -50,11 +53,13 @@ const InvectLayout = React.memo(
   ({
     client,
     apiBaseUrl,
+    apiClient,
     basePath,
     plugins,
   }: {
     client: QueryClient;
     apiBaseUrl?: string;
+    apiClient?: ApiClient;
     basePath?: string;
     plugins?: InvectFrontendPlugin[];
   }) => {
@@ -62,7 +67,7 @@ const InvectLayout = React.memo(
 
     const content = (
       <QueryClientProvider client={client}>
-        <ApiProvider baseURL={apiBaseUrl}>
+        <ApiProvider baseURL={apiBaseUrl} apiClient={apiClient}>
           <PluginRegistryProvider plugins={plugins ?? []}>
             <ValidationProvider>
               <NodeRegistryProvider>
@@ -112,11 +117,13 @@ const InvectRoutes = React.memo(
   ({
     client,
     apiBaseUrl,
+    apiClient,
     basePath,
     plugins,
   }: {
     client: QueryClient;
     apiBaseUrl: string;
+    apiClient?: ApiClient;
     basePath: string;
     plugins?: InvectFrontendPlugin[];
   }) => {
@@ -134,6 +141,7 @@ const InvectRoutes = React.memo(
               <InvectLayout
                 client={client}
                 apiBaseUrl={apiBaseUrl}
+                apiClient={apiClient}
                 basePath={basePath}
                 plugins={plugins}
               />
@@ -189,12 +197,19 @@ export const Invect = React.memo(
     basePath = '/invect',
     useMemoryRouter = false,
     plugins,
+    apiClient,
   }: InvectProps) => {
     const client = reactQueryClient || createDefaultQueryClient();
     const hasRouter = useHasRouterContext();
 
     const routes = (
-      <InvectRoutes client={client} apiBaseUrl={apiBaseUrl} basePath={basePath} plugins={plugins} />
+      <InvectRoutes
+        client={client}
+        apiBaseUrl={apiBaseUrl}
+        apiClient={apiClient}
+        basePath={basePath}
+        plugins={plugins}
+      />
     );
 
     // If already inside a Router (e.g. Vite + React Router app), render routes directly.

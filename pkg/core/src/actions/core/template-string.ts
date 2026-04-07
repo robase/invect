@@ -16,21 +16,12 @@ const paramsSchema = z.object({
 export const templateStringAction = defineAction({
   id: 'core.template_string',
   name: 'Template String',
-  description: 'Replace variables in a text template using {{ variable }} syntax',
+  description:
+    'Replace variables in a text template using {{ expression }} syntax. Use to compose strings from upstream node outputs, flow inputs, and global config. Full JavaScript expressions are supported inside {{ }}.',
   provider: CORE_PROVIDER,
   excludeFromTools: true,
   icon: 'FileCode2',
-  tags: [
-    'template',
-    'string',
-    'text',
-    'format',
-    'template',
-    'interpolate',
-    'replace',
-    'render',
-    'message',
-  ],
+  tags: ['template', 'string', 'text', 'format', 'interpolate', 'replace', 'render', 'message'],
 
   params: {
     schema: paramsSchema,

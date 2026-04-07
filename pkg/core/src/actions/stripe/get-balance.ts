@@ -30,9 +30,8 @@ export const stripeGetBalanceAction = defineAction({
 
   credential: {
     required: true,
-    type: 'oauth2',
-    oauth2Provider: 'stripe',
-    description: 'Stripe credential with API key or OAuth access token',
+    type: 'api_key',
+    description: 'Stripe secret API key (starts with sk_live_ or sk_test_)',
   },
 
   params: {

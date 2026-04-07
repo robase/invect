@@ -159,6 +159,15 @@ export const googleCalendarCreateEventAction = defineAction({
         aiProvided: true,
       },
       {
+        name: 'reminderMinutes',
+        label: 'Reminder (minutes)',
+        type: 'number',
+        placeholder: '10',
+        description: 'Number of minutes before the event to trigger a popup reminder (0–40320)',
+        extended: true,
+        aiProvided: true,
+      },
+      {
         name: 'visibility',
         label: 'Visibility',
         type: 'select',
@@ -191,6 +200,7 @@ export const googleCalendarCreateEventAction = defineAction({
       attendees,
       sendUpdates,
       recurrence,
+      reminderMinutes,
       visibility,
     } = params;
 
@@ -228,6 +238,12 @@ export const googleCalendarCreateEventAction = defineAction({
       }
       if (recurrence?.trim()) {
         event.recurrence = [recurrence];
+      }
+      if (reminderMinutes !== undefined) {
+        event.reminders = {
+          useDefault: false,
+          overrides: [{ method: 'popup', minutes: reminderMinutes }],
+        };
       }
 
       const url = new URL(

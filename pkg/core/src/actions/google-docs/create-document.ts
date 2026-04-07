@@ -21,7 +21,7 @@ export const googleDocsCreateDocumentAction = defineAction({
   id: 'google_docs.create_document',
   name: 'Create Document',
   description:
-    'Create a new Google Docs document (documents.create + documents.batchUpdate). Use when the user wants to create a new document with optional initial content.\n\n' +
+    'Create a new Google Docs document (documents.create + documents.batchUpdate). Call with `title` and an optional `body` for initial text content. Use when the user wants to create a new doc.\n\n' +
     'Example response:\n' +
     '```json\n' +
     '{"documentId": "1abc...", "title": "My Doc", "url": "https://docs.google.com/document/d/1abc.../edit"}\n' +
@@ -106,7 +106,7 @@ export const googleDocsCreateDocumentAction = defineAction({
         const errorText = await createResponse.text();
         return {
           success: false,
-          error: `Google Docs API error: ${createResponse.status} - ${errorText}`,
+          error: `Google Docs API error (${createResponse.status}): ${errorText}`,
         };
       }
 

@@ -2,7 +2,7 @@
  * postgres.execute_query — Execute a raw SQL query
  *
  * Runs an arbitrary SQL statement against a PostgreSQL database and
- * returns the resulting rows. Supports Nunjucks templating in the query.
+ * returns the resulting rows. Supports JavaScript template expressions in the query.
  */
 
 import { defineAction } from '../define-action';
@@ -20,7 +20,12 @@ export const postgresExecuteQueryAction = defineAction({
   id: 'postgres.execute_query',
   name: 'Execute Query',
   description:
-    'Run an arbitrary SQL query (SELECT, INSERT, UPDATE, DELETE, etc.) against a PostgreSQL database and return the results.',
+    'Run an arbitrary SQL query (SELECT, INSERT, UPDATE, DELETE, etc.) against a PostgreSQL database and return the results. ' +
+    'Use when you need to read or modify data in a PostgreSQL database with a custom SQL statement.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"data": [{"id": 1, "name": "Alice"}], "columns": ["id", "name"], "rowCount": 1}\n' +
+    '```',
   provider: POSTGRES_PROVIDER,
   actionCategory: 'read',
   tags: [
@@ -58,8 +63,10 @@ export const postgresExecuteQueryAction = defineAction({
         label: 'SQL Query',
         type: 'code',
         required: true,
-        description: 'SQL statement to execute. Supports Nunjucks templates for dynamic values.',
+        description:
+          'SQL statement to execute. Supports JavaScript template expressions (e.g. {{ variable }}) for dynamic values.',
         defaultValue: 'SELECT * FROM users LIMIT 10',
+        aiProvided: true,
       },
       {
         name: 'timeout',
@@ -68,6 +75,7 @@ export const postgresExecuteQueryAction = defineAction({
         description: 'Query timeout in seconds. Defaults to 30.',
         defaultValue: 30,
         extended: true,
+        aiProvided: true,
       },
     ],
   },

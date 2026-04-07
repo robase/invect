@@ -33,6 +33,7 @@ export const linearListTeamsAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'linear',
+    requiredScopes: ['read'],
     description: 'Linear OAuth2 credential with read scope',
   },
 

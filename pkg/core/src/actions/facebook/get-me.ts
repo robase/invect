@@ -9,7 +9,7 @@ import { defineAction } from '../define-action';
 import { FACEBOOK_PROVIDER } from '../providers';
 import { z } from 'zod/v4';
 
-const FACEBOOK_API = 'https://graph.facebook.com/v19.0';
+const FACEBOOK_API = 'https://graph.facebook.com/v21.0';
 
 const paramsSchema = z.object({
   credentialId: z.string().min(1, 'Facebook credential is required'),
@@ -31,7 +31,8 @@ export const facebookGetMeAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'facebook',
-    description: 'Facebook OAuth2 credential',
+    requiredScopes: ['public_profile', 'email'],
+    description: 'Facebook OAuth2 credential with public_profile and email scopes',
   },
 
   params: {

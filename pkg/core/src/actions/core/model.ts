@@ -37,7 +37,8 @@ const paramsSchema = z.object({
 export const modelAction = defineAction({
   id: 'core.model',
   name: 'AI Model',
-  description: 'Generate text using LLMs (OpenAI, Anthropic)',
+  description:
+    'Send a prompt to an LLM (OpenAI, Anthropic, or OpenRouter) and return the generated text. Supports system prompts, temperature control, structured JSON output via an output schema, and async batch processing. The prompt field supports {{ expression }} templates to inject upstream data.',
   provider: CORE_PROVIDER,
   excludeFromTools: true,
   icon: 'Sparkles',

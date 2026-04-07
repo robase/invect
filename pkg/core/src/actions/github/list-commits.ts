@@ -31,7 +31,7 @@ export const githubListCommitsAction = defineAction({
     'List commits in a GitHub repository (GET /repos/{owner}/{repo}/commits). Use when you need to view commit history, audit changes, or find specific commits.\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '[{"sha": "6dcb09b5...", "message": "Fix bug", "author": "octocat", "date": "2024-01-01T00:00:00Z"}]\n' +
+    '{"commits": [{"sha": "6dcb09b5...", "shortSha": "6dcb09b", "message": "Fix bug", "author": "octocat", "date": "2024-01-01T00:00:00Z"}], "totalReturned": 1}\n' +
     '```',
   provider: GITHUB_PROVIDER,
   actionCategory: 'read',
@@ -40,6 +40,7 @@ export const githubListCommitsAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'github',
+    requiredScopes: ['repo'],
     description: 'GitHub OAuth2 credential with repo scope',
   },
 

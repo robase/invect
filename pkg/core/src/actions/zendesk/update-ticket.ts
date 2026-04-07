@@ -25,10 +25,10 @@ export const zendeskUpdateTicketAction = defineAction({
   id: 'zendesk.update_ticket',
   name: 'Update Ticket',
   description:
-    'Update a Zendesk ticket (PUT /api/v2/tickets/{ticketId}). Use when the user wants to change a ticket\u2019s status, priority, subject, or add a comment.\n\n' +
+    'Update a Zendesk ticket (PUT /api/v2/tickets/{ticketId}). Use when the user wants to change a ticket\u2019s status, priority, subject, or add a comment. Call with `ticketId` and at least one of: `status` (new/open/pending/hold/solved/closed), `priority`, `subject`, or `comment` (with optional `commentPublic` flag for internal notes).\n\n' +
     'Example response:\n' +
     '```json\n' +
-    '{"ticket": {"id": 35436, "subject": "Help!", "status": "solved", "priority": "normal"}}\n' +
+    '{"id": 35436, "subject": "Help!", "status": "solved", "priority": "normal", "updated_at": "2024-01-16T14:30:00Z"}\n' +
     '```',
   provider: ZENDESK_PROVIDER,
   actionCategory: 'write',
@@ -37,6 +37,7 @@ export const zendeskUpdateTicketAction = defineAction({
     required: true,
     type: 'oauth2',
     oauth2Provider: 'zendesk',
+    requiredScopes: ['write'],
     description: 'Zendesk OAuth2 credential with ticket write access',
   },
 

@@ -27,7 +27,7 @@ export const javascriptAction = defineAction({
   id: 'core.javascript',
   name: 'JavaScript',
   description:
-    'Transform and process data using JavaScript. Upstream node outputs are available as local variables.',
+    'Transform and process data using JavaScript in a sandboxed QuickJS WASM environment. Use when you need to filter, map, reshape, or compute values from upstream node outputs. Upstream variables are available by their reference ID; `$input` holds the full context object. Single expressions auto-return; use explicit `return` for multi-line code.',
   provider: CORE_PROVIDER,
   icon: 'Braces',
   tags: [

@@ -18,16 +18,24 @@ const paramsSchema = z.object({
   email: z.string().email('Valid requester email is required'),
   priority: z.number().int().min(1).max(4).optional().default(1),
   status: z.number().int().min(2).max(5).optional().default(2),
+  type: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  ccEmails: z.array(z.string()).optional(),
+  groupId: z.number().int().optional(),
+  responderId: z.number().int().optional(),
 });
 
 export const freshdeskCreateTicketAction = defineAction({
   id: 'freshdesk.create_ticket',
   name: 'Create Ticket',
   description:
-    'Create a new support ticket in Freshdesk (POST /api/v2/tickets). Use when the user wants to open a ticket with subject, description, requester email, priority, and status.\n\n' +
+    'Create a new support ticket in Freshdesk (POST /api/v2/tickets). Use when the user wants to open a ticket. ' +
+    'Required: `subject`, `description` (HTML or plain text), and `email` (requester). ' +
+    'Optional: `priority` (1=Low, 2=Medium, 3=High, 4=Urgent), `status` (2=Open, 3=Pending, 4=Resolved, 5=Closed), ' +
+    "`type`, `tags`, `cc_emails`, `group_id`, `responder_id`. If the email doesn't exist in Freshdesk, a new contact is created.\n\n" +
     'Example response:\n' +
     '```json\n' +
-    '{"id": 1, "subject": "Issue with billing", "status": 2, "priority": 1, "requester_id": 123}\n' +
+    '{"id": 1, "subject": "Issue with billing", "status": 2, "priority": 1, "requester_id": 123, "group_id": null, "type": null, "tags": [], "created_at": "2025-01-15T10:00:00Z"}\n' +
     '```',
   provider: FRESHDESK_PROVIDER,
   actionCategory: 'write',
@@ -117,11 +125,67 @@ export const freshdeskCreateTicketAction = defineAction({
           { label: 'Closed', value: 5 },
         ],
       },
+      {
+        name: 'type',
+        label: 'Type',
+        type: 'text',
+        placeholder: 'Problem',
+        description: 'Ticket type (e.g. Question, Incident, Problem, Feature Request)',
+        aiProvided: true,
+        extended: true,
+      },
+      {
+        name: 'tags',
+        label: 'Tags',
+        type: 'json',
+        placeholder: '["billing", "urgent"]',
+        description: 'Array of tags to associate with the ticket',
+        aiProvided: true,
+        extended: true,
+      },
+      {
+        name: 'ccEmails',
+        label: 'CC Emails',
+        type: 'json',
+        placeholder: '["manager@example.com"]',
+        description: 'Array of email addresses to CC on the ticket',
+        aiProvided: true,
+        extended: true,
+      },
+      {
+        name: 'groupId',
+        label: 'Group ID',
+        type: 'number',
+        description: 'ID of the agent group to assign the ticket to',
+        aiProvided: true,
+        extended: true,
+      },
+      {
+        name: 'responderId',
+        label: 'Responder ID',
+        type: 'number',
+        description: 'ID of the agent to assign the ticket to',
+        aiProvided: true,
+        extended: true,
+      },
     ],
   },
 
   async execute(params, context) {
-    const { credentialId, domain, subject, description, email, priority, status } = params;
+    const {
+      credentialId,
+      domain,
+      subject,
+      description,
+      email,
+      priority,
+      status,
+      type,
+      tags,
+      ccEmails,
+      groupId,
+      responderId,
+    } = params;
 
     let credential = context.credential;
     if (!credential && context.functions?.getCredential) {
@@ -158,7 +222,18 @@ export const freshdeskCreateTicketAction = defineAction({
           Authorization: authHeader,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ subject, description, email, priority, status }),
+        body: JSON.stringify({
+          subject,
+          description,
+          email,
+          priority,
+          status,
+          ...(type && { type }),
+          ...(tags && tags.length > 0 && { tags }),
+          ...(ccEmails && ccEmails.length > 0 && { cc_emails: ccEmails }),
+          ...(groupId && { group_id: groupId }),
+          ...(responderId && { responder_id: responderId }),
+        }),
       });
 
       if (!response.ok) {
