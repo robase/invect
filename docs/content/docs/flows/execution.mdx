@@ -18,6 +18,7 @@ Input ──→ Fetch Data ──→ Transform ──→ Output
 ```
 
 In this flow, execution order is:
+
 1. `Input`
 2. `Fetch Data` (depends on Input)
 3. `Transform` and `Validate` (both depend on Fetch Data)
@@ -69,26 +70,26 @@ Each node's output is stored and made available to downstream nodes. Outputs are
 └─────────────────────────────────────┘
 ```
 
-| Status | Description |
-|--------|-------------|
-| `PENDING` | Flow run created, not yet started |
-| `RUNNING` | Nodes are actively executing |
-| `SUCCESS` | All nodes completed successfully |
-| `FAILED` | A node failed and the flow stopped |
+| Status             | Description                                                         |
+| ------------------ | ------------------------------------------------------------------- |
+| `PENDING`          | Flow run created, not yet started                                   |
+| `RUNNING`          | Nodes are actively executing                                        |
+| `SUCCESS`          | All nodes completed successfully                                    |
+| `FAILED`           | A node failed and the flow stopped                                  |
 | `PAUSED_FOR_BATCH` | A node returned a batch job — flow pauses until the batch completes |
-| `CANCELLED` | Flow run was cancelled |
+| `CANCELLED`        | Flow run was cancelled                                              |
 
 ### Node execution states
 
 Each individual node goes through its own lifecycle:
 
-| Status | Description |
-|--------|-------------|
-| `PENDING` | Waiting to execute |
-| `RUNNING` | Currently executing |
-| `COMPLETED` | Finished successfully |
-| `FAILED` | Execution failed |
-| `SKIPPED` | Skipped (inactive branch of an if/else) |
+| Status      | Description                             |
+| ----------- | --------------------------------------- |
+| `PENDING`   | Waiting to execute                      |
+| `RUNNING`   | Currently executing                     |
+| `COMPLETED` | Finished successfully                   |
+| `FAILED`    | Execution failed                        |
+| `SKIPPED`   | Skipped (inactive branch of an if/else) |
 
 ## Execution tracing
 
@@ -116,12 +117,12 @@ The error is captured in the node execution trace with the full error message an
 
 Configure timeouts in [execution config](/docs/reference/configuration):
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `defaultTimeout` | 60,000ms | Per-node execution timeout |
-| `flowTimeoutMs` | 600,000ms (10 min) | Total flow execution timeout |
-| `heartbeatIntervalMs` | 30,000ms | Heartbeat interval for long-running flows |
-| `staleRunCheckIntervalMs` | 60,000ms | How often to check for stale runs |
+| Option                    | Default            | Description                               |
+| ------------------------- | ------------------ | ----------------------------------------- |
+| `defaultTimeout`          | 60,000ms           | Per-node execution timeout                |
+| `flowTimeoutMs`           | 600,000ms (10 min) | Total flow execution timeout              |
+| `heartbeatIntervalMs`     | 30,000ms           | Heartbeat interval for long-running flows |
+| `staleRunCheckIntervalMs` | 60,000ms           | How often to check for stale runs         |
 
 ## Concurrency
 

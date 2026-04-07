@@ -36,11 +36,11 @@ export const microsoftListCalendarsAction = defineAction({
   id: 'microsoft.list_calendars',
   name: 'List Calendars',
   description:
-    'List all calendars for the authenticated user (GET /me/calendars). Use when you need to discover available calendars before querying events.\n\n'
-    + 'Example response:\n'
-    + '```json\n'
-    + '{"id": "AAMkAGI1A...", "name": "Calendar", "color": "auto", "isDefaultCalendar": true, "canEdit": true}\n'
-    + '```',
+    'List all calendars for the authenticated user (GET /me/calendars). Use when you need to discover available calendars before querying events.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "AAMkAGI1A...", "name": "Calendar", "color": "auto", "isDefaultCalendar": true, "canEdit": true}\n' +
+    '```',
   provider: MICROSOFT_PROVIDER,
   actionCategory: 'read',
 

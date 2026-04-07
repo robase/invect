@@ -16,47 +16,50 @@ Invect is an open-source workflow orchestration library that you mount directly 
   import express from 'express';
   import { createInvectRouter } from '@invect/express';
 
-  const app = express();
-  const router = await createInvectRouter({
-    database: { type: 'sqlite', connectionString: 'file:./dev.db' },
-    encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
-  });
-  app.use('/invect', router);
-  app.listen(3000);
-  ```
-  </Tab>
-  <Tab value="NestJS">
-  ```ts title="app.module.ts"
-  import { Module } from '@nestjs/common';
-  import { InvectModule } from '@invect/nestjs';
+const app = express();
+const router = await createInvectRouter({
+database: { type: 'sqlite', connectionString: 'file:./dev.db' },
+encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+});
+app.use('/invect', router);
+app.listen(3000);
 
-  @Module({
-    imports: [
-      InvectModule.forRoot({
-        database: { type: 'sqlite', connectionString: 'file:./dev.db' },
-        encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
-      }),
-    ],
-  })
-  export class AppModule {}
-  ```
+````
+</Tab>
+<Tab value="NestJS">
+```ts title="app.module.ts"
+import { Module } from '@nestjs/common';
+import { InvectModule } from '@invect/nestjs';
+
+@Module({
+  imports: [
+    InvectModule.forRoot({
+      database: { type: 'sqlite', connectionString: 'file:./dev.db' },
+      encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+    }),
+  ],
+})
+export class AppModule {}
+````
+
   </Tab>
   <Tab value="Next.js">
   ```ts title="app/api/invect/[...invect]/route.ts"
   import { createInvectHandler } from '@invect/nextjs';
 
-  const handler = createInvectHandler({
-    database: { type: 'sqlite', connectionString: 'file:./dev.db' },
-    encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
-  });
+const handler = createInvectHandler({
+database: { type: 'sqlite', connectionString: 'file:./dev.db' },
+encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+});
 
-  export const GET = handler.GET;
-  export const POST = handler.POST;
-  export const PATCH = handler.PATCH;
-  export const PUT = handler.PUT;
-  export const DELETE = handler.DELETE;
-  ```
-  </Tab>
+export const GET = handler.GET;
+export const POST = handler.POST;
+export const PATCH = handler.PATCH;
+export const PUT = handler.PUT;
+export const DELETE = handler.DELETE;
+
+```
+</Tab>
 </Tabs>
 
 That's it. You have a visual flow editor and a full REST API for managing and executing workflows.
@@ -64,69 +67,70 @@ That's it. You have a visual flow editor and a full REST API for managing and ex
 ## Start here
 
 <Cards>
-  <Card
-    title="Introduction"
-    description="What Invect is and what it does."
-    href="/docs/getting-started/introduction"
-  />
-  <Card
-    title="Quickstart"
-    description="Install, run, and build your first flow in under 5 minutes."
-    href="/docs/getting-started/quickstart"
-  />
-  <Card
-    title="Build Your First Flow"
-    description="Create a multi-step flow from scratch using the visual editor."
-    href="/docs/getting-started/first-flow"
-  />
+<Card
+  title="Introduction"
+  description="What Invect is and what it does."
+  href="/docs/getting-started/introduction"
+/>
+<Card
+  title="Quickstart"
+  description="Install, run, and build your first flow in under 5 minutes."
+  href="/docs/getting-started/quickstart"
+/>
+<Card
+  title="Build Your First Flow"
+  description="Create a multi-step flow from scratch using the visual editor."
+  href="/docs/getting-started/first-flow"
+/>
 </Cards>
 
 ## Go deeper
 
 <Cards>
-  <Card
-    title="Flows"
-    description="Creating, triggering, templates, and batch processing."
-    href="/docs/flows/creating-flows"
-  />
-  <Card
-    title="Nodes"
-    description="Core nodes and 190+ integration actions."
-    href="/docs/nodes/overview"
-  />
-  <Card
-    title="Agents"
-    description="AI agents with iterative tool calling."
-    href="/docs/agents/overview"
-  />
-  <Card
-    title="Credentials"
-    description="API keys and OAuth2 for 35+ services."
-    href="/docs/credentials/api-keys"
-  />
-  <Card
-    title="Frontend"
-    description="Embed the visual editor in your React app."
-    href="/docs/frontend/embedding"
-  />
-  <Card
-    title="Plugins"
-    description="Auth, RBAC, webhooks, version control, and custom."
-    href="/docs/plugins/overview"
-  />
-  <Card
-    title="Deployment"
-    description="Production setup, encryption, and Docker."
-    href="/docs/deployment/production"
-  />
-  <Card
-    title="Reference"
-    description="API endpoints, CLI, config, and database schema."
-    href="/docs/reference/configuration"
-  />
-  <Card
-    title="Concepts"
-    description="Architecture, execution model, and security."
-    href="/docs/concepts/architecture"
-  />
+<Card
+  title="Flows"
+  description="Creating, triggering, templates, and batch processing."
+  href="/docs/flows/creating-flows"
+/>
+<Card
+  title="Nodes"
+  description="Core nodes and 190+ integration actions."
+  href="/docs/nodes/overview"
+/>
+<Card
+  title="Agents"
+  description="AI agents with iterative tool calling."
+  href="/docs/agents/overview"
+/>
+<Card
+  title="Credentials"
+  description="API keys and OAuth2 for 35+ services."
+  href="/docs/credentials/api-keys"
+/>
+<Card
+  title="Frontend"
+  description="Embed the visual editor in your React app."
+  href="/docs/frontend/embedding"
+/>
+<Card
+  title="Plugins"
+  description="Auth, RBAC, webhooks, version control, and custom."
+  href="/docs/plugins/overview"
+/>
+<Card
+  title="Deployment"
+  description="Production setup, encryption, and Docker."
+  href="/docs/deployment/production"
+/>
+<Card
+  title="Reference"
+  description="API endpoints, CLI, config, and database schema."
+  href="/docs/reference/configuration"
+/>
+<Card
+  title="Concepts"
+  description="Architecture, execution model, and security."
+  href="/docs/concepts/architecture"
+/>
 </Cards>
+```

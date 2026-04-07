@@ -1,6 +1,6 @@
 ---
 name: create-action
-description: "Scaffold a new Invect provider action from scratch. Use when: creating a new defineAction, adding a new tool/node to a provider, implementing a new API integration action, scaffolding OAuth2 actions, adding actions to existing providers."
+description: 'Scaffold a new Invect provider action from scratch. Use when: creating a new defineAction, adding a new tool/node to a provider, implementing a new API integration action, scaffolding OAuth2 actions, adding actions to existing providers.'
 argument-hint: "Provider name and action (e.g. 'stripe create_charge')"
 ---
 
@@ -29,6 +29,7 @@ Check if the provider already exists in `pkg/core/src/actions/providers.ts`.
 Create `pkg/core/src/actions/<provider>/<action-name>.ts` using the appropriate template from [action templates](./references/action-templates.md).
 
 Choose the right template based on the action type:
+
 - **API Read** (GET/list): For fetching data from external APIs
 - **API Write** (POST/PUT/DELETE): For creating/updating/deleting via external APIs
 - **Core Utility**: For data transformation, logic, or internal operations

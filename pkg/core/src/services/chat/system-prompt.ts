@@ -352,7 +352,10 @@ No flow is currently open. The user is on the home/dashboard page.`;
     for (const field of flow.inputFields) {
       const label = field.label ? ` (${field.label})` : '';
       const desc = field.description ? ` — ${field.description}` : '';
-      const def = field.defaultValue !== undefined ? ` [default: ${JSON.stringify(field.defaultValue)}]` : ' [required]';
+      const def =
+        field.defaultValue !== undefined
+          ? ` [default: ${JSON.stringify(field.defaultValue)}]`
+          : ' [required]';
       parts.push(`- \`${field.name}\`${label}${desc}${def}`);
     }
     parts.push(

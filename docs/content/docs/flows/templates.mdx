@@ -54,10 +54,10 @@ Hello {{ input.name }}, you have {{ orders.length }} orders.
 
 There are two evaluation modes:
 
-| Mode | Pattern | Returns |
-|------|---------|---------|
-| **Pure** | Entire value is a single `{{ expr }}` | Raw JavaScript value (object, array, number, boolean) |
-| **Mixed** | Text with embedded `{{ expr }}` blocks | Always a string, each expression stringified |
+| Mode      | Pattern                                | Returns                                               |
+| --------- | -------------------------------------- | ----------------------------------------------------- |
+| **Pure**  | Entire value is a single `{{ expr }}`  | Raw JavaScript value (object, array, number, boolean) |
+| **Mixed** | Text with embedded `{{ expr }}` blocks | Always a string, each expression stringified          |
 
 **Pure expression** — returns the raw value:
 
@@ -128,5 +128,7 @@ When a node needs a JSON object as input, use a pure expression:
 ```
 
 <Callout type="warn">
-  Template expressions run in a WASM sandbox with no access to `fetch`, `fs`, `process`, or other Node.js APIs. They're for data transformation only — use HTTP Request or custom action nodes for I/O.
+  Template expressions run in a WASM sandbox with no access to `fetch`, `fs`, `process`, or other
+  Node.js APIs. They're for data transformation only — use HTTP Request or custom action nodes for
+  I/O.
 </Callout>

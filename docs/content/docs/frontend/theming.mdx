@@ -31,24 +31,24 @@ All Invect styles are scoped inside a `.invect` CSS class. This means:
 
 Invect uses CSS custom properties with the `imp-` prefix. These control all colors, borders, shadows, and typography:
 
-| Token | Description |
-|-------|-------------|
-| `--imp-background` | Page background |
-| `--imp-foreground` | Default text color |
-| `--imp-card` | Card/panel background |
-| `--imp-card-foreground` | Card text color |
-| `--imp-popover` | Popover/dropdown background |
-| `--imp-primary` | Primary accent color |
-| `--imp-primary-foreground` | Text on primary color |
-| `--imp-secondary` | Secondary background |
-| `--imp-muted` | Muted/disabled background |
-| `--imp-muted-foreground` | Muted text color |
-| `--imp-accent` | Accent highlight |
-| `--imp-destructive` | Error/danger color |
-| `--imp-border` | Border color |
-| `--imp-input` | Input field border |
-| `--imp-ring` | Focus ring color |
-| `--imp-radius` | Border radius |
+| Token                      | Description                 |
+| -------------------------- | --------------------------- |
+| `--imp-background`         | Page background             |
+| `--imp-foreground`         | Default text color          |
+| `--imp-card`               | Card/panel background       |
+| `--imp-card-foreground`    | Card text color             |
+| `--imp-popover`            | Popover/dropdown background |
+| `--imp-primary`            | Primary accent color        |
+| `--imp-primary-foreground` | Text on primary color       |
+| `--imp-secondary`          | Secondary background        |
+| `--imp-muted`              | Muted/disabled background   |
+| `--imp-muted-foreground`   | Muted text color            |
+| `--imp-accent`             | Accent highlight            |
+| `--imp-destructive`        | Error/danger color          |
+| `--imp-border`             | Border color                |
+| `--imp-input`              | Input field border          |
+| `--imp-ring`               | Focus ring color            |
+| `--imp-radius`             | Border radius               |
 
 ## Using tokens in plugin components
 
@@ -59,9 +59,7 @@ function MyPluginComponent() {
   return (
     <div className="bg-imp-background text-imp-foreground border border-imp-border rounded-md p-4">
       <h2 className="text-imp-primary font-semibold">Plugin Panel</h2>
-      <p className="text-imp-muted-foreground">
-        This component uses Invect theme tokens.
-      </p>
+      <p className="text-imp-muted-foreground">This component uses Invect theme tokens.</p>
     </div>
   );
 }

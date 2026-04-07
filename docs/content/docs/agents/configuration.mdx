@@ -5,16 +5,16 @@ description: All configuration options for the Agent node.
 
 ## Node parameters
 
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| `credentialId` | credential | — | OpenAI, Anthropic, or OpenRouter API key |
-| `model` | string | — | Model name (e.g., `gpt-4o-mini`, `claude-sonnet-4-20250514`) |
-| `taskPrompt` | string | — | Main task/goal for the agent (supports [template expressions](/docs/flows/templates)) |
-| `systemPrompt` | string | `""` | Optional system instructions |
-| `enabledTools` | string[] | `[]` | Array of tool IDs to enable |
-| `maxIterations` | number | `10` | Maximum number of prompt→tool→response loops (1–50) |
-| `stopCondition` | string | `"explicit_stop"` | When to stop: `explicit_stop`, `tool_result`, `max_iterations` |
-| `enableParallelTools` | boolean | `false` | Allow the LLM to call multiple tools per response |
+| Param                 | Type       | Default           | Description                                                                           |
+| --------------------- | ---------- | ----------------- | ------------------------------------------------------------------------------------- |
+| `credentialId`        | credential | —                 | OpenAI, Anthropic, or OpenRouter API key                                              |
+| `model`               | string     | —                 | Model name (e.g., `gpt-4o-mini`, `claude-sonnet-4-20250514`)                          |
+| `taskPrompt`          | string     | —                 | Main task/goal for the agent (supports [template expressions](/docs/flows/templates)) |
+| `systemPrompt`        | string     | `""`              | Optional system instructions                                                          |
+| `enabledTools`        | string[]   | `[]`              | Array of tool IDs to enable                                                           |
+| `maxIterations`       | number     | `10`              | Maximum number of prompt→tool→response loops (1–50)                                   |
+| `stopCondition`       | string     | `"explicit_stop"` | When to stop: `explicit_stop`, `tool_result`, `max_iterations`                        |
+| `enableParallelTools` | boolean    | `false`           | Allow the LLM to call multiple tools per response                                     |
 
 ## Provider-specific behavior
 

@@ -48,20 +48,20 @@ All business logic lives in `@invect/core`. Framework packages are thin adapters
 
 Services handle all business logic. They're created by the `ServiceFactory` during initialization and injected into the `Invect` class.
 
-| Service | Responsibility |
-|---------|---------------|
-| `FlowOrchestrationService` | Orchestrates complete flow execution |
-| `FlowRunCoordinator` | Coordinates full flow run lifecycle |
+| Service                    | Responsibility                                          |
+| -------------------------- | ------------------------------------------------------- |
+| `FlowOrchestrationService` | Orchestrates complete flow execution                    |
+| `FlowRunCoordinator`       | Coordinates full flow run lifecycle                     |
 | `NodeExecutionCoordinator` | Handles individual node execution + template resolution |
-| `FlowsService` | Flow CRUD operations |
-| `FlowVersionsService` | Flow version management |
-| `FlowRunsService` | Flow execution records |
-| `NodeExecutionService` | Node-level execution traces |
-| `BatchJobsService` | Batch processing integration |
-| `CredentialsService` | Secure credential storage + OAuth2 refresh |
-| `TemplateService` | Template rendering via QuickJS WASM sandbox |
-| `GraphService` | Topological sorting, dependency analysis |
-| `ReactFlowRendererService` | Flow visualization data for frontend |
+| `FlowsService`             | Flow CRUD operations                                    |
+| `FlowVersionsService`      | Flow version management                                 |
+| `FlowRunsService`          | Flow execution records                                  |
+| `NodeExecutionService`     | Node-level execution traces                             |
+| `BatchJobsService`         | Batch processing integration                            |
+| `CredentialsService`       | Secure credential storage + OAuth2 refresh              |
+| `TemplateService`          | Template rendering via QuickJS WASM sandbox             |
+| `GraphService`             | Topological sorting, dependency analysis                |
+| `ReactFlowRendererService` | Flow visualization data for frontend                    |
 
 **Services never bypass each other.** Controllers/routes delegate to the `Invect` class, which delegates to services, which delegate to models for database access.
 
@@ -69,17 +69,20 @@ Services handle all business logic. They're created by the `ServiceFactory` duri
 
 Invect uses **Drizzle ORM** for database access, supporting three dialects:
 
-| Dialect | Driver Options |
-|---------|---------------|
-| SQLite | `better-sqlite3`, `libsql` |
+| Dialect    | Driver Options                                    |
+| ---------- | ------------------------------------------------- |
+| SQLite     | `better-sqlite3`, `libsql`                        |
 | PostgreSQL | `postgres` (postgres.js), `pg`, `neon-serverless` |
-| MySQL | `mysql2` |
+| MySQL      | `mysql2`                                          |
 
 The database layer is abstracted through **Models** — each model handles CRUD for a specific table:
 
 ```ts
 class FlowsModel {
-  constructor(private db: DatabaseConnection, private dbType: DatabaseType) {}
+  constructor(
+    private db: DatabaseConnection,
+    private dbType: DatabaseType,
+  ) {}
 
   async create(data: NewFlow): Promise<Flow> {
     return this.db.insert(flows).values(data).returning();

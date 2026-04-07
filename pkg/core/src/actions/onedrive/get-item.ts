@@ -20,11 +20,11 @@ export const onedriveGetItemAction = defineAction({
   id: 'onedrive.get_item',
   name: 'Get Item',
   description:
-    'Get metadata for a file or folder in OneDrive by its item ID (GET /me/drive/items/{item-id}). Use when you need file size, modification date, download URL, or other properties.\n\n'
-    + 'Example response:\n'
-    + '```json\n'
-    + '{"id": "01NKDM7HM...", "name": "report.docx", "size": 157286400, "createdDateTime": "2025-01-10T08:00:00Z", "webUrl": "https://onedrive.live.com/...", "file": {"mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}}\n'
-    + '```',
+    'Get metadata for a file or folder in OneDrive by its item ID (GET /me/drive/items/{item-id}). Use when you need file size, modification date, download URL, or other properties.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "01NKDM7HM...", "name": "report.docx", "size": 157286400, "createdDateTime": "2025-01-10T08:00:00Z", "webUrl": "https://onedrive.live.com/...", "file": {"mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}}\n' +
+    '```',
   provider: ONEDRIVE_PROVIDER,
   actionCategory: 'read',
 

@@ -38,6 +38,7 @@ import { Step, Steps } from 'fumadocs-ui/components/steps';
 DATABASE_URL=file:./dev.db
 INVECT_ENCRYPTION_KEY=   # Generate with: npx invect-cli secret
 ```
+
 </Step>
 
 <Step>
@@ -68,6 +69,7 @@ app.listen(3000, () => {
 ```
 
 The router internally creates an `Invect` core instance, initializes the database, registers all built-in actions, and starts batch polling.
+
 </Step>
 
 <Step>
@@ -79,6 +81,7 @@ npx invect-cli migrate
 ```
 
 This creates Drizzle schema files for your database dialect and applies them. See [CLI Reference](/docs/reference/cli) for all options.
+
 </Step>
 
 <Step>
@@ -89,6 +92,7 @@ npx tsx index.ts
 ```
 
 The API is now live at `http://localhost:3000/invect`. Add the [frontend](/docs/frontend) to get the visual flow editor.
+
 </Step>
 
 </Steps>
@@ -142,7 +146,7 @@ const router = await createInvectRouter({
   encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
   plugins: [
     authentication({
-      auth,  // Your Better Auth instance
+      auth, // Your Better Auth instance
     }),
     rbacPlugin(),
   ],

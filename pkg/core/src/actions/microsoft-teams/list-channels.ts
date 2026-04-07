@@ -27,11 +27,11 @@ export const teamsListChannelsAction = defineAction({
   id: 'microsoft_teams.list_channels',
   name: 'List Channels',
   description:
-    'List channels in a Microsoft Team (GET /teams/{team-id}/channels). Use when you need to find a channel ID before sending messages or reading channel history.\n\n'
-    + 'Example response:\n'
-    + '```json\n'
-    + '{"id": "19:561fbdbbfca8...@thread.tacv2", "displayName": "General", "description": "Main channel", "membershipType": "standard"}\n'
-    + '```',
+    'List channels in a Microsoft Team (GET /teams/{team-id}/channels). Use when you need to find a channel ID before sending messages or reading channel history.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "19:561fbdbbfca8...@thread.tacv2", "displayName": "General", "description": "Main channel", "membershipType": "standard"}\n' +
+    '```',
   provider: MICROSOFT_TEAMS_PROVIDER,
   actionCategory: 'read',
 

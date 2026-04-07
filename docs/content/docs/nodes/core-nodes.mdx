@@ -11,8 +11,8 @@ import { Callout } from 'fumadocs-ui/components/callout';
 
 Defines the inputs your flow expects. Add named fields with types and default values. When the flow runs, input values are passed from the trigger or API call.
 
-| Param | Type | Description |
-|-------|------|-------------|
+| Param              | Type  | Description                                                   |
+| ------------------ | ----- | ------------------------------------------------------------- |
 | `inputDefinitions` | array | Named inputs with `name`, `type`, and optional `defaultValue` |
 
 Downstream nodes reference inputs via `{{ input.fieldName }}`.
@@ -31,15 +31,15 @@ The Output node automatically receives all upstream node data. You can use templ
 
 Calls an LLM (OpenAI, Anthropic, or OpenRouter) with a prompt and returns the response.
 
-| Param | Type | Description |
-|-------|------|-------------|
-| `credentialId` | credential | API key for the AI provider |
-| `model` | select | Model name (e.g., `gpt-4o-mini`, `claude-sonnet-4-20250514`) |
-| `prompt` | textarea | The prompt to send (supports template expressions) |
-| `systemPrompt` | textarea | Optional system instructions |
-| `temperature` | number | Sampling temperature (0–2) |
-| `maxTokens` | number | Maximum response tokens |
-| `responseFormat` | select | `text` or `json_object` |
+| Param            | Type       | Description                                                  |
+| ---------------- | ---------- | ------------------------------------------------------------ |
+| `credentialId`   | credential | API key for the AI provider                                  |
+| `model`          | select     | Model name (e.g., `gpt-4o-mini`, `claude-sonnet-4-20250514`) |
+| `prompt`         | textarea   | The prompt to send (supports template expressions)           |
+| `systemPrompt`   | textarea   | Optional system instructions                                 |
+| `temperature`    | number     | Sampling temperature (0–2)                                   |
+| `maxTokens`      | number     | Maximum response tokens                                      |
+| `responseFormat` | select     | `text` or `json_object`                                      |
 
 ### Example
 
@@ -50,7 +50,8 @@ Prompt: Summarize the following article in 3 bullet points:
 ```
 
 <Callout type="info">
-  The Model node makes a single API call. For iterative multi-step reasoning with tool calling, use the [Agent](/docs/agents) node instead.
+  The Model node makes a single API call. For iterative multi-step reasoning with tool calling, use
+  the [Agent](/docs/agents) node instead.
 </Callout>
 
 ## Template String
@@ -59,8 +60,8 @@ Prompt: Summarize the following article in 3 bullet points:
 
 Generates a text string using template expressions. Useful for building prompts, formatting data, or constructing messages.
 
-| Param | Type | Description |
-|-------|------|-------------|
+| Param      | Type     | Description                   |
+| ---------- | -------- | ----------------------------- |
 | `template` | textarea | Text with `{{ }}` expressions |
 
 ### Example
@@ -78,8 +79,8 @@ Report for {{ input.date }}:
 
 Evaluates a JavaScript condition and routes execution to the `true` or `false` branch.
 
-| Param | Type | Description |
-|-------|------|-------------|
+| Param       | Type | Description                               |
+| ----------- | ---- | ----------------------------------------- |
 | `condition` | code | JavaScript expression returning a boolean |
 
 The If/Else node has **two output handles** — connect downstream nodes to either the `true` or `false` output. Nodes on the inactive branch are automatically skipped.
@@ -90,16 +91,32 @@ The node acts as a **passthrough** — its output equals its input data. This me
 
 ```js
 // Check a value
-{{ input.score > 80 }}
+{
+  {
+    input.score > 80;
+  }
+}
 
 // String comparison
-{{ api_result.status === 'success' }}
+{
+  {
+    api_result.status === 'success';
+  }
+}
 
 // Array check
-{{ input.items.length > 0 }}
+{
+  {
+    input.items.length > 0;
+  }
+}
 
 // Complex logic
-{{ input.age >= 18 && input.country === 'US' }}
+{
+  {
+    input.age >= 18 && input.country === 'US';
+  }
+}
 ```
 
 ## JQ
@@ -108,8 +125,8 @@ The node acts as a **passthrough** — its output equals its input data. This me
 
 Transforms JSON data using [JQ](https://jqlang.github.io/jq/) query syntax. Powerful for selecting, filtering, and reshaping data.
 
-| Param | Type | Description |
-|-------|------|-------------|
+| Param   | Type | Description     |
+| ------- | ---- | --------------- |
 | `query` | code | JQ query string |
 
 ### Example queries
@@ -133,13 +150,13 @@ The JQ node operates on the incoming data object — all upstream node outputs a
 
 Makes HTTP requests to any URL. Supports all methods, custom headers, JSON/form bodies, and authentication.
 
-| Param | Type | Description |
-|-------|------|-------------|
-| `url` | text | Request URL (supports template expressions) |
-| `method` | select | `GET`, `POST`, `PUT`, `PATCH`, `DELETE` |
-| `headers` | json | Request headers as key-value pairs |
-| `body` | json/textarea | Request body |
-| `credentialId` | credential | Optional credential for authentication |
+| Param          | Type          | Description                                 |
+| -------------- | ------------- | ------------------------------------------- |
+| `url`          | text          | Request URL (supports template expressions) |
+| `method`       | select        | `GET`, `POST`, `PUT`, `PATCH`, `DELETE`     |
+| `headers`      | json          | Request headers as key-value pairs          |
+| `body`         | json/textarea | Request body                                |
+| `credentialId` | credential    | Optional credential for authentication      |
 
 ### Example
 

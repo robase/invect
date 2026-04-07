@@ -24,7 +24,8 @@ openssl rand -base64 32
 ```
 
 <Callout type="error">
-  **Never commit the encryption key to source control.** Store it securely in your environment variables, secrets manager, or deployment platform.
+  **Never commit the encryption key to source control.** Store it securely in your environment
+  variables, secrets manager, or deployment platform.
 </Callout>
 
 ## How it works
@@ -44,15 +45,15 @@ When a credential is read:
 
 ## What's encrypted
 
-| Data | Encrypted | Notes |
-|------|-----------|-------|
-| API keys | Yes | OpenAI, Anthropic, HTTP API keys |
-| OAuth2 access tokens | Yes | Refreshed tokens are re-encrypted |
-| OAuth2 refresh tokens | Yes | |
-| OAuth2 client secrets | Yes | Required for token refresh |
-| Database connection strings | Yes | PostgreSQL, MySQL credentials |
-| Credential names | No | Stored in plaintext for search/display |
-| Credential types | No | Stored in plaintext |
+| Data                        | Encrypted | Notes                                  |
+| --------------------------- | --------- | -------------------------------------- |
+| API keys                    | Yes       | OpenAI, Anthropic, HTTP API keys       |
+| OAuth2 access tokens        | Yes       | Refreshed tokens are re-encrypted      |
+| OAuth2 refresh tokens       | Yes       |                                        |
+| OAuth2 client secrets       | Yes       | Required for token refresh             |
+| Database connection strings | Yes       | PostgreSQL, MySQL credentials          |
+| Credential names            | No        | Stored in plaintext for search/display |
+| Credential types            | No        | Stored in plaintext                    |
 
 ## Key rotation
 
@@ -63,7 +64,8 @@ To rotate the encryption key:
 3. Update `INVECT_ENCRYPTION_KEY`
 
 <Callout type="info">
-  There is no built-in key rotation command yet. You would need to implement this in a migration script that reads all credentials, decrypts with the old key, and re-encrypts with the new key.
+  There is no built-in key rotation command yet. You would need to implement this in a migration
+  script that reads all credentials, decrypts with the old key, and re-encrypts with the new key.
 </Callout>
 
 ## Missing key behavior

@@ -53,14 +53,15 @@ The `buildIncomingDataObject()` method creates the context for each node:
 ```ts
 // Node Z has upstream nodes "Fetch User" (referenceId: fetch_user) and "Get Config" (referenceId: get_config)
 const incomingData = {
-  fetch_user: { id: 123, name: "Alice" },    // JSON-parsed output
-  get_config: "production"                     // Raw string output
+  fetch_user: { id: 123, name: 'Alice' }, // JSON-parsed output
+  get_config: 'production', // Raw string output
 };
 ```
 
 ### Reference ID derivation
 
 The `referenceId` is the node's label normalized to `snake_case`:
+
 - "Fetch User" → `fetch_user`
 - "API Response" → `api_response`
 
@@ -77,10 +78,10 @@ After building the input data, all template parameters are resolved:
 
 Two evaluation modes:
 
-| Mode | When | Returns |
-|------|------|---------|
+| Mode            | When                         | Returns                              |
+| --------------- | ---------------------------- | ------------------------------------ |
 | Pure expression | Entire param is `{{ expr }}` | Raw JS value (object, array, number) |
-| Mixed template | Text + `{{ expr }}` blocks | String (expressions stringified) |
+| Mixed template  | Text + `{{ expr }}` blocks   | String (expressions stringified)     |
 
 ## Special node handling
 
@@ -120,12 +121,12 @@ During execution, node outputs are stored in memory (per flow run). After the ru
 
 Each node execution record includes:
 
-| Field | Description |
-|-------|-------------|
-| `nodeId` | The node's ID within the flow |
-| `status` | `COMPLETED`, `FAILED`, `SKIPPED` |
-| `input` | The incoming data object |
-| `resolvedParams` | Config params after template resolution |
-| `output` | The node's result |
-| `error` | Error message (if failed) |
-| `startedAt` / `completedAt` | Timing |
+| Field                       | Description                             |
+| --------------------------- | --------------------------------------- |
+| `nodeId`                    | The node's ID within the flow           |
+| `status`                    | `COMPLETED`, `FAILED`, `SKIPPED`        |
+| `input`                     | The incoming data object                |
+| `resolvedParams`            | Config params after template resolution |
+| `output`                    | The node's result                       |
+| `error`                     | Error message (if failed)               |
+| `startedAt` / `completedAt` | Timing                                  |

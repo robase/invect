@@ -10,12 +10,12 @@ and never see `[object Object]` where a full JSON object should appear.
 **Seed data**: The Express-Drizzle example ships several pre-built flows that
 exercise the patterns under test. The most relevant are:
 
-| Seed flow | Why it matters |
-|-----------|---------------|
-| JQ Data Transform | Input → JQ → Template — JSON objects flow between nodes |
-| User Age Check | Input → JQ → If-Else → Template — branching + template references |
+| Seed flow                   | Why it matters                                                              |
+| --------------------------- | --------------------------------------------------------------------------- |
+| JQ Data Transform           | Input → JQ → Template — JSON objects flow between nodes                     |
+| User Age Check              | Input → JQ → If-Else → Template — branching + template references           |
 | E-Commerce Order Processing | Multi-input → JQ merge → nested If-Else → Templates — deeply nested objects |
-| Simple Template Flow | Input → Template — basic Nunjucks `{{ topic }}` |
+| Simple Template Flow        | Input → Template — basic Nunjucks `{{ topic }}`                             |
 
 ---
 

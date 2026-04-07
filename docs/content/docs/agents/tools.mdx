@@ -24,10 +24,10 @@ Every action defined with `defineAction()` is automatically registered as both a
 
 Utility tools that only exist as agent tools (no corresponding flow node):
 
-| Tool ID | Description |
-|---------|-------------|
-| `math_eval` | Evaluate mathematical expressions safely |
-| `json_logic` | Apply JSON Logic rules to data |
+| Tool ID      | Description                              |
+| ------------ | ---------------------------------------- |
+| `math_eval`  | Evaluate mathematical expressions safely |
+| `json_logic` | Apply JSON Logic rules to data           |
 
 ## Enabling tools
 
@@ -39,13 +39,13 @@ Each agent instance can have a different set of enabled tools. This lets you cre
 
 When a tool executes in an agent context, it receives:
 
-| Context | Description |
-|---------|-------------|
-| `credential` | OAuth2 tokens or API keys (auto-refreshed) |
-| `incomingData` | The agent's current execution data |
-| `flowInputs` | Original flow inputs |
-| `logger` | Structured logger |
-| `functions` | Service functions (getCredential, submitPrompt, etc.) |
+| Context        | Description                                           |
+| -------------- | ----------------------------------------------------- |
+| `credential`   | OAuth2 tokens or API keys (auto-refreshed)            |
+| `incomingData` | The agent's current execution data                    |
+| `flowInputs`   | Original flow inputs                                  |
+| `logger`       | Structured logger                                     |
+| `functions`    | Service functions (getCredential, submitPrompt, etc.) |
 
 Tools that require credentials (OAuth2 actions) are automatically provided with the credential configured on the agent node.
 
@@ -53,11 +53,11 @@ Tools that require credentials (OAuth2 actions) are automatically provided with 
 
 Each tool instance on an agent can be customized:
 
-| Setting | Description |
-|---------|-------------|
-| Custom name | Override the tool name shown to the LLM |
+| Setting            | Description                                           |
+| ------------------ | ----------------------------------------------------- |
+| Custom name        | Override the tool name shown to the LLM               |
 | Custom description | Provide more specific instructions for when to use it |
-| Custom parameters | Pre-fill or constrain tool parameters |
+| Custom parameters  | Pre-fill or constrain tool parameters                 |
 
 This is useful for making generic tools more specific. For example, an `http.request` tool could be customized with a fixed base URL and description like "Fetch user data from the internal API".
 
@@ -105,7 +105,9 @@ export const myToolDefinition: AgentToolDefinition = {
   id: 'my_tool',
   name: 'My Tool',
   description: 'Describe what this tool does for the LLM',
-  inputSchema: { /* JSON Schema */ },
+  inputSchema: {
+    /* JSON Schema */
+  },
   category: 'utility',
   enabledByDefault: true,
 };

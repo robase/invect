@@ -20,7 +20,7 @@ import { myNewAction } from './my-new-action';
 // Add to provider actions array
 export const myProviderActions: ActionDefinition[] = [
   myExistingAction,
-  myNewAction,  // ← Add here
+  myNewAction, // ← Add here
 ];
 ```
 

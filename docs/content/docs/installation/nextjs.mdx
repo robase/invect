@@ -13,24 +13,13 @@ import { Callout } from 'fumadocs-ui/components/callout';
 ### Install packages
 
 <Tabs items={['pnpm', 'npm', 'yarn']}>
-  <Tab value="pnpm">
-  ```bash
-  pnpm add @invect/core @invect/nextjs @invect/ui
-  ```
-  </Tab>
-  <Tab value="npm">
-  ```bash
-  npm install @invect/core @invect/nextjs @invect/ui
-  ```
-  </Tab>
-  <Tab value="yarn">
-  ```bash
-  yarn add @invect/core @invect/nextjs @invect/ui
-  ```
-  </Tab>
+  <Tab value="pnpm">```bash pnpm add @invect/core @invect/nextjs @invect/ui ```</Tab>
+  <Tab value="npm">```bash npm install @invect/core @invect/nextjs @invect/ui ```</Tab>
+  <Tab value="yarn">```bash yarn add @invect/core @invect/nextjs @invect/ui ```</Tab>
 </Tabs>
 
 Next.js is self-contained — the API handler and frontend run in the same app.
+
 </Step>
 
 <Step>
@@ -40,6 +29,7 @@ Next.js is self-contained — the API handler and frontend run in the same app.
 DATABASE_URL=file:./dev.db
 INVECT_ENCRYPTION_KEY=   # Generate with: npx invect-cli secret
 ```
+
 </Step>
 
 <Step>
@@ -66,6 +56,7 @@ export const DELETE = handler.DELETE;
 ```
 
 The handler lazily initializes a singleton `Invect` core instance on the first request. During `next build`, initialization is skipped automatically.
+
 </Step>
 
 <Step>
@@ -80,12 +71,7 @@ import { Invect } from '@invect/ui';
 import '@invect/ui/styles';
 
 export default function InvectPage() {
-  return (
-    <Invect
-      apiBaseUrl="/api/invect"
-      basePath="/invect"
-    />
-  );
+  return <Invect apiBaseUrl="/api/invect" basePath="/invect" />;
 }
 ```
 
@@ -101,6 +87,7 @@ export default function InvectPage() {
 npx invect-cli generate
 npx invect-cli migrate
 ```
+
 </Step>
 
 <Step>
@@ -111,6 +98,7 @@ next dev
 ```
 
 Open `http://localhost:3000/invect` — the visual flow editor is ready.
+
 </Step>
 
 </Steps>
@@ -152,7 +140,7 @@ For the full-featured setup with user authentication and access control:
 import { createInvectHandler } from '@invect/nextjs';
 import { authentication } from '@invect/user-auth/backend';
 import { rbacPlugin } from '@invect/rbac/backend';
-import { auth } from '@/lib/auth';  // Your Better Auth instance
+import { auth } from '@/lib/auth'; // Your Better Auth instance
 
 export const handler = createInvectHandler({
   database: {
@@ -160,10 +148,7 @@ export const handler = createInvectHandler({
     connectionString: process.env.DATABASE_URL!,
   },
   encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
-  plugins: [
-    authentication({ auth }),
-    rbacPlugin(),
-  ],
+  plugins: [authentication({ auth }), rbacPlugin()],
 });
 ```
 

@@ -1,5 +1,5 @@
 ---
-description: "Audit, review, and improve Invect provider action/tool definitions. Use when: auditing actions for missing documentation links, verifying API response shapes in descriptions, checking action accuracy against provider API docs, identifying missing common use-case actions for a provider, reviewing defineAction() quality."
+description: 'Audit, review, and improve Invect provider action/tool definitions. Use when: auditing actions for missing documentation links, verifying API response shapes in descriptions, checking action accuracy against provider API docs, identifying missing common use-case actions for a provider, reviewing defineAction() quality.'
 tools: [read, search, web, edit, agent, todo]
 ---
 
@@ -78,16 +78,16 @@ When asked to audit a provider:
 
 ## Auto-Fix Policy
 
-| Change type | Auto-fix? |
-|---|---|
-| Missing/wrong `docsUrl` in providers.ts | ✓ Auto-fix |
-| Generic or inaccurate descriptions | ✓ Auto-fix |
-| Missing response shape examples in descriptions | ✓ Auto-fix |
-| Incorrect param metadata (labels, placeholders, types) | ✓ Auto-fix |
-| Missing OAuth2 scopes | ✓ Auto-fix |
-| New action files for missing use cases | ✗ Ask first |
-| Changes to `execute()` function logic | ✗ Ask first |
-| Removing or deprecating existing actions | ✗ Ask first |
+| Change type                                            | Auto-fix?   |
+| ------------------------------------------------------ | ----------- |
+| Missing/wrong `docsUrl` in providers.ts                | ✓ Auto-fix  |
+| Generic or inaccurate descriptions                     | ✓ Auto-fix  |
+| Missing response shape examples in descriptions        | ✓ Auto-fix  |
+| Incorrect param metadata (labels, placeholders, types) | ✓ Auto-fix  |
+| Missing OAuth2 scopes                                  | ✓ Auto-fix  |
+| New action files for missing use cases                 | ✗ Ask first |
+| Changes to `execute()` function logic                  | ✗ Ask first |
+| Removing or deprecating existing actions               | ✗ Ask first |
 
 ## Output Format
 
@@ -126,12 +126,12 @@ After completing the audit, present a structured report:
 
 When improving an action description, follow this pattern:
 
-```
+````
 Before:
   description: 'Send an email via Gmail'
 
 After:
   description: 'Send an email via Gmail (messages.send). Supports plain text/HTML, CC/BCC, and threading.\n\nExample response:\n```json\n{"id": "msg123", "threadId": "thread456", "labelIds": ["SENT"]}\n```'
-```
+````
 
 Keep descriptions under ~500 chars. The JSON example should show 2-5 representative fields.

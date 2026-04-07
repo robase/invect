@@ -21,11 +21,11 @@ export const microsoftGetCalendarEventAction = defineAction({
   id: 'microsoft.get_calendar_event',
   name: 'Get Calendar Event',
   description:
-    'Get the full details of a specific calendar event by its ID (GET /me/events/{id}). Use when you need attendee lists, meeting body, join URLs, or recurrence details for a specific event.\n\n'
-    + 'Example response:\n'
-    + '```json\n'
-    + '{"id": "AAMkAGI1A...", "subject": "Budget Review", "start": {"dateTime": "2025-01-15T14:00:00", "timeZone": "UTC"}, "organizer": {"emailAddress": {"name": "Alice", "address": "alice@example.com"}}, "attendees": [{"emailAddress": {"name": "Bob"}, "type": "required"}]}\n'
-    + '```',
+    'Get the full details of a specific calendar event by its ID (GET /me/events/{id}). Use when you need attendee lists, meeting body, join URLs, or recurrence details for a specific event.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "AAMkAGI1A...", "subject": "Budget Review", "start": {"dateTime": "2025-01-15T14:00:00", "timeZone": "UTC"}, "organizer": {"emailAddress": {"name": "Alice", "address": "alice@example.com"}}, "attendees": [{"emailAddress": {"name": "Bob"}, "type": "required"}]}\n' +
+    '```',
   provider: MICROSOFT_PROVIDER,
   actionCategory: 'read',
 

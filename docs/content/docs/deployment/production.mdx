@@ -7,20 +7,20 @@ import { Callout } from 'fumadocs-ui/components/callout';
 
 ## Environment variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DATABASE_URL` | Yes | Database connection string |
-| `INVECT_ENCRYPTION_KEY` | Yes | AES-256-GCM key for credential encryption ([details](/docs/deployment/encryption)) |
-| `OPENAI_API_KEY` | No | Default OpenAI API key (if seeding credentials) |
-| `ANTHROPIC_API_KEY` | No | Default Anthropic API key (if seeding credentials) |
+| Variable                | Required | Description                                                                        |
+| ----------------------- | -------- | ---------------------------------------------------------------------------------- |
+| `DATABASE_URL`          | Yes      | Database connection string                                                         |
+| `INVECT_ENCRYPTION_KEY` | Yes      | AES-256-GCM key for credential encryption ([details](/docs/deployment/encryption)) |
+| `OPENAI_API_KEY`        | No       | Default OpenAI API key (if seeding credentials)                                    |
+| `ANTHROPIC_API_KEY`     | No       | Default Anthropic API key (if seeding credentials)                                 |
 
 If using the [Authentication Plugin](/docs/plugins/authentication):
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `INVECT_ADMIN_EMAIL` | Yes | Email for the initial admin user |
-| `INVECT_ADMIN_PASSWORD` | Yes | Password for the initial admin user |
-| `BETTER_AUTH_SECRET` | Yes | Secret key for Better Auth (min 32 chars) |
+| Variable                | Required | Description                               |
+| ----------------------- | -------- | ----------------------------------------- |
+| `INVECT_ADMIN_EMAIL`    | Yes      | Email for the initial admin user          |
+| `INVECT_ADMIN_PASSWORD` | Yes      | Password for the initial admin user       |
+| `BETTER_AUTH_SECRET`    | Yes      | Secret key for Better Auth (min 32 chars) |
 
 ## Database
 
@@ -33,7 +33,8 @@ DATABASE_URL=file:./data/invect.db
 ```
 
 <Callout type="warn">
-  SQLite doesn't support concurrent writes from multiple processes. For multi-instance deployments, use PostgreSQL.
+  SQLite doesn't support concurrent writes from multiple processes. For multi-instance deployments,
+  use PostgreSQL.
 </Callout>
 
 ### PostgreSQL
@@ -86,7 +87,7 @@ services:
   app:
     build: .
     ports:
-      - "3000:3000"
+      - '3000:3000'
     environment:
       DATABASE_URL: postgresql://invect:invect@db:5432/invect
       INVECT_ENCRYPTION_KEY: ${INVECT_ENCRYPTION_KEY}

@@ -11,8 +11,8 @@ Triggers define how a flow starts. Invect includes three built-in trigger types,
 
 The default trigger type. Flows with a manual trigger are started from the UI "Run" button, the REST API, or programmatically.
 
-| Param | Description |
-|-------|-------------|
+| Param              | Description                                |
+| ------------------ | ------------------------------------------ |
 | `inputDefinitions` | Named inputs with types and default values |
 
 Downstream nodes access trigger outputs via `{{ manual_trigger.variableName }}`.
@@ -38,26 +38,27 @@ const result = await core.startFlowRun(flowId, {
 
 Schedule flows to run on a recurring basis using cron expressions.
 
-| Param | Description |
-|-------|-------------|
-| `expression` | Cron expression (e.g., `0 9 * * MON-FRI` for weekdays at 9am) |
-| `timezone` | IANA timezone (e.g., `America/New_York`) |
-| `staticInputs` | Fixed input values passed to the flow on each run |
+| Param          | Description                                                   |
+| -------------- | ------------------------------------------------------------- |
+| `expression`   | Cron expression (e.g., `0 9 * * MON-FRI` for weekdays at 9am) |
+| `timezone`     | IANA timezone (e.g., `America/New_York`)                      |
+| `staticInputs` | Fixed input values passed to the flow on each run             |
 
 Downstream nodes access the scheduled time via `{{ cron_trigger.scheduledTime }}`.
 
 ### Common cron expressions
 
-| Expression | Schedule |
-|------------|----------|
-| `* * * * *` | Every minute |
-| `0 * * * *` | Every hour |
-| `0 9 * * *` | Daily at 9:00 AM |
-| `0 9 * * MON-FRI` | Weekdays at 9:00 AM |
-| `0 0 1 * *` | First day of each month |
+| Expression        | Schedule                |
+| ----------------- | ----------------------- |
+| `* * * * *`       | Every minute            |
+| `0 * * * *`       | Every hour              |
+| `0 9 * * *`       | Daily at 9:00 AM        |
+| `0 9 * * MON-FRI` | Weekdays at 9:00 AM     |
+| `0 0 1 * *`       | First day of each month |
 
 <Callout type="info">
-  Cron scheduling is enabled by default. Disable it globally by setting `triggers.cronEnabled: false` in your [config](/docs/reference/configuration).
+  Cron scheduling is enabled by default. Disable it globally by setting `triggers.cronEnabled:
+  false` in your [config](/docs/reference/configuration).
 </Callout>
 
 ## Webhook trigger
@@ -72,9 +73,7 @@ const config = {
   triggers: {
     webhookBaseUrl: 'https://your-app.com/invect',
   },
-  plugins: [
-    webhooksPlugin(),
-  ],
+  plugins: [webhooksPlugin()],
 };
 ```
 
@@ -92,11 +91,11 @@ See [Webhooks Plugin](/docs/plugins/webhooks) for setup details.
 
 The **Input** node (`core.input`) and **Manual Trigger** node (`trigger.manual`) serve similar purposes — they define flow inputs. The key differences:
 
-| | Input Node | Manual Trigger |
-|--|-----------|----------------|
-| Purpose | Define flow input schema with types and defaults | Entry point that initiates execution |
-| Can be mid-flow | Yes | No (always first) |
-| UI behavior | Shows input form when running | Shows input form when running |
-| Reference ID | `input` | `manual_trigger` |
+|                 | Input Node                                       | Manual Trigger                       |
+| --------------- | ------------------------------------------------ | ------------------------------------ |
+| Purpose         | Define flow input schema with types and defaults | Entry point that initiates execution |
+| Can be mid-flow | Yes                                              | No (always first)                    |
+| UI behavior     | Shows input form when running                    | Shows input form when running        |
+| Reference ID    | `input`                                          | `manual_trigger`                     |
 
 For most flows, you'll use either one — they're largely interchangeable for simple use cases. Input nodes are more flexible because they can appear anywhere in the graph.

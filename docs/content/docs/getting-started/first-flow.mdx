@@ -24,6 +24,7 @@ Input → Model → Output
 Open the Invect dashboard and click **New Flow**. Give it a name like "Topic Summarizer".
 
 You'll be taken to the visual flow editor — a blank canvas where you'll add nodes.
+
 </Step>
 
 <Step>
@@ -33,13 +34,14 @@ Click the **+** button in the node palette (left sidebar) and select **Input** u
 
 Click the node to open its config panel. Add one input field:
 
-| Field | Value |
-|-------|-------|
-| Name | `topic` |
-| Type | `string` |
+| Field   | Value               |
+| ------- | ------------------- |
+| Name    | `topic`             |
+| Type    | `string`            |
 | Default | `Quantum computing` |
 
 The Input node defines the data your flow expects when triggered. Downstream nodes access these values via template expressions like `{{ input.topic }}`.
+
 </Step>
 
 <Step>
@@ -49,13 +51,14 @@ Add a **Model** node from the palette. Connect the Input node's output handle to
 
 Open the Model node config and set:
 
-| Field | Value |
-|-------|-------|
+| Field      | Value                                                                                                     |
+| ---------- | --------------------------------------------------------------------------------------------------------- |
 | Credential | Select an OpenAI or Anthropic API key (create one in [Credentials](/docs/credentials/api-keys) if needed) |
-| Model | `gpt-4o-mini` or `claude-sonnet-4-20250514` |
-| Prompt | `Summarize the following topic in 3 sentences: {{ input.topic }}` |
+| Model      | `gpt-4o-mini` or `claude-sonnet-4-20250514`                                                               |
+| Prompt     | `Summarize the following topic in 3 sentences: {{ input.topic }}`                                         |
 
 The `{{ input.topic }}` expression is resolved at runtime using the Input node's output. Template expressions support full JavaScript — see [Templates](/docs/flows/templates).
+
 </Step>
 
 <Step>
@@ -64,6 +67,7 @@ The `{{ input.topic }}` expression is resolved at runtime using the Input node's
 Add an **Output** node and connect the Model node to it.
 
 The Output node captures the final result of your flow. It automatically receives the upstream node's data.
+
 </Step>
 
 <Step>
@@ -76,6 +80,7 @@ Click the **Run** button in the top-right corner. The flow executes each node in
 3. **Output** — captures the final result
 
 You can see the execution trace for each node by clicking on it after the run completes. Each node shows its input data, resolved parameters, and output.
+
 </Step>
 
 </Steps>
@@ -101,6 +106,7 @@ Invect uses topological sorting to determine node execution order. Nodes run in 
 ### Node data flow
 
 Each node's output is available to downstream nodes. When building the input data for a node, Invect creates an object where:
+
 - **Keys** are the upstream node's `referenceId` (snake_case label)
 - **Values** are the upstream node's output
 

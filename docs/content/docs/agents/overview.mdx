@@ -25,6 +25,7 @@ The **Agent** node runs an iterative AI loop: send a prompt to an LLM, the model
 ```
 
 At each iteration, the LLM can:
+
 - **Call one or more tools** — Invect executes them and feeds results back
 - **Return a text response** — The agent loop ends
 - **Call the stop tool** — Explicitly signals completion (when using `explicit_stop`)
@@ -33,16 +34,17 @@ At each iteration, the LLM can:
 
 Add an Agent node to your flow, configure it with:
 
-| Field | Value |
-|-------|-------|
-| Credential | An OpenAI or Anthropic API key |
-| Model | `gpt-4o` or `claude-sonnet-4-20250514` |
-| Task Prompt | `Research the company {{ input.company }} and create a summary` |
-| Tools | Enable `http.request`, `core.jq` |
-| Max Iterations | `10` |
-| Stop Condition | `explicit_stop` |
+| Field          | Value                                                           |
+| -------------- | --------------------------------------------------------------- |
+| Credential     | An OpenAI or Anthropic API key                                  |
+| Model          | `gpt-4o` or `claude-sonnet-4-20250514`                          |
+| Task Prompt    | `Research the company {{ input.company }} and create a summary` |
+| Tools          | Enable `http.request`, `core.jq`                                |
+| Max Iterations | `10`                                                            |
+| Stop Condition | `explicit_stop`                                                 |
 
 The agent will:
+
 1. Plan how to research the company
 2. Use HTTP Request to fetch data from APIs
 3. Use JQ to parse and extract relevant info
@@ -53,21 +55,21 @@ The agent will:
 
 Agents support three providers:
 
-| Provider | Models |
-|----------|--------|
-| OpenAI | `gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo`, `o1`, `o3-mini` |
-| Anthropic | `claude-sonnet-4-20250514`, `claude-sonnet-4-20250514`, `claude-3-haiku` |
-| OpenRouter | Routes to multiple providers (DeepSeek, Llama, Mistral, etc.) |
+| Provider   | Models                                                                   |
+| ---------- | ------------------------------------------------------------------------ |
+| OpenAI     | `gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo`, `o1`, `o3-mini`                  |
+| Anthropic  | `claude-sonnet-4-20250514`, `claude-sonnet-4-20250514`, `claude-3-haiku` |
+| OpenRouter | Routes to multiple providers (DeepSeek, Llama, Mistral, etc.)            |
 
 Each provider's tool calling format is handled automatically by the adapter layer.
 
 ## Stop conditions
 
-| Condition | Behavior |
-|-----------|----------|
-| `explicit_stop` | Agent must call the stop tool to end. Best for complex tasks where you want the agent to decide when it's done. |
-| `tool_result` | Agent stops after executing the first tool. Good for simple lookup-and-return patterns. |
-| `max_iterations` | Agent runs until hitting the iteration limit. Fallback — always active regardless of selected condition. |
+| Condition        | Behavior                                                                                                        |
+| ---------------- | --------------------------------------------------------------------------------------------------------------- |
+| `explicit_stop`  | Agent must call the stop tool to end. Best for complex tasks where you want the agent to decide when it's done. |
+| `tool_result`    | Agent stops after executing the first tool. Good for simple lookup-and-return patterns.                         |
+| `max_iterations` | Agent runs until hitting the iteration limit. Fallback — always active regardless of selected condition.        |
 
 ## Template expressions in prompts
 

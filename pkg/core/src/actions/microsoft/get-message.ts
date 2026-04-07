@@ -63,11 +63,11 @@ export const microsoftGetMessageAction = defineAction({
   id: 'microsoft.get_message',
   name: 'Get Email',
   description:
-    'Get the full content of a single email by its message ID (GET /me/messages/{id}). Use when you need to read the full body, headers, or attachments of a specific email.\n\n'
-    + 'Example response:\n'
-    + '```json\n'
-    + '{"id": "AAMkAGI1A...", "subject": "Re: Project Update", "body": {"contentType": "html", "content": "<html>...</html>"}, "from": {"emailAddress": {"name": "Jane", "address": "jane@example.com"}}, "hasAttachments": true}\n'
-    + '```',
+    'Get the full content of a single email by its message ID (GET /me/messages/{id}). Use when you need to read the full body, headers, or attachments of a specific email.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "AAMkAGI1A...", "subject": "Re: Project Update", "body": {"contentType": "html", "content": "<html>...</html>"}, "from": {"emailAddress": {"name": "Jane", "address": "jane@example.com"}}, "hasAttachments": true}\n' +
+    '```',
   provider: MICROSOFT_PROVIDER,
   actionCategory: 'read',
 

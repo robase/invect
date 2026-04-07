@@ -28,16 +28,16 @@ When a node executes, Invect:
 
 Built-in nodes for flow control, data transformation, and AI:
 
-| Node | Action ID | Description |
-|------|-----------|-------------|
-| Input | `core.input` | Define flow inputs with types and defaults |
-| Output | `core.output` | Capture the final result of a flow |
-| Model | `core.model` | Call OpenAI, Anthropic, or OpenRouter models |
-| Template String | `core.template_string` | Generate text with template expressions |
-| If/Else | `core.if_else` | Branch based on a JavaScript condition |
-| JQ | `core.jq` | Transform JSON with JQ queries |
-| HTTP Request | `http.request` | Make HTTP requests to any URL |
-| Agent | `AGENT` | AI agent with iterative tool calling |
+| Node            | Action ID              | Description                                  |
+| --------------- | ---------------------- | -------------------------------------------- |
+| Input           | `core.input`           | Define flow inputs with types and defaults   |
+| Output          | `core.output`          | Capture the final result of a flow           |
+| Model           | `core.model`           | Call OpenAI, Anthropic, or OpenRouter models |
+| Template String | `core.template_string` | Generate text with template expressions      |
+| If/Else         | `core.if_else`         | Branch based on a JavaScript condition       |
+| JQ              | `core.jq`              | Transform JSON with JQ queries               |
+| HTTP Request    | `http.request`         | Make HTTP requests to any URL                |
+| Agent           | `AGENT`                | AI agent with iterative tool calling         |
 
 See [Core Nodes](/docs/nodes/core-nodes) for detailed configuration of each.
 
@@ -45,23 +45,23 @@ See [Core Nodes](/docs/nodes/core-nodes) for detailed configuration of each.
 
 190+ nodes for third-party services, organized by provider:
 
-| Provider | Example Actions |
-|----------|----------------|
-| Gmail | `gmail.send_message`, `gmail.list_messages`, `gmail.get_message` |
-| Slack | `slack.send_message`, `slack.list_channels` |
-| GitHub | `github.create_issue`, `github.list_repos` |
-| Google Sheets | `google_sheets.get_values`, `google_sheets.append_values` |
-| Google Docs | `google_docs.get_document`, `google_docs.create_document` |
-| Google Drive | `google_drive.list_files`, `google_drive.create_file` |
-| Google Calendar | `google_calendar.list_events`, `google_calendar.create_event` |
-| Linear | `linear.create_issue`, `linear.list_issues` |
-| PostgreSQL | `postgres.execute_query`, `postgres.list_tables` |
-| Microsoft 365 | `microsoft.list_events`, `microsoft.list_messages` |
-| Salesforce | `salesforce.*` |
-| HubSpot | `hubspot.*` |
-| Jira | `jira.*` |
-| Stripe | `stripe.*` |
-| And 20+ more... | |
+| Provider        | Example Actions                                                  |
+| --------------- | ---------------------------------------------------------------- |
+| Gmail           | `gmail.send_message`, `gmail.list_messages`, `gmail.get_message` |
+| Slack           | `slack.send_message`, `slack.list_channels`                      |
+| GitHub          | `github.create_issue`, `github.list_repos`                       |
+| Google Sheets   | `google_sheets.get_values`, `google_sheets.append_values`        |
+| Google Docs     | `google_docs.get_document`, `google_docs.create_document`        |
+| Google Drive    | `google_drive.list_files`, `google_drive.create_file`            |
+| Google Calendar | `google_calendar.list_events`, `google_calendar.create_event`    |
+| Linear          | `linear.create_issue`, `linear.list_issues`                      |
+| PostgreSQL      | `postgres.execute_query`, `postgres.list_tables`                 |
+| Microsoft 365   | `microsoft.list_events`, `microsoft.list_messages`               |
+| Salesforce      | `salesforce.*`                                                   |
+| HubSpot         | `hubspot.*`                                                      |
+| Jira            | `jira.*`                                                         |
+| Stripe          | `stripe.*`                                                       |
+| And 20+ more... |                                                                  |
 
 See [Integrations](/docs/nodes/integrations) for the complete list.
 
@@ -69,10 +69,10 @@ See [Integrations](/docs/nodes/integrations) for the complete list.
 
 Trigger nodes define how a flow starts:
 
-| Node | Action ID | Description |
-|------|-----------|-------------|
+| Node           | Action ID        | Description                   |
+| -------------- | ---------------- | ----------------------------- |
 | Manual Trigger | `trigger.manual` | Started from UI, API, or code |
-| Cron Trigger | `trigger.cron` | Runs on a schedule |
+| Cron Trigger   | `trigger.cron`   | Runs on a schedule            |
 
 See [Triggers](/docs/flows/triggers) for details.
 
@@ -80,16 +80,16 @@ See [Triggers](/docs/flows/triggers) for details.
 
 Every node has a config panel in the visual editor. Fields are defined by the action's `params.fields` array. Common field types:
 
-| Field Type | Description |
-|------------|-------------|
-| `text` | Single-line text input |
-| `textarea` | Multi-line text input |
-| `code` | Code editor (JQ, SQL, JavaScript) |
-| `select` | Dropdown selection |
-| `number` | Numeric input |
-| `boolean` | Toggle switch |
-| `credential` | Credential selector |
-| `json` | JSON editor |
+| Field Type   | Description                       |
+| ------------ | --------------------------------- |
+| `text`       | Single-line text input            |
+| `textarea`   | Multi-line text input             |
+| `code`       | Code editor (JQ, SQL, JavaScript) |
+| `select`     | Dropdown selection                |
+| `number`     | Numeric input                     |
+| `boolean`    | Toggle switch                     |
+| `credential` | Credential selector               |
+| `json`       | JSON editor                       |
 
 All text-based fields support [template expressions](/docs/flows/templates) — use `{{ }}` to reference upstream node outputs.
 

@@ -26,9 +26,7 @@ export const jqAction = defineAction({
     schema: z.object({
       query: z.string(),
     }),
-    fields: [
-      { name: 'query', label: 'JQ Query', type: 'code', required: true },
-    ],
+    fields: [{ name: 'query', label: 'JQ Query', type: 'code', required: true }],
   },
 
   async execute(params, context) {
@@ -40,16 +38,16 @@ export const jqAction = defineAction({
 
 ## Action definition fields
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `id` | Yes | Unique string identifier (e.g., `core.jq`, `gmail.send_message`) |
-| `name` | Yes | Human-readable name for the UI |
-| `description` | Yes | What the action does (shown in UI and to LLMs for tool selection) |
-| `provider` | Yes | Provider grouping (determines palette category) |
-| `params.schema` | Yes | Zod schema for input validation |
-| `params.fields` | Yes | UI field definitions (label, type, required) |
-| `execute` | Yes | Async function that runs the action |
-| `credential` | No | Credential requirements (OAuth2 provider, required flag) |
+| Field           | Required | Description                                                       |
+| --------------- | -------- | ----------------------------------------------------------------- |
+| `id`            | Yes      | Unique string identifier (e.g., `core.jq`, `gmail.send_message`)  |
+| `name`          | Yes      | Human-readable name for the UI                                    |
+| `description`   | Yes      | What the action does (shown in UI and to LLMs for tool selection) |
+| `provider`      | Yes      | Provider grouping (determines palette category)                   |
+| `params.schema` | Yes      | Zod schema for input validation                                   |
+| `params.fields` | Yes      | UI field definitions (label, type, required)                      |
+| `execute`       | Yes      | Async function that runs the action                               |
+| `credential`    | No       | Credential requirements (OAuth2 provider, required flag)          |
 
 ## Execution context
 
@@ -100,6 +98,7 @@ During `Invect.initialize()`, every action is registered in two places:
 2. **AgentToolRegistry** — used by the Agent node to provide tools to LLMs
 
 The conversion from action to agent tool happens automatically via `toAgentToolDefinition()`:
+
 - `id` → tool ID
 - `name` → tool name
 - `description` → tool description (sent to the LLM)
@@ -113,7 +112,7 @@ Actions are grouped by **provider** for UI organization:
 export const GMAIL_PROVIDER: ProviderDef = {
   id: 'gmail',
   name: 'Gmail',
-  icon: Mail,  // Lucide icon
+  icon: Mail, // Lucide icon
 };
 ```
 
@@ -137,14 +136,12 @@ export const weatherAction = defineAction({
     schema: z.object({
       city: z.string(),
     }),
-    fields: [
-      { name: 'city', label: 'City', type: 'text', required: true },
-    ],
+    fields: [{ name: 'city', label: 'City', type: 'text', required: true }],
   },
 
   async execute(params, context) {
     const res = await fetch(
-      `https://api.weather.com/current?city=${encodeURIComponent(params.city)}`
+      `https://api.weather.com/current?city=${encodeURIComponent(params.city)}`,
     );
     const data = await res.json();
     return { success: true, output: data };
@@ -161,5 +158,6 @@ Add the action to the `allBuiltinActions` array in `pkg/core/src/actions/index.t
 The action appears in the node palette and is available as an agent tool — no additional wiring needed.
 
 <Callout type="info">
-  For actions that only make sense as agent tools (not flow nodes), create a [standalone tool](/docs/agents/tools#option-b-standalone-tool-utility-only) instead.
+  For actions that only make sense as agent tools (not flow nodes), create a [standalone
+  tool](/docs/agents/tools#option-b-standalone-tool-utility-only) instead.
 </Callout>

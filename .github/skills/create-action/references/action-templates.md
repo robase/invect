@@ -4,7 +4,7 @@
 
 For actions that fetch data from an external API.
 
-```typescript
+````typescript
 /**
  * {provider}.{action_name} — {Brief description}
  *
@@ -27,11 +27,11 @@ export const myListAction = defineAction({
   id: 'my_provider.list_items',
   name: 'List Items',
   description:
-    'List items from My Provider (items.list). Use when the user wants to browse, search, or retrieve items.\n\n'
-    + 'Example response:\n'
-    + '```json\n'
-    + '{"id": "item_123", "name": "My Item", "status": "active", "createdAt": "2024-01-15T10:00:00Z"}\n'
-    + '```',
+    'List items from My Provider (items.list). Use when the user wants to browse, search, or retrieve items.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "item_123", "name": "My Item", "status": "active", "createdAt": "2024-01-15T10:00:00Z"}\n' +
+    '```',
   provider: MY_PROVIDER,
   actionCategory: 'read',
   tags: ['my_provider', 'list', 'search', 'read', 'items'],
@@ -85,7 +85,8 @@ export const myListAction = defineAction({
     if (!credential?.config?.accessToken) {
       return {
         success: false,
-        error: 'My Provider credential not found or missing access token. Please connect a My Provider account.',
+        error:
+          'My Provider credential not found or missing access token. Please connect a My Provider account.',
       };
     }
 
@@ -107,7 +108,10 @@ export const myListAction = defineAction({
 
       if (!response.ok) {
         const errorBody = await response.text();
-        return { success: false, error: `My Provider API error (${response.status}): ${errorBody}` };
+        return {
+          success: false,
+          error: `My Provider API error (${response.status}): ${errorBody}`,
+        };
       }
 
       const data = await response.json();
@@ -124,7 +128,7 @@ export const myListAction = defineAction({
     }
   },
 });
-```
+````
 
 ---
 
@@ -132,7 +136,7 @@ export const myListAction = defineAction({
 
 For actions that create, update, or delete via an external API.
 
-```typescript
+````typescript
 /**
  * {provider}.{action_name} — {Brief description}
  */
@@ -151,11 +155,11 @@ export const myCreateAction = defineAction({
   id: 'my_provider.create_item',
   name: 'Create Item',
   description:
-    'Create a new item in My Provider (items.create). Use when the user wants to add or create a new item.\n\n'
-    + 'Example response:\n'
-    + '```json\n'
-    + '{"id": "item_456", "name": "New Item", "status": "active", "createdAt": "2024-01-15T10:00:00Z"}\n'
-    + '```',
+    'Create a new item in My Provider (items.create). Use when the user wants to add or create a new item.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "item_456", "name": "New Item", "status": "active", "createdAt": "2024-01-15T10:00:00Z"}\n' +
+    '```',
   provider: MY_PROVIDER,
   actionCategory: 'write',
   tags: ['my_provider', 'create', 'add', 'write', 'item'],
@@ -228,7 +232,10 @@ export const myCreateAction = defineAction({
 
       if (!response.ok) {
         const errorBody = await response.text();
-        return { success: false, error: `My Provider API error (${response.status}): ${errorBody}` };
+        return {
+          success: false,
+          error: `My Provider API error (${response.status}): ${errorBody}`,
+        };
       }
 
       const data = await response.json();
@@ -241,7 +248,7 @@ export const myCreateAction = defineAction({
     }
   },
 });
-```
+````
 
 ---
 
@@ -265,7 +272,8 @@ const paramsSchema = z.object({
 export const myUtilityAction = defineAction({
   id: 'core.my_utility',
   name: 'My Utility',
-  description: 'Transform data using my utility. Upstream node outputs are available via template expressions.',
+  description:
+    'Transform data using my utility. Upstream node outputs are available via template expressions.',
   provider: CORE_PROVIDER,
   tags: ['utility', 'transform', 'data'],
 
@@ -313,13 +321,14 @@ Example response:
 ```
 
 Example:
-```
+
+````
 description:
   'List emails from Gmail inbox (messages.list). Use when checking email, finding messages, or searching the inbox.\n\n'
   + 'Example response:\n'
   + '```json\n'
   + '{"id": "msg_123", "threadId": "thread_456", "subject": "Meeting notes", "from": "alice@example.com", "snippet": "Here are the notes..."}\n'
   + '```'
-```
+````
 
 For core utility actions (no external API), skip the response shape — just describe when to use the action.

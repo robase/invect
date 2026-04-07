@@ -29,11 +29,11 @@ The polling service is managed internally — no additional configuration is req
 
 During batch processing, the flow run has a special status:
 
-| Status | Meaning |
-|--------|---------|
+| Status             | Meaning                                     |
+| ------------------ | ------------------------------------------- |
 | `PAUSED_FOR_BATCH` | Flow is waiting for a batch job to complete |
-| `RUNNING` | Flow resumed after batch completion |
-| `SUCCESS` | All nodes (including post-batch) completed |
+| `RUNNING`          | Flow resumed after batch completion         |
+| `SUCCESS`          | All nodes (including post-batch) completed  |
 
 ## API
 

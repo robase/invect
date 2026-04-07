@@ -20,11 +20,11 @@ export const onedriveDeleteItemAction = defineAction({
   id: 'onedrive.delete_item',
   name: 'Delete Item',
   description:
-    'Delete a file or folder from OneDrive (DELETE /me/drive/items/{item-id}). Moves the item to the recycle bin. Use when you need to remove a file or folder.\n\n'
-    + 'Example response:\n'
-    + '```json\n'
-    + '{"itemId": "01NKDM7HM...", "deleted": true}\n'
-    + '```',
+    'Delete a file or folder from OneDrive (DELETE /me/drive/items/{item-id}). Moves the item to the recycle bin. Use when you need to remove a file or folder.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"itemId": "01NKDM7HM...", "deleted": true}\n' +
+    '```',
   provider: ONEDRIVE_PROVIDER,
   actionCategory: 'delete',
 

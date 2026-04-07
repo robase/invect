@@ -213,7 +213,7 @@ export const runFlowTool: ChatToolDefinition = {
       .default({})
       .describe(
         'Flow input values keyed by field name. ' +
-        'Check the flow context for expected field names (e.g. {"sender_email": "alice@example.com", "subject": "Test"})',
+          'Check the flow context for expected field names (e.g. {"sender_email": "alice@example.com", "subject": "Test"})',
       ),
   }),
   async execute(params: unknown, ctx: ChatToolContext): Promise<ChatToolResult> {
@@ -227,7 +227,7 @@ export const runFlowTool: ChatToolDefinition = {
 
     try {
       // Read trigger inputDefinitions and merge defaults for any missing fields
-      const mergedInputs = { ...(inputs ?? {}) };
+      const mergedInputs = { ...inputs };
       try {
         const version = await invect.versions.get(flowId, 'latest');
         if (version) {
@@ -236,8 +236,7 @@ export const runFlowTool: ChatToolDefinition = {
               ? JSON.parse(version.invectDefinition)
               : version.invectDefinition;
           const triggerNode = (def?.nodes ?? []).find(
-            (n: { type?: string }) =>
-              n.type === 'trigger.manual' || n.type === 'trigger.webhook',
+            (n: { type?: string }) => n.type === 'trigger.manual' || n.type === 'trigger.webhook',
           );
           const inputDefs = (triggerNode?.params as Record<string, unknown> | undefined)
             ?.inputDefinitions as Array<{ name: string; defaultValue?: unknown }> | undefined;

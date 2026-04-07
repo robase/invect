@@ -26,11 +26,11 @@ export const teamsListTeamsAction = defineAction({
   id: 'microsoft_teams.list_teams',
   name: 'List Teams',
   description:
-    'List Microsoft Teams the authenticated user is a member of (GET /me/joinedTeams). Use when you need to discover available teams before listing channels or sending messages.\n\n'
-    + 'Example response:\n'
-    + '```json\n'
-    + '{"id": "172b0cce-e65d-...", "displayName": "Contoso Team", "description": "Engineering team", "isArchived": false}\n'
-    + '```',
+    'List Microsoft Teams the authenticated user is a member of (GET /me/joinedTeams). Use when you need to discover available teams before listing channels or sending messages.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "172b0cce-e65d-...", "displayName": "Contoso Team", "description": "Engineering team", "isArchived": false}\n' +
+    '```',
   provider: MICROSOFT_TEAMS_PROVIDER,
   actionCategory: 'read',
 

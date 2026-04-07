@@ -150,9 +150,7 @@ export function useUpstreamSlots({ nodeId, flowId }: UseUpstreamSlotsOptions) {
     }
 
     // Direct parent node IDs
-    const directParentIds = new Set(
-      edges.filter((e) => e.target === nodeId).map((e) => e.source),
-    );
+    const directParentIds = new Set(edges.filter((e) => e.target === nodeId).map((e) => e.source));
 
     // BFS to find all transitive ancestors
     const allAncestorIds = new Set<string>();
@@ -182,7 +180,11 @@ export function useUpstreamSlots({ nodeId, flowId }: UseUpstreamSlotsOptions) {
       const displayName = data.display_name || ancestorNode.id;
       const key = data.reference_id || generateSlug(displayName);
       const output =
-        data.previewOutput ?? data.executionOutput ?? data.mockOutputData ?? data.exampleOutput ?? null;
+        data.previewOutput ??
+        data.executionOutput ??
+        data.mockOutputData ??
+        data.exampleOutput ??
+        null;
       result[key] = output;
     }
     return result;
