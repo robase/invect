@@ -18,7 +18,11 @@ export const woocommerceListCustomersAction = defineAction({
   id: 'woocommerce.list_customers',
   name: 'List Customers',
   description:
-    'List customers from a WooCommerce store. Returns customer names, emails, and billing/shipping details.',
+    'List customers from a WooCommerce store (GET /wp-json/wc/v3/customers). Use when you need to look up customer accounts, contact details, or billing/shipping info.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '[{"id": 25, "email": "john@example.com", "first_name": "John", "last_name": "Doe", "billing": {"city": "San Francisco", "state": "CA"}, "orders_count": 3}]\n' +
+    '```',
   provider: WOOCOMMERCE_PROVIDER,
   actionCategory: 'read',
   tags: ['woocommerce', 'customers', 'ecommerce', 'list'],
@@ -46,6 +50,8 @@ export const woocommerceListCustomersAction = defineAction({
         type: 'number',
         defaultValue: 10,
         description: 'Maximum number of customers to return (1–100)',
+        extended: true,
+        aiProvided: true,
       },
     ],
   },

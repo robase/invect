@@ -17,7 +17,12 @@ const paramsSchema = z.object({
 export const grafanaListDatasourcesAction = defineAction({
   id: 'grafana.list_datasources',
   name: 'List Datasources',
-  description: 'List all datasources configured in the Grafana instance.',
+  description:
+    'List all datasources in a Grafana instance (GET /api/datasources). Use when the user wants to see configured data connections or find a datasource UID.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"datasources": [{"uid": "H8joYFVGz", "name": "Prometheus", "type": "prometheus", "url": "http://prometheus:9090", "isDefault": true}], "totalCount": 3}\n' +
+    '```',
   provider: GRAFANA_PROVIDER,
   actionCategory: 'read',
 

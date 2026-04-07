@@ -20,7 +20,11 @@ export const stripeGetBalanceAction = defineAction({
   id: 'stripe.get_balance',
   name: 'Get Balance',
   description:
-    'Retrieve the current account balance from Stripe, including available and pending amounts.',
+    'Retrieve the current account balance from Stripe (GET /v1/balance). Use when you need to check available funds or pending amounts across currencies.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"available": [{"amount": 666670, "currency": "usd"}], "pending": [{"amount": 61414, "currency": "usd"}]}\n' +
+    '```',
   provider: STRIPE_PROVIDER,
   actionCategory: 'read',
 

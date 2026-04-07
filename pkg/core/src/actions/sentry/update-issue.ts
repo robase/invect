@@ -29,7 +29,11 @@ export const sentryUpdateIssueAction = defineAction({
   id: 'sentry.update_issue',
   name: 'Update Issue',
   description:
-    'Update a Sentry issue — resolve, unresolve, ignore, assign, bookmark, or change visibility.',
+    'Update a Sentry issue (PUT /organizations/{org}/issues/{issue_id}/). Use when the user wants to resolve, ignore, assign, bookmark, or change visibility of an error.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "123456", "status": "resolved", "assignedTo": {"name": "jane"}, "isBookmarked": false}\n' +
+    '```',
   provider: SENTRY_PROVIDER,
   actionCategory: 'write',
 

@@ -25,7 +25,11 @@ export const githubCreateBranchAction = defineAction({
   id: 'github.create_branch',
   name: 'Create Branch',
   description:
-    'Create a new branch in a GitHub repository. Specify a source branch or SHA to branch from.',
+    'Create a new branch in a GitHub repository (POST /repos/{owner}/{repo}/git/refs). Use when you need to create a feature branch or release branch from a specific point.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"ref": "refs/heads/feature-branch", "sha": "abc123...", "url": "https://api.github.com/repos/octocat/hello-world/git/refs/heads/feature-branch"}\n' +
+    '```',
   provider: GITHUB_PROVIDER,
   actionCategory: 'write',
 

@@ -19,7 +19,11 @@ export const freshdeskListContactsAction = defineAction({
   id: 'freshdesk.list_contacts',
   name: 'List Contacts',
   description:
-    'List contacts from a Freshdesk helpdesk. Returns a paginated list of customer contacts.',
+    'List contacts from a Freshdesk helpdesk (GET /api/v2/contacts). Use when the user wants to retrieve customer contact records from Freshdesk.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '[{"id": 101, "name": "Jane Doe", "email": "jane@example.com", "phone": "+1-555-0100"}]\n' +
+    '```',
   provider: FRESHDESK_PROVIDER,
   actionCategory: 'read',
   tags: ['freshdesk', 'support', 'contacts', 'helpdesk', 'list', 'oauth2'],
@@ -58,6 +62,7 @@ export const freshdeskListContactsAction = defineAction({
         defaultValue: 30,
         description: 'Number of contacts to return per page (1–100)',
         aiProvided: true,
+        extended: true,
       },
     ],
   },

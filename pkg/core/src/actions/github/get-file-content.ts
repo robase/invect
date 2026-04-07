@@ -24,7 +24,11 @@ export const githubGetFileContentAction = defineAction({
   id: 'github.get_file_content',
   name: 'Get File Content',
   description:
-    'Get the content of a file from a GitHub repository. Specify a branch, tag, or commit SHA.',
+    'Get the content of a file from a GitHub repository (GET /repos/{owner}/{repo}/contents/{path}). Use when you need to read source code, configs, or documentation files.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"name": "README.md", "path": "README.md", "content": "# Hello World", "sha": "abc123...", "size": 1024, "encoding": "utf-8"}\n' +
+    '```',
   provider: GITHUB_PROVIDER,
   actionCategory: 'read',
 

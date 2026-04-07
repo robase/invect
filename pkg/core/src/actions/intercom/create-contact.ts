@@ -24,7 +24,11 @@ export const intercomCreateContactAction = defineAction({
   id: 'intercom.create_contact',
   name: 'Create Contact',
   description:
-    'Create a new contact (lead or user) in Intercom with email, name, and optional details.',
+    'Create a new contact (lead or user) in Intercom (POST /contacts). Use when the user wants to add a person to Intercom with email, name, and role.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "abc123", "role": "lead", "email": "jane@example.com", "name": "Jane Doe", "created_at": 1700000000}\n' +
+    '```',
   provider: INTERCOM_PROVIDER,
   actionCategory: 'write',
 

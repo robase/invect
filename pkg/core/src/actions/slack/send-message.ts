@@ -25,7 +25,11 @@ export const slackSendMessageAction = defineAction({
   id: 'slack.send_message',
   name: 'Send Message',
   description:
-    'Send a message to a Slack channel or DM. Supports Markdown formatting and thread replies.',
+    'Send a message to a Slack channel or DM (chat.postMessage). Use when the user wants to post a message, notification, or reply to a Slack channel.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"ok": true, "channel": "C01ABC23DEF", "ts": "1234567890.123456", "message": {"text": "Hello!"}}\n' +
+    '```',
   provider: SLACK_PROVIDER,
   actionCategory: 'write',
 
@@ -80,6 +84,7 @@ export const slackSendMessageAction = defineAction({
         defaultValue: true,
         description: 'Enable or disable link previews',
         extended: true,
+        aiProvided: true,
       },
       {
         name: 'unfurlMedia',
@@ -88,6 +93,7 @@ export const slackSendMessageAction = defineAction({
         defaultValue: true,
         description: 'Enable or disable media previews',
         extended: true,
+        aiProvided: true,
       },
     ],
   },

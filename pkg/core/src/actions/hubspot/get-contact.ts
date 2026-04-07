@@ -21,7 +21,11 @@ export const hubspotGetContactAction = defineAction({
   id: 'hubspot.get_contact',
   name: 'Get Contact',
   description:
-    'Get a single contact by ID from HubSpot CRM. Returns the contact record with selected properties.',
+    'Get a single contact by ID from HubSpot CRM (GET /crm/v3/objects/contacts/{contactId}). Use when the user wants to look up a specific contact by their HubSpot ID.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "501", "properties": {"email": "jane@example.com", "firstname": "Jane"}, "createdAt": "2024-01-01T00:00:00.000Z"}\n' +
+    '```',
   provider: HUBSPOT_PROVIDER,
   actionCategory: 'read',
 
@@ -59,6 +63,7 @@ export const hubspotGetContactAction = defineAction({
         placeholder: 'firstname,lastname,email',
         description: 'Comma-separated list of contact properties to include (optional)',
         aiProvided: true,
+        extended: true,
       },
     ],
   },

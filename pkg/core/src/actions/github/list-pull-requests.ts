@@ -27,7 +27,11 @@ export const githubListPullRequestsAction = defineAction({
   id: 'github.list_pull_requests',
   name: 'List Pull Requests',
   description:
-    'List pull requests in a GitHub repository. Filter by state, head branch, base branch, and sort order.',
+    'List pull requests in a GitHub repository (GET /repos/{owner}/{repo}/pulls). Use when you need to browse, filter, or review open/closed pull requests.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '[{"number": 1347, "title": "Amazing new feature", "state": "open", "user": "octocat", "head": "feature-branch", "base": "main"}]\n' +
+    '```',
   provider: GITHUB_PROVIDER,
   actionCategory: 'read',
 
@@ -124,6 +128,7 @@ export const githubListPullRequestsAction = defineAction({
         ],
         description: 'Sort direction',
         extended: true,
+        aiProvided: true,
       },
       {
         name: 'perPage',

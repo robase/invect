@@ -20,7 +20,11 @@ export const intercomListConversationsAction = defineAction({
   id: 'intercom.list_conversations',
   name: 'List Conversations',
   description:
-    'List conversations in Intercom. Returns conversation IDs, titles, states, and participant info.',
+    'List conversations in Intercom (GET /conversations). Use when the user wants to browse recent conversations, check open threads, or find conversations by state.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"conversations": [{"id": "123", "title": "Help needed", "state": "open", "open": true}], "total_count": 25}\n' +
+    '```',
   provider: INTERCOM_PROVIDER,
   actionCategory: 'read',
 

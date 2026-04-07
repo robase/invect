@@ -35,7 +35,11 @@ export const slackListChannelsAction = defineAction({
   id: 'slack.list_channels',
   name: 'List Channels',
   description:
-    'List channels in a Slack workspace. Returns channel names, IDs, topics, and membership info.',
+    'List channels in a Slack workspace (conversations.list). Use when you need to discover channel IDs, browse available channels, or find a channel to post to.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"channels": [{"id": "C01ABC23DEF", "name": "general", "isPrivate": false, "numMembers": 42, "topic": "Company-wide"}], "count": 1}\n' +
+    '```',
   provider: SLACK_PROVIDER,
   actionCategory: 'read',
 
@@ -77,6 +81,7 @@ export const slackListChannelsAction = defineAction({
         defaultValue: true,
         description: 'Exclude archived channels from the list',
         extended: true,
+        aiProvided: true,
       },
       {
         name: 'limit',

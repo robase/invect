@@ -27,7 +27,11 @@ export const githubListIssuesAction = defineAction({
   id: 'github.list_issues',
   name: 'List Issues',
   description:
-    'List issues in a GitHub repository. Filter by state, labels, assignee, and sort order.',
+    'List issues in a GitHub repository (GET /repos/{owner}/{repo}/issues). Use when you need to browse, filter, or audit open/closed issues.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '[{"number": 1347, "title": "Found a bug", "state": "open", "user": "octocat", "labels": ["bug"], "created_at": "2024-01-01T00:00:00Z"}]\n' +
+    '```',
   provider: GITHUB_PROVIDER,
   actionCategory: 'read',
 
@@ -123,6 +127,7 @@ export const githubListIssuesAction = defineAction({
         ],
         description: 'Sort direction',
         extended: true,
+        aiProvided: true,
       },
       {
         name: 'perPage',

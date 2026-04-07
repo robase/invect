@@ -20,7 +20,11 @@ export const gitlabListProjectsAction = defineAction({
   id: 'gitlab.list_projects',
   name: 'List Projects',
   description:
-    'List GitLab projects the authenticated user has access to. Supports self-hosted instances.',
+    'List GitLab projects the authenticated user has access to (GET /api/v4/projects?membership=true). Use when the user needs to discover available repositories or find a project ID.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"projects": [{"id": 1, "name": "my-app", "fullPath": "group/my-app", "url": "https://gitlab.com/group/my-app", "visibility": "private", "defaultBranch": "main"}], "totalCount": 5}\n' +
+    '```',
   provider: GITLAB_PROVIDER,
   actionCategory: 'read',
 
@@ -50,6 +54,7 @@ export const gitlabListProjectsAction = defineAction({
         defaultValue: 'https://gitlab.com',
         placeholder: 'https://gitlab.com',
         description: 'Base URL of the GitLab instance. Defaults to https://gitlab.com.',
+        extended: true,
         aiProvided: false,
       },
       {

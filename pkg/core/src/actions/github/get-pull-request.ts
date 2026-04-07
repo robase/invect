@@ -23,7 +23,11 @@ export const githubGetPullRequestAction = defineAction({
   id: 'github.get_pull_request',
   name: 'Get Pull Request',
   description:
-    'Get detailed information about a specific GitHub pull request, including merge status, reviewers, and diff statistics.',
+    'Get detailed information about a specific pull request (GET /repos/{owner}/{repo}/pulls/{pull_number}). Use when you need merge status, reviewers, diff stats, or full PR details.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"number": 1347, "title": "Amazing feature", "state": "open", "merged": false, "mergeable": true, "additions": 10, "deletions": 2, "changed_files": 3}\n' +
+    '```',
   provider: GITHUB_PROVIDER,
   actionCategory: 'read',
 

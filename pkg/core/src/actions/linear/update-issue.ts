@@ -29,7 +29,12 @@ const paramsSchema = z.object({
 export const linearUpdateIssueAction = defineAction({
   id: 'linear.update_issue',
   name: 'Update Issue',
-  description: 'Update an existing Linear issue. Only the fields you provide will be changed.',
+  description:
+    "Update an existing Linear issue (issueUpdate mutation). Use when the user wants to modify an issue's title, description, state, priority, or other fields. Only provided fields are changed.\n\n" +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "abc123", "identifier": "ENG-42", "title": "Updated title", "url": "https://linear.app/team/issue/ENG-42"}\n' +
+    '```',
   provider: LINEAR_PROVIDER,
   actionCategory: 'write',
 

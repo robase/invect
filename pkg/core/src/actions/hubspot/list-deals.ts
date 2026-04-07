@@ -21,7 +21,12 @@ const paramsSchema = z.object({
 export const hubspotListDealsAction = defineAction({
   id: 'hubspot.list_deals',
   name: 'List Deals',
-  description: 'List deals from HubSpot CRM. Returns deal records with selected properties.',
+  description:
+    'List deals from HubSpot CRM (GET /crm/v3/objects/deals). Use when the user wants to retrieve a paginated list of deals with selected properties.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"results": [{"id": "101", "properties": {"dealname": "Big deal", "amount": "50000"}}], "paging": {"next": {"after": "102"}}}\n' +
+    '```',
   provider: HUBSPOT_PROVIDER,
   actionCategory: 'read',
 
@@ -50,6 +55,7 @@ export const hubspotListDealsAction = defineAction({
         defaultValue: 10,
         description: 'Maximum number of deals to return (1–100)',
         aiProvided: true,
+        extended: true,
       },
       {
         name: 'properties',
@@ -59,6 +65,7 @@ export const hubspotListDealsAction = defineAction({
         placeholder: 'dealname,amount,dealstage,closedate',
         description: 'Comma-separated list of deal properties to include',
         aiProvided: true,
+        extended: true,
       },
     ],
   },

@@ -19,7 +19,11 @@ export const shopifyGetProductAction = defineAction({
   id: 'shopify.get_product',
   name: 'Get Product',
   description:
-    'Get a single product by ID from a Shopify store. Returns full product details including variants, images, and options.',
+    'Get a single product by ID from a Shopify store (GET /admin/api/.../products/{id}.json). Use when you need full details for a specific product including variants, images, and options.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"product": {"id": 632910392, "title": "IPod Nano", "body_html": "<p>Description</p>", "vendor": "Apple", "status": "active", "variants": [{"id": 808950810, "price": "199.00", "sku": "IPOD2008PINK"}]}}\n' +
+    '```',
   provider: SHOPIFY_PROVIDER,
   actionCategory: 'read',
   tags: ['shopify', 'product', 'ecommerce', 'get', 'oauth2'],
@@ -57,6 +61,7 @@ export const shopifyGetProductAction = defineAction({
         type: 'text',
         required: true,
         description: 'The numeric ID of the product to retrieve',
+        aiProvided: true,
       },
     ],
   },

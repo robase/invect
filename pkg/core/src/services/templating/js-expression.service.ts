@@ -24,6 +24,9 @@ export interface JsExpressionServiceConfig {
 const DEFAULT_MEMORY_LIMIT = 16 * 1024 * 1024; // 16 MB
 const DEFAULT_MAX_STACK_SIZE = 1024 * 1024; // 1 MB
 
+/** Matches a valid JavaScript identifier (used to filter context keys for safe destructuring). */
+const VALID_JS_IDENT = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
+
 export class JsExpressionService {
   private module: QuickJSWASMModule | null = null;
   private runtime: QuickJSRuntime | null = null;
@@ -86,15 +89,17 @@ export class JsExpressionService {
       // Inject context as a JSON-serialized global, then destructure into locals.
       // This avoids per-key handle creation and is faster for large contexts.
       const contextJson = JSON.stringify(context);
-      const contextKeys = Object.keys(context);
+      // Only destructure keys that are valid JS identifiers to prevent code injection.
+      // Non-identifier keys (e.g. "my-key") are still accessible via $input["my-key"].
+      const safeKeys = Object.keys(context).filter((k) => VALID_JS_IDENT.test(k));
 
       // Build the wrapped code:
       // 1. Parse the serialized context into $input
-      // 2. Destructure context keys into local variables
+      // 2. Destructure safe context keys into local variables
       // 3. Execute user code in a function body (with auto-return for one-liners)
       const userBody = needsAutoReturn(expression) ? `return (${expression})` : expression;
-      const destructure =
-        contextKeys.length > 0 ? `const {${contextKeys.join(',')}} = $input;` : '';
+      const destructure = safeKeys.length > 0 ? `const {${safeKeys.join(',')}} = $input;` : '';
+      // eslint-disable-next-line codeql/js-bad-code-sanitization -- User expression is evaluated inside a QuickJS WASM sandbox (not Node.js eval). Context is injected as JSON-parsed data. The sandbox IS the sanitization.
       const wrapped = `(function(){const $input = JSON.parse(${JSON.stringify(contextJson)});${destructure}${userBody}})()`;
 
       const result = vm.evalCode(wrapped);

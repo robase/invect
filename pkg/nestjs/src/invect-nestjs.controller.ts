@@ -819,6 +819,7 @@ export class InvectController {
       fetchOptions.body = typeof reqBody === 'string' ? reqBody : JSON.stringify(reqBody);
     }
 
+    // codeql[js/request-forgery] SSRF mitigated: URL is validated (protocol allowlist), hostname is DNS-resolved and checked against private/internal IP ranges above, and redirects are disabled.
     const response = await fetch(url, fetchOptions);
     const responseText = await response.text();
     let responseBody: unknown;

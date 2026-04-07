@@ -23,7 +23,11 @@ export const grafanaListDashboardsAction = defineAction({
   id: 'grafana.list_dashboards',
   name: 'List Dashboards',
   description:
-    'Search and list Grafana dashboards with optional filters for query, tag, and folder.',
+    'Search and list Grafana dashboards (GET /api/search?type=dash-db). Use when the user wants to find dashboards by name, tag, or folder.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"dashboards": [{"uid": "abc123", "title": "Production Overview", "url": "/d/abc123", "tags": ["prod"], "folderTitle": "Infrastructure"}], "totalCount": 5}\n' +
+    '```',
   provider: GRAFANA_PROVIDER,
   actionCategory: 'read',
 

@@ -18,7 +18,12 @@ const paramsSchema = z.object({
 export const grafanaListAlertRulesAction = defineAction({
   id: 'grafana.list_alert_rules',
   name: 'List Alert Rules',
-  description: 'List all alert rules from the Grafana instance, organized by folder and group.',
+  description:
+    'List all Grafana alert rules (GET /api/v1/provisioning/alert-rules). Use when the user wants to audit alerting configuration, check paused rules, or review alert conditions.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"rules": [{"uid": "abc123", "title": "High CPU", "folderUid": "folder1", "ruleGroup": "infra", "condition": "B", "for": "5m", "isPaused": false}], "totalCount": 12}\n' +
+    '```',
   provider: GRAFANA_PROVIDER,
   actionCategory: 'read',
 

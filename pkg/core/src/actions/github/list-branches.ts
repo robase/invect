@@ -23,7 +23,11 @@ export const githubListBranchesAction = defineAction({
   id: 'github.list_branches',
   name: 'List Branches',
   description:
-    'List branches in a GitHub repository, including protection status and latest commit SHA.',
+    'List branches in a GitHub repository (GET /repos/{owner}/{repo}/branches). Use when you need to discover branch names or check protection status.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '[{"name": "main", "protected": true, "sha": "6dcb09b5..."}, {"name": "feature", "protected": false, "sha": "abc123..."}]\n' +
+    '```',
   provider: GITHUB_PROVIDER,
   actionCategory: 'read',
 

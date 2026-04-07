@@ -28,7 +28,12 @@ const paramsSchema = z.object({
 export const githubCreateReleaseAction = defineAction({
   id: 'github.create_release',
   name: 'Create Release',
-  description: 'Create a new release in a GitHub repository with a tag, title, and release notes.',
+  description:
+    'Create a new release in a GitHub repository (POST /repos/{owner}/{repo}/releases). Use when you need to publish a tagged release with release notes.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": 1, "tag_name": "v1.0.0", "name": "Version 1.0", "html_url": "https://github.com/octocat/hello-world/releases/tag/v1.0.0", "draft": false}\n' +
+    '```',
   provider: GITHUB_PROVIDER,
   actionCategory: 'write',
 

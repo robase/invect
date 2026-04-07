@@ -22,7 +22,12 @@ const paramsSchema = z.object({
 export const hubspotSearchObjectsAction = defineAction({
   id: 'hubspot.search_objects',
   name: 'Search Objects',
-  description: 'Search HubSpot CRM objects (contacts, companies, deals, or tickets) by text query.',
+  description:
+    'Search HubSpot CRM objects by text query (POST /crm/v3/objects/{objectType}/search). Use when the user wants to find contacts, companies, deals, or tickets matching a search term.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"total": 5, "results": [{"id": "501", "properties": {"email": "jane@example.com"}}]}\n' +
+    '```',
   provider: HUBSPOT_PROVIDER,
   actionCategory: 'read',
 
@@ -74,6 +79,7 @@ export const hubspotSearchObjectsAction = defineAction({
         defaultValue: 10,
         description: 'Maximum number of results to return (1–100)',
         aiProvided: true,
+        extended: true,
       },
     ],
   },

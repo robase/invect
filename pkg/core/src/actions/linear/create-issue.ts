@@ -30,7 +30,11 @@ export const linearCreateIssueAction = defineAction({
   id: 'linear.create_issue',
   name: 'Create Issue',
   description:
-    'Create a new issue in a Linear team. Supports title, description, priority, assignee, labels, and due date.',
+    'Create a new issue in a Linear team (issueCreate mutation). Use when the user wants to file a bug, feature request, or task in Linear.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "abc123", "identifier": "ENG-42", "title": "Fix login bug", "url": "https://linear.app/team/issue/ENG-42"}\n' +
+    '```',
   provider: LINEAR_PROVIDER,
   actionCategory: 'write',
 

@@ -22,7 +22,12 @@ const paramsSchema = z.object({
 export const githubAddIssueCommentAction = defineAction({
   id: 'github.add_issue_comment',
   name: 'Add Issue Comment',
-  description: 'Add a comment to a GitHub issue or pull request. Supports Markdown formatting.',
+  description:
+    'Add a comment to a GitHub issue or pull request (POST /repos/{owner}/{repo}/issues/{issue_number}/comments). Use when the user wants to post feedback, updates, or questions on an issue.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": 1, "body": "Great work!", "user": "octocat", "created_at": "2024-01-01T00:00:00Z", "html_url": "https://github.com/octocat/hello-world/issues/1#issuecomment-1"}\n' +
+    '```',
   provider: GITHUB_PROVIDER,
   actionCategory: 'write',
 

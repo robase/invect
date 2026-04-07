@@ -223,6 +223,9 @@ export class NodeExecutionUtils {
     let current = obj;
 
     for (const key of keys) {
+      if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+        throw new Error(`Invalid path segment: '${key}' is not allowed`);
+      }
       if (!(key in current) || typeof current[key] !== 'object') {
         current[key] = {};
       }
@@ -231,6 +234,9 @@ export class NodeExecutionUtils {
 
     if (lastKey === undefined) {
       throw new Error('Invalid path: no last key provided');
+    }
+    if (lastKey === '__proto__' || lastKey === 'constructor' || lastKey === 'prototype') {
+      throw new Error(`Invalid path segment: '${lastKey}' is not allowed`);
     }
     current[lastKey] = value;
   }

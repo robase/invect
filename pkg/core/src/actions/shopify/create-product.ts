@@ -23,7 +23,11 @@ export const shopifyCreateProductAction = defineAction({
   id: 'shopify.create_product',
   name: 'Create Product',
   description:
-    'Create a new product in a Shopify store. Specify title, description, vendor, type, and tags.',
+    'Create a new product in a Shopify store (POST /admin/api/.../products.json). Use when you need to add a new product to the catalog.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"product": {"id": 1072481062, "title": "Burton Custom Freestyle 151", "vendor": "Burton", "product_type": "Snowboard", "status": "draft", "variants": [{"id": 1070325053, "price": "0.00"}]}}\n' +
+    '```',
   provider: SHOPIFY_PROVIDER,
   actionCategory: 'write',
   tags: ['shopify', 'product', 'ecommerce', 'create', 'write', 'oauth2'],
@@ -61,30 +65,39 @@ export const shopifyCreateProductAction = defineAction({
         type: 'text',
         required: true,
         description: 'The product title',
+        aiProvided: true,
       },
       {
         name: 'bodyHtml',
         label: 'Description (HTML)',
         type: 'textarea',
         description: 'Product description in HTML format',
+        extended: true,
+        aiProvided: true,
       },
       {
         name: 'vendor',
         label: 'Vendor',
         type: 'text',
         description: 'Product vendor / brand name',
+        extended: true,
+        aiProvided: true,
       },
       {
         name: 'productType',
         label: 'Product Type',
         type: 'text',
         description: 'Product type (e.g. "Shoes", "T-Shirts")',
+        extended: true,
+        aiProvided: true,
       },
       {
         name: 'tags',
         label: 'Tags',
         type: 'text',
         description: 'Comma-separated list of tags',
+        extended: true,
+        aiProvided: true,
       },
     ],
   },

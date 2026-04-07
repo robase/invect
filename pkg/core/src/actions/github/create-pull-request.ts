@@ -28,7 +28,11 @@ export const githubCreatePullRequestAction = defineAction({
   id: 'github.create_pull_request',
   name: 'Create Pull Request',
   description:
-    'Create a new pull request in a GitHub repository. Specify head and base branches, title, body, and draft status.',
+    'Create a new pull request in a GitHub repository (POST /repos/{owner}/{repo}/pulls). Use when the user wants to propose merging changes from one branch into another.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"number": 1347, "title": "Add new feature", "state": "open", "html_url": "https://github.com/octocat/hello-world/pull/1347", "head": "feature", "base": "main"}\n' +
+    '```',
   provider: GITHUB_PROVIDER,
   actionCategory: 'write',
 
@@ -119,6 +123,7 @@ export const githubCreatePullRequestAction = defineAction({
         defaultValue: true,
         description: 'Allow maintainers to push to the head branch',
         extended: true,
+        aiProvided: true,
       },
     ],
   },

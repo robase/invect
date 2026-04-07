@@ -24,7 +24,11 @@ export const hubspotCreateContactAction = defineAction({
   id: 'hubspot.create_contact',
   name: 'Create Contact',
   description:
-    'Create a new contact in HubSpot CRM with email, name, phone, and company properties.',
+    'Create a new contact in HubSpot CRM (POST /crm/v3/objects/contacts). Use when the user wants to add a person to their HubSpot CRM with email, name, phone, and company.\n\n'
+    + 'Example response:\n'
+    + '```json\n'
+    + '{"id": "501", "properties": {"email": "jane@example.com", "firstname": "Jane"}, "createdAt": "2024-01-01T00:00:00.000Z"}\n'
+    + '```',
   provider: HUBSPOT_PROVIDER,
   actionCategory: 'write',
 
@@ -62,6 +66,7 @@ export const hubspotCreateContactAction = defineAction({
         placeholder: 'Jane',
         description: 'Contact first name',
         aiProvided: true,
+        extended: true,
       },
       {
         name: 'lastname',
@@ -70,27 +75,19 @@ export const hubspotCreateContactAction = defineAction({
         placeholder: 'Doe',
         description: 'Contact last name',
         aiProvided: true,
-      },
-      {
-        name: 'phone',
+        extended: true,
         label: 'Phone',
         type: 'text',
         placeholder: '+1-555-0100',
         description: 'Contact phone number',
         aiProvided: true,
-      },
-      {
-        name: 'company',
+        extended: true,
         label: 'Company',
         type: 'text',
         placeholder: 'Acme Inc.',
         description: 'Contact company name',
         aiProvided: true,
-      },
-    ],
-  },
-
-  tags: ['hubspot', 'crm', 'contacts', 'create', 'oauth2'],
+        extended: true, ['hubspot', 'crm', 'contacts', 'create', 'oauth2'],
 
   async execute(params, context) {
     const { credentialId, email, firstname, lastname, phone, company } = params;

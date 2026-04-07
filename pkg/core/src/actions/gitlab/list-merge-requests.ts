@@ -22,7 +22,11 @@ export const gitlabListMergeRequestsAction = defineAction({
   id: 'gitlab.list_merge_requests',
   name: 'List Merge Requests',
   description:
-    'List merge requests in a GitLab project. Filter by state (opened, closed, merged, all).',
+    'List merge requests in a GitLab project (GET /api/v4/projects/:id/merge_requests). Use when the user wants to review open MRs, check CI status, or audit merged code.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"mergeRequests": [{"iid": 10, "title": "Add feature", "state": "opened", "url": "https://gitlab.com/g/p/-/merge_requests/10", "sourceBranch": "feature/x", "targetBranch": "main"}], "totalCount": 8}\n' +
+    '```',
   provider: GITLAB_PROVIDER,
   actionCategory: 'read',
 
@@ -52,6 +56,7 @@ export const gitlabListMergeRequestsAction = defineAction({
         defaultValue: 'https://gitlab.com',
         placeholder: 'https://gitlab.com',
         description: 'Base URL of the GitLab instance. Defaults to https://gitlab.com.',
+        extended: true,
         aiProvided: false,
       },
       {

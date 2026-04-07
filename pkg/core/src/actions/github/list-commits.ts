@@ -28,7 +28,11 @@ export const githubListCommitsAction = defineAction({
   id: 'github.list_commits',
   name: 'List Commits',
   description:
-    'List commits in a GitHub repository. Filter by branch, file path, author, or date range.',
+    'List commits in a GitHub repository (GET /repos/{owner}/{repo}/commits). Use when you need to view commit history, audit changes, or find specific commits.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '[{"sha": "6dcb09b5...", "message": "Fix bug", "author": "octocat", "date": "2024-01-01T00:00:00Z"}]\n' +
+    '```',
   provider: GITHUB_PROVIDER,
   actionCategory: 'read',
 

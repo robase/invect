@@ -23,7 +23,11 @@ export const segmentIdentifyAction = defineAction({
   id: 'segment.identify',
   name: 'Identify User',
   description:
-    'Identify a user and associate traits such as email, name, and plan with their profile.',
+    'Identify a user and set traits via Segment (POST /v1/identify). Use when the user wants to associate profile attributes like email, name, or plan with a user ID.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"acknowledged": true, "userId": "user-123"}\n' +
+    '```',
   provider: SEGMENT_PROVIDER,
   actionCategory: 'write',
 

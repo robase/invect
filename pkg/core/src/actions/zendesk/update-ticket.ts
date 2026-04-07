@@ -24,7 +24,12 @@ const paramsSchema = z.object({
 export const zendeskUpdateTicketAction = defineAction({
   id: 'zendesk.update_ticket',
   name: 'Update Ticket',
-  description: 'Update a Zendesk ticket — change status, priority, subject, or add a comment.',
+  description:
+    'Update a Zendesk ticket (PUT /api/v2/tickets/{ticketId}). Use when the user wants to change a ticket\u2019s status, priority, subject, or add a comment.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"ticket": {"id": 35436, "subject": "Help!", "status": "solved", "priority": "normal"}}\n' +
+    '```',
   provider: ZENDESK_PROVIDER,
   actionCategory: 'write',
 
@@ -71,6 +76,7 @@ export const zendeskUpdateTicketAction = defineAction({
         placeholder: 'New subject (leave empty to keep current)',
         description: 'New ticket subject. Leave empty to keep current.',
         aiProvided: true,
+        extended: true,
       },
       {
         name: 'status',
@@ -86,6 +92,7 @@ export const zendeskUpdateTicketAction = defineAction({
         ],
         description: 'Set the ticket status.',
         aiProvided: true,
+        extended: true,
       },
       {
         name: 'priority',
@@ -99,6 +106,7 @@ export const zendeskUpdateTicketAction = defineAction({
         ],
         description: 'Set the ticket priority.',
         aiProvided: true,
+        extended: true,
       },
       {
         name: 'comment',
@@ -107,6 +115,7 @@ export const zendeskUpdateTicketAction = defineAction({
         placeholder: 'Add a comment to the ticket...',
         description: 'A comment to add to the ticket. Supports {{ expression }} templating.',
         aiProvided: true,
+        extended: true,
       },
       {
         name: 'commentPublic',

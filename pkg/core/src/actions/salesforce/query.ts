@@ -18,7 +18,11 @@ export const salesforceQueryAction = defineAction({
   id: 'salesforce.query',
   name: 'SOQL Query',
   description:
-    'Execute a SOQL query against Salesforce and return matching records. Supports standard SOQL syntax for querying any SObject.',
+    'Execute a SOQL query against Salesforce (GET /query?q=...). Use when the user wants to search, filter, or retrieve records using Salesforce Object Query Language.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"totalSize": 2, "done": true, "records": [{"Id": "001xx...", "Name": "Acme Corp", "attributes": {"type": "Account"}}]}\n' +
+    '```',
   provider: SALESFORCE_PROVIDER,
   actionCategory: 'read',
 

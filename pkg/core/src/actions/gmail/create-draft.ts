@@ -151,6 +151,7 @@ export const gmailCreateDraftAction = defineAction({
         defaultValue: false,
         description: 'Whether the body is HTML formatted',
         extended: true,
+        aiProvided: true,
       },
       {
         name: 'threadId',

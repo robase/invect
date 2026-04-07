@@ -20,7 +20,11 @@ export const salesforceUpdateRecordAction = defineAction({
   id: 'salesforce.update_record',
   name: 'Update Record',
   description:
-    'Update an existing Salesforce record by object type and ID with the given field values.',
+    'Update an existing Salesforce SObject record (PATCH /sobjects/{objectType}/{recordId}). Use when the user wants to modify fields on an Account, Contact, Lead, or Opportunity. Returns 204 on success.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "001xx000003DGbY", "updated": true}\n' +
+    '```',
   provider: SALESFORCE_PROVIDER,
   actionCategory: 'write',
 

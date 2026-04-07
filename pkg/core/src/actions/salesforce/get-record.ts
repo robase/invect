@@ -19,7 +19,11 @@ export const salesforceGetRecordAction = defineAction({
   id: 'salesforce.get_record',
   name: 'Get Record',
   description:
-    'Retrieve a single Salesforce record by object type (e.g. Account, Contact, Lead) and record ID.',
+    'Retrieve a single Salesforce SObject record by ID (GET /sobjects/{objectType}/{recordId}). Use when the user wants to look up a specific Account, Contact, Lead, or Opportunity by its Salesforce ID.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"Id": "001xx000003DGbY", "Name": "Acme Corp", "Industry": "Technology", "attributes": {"type": "Account"}}\n' +
+    '```',
   provider: SALESFORCE_PROVIDER,
   actionCategory: 'read',
 

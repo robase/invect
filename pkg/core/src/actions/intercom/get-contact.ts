@@ -19,7 +19,12 @@ const paramsSchema = z.object({
 export const intercomGetContactAction = defineAction({
   id: 'intercom.get_contact',
   name: 'Get Contact',
-  description: 'Get a single contact by ID from Intercom. Returns full contact details.',
+  description:
+    'Get a single contact by ID from Intercom (GET /contacts/{contactId}). Use when the user wants to retrieve full details of a specific Intercom contact.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "abc123", "role": "user", "email": "jane@example.com", "name": "Jane Doe", "created_at": 1700000000}\n' +
+    '```',
   provider: INTERCOM_PROVIDER,
   actionCategory: 'read',
 

@@ -21,7 +21,11 @@ export const linearListTeamsAction = defineAction({
   id: 'linear.list_teams',
   name: 'List Teams',
   description:
-    'List all teams in the Linear workspace. Useful for finding team IDs to create or filter issues.',
+    'List all teams in the Linear workspace (teams query). Use when the user needs to discover team IDs, workflow states, labels, or members before creating or filtering issues.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '[{"id": "team1", "name": "Engineering", "key": "ENG", "issueCount": 150, "states": [{"name": "In Progress"}], "members": [{"name": "Alice"}]}]\n' +
+    '```',
   provider: LINEAR_PROVIDER,
   actionCategory: 'read',
 
@@ -50,6 +54,7 @@ export const linearListTeamsAction = defineAction({
         defaultValue: false,
         description: 'Include archived teams in the results.',
         extended: true,
+        aiProvided: true,
       },
     ],
   },

@@ -25,7 +25,11 @@ export const gitlabCreateMergeRequestAction = defineAction({
   id: 'gitlab.create_merge_request',
   name: 'Create Merge Request',
   description:
-    'Create a new merge request in a GitLab project. Specify source and target branches.',
+    'Create a merge request in a GitLab project (POST /api/v4/projects/:id/merge_requests). Use when the user wants to open a merge request for code review.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"mergeRequestId": 1, "mergeRequestIid": 10, "url": "https://gitlab.com/group/project/-/merge_requests/10", "title": "Add feature", "state": "opened", "sourceBranch": "feature/x", "targetBranch": "main"}\n' +
+    '```',
   provider: GITLAB_PROVIDER,
   actionCategory: 'write',
 
@@ -55,6 +59,7 @@ export const gitlabCreateMergeRequestAction = defineAction({
         defaultValue: 'https://gitlab.com',
         placeholder: 'https://gitlab.com',
         description: 'Base URL of the GitLab instance. Defaults to https://gitlab.com.',
+        extended: true,
         aiProvided: false,
       },
       {

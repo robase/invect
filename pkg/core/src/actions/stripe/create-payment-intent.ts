@@ -25,7 +25,11 @@ export const stripeCreatePaymentIntentAction = defineAction({
   id: 'stripe.create_payment_intent',
   name: 'Create Payment Intent',
   description:
-    'Create a Stripe PaymentIntent to collect a payment. Specify the amount in the smallest currency unit (e.g. cents for USD).',
+    'Create a Stripe PaymentIntent to collect a payment (POST /v1/payment_intents). Use when you need to initiate a new payment or checkout session. Amount is in the smallest currency unit (e.g. 2000 = $20.00 USD).\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "pi_abc123", "amount": 2000, "currency": "usd", "status": "requires_payment_method", "client_secret": "pi_abc123_secret_xyz"}\n' +
+    '```',
   provider: STRIPE_PROVIDER,
   actionCategory: 'write',
 

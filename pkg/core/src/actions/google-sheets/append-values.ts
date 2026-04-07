@@ -91,6 +91,7 @@ export const googleSheetsAppendValuesAction = defineAction({
         ],
         description: 'How input data should be interpreted',
         extended: true,
+        aiProvided: true,
       },
       {
         name: 'insertDataOption',
@@ -103,6 +104,7 @@ export const googleSheetsAppendValuesAction = defineAction({
         ],
         description: 'Whether to insert new rows or overwrite existing data',
         extended: true,
+        aiProvided: true,
       },
     ],
   },

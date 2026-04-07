@@ -27,7 +27,11 @@ export const trelloUpdateCardAction = defineAction({
   id: 'trello.update_card',
   name: 'Update Card',
   description:
-    'Update an existing Trello card. Supports changing name, description, due date, archived status, and moving to a different list.',
+    "Update an existing Trello card (PUT /1/cards/{id}). Use when the user wants to modify a card's name, description, due date, or move it to a different list.\n\n" +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "card123", "name": "Updated card", "desc": "New description", "due": "2024-03-01T12:00:00.000Z", "url": "https://trello.com/c/abc123"}\n' +
+    '```',
   provider: TRELLO_PROVIDER,
   actionCategory: 'write',
 

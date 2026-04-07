@@ -22,7 +22,11 @@ export const stripeListCustomersAction = defineAction({
   id: 'stripe.list_customers',
   name: 'List Customers',
   description:
-    'List customers from a Stripe account. Optionally filter by email and control the number of results returned.',
+    'List customers from a Stripe account (GET /v1/customers). Use when you need to retrieve or search customer records.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"data": [{"id": "cus_NffrFeUfNV2Hib", "name": "Jenny Rosen", "email": "jenny@example.com", "created": 1680893993}], "has_more": false}\n' +
+    '```',
   provider: STRIPE_PROVIDER,
   actionCategory: 'read',
 
@@ -59,6 +63,7 @@ export const stripeListCustomersAction = defineAction({
         type: 'text',
         placeholder: 'user@example.com',
         description: 'Filter customers by exact email address',
+        extended: true,
         aiProvided: true,
       },
     ],

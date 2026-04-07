@@ -24,7 +24,11 @@ export const mixpanelTrackEventAction = defineAction({
   id: 'mixpanel.track_event',
   name: 'Track Event',
   description:
-    'Track an analytics event in Mixpanel. Sends the event via the Import API with service-account authentication.',
+    'Track an analytics event in Mixpanel (POST /import). Use when the user wants to record a server-side event like a signup, purchase, or feature interaction. Authenticated via service account.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"code": 200, "status": "OK", "numRecordsImported": 1}\n' +
+    '```',
   provider: MIXPANEL_PROVIDER,
   actionCategory: 'write',
 

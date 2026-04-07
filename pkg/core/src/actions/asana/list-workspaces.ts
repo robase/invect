@@ -21,7 +21,11 @@ export const asanaListWorkspacesAction = defineAction({
   id: 'asana.list_workspaces',
   name: 'List Workspaces',
   description:
-    'List all workspaces accessible by the authenticated Asana user. Returns workspace GIDs and names.',
+    'List all workspaces accessible by the authenticated Asana user (GET /workspaces). Use when the user needs to discover workspace GIDs before listing projects or tasks.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '[{"gid": "12345", "name": "My Company", "resource_type": "workspace"}]\n' +
+    '```',
   provider: ASANA_PROVIDER,
   actionCategory: 'read',
 

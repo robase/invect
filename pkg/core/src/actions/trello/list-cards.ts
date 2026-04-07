@@ -21,7 +21,11 @@ export const trelloListCardsAction = defineAction({
   id: 'trello.list_cards',
   name: 'List Cards',
   description:
-    'List all cards in a Trello list. Returns card names, descriptions, due dates, labels, and URLs.',
+    'List all cards in a Trello list (GET /1/lists/{id}/cards). Use when the user wants to see items in a specific list on a Trello board.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '[{"id": "card123", "name": "Fix bug", "desc": "Details...", "due": "2024-03-01T12:00:00.000Z", "labels": [{"name": "Bug", "color": "red"}], "url": "https://trello.com/c/abc123"}]\n' +
+    '```',
   provider: TRELLO_PROVIDER,
   actionCategory: 'read',
 

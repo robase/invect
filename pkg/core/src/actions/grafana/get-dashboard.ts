@@ -18,7 +18,12 @@ const paramsSchema = z.object({
 export const grafanaGetDashboardAction = defineAction({
   id: 'grafana.get_dashboard',
   name: 'Get Dashboard',
-  description: 'Retrieve a Grafana dashboard by UID, including panels, variables, and metadata.',
+  description:
+    'Retrieve a Grafana dashboard by UID (GET /api/dashboards/uid/{uid}). Use when the user wants to inspect dashboard panels, variables, or metadata.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"uid": "abc123", "title": "Production Overview", "tags": ["prod"], "version": 3, "url": "/d/abc123/production-overview", "panels": [{"id": 1, "type": "timeseries", "title": "CPU Usage"}]}\n' +
+    '```',
   provider: GRAFANA_PROVIDER,
   actionCategory: 'read',
 

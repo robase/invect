@@ -99,6 +99,7 @@ export const googleSheetsGetValuesAction = defineAction({
         ],
         description: 'How values should be rendered',
         extended: true,
+        aiProvided: true,
       },
     ],
   },

@@ -19,7 +19,12 @@ const paramsSchema = z.object({
 export const asanaGetTaskAction = defineAction({
   id: 'asana.get_task',
   name: 'Get Task',
-  description: 'Get the full details of a single Asana task by its GID.',
+  description:
+    'Get the full details of a single Asana task (GET /tasks/{task_gid}). Use when the user wants to view all information about a specific task including notes, subtasks, and custom fields.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"gid": "12345", "name": "Design review", "notes": "Review the mockups", "completed": false, "due_on": "2024-03-01", "assignee": {"name": "Alice"}}\n' +
+    '```',
   provider: ASANA_PROVIDER,
   actionCategory: 'read',
 

@@ -78,6 +78,7 @@ export const googleDriveSearchFilesAction = defineAction({
         defaultValue: false,
         description: 'Include files from shared drives in results',
         extended: true,
+        aiProvided: true,
       },
     ],
   },

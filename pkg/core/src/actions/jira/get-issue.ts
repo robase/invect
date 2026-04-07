@@ -20,7 +20,11 @@ export const jiraGetIssueAction = defineAction({
   id: 'jira.get_issue',
   name: 'Get Issue',
   description:
-    'Get a single Jira issue by its key (e.g. PROJ-123) or numeric ID. Returns the full issue details.',
+    'Get a single Jira issue by key or ID (GET /rest/api/3/issue/{issueIdOrKey}). Use when the user wants to view the full details of a specific Jira issue.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "10002", "key": "ED-1", "fields": {"summary": "Main order flow broken", "status": {"name": "Open"}, "priority": {"name": "High"}, "assignee": {"displayName": "Mia"}}}\n' +
+    '```',
   provider: JIRA_PROVIDER,
   actionCategory: 'read',
 

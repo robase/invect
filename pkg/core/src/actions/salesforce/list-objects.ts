@@ -17,7 +17,11 @@ export const salesforceListObjectsAction = defineAction({
   id: 'salesforce.list_objects',
   name: 'List Objects',
   description:
-    'List all available SObject types in the Salesforce org, including standard and custom objects with metadata.',
+    'List all available SObject types in the Salesforce org (GET /sobjects). Use when the user wants to discover which objects (Account, Contact, Lead, custom objects, etc.) are available in their Salesforce instance.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '[{"name": "Account", "label": "Account", "queryable": true, "createable": true, "urls": {}}]\n' +
+    '```',
   provider: SALESFORCE_PROVIDER,
   actionCategory: 'read',
 

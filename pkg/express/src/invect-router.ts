@@ -1085,6 +1085,7 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
           fetchOptions.body = typeof body === 'string' ? body : JSON.stringify(body);
         }
 
+        // codeql[js/request-forgery] SSRF mitigated: URL is validated (protocol allowlist), hostname is DNS-resolved and checked against private/internal IP ranges above, and redirects are disabled.
         const response = await fetch(url, fetchOptions);
         const responseText = await response.text();
 

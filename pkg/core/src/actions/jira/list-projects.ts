@@ -19,7 +19,11 @@ export const jiraListProjectsAction = defineAction({
   id: 'jira.list_projects',
   name: 'List Projects',
   description:
-    'List Jira projects accessible to the authenticated user. Returns project id, key, and name.',
+    'List Jira projects accessible to the authenticated user (GET /rest/api/3/project/search). Use when the user needs to find project keys or IDs before creating or searching issues.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '[{"id": "10000", "key": "PROJ", "name": "My Project"}]\n' +
+    '```',
   provider: JIRA_PROVIDER,
   actionCategory: 'read',
 

@@ -22,7 +22,12 @@ const paramsSchema = z.object({
 export const gitlabCreateIssueAction = defineAction({
   id: 'gitlab.create_issue',
   name: 'Create Issue',
-  description: 'Create a new issue in a GitLab project. Supports title, description, and labels.',
+  description:
+    'Create a new issue in a GitLab project (POST /api/v4/projects/:id/issues). Use when the user wants to file a bug, task, or feature request.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"issueId": 1, "issueIid": 42, "url": "https://gitlab.com/group/project/-/issues/42", "title": "Bug: broken", "state": "opened", "labels": ["bug"]}\n' +
+    '```',
   provider: GITLAB_PROVIDER,
   actionCategory: 'write',
 
@@ -52,6 +57,7 @@ export const gitlabCreateIssueAction = defineAction({
         defaultValue: 'https://gitlab.com',
         placeholder: 'https://gitlab.com',
         description: 'Base URL of the GitLab instance. Defaults to https://gitlab.com.',
+        extended: true,
         aiProvided: false,
       },
       {

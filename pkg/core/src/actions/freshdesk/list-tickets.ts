@@ -19,7 +19,11 @@ export const freshdeskListTicketsAction = defineAction({
   id: 'freshdesk.list_tickets',
   name: 'List Tickets',
   description:
-    'List tickets from a Freshdesk helpdesk. Returns a paginated list of support tickets.',
+    'List tickets from a Freshdesk helpdesk (GET /api/v2/tickets). Use when the user wants to retrieve a paginated list of support tickets.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '[{"id": 1, "subject": "Issue", "status": 2, "priority": 1, "requester_id": 123}]\n' +
+    '```',
   provider: FRESHDESK_PROVIDER,
   actionCategory: 'read',
   tags: ['freshdesk', 'support', 'tickets', 'helpdesk', 'list', 'oauth2'],
@@ -58,6 +62,7 @@ export const freshdeskListTicketsAction = defineAction({
         defaultValue: 30,
         description: 'Number of tickets to return per page (1–100)',
         aiProvided: true,
+        extended: true,
       },
     ],
   },

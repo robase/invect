@@ -18,7 +18,11 @@ export const woocommerceGetProductAction = defineAction({
   id: 'woocommerce.get_product',
   name: 'Get Product',
   description:
-    'Get a single product by ID from a WooCommerce store. Returns full product details including pricing, stock, and attributes.',
+    'Get a single product by ID from a WooCommerce store (GET /wp-json/wc/v3/products/{id}). Use when you need full details for a specific product including pricing, stock, categories, and attributes.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": 794, "name": "Premium Quality T-Shirt", "type": "simple", "regular_price": "21.99", "stock_quantity": 15, "categories": [{"id": 9, "name": "Clothing"}]}\n' +
+    '```',
   provider: WOOCOMMERCE_PROVIDER,
   actionCategory: 'read',
   tags: ['woocommerce', 'product', 'ecommerce', 'get'],
@@ -46,6 +50,7 @@ export const woocommerceGetProductAction = defineAction({
         type: 'text',
         required: true,
         description: 'The numeric ID of the product to retrieve',
+        aiProvided: true,
       },
     ],
   },

@@ -23,7 +23,11 @@ export const jiraCreateIssueAction = defineAction({
   id: 'jira.create_issue',
   name: 'Create Issue',
   description:
-    'Create a new Jira issue in a project. Supports summary, description (converted to ADF), and issue type.',
+    'Create a new Jira issue (POST /rest/api/3/issue). Use when the user wants to file a bug, task, story, or epic in a Jira project. Description is auto-converted to Atlassian Document Format.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "10000", "key": "ED-24", "self": "https://your-domain.atlassian.net/rest/api/3/issue/10000"}\n' +
+    '```',
   provider: JIRA_PROVIDER,
   actionCategory: 'write',
 

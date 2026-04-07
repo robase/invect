@@ -27,7 +27,11 @@ export const githubCreateIssueAction = defineAction({
   id: 'github.create_issue',
   name: 'Create Issue',
   description:
-    'Create a new issue in a GitHub repository. Supports title, body, labels, assignees, and milestones.',
+    'Create a new issue in a GitHub repository (POST /repos/{owner}/{repo}/issues). Use when the user wants to file a bug report, feature request, or task.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"number": 1347, "title": "Found a bug", "state": "open", "html_url": "https://github.com/octocat/hello-world/issues/1347"}\n' +
+    '```',
   provider: GITHUB_PROVIDER,
   actionCategory: 'write',
 

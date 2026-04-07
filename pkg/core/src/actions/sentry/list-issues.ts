@@ -25,7 +25,11 @@ export const sentryListIssuesAction = defineAction({
   id: 'sentry.list_issues',
   name: 'List Issues',
   description:
-    'List issues for a Sentry organization. Supports structured search queries like "is:unresolved", "assigned:me", "level:error". Default query is "is:unresolved".',
+    'List issues for a Sentry organization (GET /organizations/{org}/issues/). Use when the user wants to see recent errors, filter by status, or triage unresolved issues. Supports structured search queries like "is:unresolved", "assigned:me", "level:error".\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"issues": [{"id": "123", "shortId": "PROJ-1A", "title": "TypeError", "status": "unresolved", "count": "48", "userCount": 12, "firstSeen": "2025-03-01T10:00:00Z"}], "totalCount": 25}\n' +
+    '```',
   provider: SENTRY_PROVIDER,
   actionCategory: 'read',
 
@@ -86,6 +90,7 @@ export const sentryListIssuesAction = defineAction({
         ],
         description: 'Time period for event count statistics.',
         extended: true,
+        aiProvided: true,
       },
       {
         name: 'cursor',

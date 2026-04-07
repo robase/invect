@@ -27,7 +27,11 @@ export const githubSearchIssuesAction = defineAction({
   id: 'github.search_issues',
   name: 'Search Issues & PRs',
   description:
-    'Search GitHub issues and pull requests using query syntax. Example: "repo:owner/repo is:issue is:open label:bug"',
+    'Search GitHub issues and pull requests across repositories (GET /search/issues). Use when you need to find issues matching complex criteria like labels, state, or keywords.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"totalCount": 42, "items": [{"number": 1347, "title": "Found a bug", "state": "open", "repository": "octocat/hello-world", "score": 1.0}]}\n' +
+    '```',
   provider: GITHUB_PROVIDER,
   actionCategory: 'read',
 
@@ -86,6 +90,7 @@ export const githubSearchIssuesAction = defineAction({
         ],
         description: 'Sort order',
         extended: true,
+        aiProvided: true,
       },
       {
         name: 'perPage',

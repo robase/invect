@@ -90,6 +90,7 @@ export const googleSheetsUpdateValuesAction = defineAction({
         ],
         description: 'How input data should be interpreted',
         extended: true,
+        aiProvided: true,
       },
     ],
   },

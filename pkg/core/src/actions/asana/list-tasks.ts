@@ -22,7 +22,11 @@ export const asanaListTasksAction = defineAction({
   id: 'asana.list_tasks',
   name: 'List Tasks',
   description:
-    'List tasks in an Asana project. Returns task names, completion status, due dates, assignees, and notes.',
+    'List tasks in an Asana project (GET /tasks?project={gid}). Use when the user wants to see all tasks, check completion status, or review upcoming work in a project.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '[{"gid": "12345", "name": "Design review", "completed": false, "due_on": "2024-03-01", "assignee": {"name": "Alice"}}]\n' +
+    '```',
   provider: ASANA_PROVIDER,
   actionCategory: 'read',
 

@@ -20,7 +20,12 @@ const paramsSchema = z.object({
 export const zendeskSearchAction = defineAction({
   id: 'zendesk.search',
   name: 'Search',
-  description: 'Search Zendesk tickets, users, or organizations using Zendesk search syntax.',
+  description:
+    'Search Zendesk tickets, users, or organizations (GET /api/v2/search.json). Use when the user wants to find tickets or other resources using Zendesk search syntax (e.g. type:ticket status:open).\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"results": [{"id": 35436, "result_type": "ticket", "subject": "Help!", "status": "open"}], "count": 5}\n' +
+    '```',
   provider: ZENDESK_PROVIDER,
   actionCategory: 'read',
 

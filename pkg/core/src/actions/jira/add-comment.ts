@@ -21,7 +21,11 @@ export const jiraAddCommentAction = defineAction({
   id: 'jira.add_comment',
   name: 'Add Comment',
   description:
-    'Add a comment to a Jira issue. The comment text is automatically converted to Atlassian Document Format.',
+    'Add a comment to a Jira issue (POST /rest/api/3/issue/{issueIdOrKey}/comment). Use when the user wants to post a note or update on an existing issue. Text is auto-converted to Atlassian Document Format.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "10001", "author": {"displayName": "Mia"}, "created": "2024-01-15T10:30:00.000+0000"}\n' +
+    '```',
   provider: JIRA_PROVIDER,
   actionCategory: 'write',
 

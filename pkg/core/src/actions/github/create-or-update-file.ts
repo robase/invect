@@ -29,7 +29,11 @@ export const githubCreateOrUpdateFileAction = defineAction({
   id: 'github.create_or_update_file',
   name: 'Create or Update File',
   description:
-    'Create a new file or update an existing file in a GitHub repository with a commit message.',
+    'Create or update a file in a GitHub repository (PUT /repos/{owner}/{repo}/contents/{path}). Use when you need to commit a file change directly via the API.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"content": {"name": "README.md", "path": "README.md", "sha": "abc123..."}, "commit": {"sha": "def456...", "message": "Update README"}}\n' +
+    '```',
   provider: GITHUB_PROVIDER,
   actionCategory: 'write',
 
@@ -120,6 +124,7 @@ export const githubCreateOrUpdateFileAction = defineAction({
         placeholder: 'Bot',
         description: 'Custom committer name (uses authenticated user if empty)',
         extended: true,
+        aiProvided: true,
       },
       {
         name: 'committerEmail',
@@ -128,6 +133,7 @@ export const githubCreateOrUpdateFileAction = defineAction({
         placeholder: 'bot@example.com',
         description: 'Custom committer email (uses authenticated user if empty)',
         extended: true,
+        aiProvided: true,
       },
     ],
   },

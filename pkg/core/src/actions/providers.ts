@@ -61,7 +61,7 @@ export const GOOGLE_DOCS_PROVIDER: ProviderDef = {
   category: 'storage',
   nodeCategory: 'Integrations',
   description: 'Create, read, and edit Google Docs documents',
-  docsUrl: 'https://developers.google.com/docs/api',
+  docsUrl: 'https://developers.google.com/workspace/docs/api/reference/rest',
 };
 
 export const GOOGLE_SHEETS_PROVIDER: ProviderDef = {
@@ -71,7 +71,7 @@ export const GOOGLE_SHEETS_PROVIDER: ProviderDef = {
   category: 'storage',
   nodeCategory: 'Integrations',
   description: 'Read, write, and manage Google Sheets spreadsheets',
-  docsUrl: 'https://developers.google.com/sheets/api',
+  docsUrl: 'https://developers.google.com/workspace/sheets/api/reference/rest',
 };
 
 export const GOOGLE_DRIVE_PROVIDER: ProviderDef = {
@@ -81,7 +81,7 @@ export const GOOGLE_DRIVE_PROVIDER: ProviderDef = {
   category: 'storage',
   nodeCategory: 'Integrations',
   description: 'Manage files and folders in Google Drive',
-  docsUrl: 'https://developers.google.com/drive/api',
+  docsUrl: 'https://developers.google.com/workspace/drive/api/reference/rest/v3',
 };
 
 export const GOOGLE_CALENDAR_PROVIDER: ProviderDef = {
@@ -91,7 +91,7 @@ export const GOOGLE_CALENDAR_PROVIDER: ProviderDef = {
   category: 'utility',
   nodeCategory: 'Integrations',
   description: 'Manage events and calendars in Google Calendar',
-  docsUrl: 'https://developers.google.com/calendar/api',
+  docsUrl: 'https://developers.google.com/workspace/calendar/api/v3/reference',
 };
 
 export const LINEAR_PROVIDER: ProviderDef = {
@@ -230,7 +230,7 @@ export const STRIPE_PROVIDER: ProviderDef = {
   category: 'custom',
   nodeCategory: 'Integrations',
   description: 'Stripe payment processing — customers, charges, and subscriptions',
-  docsUrl: 'https://stripe.com/docs/api',
+  docsUrl: 'https://docs.stripe.com/api',
 };
 
 export const TWITTER_PROVIDER: ProviderDef = {

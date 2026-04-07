@@ -26,7 +26,11 @@ export const asanaUpdateTaskAction = defineAction({
   id: 'asana.update_task',
   name: 'Update Task',
   description:
-    'Update an existing Asana task. Supports changing name, notes, due date, completion status, and assignee.',
+    "Update an existing Asana task (PUT /tasks/{task_gid}). Use when the user wants to modify a task's name, notes, due date, completion status, or assignee.\n\n" +
+    'Example response:\n' +
+    '```json\n' +
+    '{"gid": "12345", "name": "Updated task", "completed": true, "due_on": "2024-03-01", "assignee": {"name": "Alice"}}\n' +
+    '```',
   provider: ASANA_PROVIDER,
   actionCategory: 'write',
 

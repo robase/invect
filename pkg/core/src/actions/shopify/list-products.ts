@@ -19,7 +19,11 @@ export const shopifyListProductsAction = defineAction({
   id: 'shopify.list_products',
   name: 'List Products',
   description:
-    'List products from a Shopify store. Returns product titles, descriptions, variants, and pricing.',
+    'List products from a Shopify store (GET /admin/api/.../products.json). Use when you need to browse or search the product catalog.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"products": [{"id": 632910392, "title": "IPod Nano", "vendor": "Apple", "product_type": "Electronics", "status": "active", "variants": [{"id": 808950810, "price": "199.00"}]}]}\n' +
+    '```',
   provider: SHOPIFY_PROVIDER,
   actionCategory: 'read',
   tags: ['shopify', 'products', 'ecommerce', 'list', 'oauth2'],
@@ -57,6 +61,8 @@ export const shopifyListProductsAction = defineAction({
         type: 'number',
         defaultValue: 50,
         description: 'Maximum number of products to return (1–250)',
+        extended: true,
+        aiProvided: true,
       },
     ],
   },

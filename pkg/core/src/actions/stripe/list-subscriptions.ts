@@ -23,7 +23,11 @@ export const stripeListSubscriptionsAction = defineAction({
   id: 'stripe.list_subscriptions',
   name: 'List Subscriptions',
   description:
-    'List subscriptions from a Stripe account. Optionally filter by customer ID and subscription status.',
+    'List subscriptions from a Stripe account (GET /v1/subscriptions). Use when you need to review recurring billing or check subscription statuses for a customer.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"data": [{"id": "sub_abc123", "customer": "cus_xyz", "status": "active", "current_period_end": 1682288167, "plan": {"amount": 1000, "currency": "usd"}}], "has_more": false}\n' +
+    '```',
   provider: STRIPE_PROVIDER,
   actionCategory: 'read',
 
@@ -60,6 +64,7 @@ export const stripeListSubscriptionsAction = defineAction({
         type: 'text',
         placeholder: 'cus_abc123',
         description: 'Filter subscriptions by Stripe customer ID',
+        extended: true,
         aiProvided: true,
       },
       {

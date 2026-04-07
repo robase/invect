@@ -18,7 +18,11 @@ export const woocommerceListProductsAction = defineAction({
   id: 'woocommerce.list_products',
   name: 'List Products',
   description:
-    'List products from a WooCommerce store. Returns product names, prices, descriptions, and stock status.',
+    'List products from a WooCommerce store (GET /wp-json/wc/v3/products). Use when you need to browse the product catalog or check stock/pricing.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '[{"id": 794, "name": "Premium Quality T-Shirt", "type": "simple", "status": "publish", "regular_price": "21.99", "stock_status": "instock"}]\n' +
+    '```',
   provider: WOOCOMMERCE_PROVIDER,
   actionCategory: 'read',
   tags: ['woocommerce', 'products', 'ecommerce', 'list'],
@@ -46,6 +50,8 @@ export const woocommerceListProductsAction = defineAction({
         type: 'number',
         defaultValue: 10,
         description: 'Maximum number of products to return (1–100)',
+        extended: true,
+        aiProvided: true,
       },
     ],
   },

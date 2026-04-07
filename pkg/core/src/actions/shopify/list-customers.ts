@@ -19,7 +19,11 @@ export const shopifyListCustomersAction = defineAction({
   id: 'shopify.list_customers',
   name: 'List Customers',
   description:
-    'List customers from a Shopify store. Returns customer names, emails, order counts, and total spend.',
+    'List customers from a Shopify store (GET /admin/api/.../customers.json). Use when you need to look up customer accounts, contact details, or order history.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"customers": [{"id": 207119551, "first_name": "Bob", "last_name": "Norman", "email": "bob@example.com", "orders_count": 1, "total_spent": "199.65"}]}\n' +
+    '```',
   provider: SHOPIFY_PROVIDER,
   actionCategory: 'read',
   tags: ['shopify', 'customers', 'ecommerce', 'list', 'oauth2'],
@@ -57,6 +61,8 @@ export const shopifyListCustomersAction = defineAction({
         type: 'number',
         defaultValue: 50,
         description: 'Maximum number of customers to return (1–250)',
+        extended: true,
+        aiProvided: true,
       },
     ],
   },

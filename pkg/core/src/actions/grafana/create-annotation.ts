@@ -25,7 +25,11 @@ export const grafanaCreateAnnotationAction = defineAction({
   id: 'grafana.create_annotation',
   name: 'Create Annotation',
   description:
-    'Create an annotation on a Grafana dashboard or globally. Useful for marking deployments, incidents, or events.',
+    'Create a Grafana annotation (POST /api/annotations). Use when the user wants to mark a deployment, incident, or noteworthy event on dashboards.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"message": "Annotation added", "id": 1}\n' +
+    '```',
   provider: GRAFANA_PROVIDER,
   actionCategory: 'write',
 
@@ -77,6 +81,7 @@ export const grafanaCreateAnnotationAction = defineAction({
         label: 'Panel ID',
         type: 'number',
         description: 'Numeric panel ID. Requires dashboardUid to be set.',
+        extended: true,
         aiProvided: true,
       },
       {

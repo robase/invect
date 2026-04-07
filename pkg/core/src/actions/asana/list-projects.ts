@@ -20,7 +20,12 @@ const paramsSchema = z.object({
 export const asanaListProjectsAction = defineAction({
   id: 'asana.list_projects',
   name: 'List Projects',
-  description: 'List projects in an Asana workspace. Returns project GIDs, names, and metadata.',
+  description:
+    'List projects in an Asana workspace (GET /projects?workspace={gid}). Use when the user needs to find project GIDs before listing or creating tasks.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '[{"gid": "12345", "name": "Q1 Launch", "resource_type": "project"}]\n' +
+    '```',
   provider: ASANA_PROVIDER,
   actionCategory: 'read',
 

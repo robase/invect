@@ -24,7 +24,11 @@ export const zendeskCreateTicketAction = defineAction({
   id: 'zendesk.create_ticket',
   name: 'Create Ticket',
   description:
-    'Create a new support ticket in Zendesk with subject, description, priority, and type.',
+    'Create a new support ticket in Zendesk (POST /api/v2/tickets). Use when the user wants to open a support ticket with subject, description, priority, and type.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"ticket": {"id": 35436, "subject": "Help!", "status": "new", "priority": "normal", "requester_id": 123}}\n' +
+    '```',
   provider: ZENDESK_PROVIDER,
   actionCategory: 'write',
 
@@ -86,6 +90,7 @@ export const zendeskCreateTicketAction = defineAction({
         ],
         description: 'Ticket priority level.',
         aiProvided: true,
+        extended: true,
       },
       {
         name: 'type',
@@ -100,6 +105,7 @@ export const zendeskCreateTicketAction = defineAction({
         ],
         description: 'Ticket type.',
         aiProvided: true,
+        extended: true,
       },
       {
         name: 'requesterEmail',

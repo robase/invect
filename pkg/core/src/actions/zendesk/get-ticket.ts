@@ -19,7 +19,12 @@ const paramsSchema = z.object({
 export const zendeskGetTicketAction = defineAction({
   id: 'zendesk.get_ticket',
   name: 'Get Ticket',
-  description: 'Get a single Zendesk ticket by ID, including its full details.',
+  description:
+    'Get a single Zendesk ticket by ID (GET /api/v2/tickets/{ticketId}). Use when the user wants to retrieve full details of a specific support ticket.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"ticket": {"id": 35436, "subject": "Help!", "status": "open", "priority": "normal", "requester_id": 123}}\n' +
+    '```',
   provider: ZENDESK_PROVIDER,
   actionCategory: 'read',
 

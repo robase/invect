@@ -20,7 +20,11 @@ export const shopifyListOrdersAction = defineAction({
   id: 'shopify.list_orders',
   name: 'List Orders',
   description:
-    'List orders from a Shopify store. Filter by status: any, open, closed, or cancelled.',
+    'List orders from a Shopify store (GET /admin/api/.../orders.json). Use when you need to review recent orders, check fulfillment status, or look up order history.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"orders": [{"id": 450789469, "name": "#1001", "total_price": "598.94", "financial_status": "paid", "fulfillment_status": null, "created_at": "2024-01-09T17:28:06-05:00"}]}\n' +
+    '```',
   provider: SHOPIFY_PROVIDER,
   actionCategory: 'read',
   tags: ['shopify', 'orders', 'ecommerce', 'list', 'oauth2'],
@@ -58,6 +62,8 @@ export const shopifyListOrdersAction = defineAction({
         type: 'number',
         defaultValue: 50,
         description: 'Maximum number of orders to return (1–250)',
+        extended: true,
+        aiProvided: true,
       },
       {
         name: 'status',
@@ -65,6 +71,8 @@ export const shopifyListOrdersAction = defineAction({
         type: 'select',
         defaultValue: 'any',
         description: 'Filter orders by status',
+        extended: true,
+        aiProvided: true,
         options: [
           { label: 'Any', value: 'any' },
           { label: 'Open', value: 'open' },

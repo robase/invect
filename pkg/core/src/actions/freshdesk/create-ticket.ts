@@ -24,7 +24,11 @@ export const freshdeskCreateTicketAction = defineAction({
   id: 'freshdesk.create_ticket',
   name: 'Create Ticket',
   description:
-    'Create a new support ticket in Freshdesk. Specify subject, description, requester email, priority, and status.',
+    'Create a new support ticket in Freshdesk (POST /api/v2/tickets). Use when the user wants to open a ticket with subject, description, requester email, priority, and status.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": 1, "subject": "Issue with billing", "status": 2, "priority": 1, "requester_id": 123}\n' +
+    '```',
   provider: FRESHDESK_PROVIDER,
   actionCategory: 'write',
   tags: ['freshdesk', 'support', 'ticket', 'helpdesk', 'create', 'oauth2'],
@@ -90,6 +94,7 @@ export const freshdeskCreateTicketAction = defineAction({
         defaultValue: 1,
         description: 'Ticket priority',
         aiProvided: true,
+        extended: true,
         options: [
           { label: 'Low', value: 1 },
           { label: 'Medium', value: 2 },
@@ -104,6 +109,7 @@ export const freshdeskCreateTicketAction = defineAction({
         defaultValue: 2,
         description: 'Ticket status',
         aiProvided: true,
+        extended: true,
         options: [
           { label: 'Open', value: 2 },
           { label: 'Pending', value: 3 },

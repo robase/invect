@@ -22,7 +22,11 @@ export const intercomReplyToConversationAction = defineAction({
   id: 'intercom.reply_to_conversation',
   name: 'Reply to Conversation',
   description:
-    'Reply to an existing Intercom conversation as an admin. Sends a comment on the conversation thread.',
+    'Reply to an Intercom conversation as an admin (POST /conversations/{id}/reply). Use when the user wants to send a response on an existing conversation thread.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"type": "conversation_part", "id": "456", "conversation_id": "123", "body": "Thanks!", "created_at": 1700000000}\n' +
+    '```',
   provider: INTERCOM_PROVIDER,
   actionCategory: 'write',
 

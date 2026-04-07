@@ -21,7 +21,12 @@ const paramsSchema = z.object({
 export const stripeListChargesAction = defineAction({
   id: 'stripe.list_charges',
   name: 'List Charges',
-  description: 'List charges (payments) from a Stripe account. Optionally filter by customer ID.',
+  description:
+    'List charges/payments from a Stripe account (GET /v1/charges). Use when you need to review payment history or look up charges for a customer.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"data": [{"id": "ch_abc123", "amount": 2000, "currency": "usd", "status": "succeeded", "customer": "cus_xyz"}], "has_more": false}\n' +
+    '```',
   provider: STRIPE_PROVIDER,
   actionCategory: 'read',
 
@@ -58,6 +63,7 @@ export const stripeListChargesAction = defineAction({
         type: 'text',
         placeholder: 'cus_abc123',
         description: 'Filter charges by Stripe customer ID',
+        extended: true,
         aiProvided: true,
       },
     ],

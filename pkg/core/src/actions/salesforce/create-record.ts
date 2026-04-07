@@ -19,7 +19,11 @@ export const salesforceCreateRecordAction = defineAction({
   id: 'salesforce.create_record',
   name: 'Create Record',
   description:
-    'Create a new Salesforce record of the specified object type (e.g. Account, Contact, Lead) with the given field values.',
+    'Create a new Salesforce SObject record (POST /sobjects/{objectType}). Use when the user wants to create an Account, Contact, Lead, Opportunity, or any custom object in Salesforce.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "001xx000003DGbY", "success": true, "errors": []}\n' +
+    '```',
   provider: SALESFORCE_PROVIDER,
   actionCategory: 'write',
 

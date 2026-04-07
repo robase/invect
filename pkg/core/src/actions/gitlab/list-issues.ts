@@ -21,7 +21,12 @@ const paramsSchema = z.object({
 export const gitlabListIssuesAction = defineAction({
   id: 'gitlab.list_issues',
   name: 'List Issues',
-  description: 'List issues in a GitLab project. Filter by state (opened, closed, all).',
+  description:
+    'List issues in a GitLab project (GET /api/v4/projects/:id/issues). Use when the user wants to review open bugs, triage tasks, or check issue status.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"issues": [{"iid": 42, "title": "Bug report", "state": "opened", "url": "https://gitlab.com/g/p/-/issues/42", "labels": ["bug"], "author": "jane"}], "totalCount": 15}\n' +
+    '```',
   provider: GITLAB_PROVIDER,
   actionCategory: 'read',
 
@@ -51,6 +56,7 @@ export const gitlabListIssuesAction = defineAction({
         defaultValue: 'https://gitlab.com',
         placeholder: 'https://gitlab.com',
         description: 'Base URL of the GitLab instance. Defaults to https://gitlab.com.',
+        extended: true,
         aiProvided: false,
       },
       {

@@ -23,7 +23,11 @@ export const stripeCreateCustomerAction = defineAction({
   id: 'stripe.create_customer',
   name: 'Create Customer',
   description:
-    'Create a new customer in Stripe with an email address and optional name, description, and phone number.',
+    'Create a new customer in Stripe (POST /v1/customers). Use when you need to register a new customer for billing or subscriptions.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "cus_NffrFeUfNV2Hib", "object": "customer", "email": "jenny@example.com", "name": "Jenny Rosen", "created": 1680893993}\n' +
+    '```',
   provider: STRIPE_PROVIDER,
   actionCategory: 'write',
 

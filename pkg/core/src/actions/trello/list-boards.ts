@@ -19,7 +19,11 @@ export const trelloListBoardsAction = defineAction({
   id: 'trello.list_boards',
   name: 'List Boards',
   description:
-    'List all Trello boards accessible by the authenticated user. Returns board names, descriptions, and URLs.',
+    'List all Trello boards accessible by the authenticated user (GET /1/members/me/boards). Use when the user needs to find board IDs before listing lists or cards.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '[{"id": "board123", "name": "Project Alpha", "desc": "Main board", "url": "https://trello.com/b/abc123", "closed": false}]\n' +
+    '```',
   provider: TRELLO_PROVIDER,
   actionCategory: 'read',
 

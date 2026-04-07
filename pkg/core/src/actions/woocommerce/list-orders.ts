@@ -22,7 +22,11 @@ export const woocommerceListOrdersAction = defineAction({
   id: 'woocommerce.list_orders',
   name: 'List Orders',
   description:
-    'List orders from a WooCommerce store. Filter by status: any, pending, processing, completed, or cancelled.',
+    'List orders from a WooCommerce store (GET /wp-json/wc/v3/orders). Use when you need to review recent orders, check payment or fulfillment status.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '[{"id": 727, "status": "processing", "total": "29.99", "currency": "USD", "billing": {"first_name": "John", "email": "john@example.com"}, "line_items": [{"name": "T-Shirt", "quantity": 1}]}]\n' +
+    '```',
   provider: WOOCOMMERCE_PROVIDER,
   actionCategory: 'read',
   tags: ['woocommerce', 'orders', 'ecommerce', 'list'],
@@ -50,6 +54,8 @@ export const woocommerceListOrdersAction = defineAction({
         type: 'number',
         defaultValue: 10,
         description: 'Maximum number of orders to return (1–100)',
+        extended: true,
+        aiProvided: true,
       },
       {
         name: 'status',
@@ -57,6 +63,8 @@ export const woocommerceListOrdersAction = defineAction({
         type: 'select',
         defaultValue: 'any',
         description: 'Filter orders by status',
+        extended: true,
+        aiProvided: true,
         options: [
           { label: 'Any', value: 'any' },
           { label: 'Pending', value: 'pending' },

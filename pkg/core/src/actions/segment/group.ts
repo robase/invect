@@ -22,7 +22,12 @@ const paramsSchema = z.object({
 export const segmentGroupAction = defineAction({
   id: 'segment.group',
   name: 'Group User',
-  description: 'Associate a user with a group or company and optionally set group-level traits.',
+  description:
+    'Associate a user with a group via Segment (POST /v1/group). Use when the user wants to link a user to a company, team, or account and set group-level traits.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"acknowledged": true, "userId": "user-123", "groupId": "group-456"}\n' +
+    '```',
   provider: SEGMENT_PROVIDER,
   actionCategory: 'write',
 

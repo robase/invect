@@ -21,7 +21,12 @@ const paramsSchema = z.object({
 export const freshdeskUpdateTicketAction = defineAction({
   id: 'freshdesk.update_ticket',
   name: 'Update Ticket',
-  description: 'Update an existing Freshdesk ticket. Can change status, priority, or subject.',
+  description:
+    'Update an existing Freshdesk ticket (PUT /api/v2/tickets/{ticketId}). Use when the user wants to change a ticket\u2019s status, priority, or subject.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": 1, "subject": "Issue", "status": 4, "priority": 3}\n' +
+    '```',
   provider: FRESHDESK_PROVIDER,
   actionCategory: 'write',
   tags: ['freshdesk', 'support', 'ticket', 'helpdesk', 'update', 'oauth2'],
@@ -68,6 +73,7 @@ export const freshdeskUpdateTicketAction = defineAction({
         type: 'select',
         description: 'New ticket status (leave empty to keep current)',
         aiProvided: true,
+        extended: true,
         options: [
           { label: 'Open', value: 2 },
           { label: 'Pending', value: 3 },
@@ -81,6 +87,7 @@ export const freshdeskUpdateTicketAction = defineAction({
         type: 'select',
         description: 'New ticket priority (leave empty to keep current)',
         aiProvided: true,
+        extended: true,
         options: [
           { label: 'Low', value: 1 },
           { label: 'Medium', value: 2 },
@@ -94,6 +101,7 @@ export const freshdeskUpdateTicketAction = defineAction({
         type: 'text',
         description: 'New ticket subject (leave empty to keep current)',
         aiProvided: true,
+        extended: true,
       },
     ],
   },

@@ -22,7 +22,11 @@ export const segmentPageAction = defineAction({
   id: 'segment.page',
   name: 'Page View',
   description:
-    'Record a page view for a user. Sends the page name and optional properties to Segment.',
+    'Record a page view for a user via Segment (POST /v1/page). Use when the user wants to track which pages a user visits along with page metadata.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"acknowledged": true, "userId": "user-123", "name": "Home"}\n' +
+    '```',
   provider: SEGMENT_PROVIDER,
   actionCategory: 'write',
 

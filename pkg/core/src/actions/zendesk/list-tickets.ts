@@ -19,7 +19,12 @@ const paramsSchema = z.object({
 export const zendeskListTicketsAction = defineAction({
   id: 'zendesk.list_tickets',
   name: 'List Tickets',
-  description: 'List tickets from a Zendesk instance, sorted by newest first.',
+  description:
+    'List tickets from a Zendesk instance (GET /api/v2/tickets). Use when the user wants to retrieve recent support tickets sorted by newest first.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"tickets": [{"id": 35436, "subject": "Help!", "status": "open", "priority": "normal"}], "meta": {"has_more": true}}\n' +
+    '```',
   provider: ZENDESK_PROVIDER,
   actionCategory: 'read',
 

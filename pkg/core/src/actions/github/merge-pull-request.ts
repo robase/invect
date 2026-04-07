@@ -25,7 +25,12 @@ const paramsSchema = z.object({
 export const githubMergePullRequestAction = defineAction({
   id: 'github.merge_pull_request',
   name: 'Merge Pull Request',
-  description: 'Merge a GitHub pull request using merge commit, squash, or rebase strategy.',
+  description:
+    'Merge a pull request into its base branch (PUT /repos/{owner}/{repo}/pulls/{pull_number}/merge). Use when the user wants to complete a PR merge via merge commit, squash, or rebase.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"sha": "6dcb09b5b57875f334f61aebed695e2e4193db5e", "merged": true, "message": "Pull Request successfully merged"}\n' +
+    '```',
   provider: GITHUB_PROVIDER,
   actionCategory: 'write',
 

@@ -22,7 +22,11 @@ export const woocommerceCreateProductAction = defineAction({
   id: 'woocommerce.create_product',
   name: 'Create Product',
   description:
-    'Create a new product in a WooCommerce store. Specify name, price, type, and description.',
+    'Create a new product in a WooCommerce store (POST /wp-json/wc/v3/products). Use when you need to add a new product to the catalog.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": 794, "name": "Premium Quality T-Shirt", "type": "simple", "status": "publish", "regular_price": "21.99", "permalink": "https://example.com/product/premium-quality-t-shirt"}\n' +
+    '```',
   provider: WOOCOMMERCE_PROVIDER,
   actionCategory: 'write',
   tags: ['woocommerce', 'product', 'ecommerce', 'create', 'write'],
@@ -50,6 +54,7 @@ export const woocommerceCreateProductAction = defineAction({
         type: 'text',
         required: true,
         description: 'The product name',
+        aiProvided: true,
       },
       {
         name: 'regularPrice',
@@ -58,6 +63,7 @@ export const woocommerceCreateProductAction = defineAction({
         required: true,
         placeholder: '29.99',
         description: 'Product regular price as a string (e.g. "29.99")',
+        aiProvided: true,
       },
       {
         name: 'type',
@@ -65,6 +71,8 @@ export const woocommerceCreateProductAction = defineAction({
         type: 'select',
         defaultValue: 'simple',
         description: 'The type of product',
+        extended: true,
+        aiProvided: true,
         options: [
           { label: 'Simple', value: 'simple' },
           { label: 'Grouped', value: 'grouped' },
@@ -77,12 +85,16 @@ export const woocommerceCreateProductAction = defineAction({
         label: 'Description',
         type: 'textarea',
         description: 'Full product description (HTML supported)',
+        extended: true,
+        aiProvided: true,
       },
       {
         name: 'shortDescription',
         label: 'Short Description',
         type: 'textarea',
         description: 'Brief product summary (HTML supported)',
+        extended: true,
+        aiProvided: true,
       },
     ],
   },

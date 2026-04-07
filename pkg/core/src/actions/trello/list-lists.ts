@@ -21,7 +21,11 @@ export const trelloListListsAction = defineAction({
   id: 'trello.list_lists',
   name: 'List Lists',
   description:
-    'List all lists in a Trello board. Returns list names, positions, and closed status.',
+    'List all lists in a Trello board (GET /1/boards/{id}/lists). Use when the user needs to discover list IDs before creating or moving cards.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '[{"id": "list123", "name": "To Do", "pos": 1024, "closed": false}]\n' +
+    '```',
   provider: TRELLO_PROVIDER,
   actionCategory: 'read',
 

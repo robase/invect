@@ -21,7 +21,11 @@ export const mixpanelCreateProfileAction = defineAction({
   id: 'mixpanel.create_profile',
   name: 'Create / Update Profile',
   description:
-    'Set user profile properties in Mixpanel. Creates the profile if it does not exist, or updates existing properties.',
+    'Set user profile properties in Mixpanel (POST /engage#profile-set). Use when the user wants to create or update a user profile with attributes like name, email, or plan.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"status": 1, "distinctId": "user-123"}\n' +
+    '```',
   provider: MIXPANEL_PROVIDER,
   actionCategory: 'write',
 

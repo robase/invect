@@ -29,7 +29,11 @@ export const githubUpdateIssueAction = defineAction({
   id: 'github.update_issue',
   name: 'Update Issue',
   description:
-    'Update an existing GitHub issue. Change title, body, state, labels, assignees, or milestone.',
+    'Update an existing GitHub issue (PATCH /repos/{owner}/{repo}/issues/{issue_number}). Use when you need to change the title, body, state, labels, assignees, or milestone.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"number": 1347, "title": "Updated title", "state": "closed", "html_url": "https://github.com/octocat/hello-world/issues/1347"}\n' +
+    '```',
   provider: GITHUB_PROVIDER,
   actionCategory: 'write',
 

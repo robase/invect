@@ -23,7 +23,11 @@ export const jiraSearchIssuesAction = defineAction({
   id: 'jira.search_issues',
   name: 'Search Issues',
   description:
-    'Search Jira issues using JQL (Jira Query Language). Returns matching issues with selected fields.',
+    'Search Jira issues using JQL (POST /rest/api/3/search). Use when the user wants to find issues matching specific criteria like project, status, assignee, or custom fields.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"issues": [{"id": "10001", "key": "PROJ-123", "fields": {"summary": "Fix login", "status": {"name": "Done"}}}], "total": 42, "maxResults": 25}\n' +
+    '```',
   provider: JIRA_PROVIDER,
   actionCategory: 'read',
 

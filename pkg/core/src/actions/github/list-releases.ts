@@ -21,7 +21,12 @@ const paramsSchema = z.object({
 export const githubListReleasesAction = defineAction({
   id: 'github.list_releases',
   name: 'List Releases',
-  description: 'List releases in a GitHub repository, including tags, release notes, and assets.',
+  description:
+    'List releases in a GitHub repository (GET /repos/{owner}/{repo}/releases). Use when you need to browse release history, download assets, or check version tags.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '[{"id": 1, "tag_name": "v1.0.0", "name": "Version 1.0", "draft": false, "prerelease": false, "published_at": "2024-01-01T00:00:00Z"}]\n' +
+    '```',
   provider: GITHUB_PROVIDER,
   actionCategory: 'read',
 

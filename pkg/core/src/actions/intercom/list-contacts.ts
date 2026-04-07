@@ -21,7 +21,11 @@ export const intercomListContactsAction = defineAction({
   id: 'intercom.list_contacts',
   name: 'List Contacts',
   description:
-    'List contacts in Intercom. Returns contact names, emails, roles, and IDs with pagination.',
+    'List contacts in Intercom (POST /contacts/search). Use when the user wants to browse their Intercom contact list with pagination.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"type": "list", "data": [{"id": "abc123", "role": "user", "email": "jane@example.com"}], "total_count": 50}\n' +
+    '```',
   provider: INTERCOM_PROVIDER,
   actionCategory: 'read',
 

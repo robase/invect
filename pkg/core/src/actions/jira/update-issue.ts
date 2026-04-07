@@ -24,7 +24,8 @@ export const jiraUpdateIssueAction = defineAction({
   id: 'jira.update_issue',
   name: 'Update Issue',
   description:
-    'Update an existing Jira issue. Can modify summary and description. Note: status transitions require the Jira transitions API.',
+    "Update an existing Jira issue (PUT /rest/api/3/issue/{issueIdOrKey}). Use when the user wants to modify an issue's summary, description, or transition its status. Returns 204 on success for field updates.\n\n" +
+    'Status transitions use GET/POST /rest/api/3/issue/{id}/transitions automatically.',
   provider: JIRA_PROVIDER,
   actionCategory: 'write',
 

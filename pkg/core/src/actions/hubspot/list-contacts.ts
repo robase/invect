@@ -21,7 +21,12 @@ const paramsSchema = z.object({
 export const hubspotListContactsAction = defineAction({
   id: 'hubspot.list_contacts',
   name: 'List Contacts',
-  description: 'List contacts from HubSpot CRM. Returns contact records with selected properties.',
+  description:
+    'List contacts from HubSpot CRM (GET /crm/v3/objects/contacts). Use when the user wants to retrieve a paginated list of contacts.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"results": [{"id": "501", "properties": {"email": "jane@example.com", "firstname": "Jane"}}], "paging": {"next": {"after": "502"}}}\n' +
+    '```',
   provider: HUBSPOT_PROVIDER,
   actionCategory: 'read',
 
@@ -50,6 +55,7 @@ export const hubspotListContactsAction = defineAction({
         defaultValue: 10,
         description: 'Maximum number of contacts to return (1–100)',
         aiProvided: true,
+        extended: true,
       },
       {
         name: 'properties',
@@ -59,6 +65,7 @@ export const hubspotListContactsAction = defineAction({
         placeholder: 'firstname,lastname,email',
         description: 'Comma-separated list of contact properties to include',
         aiProvided: true,
+        extended: true,
       },
     ],
   },

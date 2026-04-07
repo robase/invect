@@ -24,7 +24,11 @@ export const hubspotCreateDealAction = defineAction({
   id: 'hubspot.create_deal',
   name: 'Create Deal',
   description:
-    'Create a new deal in HubSpot CRM with name, amount, stage, pipeline, and close date.',
+    'Create a new deal in HubSpot CRM (POST /crm/v3/objects/deals). Use when the user wants to track a new sales opportunity with name, amount, stage, and pipeline.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "101", "properties": {"dealname": "New deal", "amount": "50000", "dealstage": "contractsent"}, "createdAt": "2024-01-01T00:00:00.000Z"}\n' +
+    '```',
   provider: HUBSPOT_PROVIDER,
   actionCategory: 'write',
 
@@ -62,6 +66,7 @@ export const hubspotCreateDealAction = defineAction({
         placeholder: '50000',
         description: 'Deal monetary amount',
         aiProvided: true,
+        extended: true,
       },
       {
         name: 'dealstage',
@@ -70,6 +75,7 @@ export const hubspotCreateDealAction = defineAction({
         placeholder: 'appointmentscheduled',
         description: 'Deal stage internal name (e.g. appointmentscheduled, qualifiedtobuy)',
         aiProvided: true,
+        extended: true,
       },
       {
         name: 'pipeline',
@@ -78,6 +84,7 @@ export const hubspotCreateDealAction = defineAction({
         placeholder: 'default',
         description: 'Pipeline internal name (defaults to the default pipeline if empty)',
         aiProvided: true,
+        extended: true,
       },
       {
         name: 'closedate',
@@ -86,6 +93,7 @@ export const hubspotCreateDealAction = defineAction({
         placeholder: '2026-12-31',
         description: 'Expected close date (ISO 8601 format)',
         aiProvided: true,
+        extended: true,
       },
     ],
   },

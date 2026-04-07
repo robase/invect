@@ -23,7 +23,11 @@ export const githubGetIssueAction = defineAction({
   id: 'github.get_issue',
   name: 'Get Issue',
   description:
-    'Get detailed information about a specific GitHub issue by its number, including title, body, state, labels, and assignees.',
+    'Get detailed information about a specific GitHub issue (GET /repos/{owner}/{repo}/issues/{issue_number}). Use when you need the full body, labels, assignees, and timeline of a single issue.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"number": 1347, "title": "Found a bug", "state": "open", "body": "...", "user": "octocat", "labels": ["bug"], "assignees": ["octocat"]}\n' +
+    '```',
   provider: GITHUB_PROVIDER,
   actionCategory: 'read',
 

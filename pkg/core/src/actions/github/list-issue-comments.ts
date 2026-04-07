@@ -23,7 +23,11 @@ export const githubListIssueCommentsAction = defineAction({
   id: 'github.list_issue_comments',
   name: 'List Issue Comments',
   description:
-    'List all comments on a GitHub issue or pull request, including author and timestamps.',
+    'List comments on a GitHub issue or pull request (GET /repos/{owner}/{repo}/issues/{issue_number}/comments). Use when you need to read the discussion thread on an issue.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '[{"id": 1, "body": "Great work!", "user": "octocat", "created_at": "2024-01-01T00:00:00Z"}]\n' +
+    '```',
   provider: GITHUB_PROVIDER,
   actionCategory: 'read',
 

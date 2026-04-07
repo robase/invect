@@ -24,7 +24,11 @@ export const trelloCreateCardAction = defineAction({
   id: 'trello.create_card',
   name: 'Create Card',
   description:
-    'Create a new card in a Trello list. Supports setting a name, description, due date, and position.',
+    'Create a new card in a Trello list (POST /1/cards). Use when the user wants to add a task or item to a Trello board.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "card123", "name": "New feature", "desc": "", "due": null, "url": "https://trello.com/c/H0TZyzbK", "idList": "list123"}\n' +
+    '```',
   provider: TRELLO_PROVIDER,
   actionCategory: 'write',
 

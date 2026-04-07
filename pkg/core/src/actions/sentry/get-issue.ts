@@ -22,7 +22,11 @@ export const sentryGetIssueAction = defineAction({
   id: 'sentry.get_issue',
   name: 'Get Issue',
   description:
-    'Retrieve detailed information about a Sentry issue including title, status, event count, first/last seen, and activity.',
+    'Retrieve a Sentry issue by ID (GET /organizations/{org}/issues/{issue_id}/). Use when the user wants to inspect a specific error, check its status, or see event counts.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "123456", "shortId": "PROJ-1A", "title": "TypeError: null is not an object", "status": "unresolved", "level": "error", "count": "48", "userCount": 12, "firstSeen": "2025-03-01T10:00:00Z", "lastSeen": "2025-04-07T08:30:00Z"}\n' +
+    '```',
   provider: SENTRY_PROVIDER,
   actionCategory: 'read',
 

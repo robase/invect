@@ -27,7 +27,11 @@ export const linearListIssuesAction = defineAction({
   id: 'linear.list_issues',
   name: 'List Issues',
   description:
-    'List issues from Linear with optional filters for team, state, assignee, and label.',
+    'List issues from Linear with optional filters (issues query). Use when the user wants to see, search, or filter their Linear issues.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '[{"id": "abc123", "identifier": "ENG-42", "title": "Fix login bug", "state": {"name": "In Progress"}, "priority": 2, "assignee": {"name": "Alice"}}]\n' +
+    '```',
   provider: LINEAR_PROVIDER,
   actionCategory: 'read',
 
@@ -55,6 +59,7 @@ export const linearListIssuesAction = defineAction({
         type: 'text',
         placeholder: 'e.g. abc123',
         description: 'Filter issues by team ID. Leave empty for all teams.',
+        extended: true,
         aiProvided: true,
       },
       {
@@ -63,6 +68,7 @@ export const linearListIssuesAction = defineAction({
         type: 'text',
         placeholder: 'e.g. In Progress, Done, Backlog',
         description: 'Filter by issue state name (case-insensitive partial match).',
+        extended: true,
         aiProvided: true,
       },
       {
@@ -71,6 +77,7 @@ export const linearListIssuesAction = defineAction({
         type: 'text',
         placeholder: 'e.g. user-id-123',
         description: 'Filter issues assigned to a specific user ID.',
+        extended: true,
         aiProvided: true,
       },
       {
@@ -79,6 +86,7 @@ export const linearListIssuesAction = defineAction({
         type: 'text',
         placeholder: 'e.g. Bug, Feature',
         description: 'Filter issues by label name (case-insensitive partial match).',
+        extended: true,
         aiProvided: true,
       },
       {
@@ -97,6 +105,7 @@ export const linearListIssuesAction = defineAction({
         defaultValue: false,
         description: 'Include archived issues in the results.',
         extended: true,
+        aiProvided: true,
       },
     ],
   },

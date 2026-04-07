@@ -30,7 +30,11 @@ export const mixpanelExportEventsAction = defineAction({
   id: 'mixpanel.export_events',
   name: 'Export Events',
   description:
-    'Export raw event data from Mixpanel for a date range. Returns an array of event objects.',
+    'Export raw event data from Mixpanel (GET /api/2.0/export). Use when the user wants to download event data for a date range, optionally filtered by event name. Returns JSONL parsed into an array.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"events": [{"event": "Sign Up", "properties": {"distinct_id": "user-1", "time": 1618716477}}], "count": 1, "fromDate": "2025-03-01", "toDate": "2025-03-31"}\n' +
+    '```',
   provider: MIXPANEL_PROVIDER,
   actionCategory: 'read',
 

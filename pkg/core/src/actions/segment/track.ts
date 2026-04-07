@@ -24,7 +24,11 @@ export const segmentTrackAction = defineAction({
   id: 'segment.track',
   name: 'Track Event',
   description:
-    'Track an analytics event for a user. Sends event name and optional properties to Segment.',
+    'Track an analytics event for a user via Segment (POST /v1/track). Use when the user wants to record a business event like a purchase, signup, or feature usage.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"acknowledged": true, "userId": "user-123", "event": "Order Completed"}\n' +
+    '```',
   provider: SEGMENT_PROVIDER,
   actionCategory: 'write',
 

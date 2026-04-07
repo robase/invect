@@ -25,7 +25,11 @@ export const asanaCreateTaskAction = defineAction({
   id: 'asana.create_task',
   name: 'Create Task',
   description:
-    'Create a new task in an Asana project. Supports name, notes, due date, and assignee.',
+    'Create a new task in an Asana project (POST /tasks). Use when the user wants to add a new task, to-do, or work item to an Asana project.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"gid": "12345", "name": "Design review", "resource_type": "task", "completed": false, "due_on": "2024-03-01", "assignee": {"gid": "67890", "name": "Alice"}}\n' +
+    '```',
   provider: ASANA_PROVIDER,
   actionCategory: 'write',
 

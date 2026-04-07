@@ -43,7 +43,11 @@ export const githubListReposAction = defineAction({
   id: 'github.list_repos',
   name: 'List Repositories',
   description:
-    'List GitHub repositories for the authenticated user or a specific organisation. Returns repo names, URLs, languages, stars, and more.',
+    'List repositories for the authenticated user or an organisation (GET /user/repos, GET /orgs/{org}/repos). Use when you need to discover or browse repositories.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '[{"name": "hello-world", "full_name": "octocat/hello-world", "private": false, "language": "JavaScript", "stars": 80, "forks": 9}]\n' +
+    '```',
   provider: GITHUB_PROVIDER,
   actionCategory: 'read',
 
@@ -113,6 +117,7 @@ export const githubListReposAction = defineAction({
         ],
         description: 'Sort direction',
         extended: true,
+        aiProvided: true,
       },
       {
         name: 'perPage',

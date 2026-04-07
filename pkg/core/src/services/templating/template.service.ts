@@ -29,11 +29,11 @@ export interface TemplateValidationResult {
   error?: string;
 }
 
-/** Regex to detect at least one {{ … }} block. */
-const TEMPLATE_PATTERN = /\{\{(?:[^}]|\}(?!\}))*\}\}/;
+/** Regex to detect at least one {{ … }} block (unrolled loop to avoid backtracking). */
+const TEMPLATE_PATTERN = /\{\{[^}]*(?:\}(?!\})[^}]*)*\}\}/;
 
-/** Regex to detect a "pure expression": the entire string is one {{ expr }} with no other text or expressions. */
-const PURE_EXPRESSION_PATTERN = /^\{\{((?:[^}]|\}(?!\}))*)\}\}$/;
+/** Regex to detect a "pure expression": the entire string is one {{ expr }} with no other text or expressions (unrolled loop). */
+const PURE_EXPRESSION_PATTERN = /^\{\{([^}]*(?:\}(?!\})[^}]*)*)\}\}$/;
 
 /**
  * Checks whether a string is a "pure" single-expression template
@@ -51,8 +51,8 @@ function isPureExpression(template: string): RegExpMatchArray | null {
   return m;
 }
 
-/** Regex to match each {{ … }} block for replacement. */
-const EXPRESSION_BLOCK_PATTERN = /\{\{((?:[^}]|\}(?!\}))*)\}\}/g;
+/** Regex to match each {{ … }} block for replacement (unrolled loop). */
+const EXPRESSION_BLOCK_PATTERN = /\{\{([^}]*(?:\}(?!\})[^}]*)*)\}\}/g;
 
 /** Regex for a valid JavaScript identifier (used for context destructuring). */
 const _VALID_JS_IDENT = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;

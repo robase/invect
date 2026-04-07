@@ -19,7 +19,11 @@ export const freshdeskGetTicketAction = defineAction({
   id: 'freshdesk.get_ticket',
   name: 'Get Ticket',
   description:
-    'Get a Freshdesk ticket by ID, including its conversations. Use this to retrieve full details of a specific support ticket.',
+    'Get a Freshdesk ticket by ID including conversations (GET /api/v2/tickets/{ticketId}?include=conversations). Use when the user wants to retrieve full details of a specific support ticket.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": 1, "subject": "Issue", "status": 2, "priority": 1, "requester_id": 123, "conversations": []}\n' +
+    '```',
   provider: FRESHDESK_PROVIDER,
   actionCategory: 'read',
   tags: ['freshdesk', 'support', 'ticket', 'helpdesk', 'get', 'oauth2'],

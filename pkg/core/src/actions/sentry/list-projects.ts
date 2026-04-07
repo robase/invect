@@ -21,7 +21,11 @@ export const sentryListProjectsAction = defineAction({
   id: 'sentry.list_projects',
   name: 'List Projects',
   description:
-    'List all projects for a Sentry organization. Returns project name, slug, platform, and status.',
+    'List all projects in a Sentry organization (GET /organizations/{org}/projects/). Use when the user needs to discover available projects or find a project slug for filtering issues.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"projects": [{"id": "1", "slug": "my-app", "name": "My App", "platform": "javascript", "status": "active"}], "totalCount": 3}\n' +
+    '```',
   provider: SENTRY_PROVIDER,
   actionCategory: 'read',
 

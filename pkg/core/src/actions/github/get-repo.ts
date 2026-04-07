@@ -22,7 +22,11 @@ export const githubGetRepoAction = defineAction({
   id: 'github.get_repo',
   name: 'Get Repository',
   description:
-    'Get detailed information about a GitHub repository including description, language, stars, forks, and settings.',
+    'Get detailed information about a GitHub repository (GET /repos/{owner}/{repo}). Use when you need repo metadata like description, language, stars, forks, visibility, or default branch.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"name": "hello-world", "full_name": "octocat/hello-world", "description": "My first repo", "language": "JavaScript", "stars": 80, "forks": 9, "private": false}\n' +
+    '```',
   provider: GITHUB_PROVIDER,
   actionCategory: 'read',
 
