@@ -24,7 +24,11 @@ export const googleSheetsAppendValuesAction = defineAction({
   id: 'google_sheets.append_values',
   name: 'Append Values',
   description:
-    'Append rows of data after the last row in a Google Sheets spreadsheet range. Great for adding new records to a table.',
+    'Append rows after the last row in a Google Sheets range (spreadsheets.values.append). Use when the user wants to add new records to a table or log data.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"updatedRange": "Sheet1!A4:C4", "updatedRows": 1, "updatedColumns": 3, "updatedCells": 3}\n' +
+    '```',
   provider: GOOGLE_SHEETS_PROVIDER,
   actionCategory: 'write',
 

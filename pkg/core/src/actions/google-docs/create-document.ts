@@ -20,7 +20,12 @@ const paramsSchema = z.object({
 export const googleDocsCreateDocumentAction = defineAction({
   id: 'google_docs.create_document',
   name: 'Create Document',
-  description: 'Create a new Google Docs document with an optional title and initial text content.',
+  description:
+    'Create a new Google Docs document (documents.create + documents.batchUpdate). Use when the user wants to create a new document with optional initial content.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"documentId": "1abc...", "title": "My Doc", "url": "https://docs.google.com/document/d/1abc.../edit"}\n' +
+    '```',
   provider: GOOGLE_DOCS_PROVIDER,
   actionCategory: 'write',
 

@@ -26,7 +26,11 @@ export const googleCalendarListEventsAction = defineAction({
   id: 'google_calendar.list_events',
   name: 'List Events',
   description:
-    'List upcoming or past events from a Google Calendar. Supports searching by keyword and filtering by date range.',
+    'List events from a Google Calendar (events.list). Use when the user wants to see upcoming meetings, check their schedule, or search for events.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"events": [{"id": "abc123", "summary": "Team Meeting", "start": {"dateTime": "2025-03-15T10:00:00Z"}, "status": "confirmed"}], "eventCount": 1}\n' +
+    '```',
   provider: GOOGLE_CALENDAR_PROVIDER,
   actionCategory: 'read',
 
@@ -100,6 +104,7 @@ export const googleCalendarListEventsAction = defineAction({
         defaultValue: true,
         description: 'Expand recurring events into individual instances',
         extended: true,
+        aiProvided: true,
       },
       {
         name: 'orderBy',
@@ -112,6 +117,7 @@ export const googleCalendarListEventsAction = defineAction({
         ],
         description: 'Sort order for results',
         extended: true,
+        aiProvided: true,
       },
     ],
   },

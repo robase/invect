@@ -1,76 +1,82 @@
 ---
 title: Theming
-description: Configure theme tokens, dark mode, and CSS scoping.
+description: Customize the Invect UI with light/dark mode and CSS variables.
 ---
-
-All `@invect/ui` styles are scoped inside a `.invect` CSS class. The component uses custom CSS properties (theme tokens) prefixed with `imp-` for colors, spacing, and typography. This scoping prevents conflicts with your application's styles.
 
 ## Theme modes
 
-The `Invect` and `InvectShell` components accept a `theme` prop:
+Invect supports three theme modes: `light`, `dark`, and `system`. Set the theme on the `<Invect />` or `<InvectShell />` component.
 
-```tsx
-<Invect apiBaseUrl="/api/invect" theme="dark" />
+The `system` mode automatically follows the operating system's preference and updates in real-time.
+
+The theme choice is persisted to `localStorage` under the `invect-ui-theme` key.
+
+## CSS scoping
+
+All Invect styles are scoped inside a `.invect` CSS class. This means:
+
+- Invect styles won't leak into your app
+- Your app styles won't affect the Invect UI
+- Dark mode is applied via `.invect.dark` class
+
+```html
+<!-- Rendering structure -->
+<div class="invect dark">
+  <!-- All Invect UI lives here -->
+  <!-- imp-* theme tokens are active -->
+</div>
 ```
-
-Options:
-
-- `"light"` — light theme
-- `"dark"` — dark theme
-- `"system"` — follows the OS preference (default)
-
-The `system` option uses `prefers-color-scheme` and updates automatically when the user changes their OS setting.
 
 ## Theme tokens
 
-All colors in the editor are defined as CSS custom properties. The main tokens:
+Invect uses CSS custom properties with the `imp-` prefix. These control all colors, borders, shadows, and typography:
 
-| Token                      | Usage                       |
-| -------------------------- | --------------------------- |
-| `--imp-background`         | Page background             |
-| `--imp-foreground`         | Primary text                |
-| `--imp-muted`              | Muted/secondary backgrounds |
-| `--imp-muted-foreground`   | Secondary text              |
-| `--imp-border`             | Borders and dividers        |
-| `--imp-primary`            | Primary action color        |
-| `--imp-primary-foreground` | Text on primary backgrounds |
-| `--imp-accent`             | Accent/highlight color      |
-| `--imp-card`               | Card backgrounds            |
-| `--imp-destructive`        | Error/danger states         |
+| Token | Description |
+|-------|-------------|
+| `--imp-background` | Page background |
+| `--imp-foreground` | Default text color |
+| `--imp-card` | Card/panel background |
+| `--imp-card-foreground` | Card text color |
+| `--imp-popover` | Popover/dropdown background |
+| `--imp-primary` | Primary accent color |
+| `--imp-primary-foreground` | Text on primary color |
+| `--imp-secondary` | Secondary background |
+| `--imp-muted` | Muted/disabled background |
+| `--imp-muted-foreground` | Muted text color |
+| `--imp-accent` | Accent highlight |
+| `--imp-destructive` | Error/danger color |
+| `--imp-border` | Border color |
+| `--imp-input` | Input field border |
+| `--imp-ring` | Focus ring color |
+| `--imp-radius` | Border radius |
 
-In Tailwind, these are used as `bg-imp-background`, `text-imp-foreground`, `border-imp-border`, etc.
+## Using tokens in plugin components
 
-## Customising tokens
-
-Override tokens by setting CSS custom properties within the `.invect` scope:
-
-```css
-.invect {
-  --imp-background: #fafafa;
-  --imp-foreground: #111111;
-  --imp-primary: #2563eb;
-  --imp-border: #e5e7eb;
-}
-
-.invect.dark {
-  --imp-background: #0a0a0a;
-  --imp-foreground: #fafafa;
-  --imp-primary: #3b82f6;
-  --imp-border: #27272a;
-}
-```
-
-Place these overrides after the `@invect/ui/styles` import so they take precedence.
-
-## InvectShell vs. Invect
-
-Two components are exported for different needs:
-
-- **`Invect`** — the full application (router, sidebar, editor, all providers). Use this for mounting the complete editor.
-- **`InvectShell`** — only the CSS scope (`.invect` class + theme resolution). No routing, no providers, no app logic. Use this when you need Invect styling around your own UI — for example, wrapping an auth gate that renders before the editor loads.
+If you're building a [frontend plugin](/docs/plugins/building-plugins), use Tailwind classes with the `imp-` token prefix:
 
 ```tsx
-import { Invect, InvectShell } from '@invect/ui';
+function MyPluginComponent() {
+  return (
+    <div className="bg-imp-background text-imp-foreground border border-imp-border rounded-md p-4">
+      <h2 className="text-imp-primary font-semibold">Plugin Panel</h2>
+      <p className="text-imp-muted-foreground">
+        This component uses Invect theme tokens.
+      </p>
+    </div>
+  );
+}
 ```
 
-The shell is lightweight — it just renders a `<div className="invect light|dark">` wrapper with theme-aware class toggling.
+These classes only work inside the `.invect` CSS scope (provided by `<Invect />` or `<InvectShell />`).
+
+## Dark mode
+
+Dark mode is handled automatically. Components should use `imp-*` tokens exclusively — never hardcode colors. When the theme switches between light and dark, token values update via CSS and all components re-render with the new palette.
+
+```tsx
+// CORRECT — adapts to light/dark
+<div className="bg-imp-background text-imp-foreground" />
+
+// WRONG — ignores theme
+<div className="bg-white text-black" />
+```

@@ -104,7 +104,11 @@ export const microsoftGetMeetingTranscriptAction = defineAction({
   id: 'microsoft.get_meeting_transcript',
   name: 'Get Meeting Transcript',
   description:
-    'Get the transcript for a Microsoft Teams online meeting. If no transcript ID is specified, retrieves the most recent transcript. Returns speaker-attributed segments.',
+    'Get the transcript for a Teams online meeting (GET /me/onlineMeetings/{id}/transcripts/{id}/content). Use when you need meeting notes, action items, or a written record of what was discussed.\n\n'
+    + 'Example response:\n'
+    + '```json\n'
+    + '{"meetingId": "MSo1N2Y5...", "transcriptId": "MSMjMCMj...", "segmentCount": 42, "segments": [{"speaker": "Alice", "text": "Let\'s review the Q1 numbers.", "timestamp": "00:00:16.246 → 00:00:17.726"}]}\n'
+    + '```',
   provider: MICROSOFT_PROVIDER,
   actionCategory: 'read',
 

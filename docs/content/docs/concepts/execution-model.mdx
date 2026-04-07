@@ -1,92 +1,131 @@
 ---
 title: Execution Model
-description: How flows execute — topological ordering, data construction, template resolution, and state management.
+description: Deep dive into how flows execute — node ordering, data flow, and state management.
 ---
 
-When a flow runs, Invect resolves the graph, executes nodes in dependency order, constructs input data for each node from upstream outputs, and resolves template expressions before passing parameters to the execution function.
+This page covers the internals of flow execution. For a practical overview, see [Flows > Execution](/docs/flows/execution).
 
-## Execution sequence
-
-The flow execution lifecycle:
+## Flow execution pipeline
 
 ```
-startFlowRun(flowId, inputs)
-  → Load the flow and its latest version
-  → Create a FlowRun record (status: RUNNING)
-  → Topological sort: determine execution order from the graph
-  → For each node (in topological order):
-      → Build the incoming data object from upstream outputs
-      → Resolve template expressions in all config params
-      → Execute the node (action or agent)
-      → Store the output for downstream nodes
-      → Create a NodeExecution record (input, output, timing)
-  → Mark the FlowRun as COMPLETED (or FAILED)
-  → Return the result
+core.startFlowRun(flowId, inputs)
+  │
+  ├── FlowsService.getFlowById()
+  │   └── Load flow + latest version definition
+  │
+  ├── FlowOrchestrationService.initiateFlowRun()
+  │   │
+  │   ├── FlowRunsService.createFlowRun()
+  │   │   └── Create execution record (status: PENDING)
+  │   │
+  │   ├── GraphService.topologicalSort()
+  │   │   └── Determine node execution order from edges
+  │   │
+  │   └── For each node in topological order:
+  │       │
+  │       ├── NodeExecutionCoordinator.buildIncomingDataObject()
+  │       │   └── Collect upstream node outputs, keyed by referenceId
+  │       │
+  │       ├── NodeExecutionCoordinator.resolveTemplateParams()
+  │       │   └── Evaluate {{ }} expressions via QuickJS WASM
+  │       │
+  │       ├── executeNode()
+  │       │   ├── NodeExecutionService.createNodeExecution() (trace)
+  │       │   ├── Dispatch to action registry or legacy executor
+  │       │   │   ├── actionRegistry.get(type) → executeActionAsNode()
+  │       │   │   └── nodeRegistry.get(type) → AgentNodeExecutor.execute()
+  │       │   └── NodeExecutionService.updateNodeExecutionStatus()
+  │       │
+  │       └── Store output for downstream nodes
+  │
+  └── Return FlowRunResult
 ```
-
-## Topological sorting
-
-The `GraphService` resolves the graph's execution order using topological sort. This ensures every node executes after all its upstream dependencies have completed. Cycles are detected and reported as errors.
-
-The sort uses Kahn's algorithm, which naturally handles parallel-independent branches. In the current implementation, nodes execute sequentially within the sorted order (parallelism is not automatic).
 
 ## Input data construction
 
-For each node, the `NodeExecutionCoordinator.buildIncomingDataObject()` method constructs the input:
+The `buildIncomingDataObject()` method creates the context for each node:
 
-1. Identify all upstream nodes (those with edges pointing to this node)
-2. For each upstream node, get its stored output
-3. Key the output by the upstream node's **reference ID**
-4. If the output is valid JSON, parse it (so downstream nodes get objects, not strings)
-5. Handle duplicate keys by appending numeric suffixes (`result`, `result1`)
+1. Find all upstream nodes (via edges)
+2. For each upstream node, get its output from the execution store
+3. Parse the output as JSON (if valid), otherwise use raw string
+4. Key each output by the upstream node's `referenceId`
 
-The result is a flat object:
-
-```json
-{
-  "input": { "name": "Alice" },
-  "fetch_user": { "id": 123, "role": "admin" },
-  "check_status": "active"
-}
+```ts
+// Node Z has upstream nodes "Fetch User" (referenceId: fetch_user) and "Get Config" (referenceId: get_config)
+const incomingData = {
+  fetch_user: { id: 123, name: "Alice" },    // JSON-parsed output
+  get_config: "production"                     // Raw string output
+};
 ```
+
+### Reference ID derivation
+
+The `referenceId` is the node's label normalized to `snake_case`:
+- "Fetch User" → `fetch_user`
+- "API Response" → `api_response`
+
+If two upstream nodes produce the same key, incrementing numbers are appended: `some_a`, `some_a1`.
 
 ## Template resolution
 
-After input data is constructed, all config parameters go through template resolution:
+After building the input data, all template parameters are resolved:
 
-1. Scan each parameter for `{{ }}` blocks
-2. For each block, evaluate the JavaScript expression in a QuickJS WASM sandbox
-3. The sandbox's global scope contains the incoming data object's keys as variables
-4. Replace the `{{ }}` block with the result
+1. Scan every config param for `{{ }}` patterns
+2. For each match, evaluate the JavaScript expression via QuickJS WASM
+3. The evaluation context includes all keys from the input data as local variables
+4. Replace the template block with the result
 
-If a parameter is entirely a single `{{ }}` expression, the raw value is returned (preserving types). If it mixes text and expressions, the result is concatenated as a string.
+Two evaluation modes:
+
+| Mode | When | Returns |
+|------|------|---------|
+| Pure expression | Entire param is `{{ expr }}` | Raw JS value (object, array, number) |
+| Mixed template | Text + `{{ expr }}` blocks | String (expressions stringified) |
 
 ## Special node handling
 
-Some nodes get special treatment during execution:
+### If/Else branching
 
-- **Input nodes** — don't receive upstream data; they produce the flow's input values
-- **Output nodes** — passthrough; their upstream output becomes the flow's result
-- **If/Else nodes** — after execution, downstream nodes on the inactive branch are marked `SKIPPED`
-- **Switch nodes** — similar to if/else, but with multiple branches
-- **Agent nodes** — run through the legacy `NodeExecutorRegistry` path (not the action executor)
+When an If/Else node executes:
+
+1. The condition expression is evaluated against the input data
+2. The result determines which downstream branch is active
+3. Nodes on the inactive branch are marked as `SKIPPED`
+4. The If/Else node's output equals its input (passthrough)
+
+### Agent execution
+
+The Agent node has a different execution model — it runs an iterative loop:
+
+1. Build the initial prompt from task prompt + system prompt + context
+2. Send to LLM with available tool definitions
+3. If LLM returns tool calls → execute tools → feed results back → repeat
+4. If LLM returns text or stop tool → end loop
+5. Final output = agent's last response
+
+This loop is handled by `AgentNodeExecutor`, the only remaining legacy executor.
+
+### Batch processing
+
+When a Model node returns `state: "PENDING"`:
+
+1. The node output includes a batch job ID
+2. The flow run transitions to `PAUSED_FOR_BATCH`
+3. The batch polling service periodically checks the provider
+4. On completion, the flow resumes from the paused node
 
 ## State management
 
-During execution, the coordinator maintains:
+During execution, node outputs are stored in memory (per flow run). After the run completes, the full execution trace (all node inputs, outputs, errors, timing) is persisted to the database.
 
-- A map of node outputs (node ID → output data)
-- The current flow run record (updated with status changes)
-- Node execution records (one per node, created at start, updated at completion)
+Each node execution record includes:
 
-If any node fails, the flow run is marked `FAILED` and remaining nodes are skipped. The error is recorded in both the node execution and the flow run records.
-
-## Batch pause/resume
-
-When a node returns `state: "PENDING"` (batch mode):
-
-1. The flow run transitions to `PAUSED_FOR_BATCH`
-2. A `batch_job` record is created
-3. Execution stops — no downstream nodes run
-4. The polling service periodically checks the batch provider
-5. When complete, the flow resumes from the paused node
+| Field | Description |
+|-------|-------------|
+| `nodeId` | The node's ID within the flow |
+| `status` | `COMPLETED`, `FAILED`, `SKIPPED` |
+| `input` | The incoming data object |
+| `resolvedParams` | Config params after template resolution |
+| `output` | The node's result |
+| `error` | Error message (if failed) |
+| `startedAt` / `completedAt` | Timing |

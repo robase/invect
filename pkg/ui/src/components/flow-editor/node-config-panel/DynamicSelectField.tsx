@@ -1,6 +1,16 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
-import { Loader2 } from 'lucide-react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { Check, ChevronsUpDown, Loader2 } from 'lucide-react';
+import { cn } from '../../../lib/utils';
+import { Button } from '../../ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '../../ui/popover';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '../../ui/command';
 import { useLoadFieldOptions } from '../../../api/node-data.api';
 import type { NodeParamField } from '../../../types/node-definition.types';
 
@@ -30,8 +40,10 @@ export function DynamicSelectField({
   value,
   onChange,
   formValues,
-  portalContainer,
+  portalContainer: _portalContainer,
 }: DynamicSelectFieldProps) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const dependsOn = field.loadOptions?.dependsOn ?? [];
 
   // Build dependency values from formValues
@@ -98,41 +110,109 @@ export function DynamicSelectField({
       ? optionEntries
       : [{ label: stringValue, value: stringValue }, ...optionEntries];
 
+  // Client-side search filter
+  const filteredOptions = useMemo(() => {
+    if (!search) {
+      return renderOptions;
+    }
+    const lower = search.toLowerCase();
+    return renderOptions.filter(
+      (o) => o.label.toLowerCase().includes(lower) || o.value.toLowerCase().includes(lower),
+    );
+  }, [renderOptions, search]);
+
+  const handleSelect = useCallback(
+    (val: string) => {
+      onChange(val);
+      setOpen(false);
+      setSearch('');
+    },
+    [onChange],
+  );
+
+  // Reset search when popover closes
+  useEffect(() => {
+    if (!open) {
+      setSearch('');
+    }
+  }, [open]);
+
+  const displayLabel = useMemo(() => {
+    if (!stringValue) {
+      return null;
+    }
+    const match = renderOptions.find((o) => o.value === stringValue);
+    return match?.label ?? stringValue;
+  }, [stringValue, renderOptions]);
+
   return (
     <div className="relative">
-      <Select
-        value={stringValue}
-        onValueChange={(val) => onChange(val)}
-        disabled={disabled || isLoading}
-      >
-        <SelectTrigger
-          id={field.name}
-          className={isLoading ? 'font-mono text-xs opacity-60' : 'font-mono text-xs'}
-        >
-          {isLoading ? (
-            <span className="flex items-center gap-2 text-muted-foreground">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              Loading…
-            </span>
-          ) : (
-            <SelectValue placeholder={placeholder} />
-          )}
-        </SelectTrigger>
-        <SelectContent className="z-[80] font-mono text-xs" container={portalContainer}>
-          {renderOptions
-            .filter((o) => o.value !== '')
-            .map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          {renderOptions.length === 0 && !isLoading && (
-            <div className="px-2 py-1.5 text-xs text-muted-foreground">
-              {!hasDeps ? 'Fill in required fields first' : 'No options available'}
-            </div>
-          )}
-        </SelectContent>
-      </Select>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            id={field.name}
+            disabled={disabled || isLoading}
+            className={cn(
+              'w-full justify-between font-mono text-xs h-9',
+              isLoading && 'opacity-60',
+              !stringValue && 'text-muted-foreground',
+            )}
+          >
+            {isLoading ? (
+              <span className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Loading…
+              </span>
+            ) : (
+              <span className="truncate">{displayLabel ?? placeholder}</span>
+            )}
+            <ChevronsUpDown className="ml-auto h-3 w-3 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
+          <Command shouldFilter={false}>
+            <CommandInput
+              placeholder="Search…"
+              className="h-8 text-xs"
+              value={search}
+              onValueChange={setSearch}
+            />
+            <CommandList className="max-h-52">
+              {!isLoading && filteredOptions.length === 0 && (
+                <CommandEmpty className="text-xs">
+                  {!hasDeps
+                    ? 'Fill in required fields first'
+                    : search
+                      ? 'No matching options'
+                      : 'No options available'}
+                </CommandEmpty>
+              )}
+              {filteredOptions.length > 0 && (
+                <CommandGroup>
+                  {filteredOptions
+                    .filter((o) => o.value !== '')
+                    .map((option) => (
+                      <CommandItem
+                        key={option.value}
+                        value={option.value}
+                        onSelect={() => handleSelect(option.value)}
+                        className="text-xs font-mono"
+                      >
+                        <span className="truncate">{option.label}</span>
+                        {stringValue === option.value && (
+                          <Check className="ml-auto h-3 w-3 shrink-0" />
+                        )}
+                      </CommandItem>
+                    ))}
+                </CommandGroup>
+              )}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
       {isError && (
         <p className="mt-1 text-xs text-destructive">
           {error instanceof Error ? error.message : 'Failed to load options'}

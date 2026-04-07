@@ -1,4 +1,4 @@
 {
   "title": "Deployment",
-  "pages": ["encryption", "environment-variables", "production-checklist"]
+  "pages": ["production", "encryption"]
 }

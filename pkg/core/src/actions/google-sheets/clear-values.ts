@@ -21,7 +21,11 @@ export const googleSheetsClearValuesAction = defineAction({
   id: 'google_sheets.clear_values',
   name: 'Clear Values',
   description:
-    'Clear all cell values in a range of a Google Sheets spreadsheet. Formatting is preserved.',
+    'Clear all cell values in a range of a Google Sheets spreadsheet (spreadsheets.values.clear). Use when the user wants to erase data while keeping formatting.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"clearedRange": "Sheet1!A1:D10"}\n' +
+    '```',
   provider: GOOGLE_SHEETS_PROVIDER,
   actionCategory: 'delete',
 

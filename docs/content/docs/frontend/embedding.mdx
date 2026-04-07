@@ -1,107 +1,199 @@
 ---
-title: Embedding the Editor
-description: Mount the visual flow editor in your React application.
+title: Embedding the UI
+description: Mount the Invect visual editor in your React application.
 ---
 
-The Invect visual editor is a React component provided by `@invect/ui`. It's the full dashboard — flow list, canvas editor, node palette, execution inspector, credentials manager, and settings.
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+import { Callout } from 'fumadocs-ui/components/callout';
 
-## Basic setup
+The `@invect/ui` package provides a React component that renders the full visual flow editor, dashboard, and management UI.
 
-```bash
-pnpm add @invect/ui react-router
-```
+## Installation
 
-```tsx
-import { BrowserRouter, Routes, Route } from 'react-router';
+<Tabs items={['pnpm', 'npm', 'yarn']}>
+  <Tab value="pnpm">
+  ```bash
+  pnpm add @invect/ui
+  ```
+  </Tab>
+  <Tab value="npm">
+  ```bash
+  npm install @invect/ui
+  ```
+  </Tab>
+  <Tab value="yarn">
+  ```bash
+  yarn add @invect/ui
+  ```
+  </Tab>
+</Tabs>
+
+## Basic usage
+
+```tsx title="App.tsx"
 import { Invect } from '@invect/ui';
 import '@invect/ui/styles';
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route
-          path="/*"
-          element={
-            <div style={{ height: '100vh' }}>
-              <Invect apiBaseUrl="http://localhost:3000/invect" />
-            </div>
-          }
-        />
-      </Routes>
-    </BrowserRouter>
+    <Invect
+      apiBaseUrl="http://localhost:3000/invect"
+    />
   );
 }
 ```
 
-**`apiBaseUrl`** — the URL where your Invect backend API is mounted. The component makes all API calls to this URL.
+This renders the full Invect UI including:
+- Dashboard with flow cards
+- Visual flow editor with drag-and-drop
+- Node config panels
+- Execution trace viewer
+- Credential management
+- Agent tool selector
 
-**`basePath`** (optional) — if the editor isn't mounted at the root (`/`), set this to the mount path so internal navigation works correctly:
+## Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `apiBaseUrl` | `string` | `undefined` | Base URL of the Invect API backend |
+| `basePath` | `string` | `undefined` | URL path where the UI is mounted (for correct routing) |
+| `useMemoryRouter` | `boolean` | `false` | Use in-memory router instead of browser URL routing |
+| `reactQueryClient` | `QueryClient` | auto-created | Custom TanStack Query client |
+| `plugins` | `InvectFrontendPlugin[]` | `[]` | Frontend plugins for sidebar items, routes, etc. |
+
+## Routing
+
+The `<Invect />` component uses React Router v7 internally. It needs to know:
+
+1. **Where the API is** → `apiBaseUrl`
+2. **Where the UI is mounted** → `basePath`
+
+### Standalone app
+
+If Invect is the only thing on the page, you don't need `basePath`:
 
 ```tsx
-<Invect apiBaseUrl="/api/invect" basePath="/admin/workflows" />
+<Invect apiBaseUrl="http://localhost:3000/invect" />
 ```
 
-**Important**: The `Invect` component needs a full-height container. Without explicit height, the canvas won't be visible.
+### Mounted at a sub-path
 
-## What's inside
+If Invect is at `/invect` in your app:
 
-`<Invect />` renders the complete application:
+```tsx
+<Invect
+  apiBaseUrl="/api/invect"
+  basePath="/invect"
+/>
+```
 
-- **Sidebar** — navigation between flows, credentials, settings
-- **Dashboard** — flow cards with create, duplicate, delete
-- **Flow editor** — drag-and-drop canvas with node palette, edge connections, config panels
-- **Execution inspector** — click nodes after a run to see input/output/timing
-- **Credentials manager** — create, edit, test, and delete credentials
-- **Settings** — configuration view
+### Embedded in another app
 
-It includes its own React Router internally, so it manages navigation between these views.
+If you're embedding Invect inside an existing React app with its own router, use `useMemoryRouter` to avoid conflicts:
 
-## Styles
+```tsx
+<Invect
+  apiBaseUrl="/api/invect"
+  useMemoryRouter
+/>
+```
 
-The `@invect/ui/styles` import is required — it provides all CSS for the editor and its internal components. Without it, the editor renders unstyled.
+## Two components: `Invect` vs `InvectShell`
 
-All styles are scoped under a `.invect` CSS class, so they won't conflict with your application's styles.
+| Component | Purpose |
+|-----------|---------|
+| `Invect` | Full app — router, sidebar, pages, API providers, query client |
+| `InvectShell` | CSS scope only — theme tokens, dark mode, no app logic |
+
+`InvectShell` exists for situations where you need Invect styling but not the full app — typically for plugin UI that renders **outside** the main component (like a sign-in page).
+
+```tsx title="Using InvectShell for a login page"
+import { InvectShell } from '@invect/ui';
+import '@invect/ui/styles';
+
+function LoginPage() {
+  return (
+    <InvectShell theme="dark">
+      {/* Your login form gets Invect theme tokens */}
+      <div className="bg-imp-background text-imp-foreground">
+        <h1>Sign In</h1>
+      </div>
+    </InvectShell>
+  );
+}
+```
+
+### InvectShell props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `children` | `ReactNode` | — | Content to wrap |
+| `theme` | `'light' \| 'dark' \| 'system'` | `'dark'` | Color theme |
+| `className` | `string` | `undefined` | Additional CSS classes |
 
 ## With authentication
 
-If you're using the `@invect/user-auth` plugin, wrap the editor with `AuthenticatedInvect` to add a sign-in gate:
+When using the [Authentication Plugin](/docs/plugins/authentication), use `AuthenticatedInvect` to wrap the UI with a sign-in gate:
 
-```tsx
+```tsx title="App.tsx"
 import { Invect, InvectShell } from '@invect/ui';
 import { AuthenticatedInvect } from '@invect/user-auth/ui';
 import '@invect/ui/styles';
 
-<AuthenticatedInvect
-  apiBaseUrl="/api/invect"
-  basePath="/invect"
-  InvectComponent={Invect}
-  ShellComponent={InvectShell}
-  theme="light"
-/>;
-```
-
-`InvectShell` provides the CSS scope around the auth UI (sign-in page, loading states) so they render with Invect's theme tokens. The `Invect` component is passed as a prop to avoid circular dependencies.
-
-See [Authentication plugin](/docs/plugins/authentication) for full setup.
-
-## Next.js integration
-
-For Next.js, mount the editor in a client component with a catch-all route:
-
-```tsx title="app/invect/[[...slug]]/page.tsx"
-'use client';
-
-import { Invect } from '@invect/ui';
-import '@invect/ui/styles';
-
-export default function InvectPage() {
+function App() {
   return (
-    <div style={{ height: '100vh' }}>
-      <Invect apiBaseUrl="/api/invect" basePath="/invect" />
-    </div>
+    <AuthenticatedInvect
+      apiBaseUrl="/api/invect"
+      basePath="/invect"
+      InvectComponent={Invect}
+      ShellComponent={InvectShell}
+      theme="dark"
+    />
   );
 }
 ```
 
-The `basePath="/invect"` matches the route segment so internal navigation resolves correctly.
+This renders:
+```
+InvectShell (CSS scope + theme)
+  └─ AuthProvider
+      └─ AuthGate
+          ├─ Not authenticated → Sign-in page (with Invect styling)
+          └─ Authenticated → <Invect /> (full app)
+```
+
+See [Authentication Plugin](/docs/plugins/authentication) for backend setup.
+
+## Frontend plugins
+
+Plugins can contribute UI elements to the Invect frontend:
+
+```tsx
+<Invect
+  apiBaseUrl="/api/invect"
+  plugins={[rbacFrontendPlugin]}
+/>
+```
+
+Frontend plugins can add:
+
+| Contribution | Description |
+|-------------|-------------|
+| `sidebar` | Navigation items in the sidebar |
+| `routes` | New pages (e.g., `/access` for RBAC) |
+| `panelTabs` | Tabs in the node config panel |
+| `headerActions` | Action buttons in the header (e.g., "Share") |
+| `providers` | React context providers wrapping the app |
+| `apiHeaders` | Inject headers into all API requests |
+
+See [Building Plugins](/docs/plugins/building-plugins) for how to create frontend plugins.
+
+## Styles
+
+You must import the Invect stylesheet:
+
+```ts
+import '@invect/ui/styles';
+```
+
+All Invect CSS is scoped inside a `.invect` class — it won't conflict with your app's styles. Theme tokens use the `imp-*` prefix (e.g., `bg-imp-background`, `text-imp-foreground`).

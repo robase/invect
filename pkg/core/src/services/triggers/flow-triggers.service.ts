@@ -169,9 +169,14 @@ export class FlowTriggersService {
           }
         }
 
-        const updated = await this.databaseService.flowTriggers.update(prev.id, update);
-        if (updated) {
-          results.push(updated);
+        // Skip DB call when there's nothing to update (e.g. manual triggers)
+        if (Object.keys(update).length > 0) {
+          const updated = await this.databaseService.flowTriggers.update(prev.id, update);
+          if (updated) {
+            results.push(updated);
+          }
+        } else {
+          results.push(prev);
         }
 
         existingByNodeId.delete(node.id);

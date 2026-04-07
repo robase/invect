@@ -22,7 +22,11 @@ export const googleCalendarDeleteEventAction = defineAction({
   id: 'google_calendar.delete_event',
   name: 'Delete Event',
   description:
-    'Delete an event from a Google Calendar. Optionally notify attendees about the cancellation.',
+    'Delete an event from Google Calendar (events.delete). Use when the user wants to cancel or remove an event from their calendar.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"eventId": "abc123", "deleted": true, "calendarId": "primary"}\n' +
+    '```',
   provider: GOOGLE_CALENDAR_PROVIDER,
   actionCategory: 'delete',
 
@@ -77,6 +81,7 @@ export const googleCalendarDeleteEventAction = defineAction({
         ],
         description: 'Who to notify about the cancellation',
         extended: true,
+        aiProvided: true,
       },
     ],
   },

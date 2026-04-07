@@ -1,90 +1,165 @@
 ---
 title: Actions System
-description: How defineAction() works and how actions serve as both nodes and tools.
+description: How nodes and agent tools are defined using the defineAction() pattern.
 ---
 
-Actions are the unified abstraction for node types and agent tools. Every node type in Invect (except the legacy Agent node) is defined as an action using `defineAction()`. This single definition serves multiple purposes:
+import { Callout } from 'fumadocs-ui/components/callout';
 
-- Flow node in the visual editor
-- Agent tool for LLM tool calling
-- Config panel UI generation
-- Input validation via Zod
+The **actions system** is how all node types (except Agent) and all agent tools are defined. A single `defineAction()` call creates both a flow node and an agent tool.
 
-## The dual-purpose design
+## defineAction()
 
-When an action is registered:
+Every action is a self-contained file that defines:
 
-1. **As a node**: The action ID becomes the node type string in flow definitions. The `params.fields` array generates the config panel in the visual editor. When the node executes, `executeActionAsNode()` constructs an `ActionExecutionContext`, validates params with Zod, and calls `execute()`.
+```ts title="pkg/core/src/actions/core/jq.ts"
+import { defineAction } from '../define-action';
+import { CORE_PROVIDER } from '../providers';
+import { z } from 'zod/v4';
 
-2. **As an agent tool**: The `toAgentToolDefinition()` method converts the action's Zod schema to JSON Schema, pulls the description, and creates an `AgentToolDefinition`. When an agent calls the tool, `executeActionAsTool()` validates input with Zod and calls `execute()`.
+export const jqAction = defineAction({
+  id: 'core.jq',
+  name: 'JQ Transformation',
+  description: 'Query and transform JSON data using JQ syntax',
+  provider: CORE_PROVIDER,
 
-The `execute()` function is the same in both cases — it doesn't know whether it was invoked as a node or a tool.
+  params: {
+    schema: z.object({
+      query: z.string(),
+    }),
+    fields: [
+      { name: 'query', label: 'JQ Query', type: 'code', required: true },
+    ],
+  },
 
-## Action registry
+  async execute(params, context) {
+    const result = jq.run(params.query, context.incomingData);
+    return { success: true, output: result };
+  },
+});
+```
 
-The `ActionRegistry` is a central store of all registered actions. During `Invect.initialize()`:
+## Action definition fields
 
-1. `initializeGlobalActionRegistry()` creates the registry
-2. `registerBuiltinActions()` registers all ~190 built-in actions
-3. Plugin actions are registered
-4. `registerActionsAsTools()` converts all actions to agent tools
+| Field | Required | Description |
+|-------|----------|-------------|
+| `id` | Yes | Unique string identifier (e.g., `core.jq`, `gmail.send_message`) |
+| `name` | Yes | Human-readable name for the UI |
+| `description` | Yes | What the action does (shown in UI and to LLMs for tool selection) |
+| `provider` | Yes | Provider grouping (determines palette category) |
+| `params.schema` | Yes | Zod schema for input validation |
+| `params.fields` | Yes | UI field definitions (label, type, required) |
+| `execute` | Yes | Async function that runs the action |
+| `credential` | No | Credential requirements (OAuth2 provider, required flag) |
 
-The registry supports lookup by action ID, listing all actions, and listing by provider.
+## Execution context
 
-## Action execution context
-
-When an action executes (either as node or tool), it receives:
+The `execute` function receives validated params and a context object:
 
 ```ts
-interface ActionExecutionContext {
-  incomingData: Record<string, unknown>;  // Upstream node outputs
-  flowInputs: Record<string, unknown>;    // Original flow inputs
-  credential?: Credential;                // Decrypted credential (if attached)
-  logger: Logger;                         // Scoped logger
-  flowRunState: {
-    flowId: string;
-    flowRunId: string;
-    nodeId: string;
-  };
-  functions: {
-    submitPrompt: (...) => Promise<...>;        // Call an LLM
-    getCredential: (id: string) => Promise<...>; // Load a credential
-    markDownstreamNodesAsSkipped: () => void;    // For conditional nodes
-  };
+async execute(params, context) {
+  // params — Zod-validated and template-resolved config
+  // context.credential — OAuth2 tokens or API key (auto-refreshed)
+  // context.incomingData — upstream node outputs
+  // context.flowInputs — original flow inputs
+  // context.logger — structured logger
+  // context.functions — service functions:
+  //   .submitPrompt() — call an LLM
+  //   .getCredential(id) — fetch a credential
+  //   .markDownstreamNodesAsSkipped() — for flow control nodes
+  // context.flowRunState — current flow run state
 }
 ```
 
-## The execute function
+## Action results
+
+Actions return an `ActionResult`:
 
 ```ts
-async execute(params: T, context: ActionExecutionContext): Promise<ActionResult>
-```
+// Simple result
+return { success: true, output: { data: 'hello' } };
 
-`params` are the validated, template-resolved configuration values. `context` provides everything else the action needs.
+// Error result
+return { success: false, error: 'Something went wrong' };
 
-Returns:
-
-```ts
-interface ActionResult {
-  success: boolean;
-  output?: unknown; // The node's output data
-  error?: string; // Error message (if success: false)
-  outputVariables?: Record<string, unknown>; // For multi-output nodes (if/else, switch)
-}
-```
-
-## Provider grouping
-
-Actions are grouped by **provider** for the node palette UI. Each provider has an `id`, `name`, and `icon`:
-
-```ts
-const GMAIL_PROVIDER = {
-  id: 'gmail',
-  name: 'Gmail',
-  icon: 'Mail',
-  description: 'Google Gmail actions',
-  category: 'communication',
+// Multi-output (for flow control nodes like if/else)
+return {
+  success: true,
+  output: data,
+  outputVariables: {
+    true_output: data,
+    false_output: null,
+  },
 };
 ```
 
-The node palette groups actions under their provider's heading. Core actions are bundled under the "Core" provider.
+## Dual registration
+
+During `Invect.initialize()`, every action is registered in two places:
+
+1. **ActionRegistry** — used by the flow execution engine to run nodes
+2. **AgentToolRegistry** — used by the Agent node to provide tools to LLMs
+
+The conversion from action to agent tool happens automatically via `toAgentToolDefinition()`:
+- `id` → tool ID
+- `name` → tool name
+- `description` → tool description (sent to the LLM)
+- `params.schema` → JSON Schema input definition
+
+## Providers
+
+Actions are grouped by **provider** for UI organization:
+
+```ts
+export const GMAIL_PROVIDER: ProviderDef = {
+  id: 'gmail',
+  name: 'Gmail',
+  icon: Mail,  // Lucide icon
+};
+```
+
+Current providers: Core, HTTP, Triggers, Gmail, Slack, GitHub, Google Docs, Google Sheets, Google Drive, Google Calendar, Linear, PostgreSQL, Microsoft 365, Microsoft Teams, Sentry, Grafana, Salesforce, HubSpot, Jira, Asana, Trello, Dropbox, OneDrive, Stripe, Twitter, LinkedIn, Facebook, Shopify, WooCommerce, Zendesk, Intercom, Freshdesk, Segment, Mixpanel, Google Analytics, GitLab, Resend, SendGrid.
+
+## Adding a custom action
+
+### 1. Create the action file
+
+```ts title="my-actions/weather.ts"
+import { defineAction } from '@invect/core';
+import { z } from 'zod/v4';
+
+export const weatherAction = defineAction({
+  id: 'custom.get_weather',
+  name: 'Get Weather',
+  description: 'Fetch current weather for a city',
+  provider: { id: 'custom', name: 'Custom', icon: Cloud },
+
+  params: {
+    schema: z.object({
+      city: z.string(),
+    }),
+    fields: [
+      { name: 'city', label: 'City', type: 'text', required: true },
+    ],
+  },
+
+  async execute(params, context) {
+    const res = await fetch(
+      `https://api.weather.com/current?city=${encodeURIComponent(params.city)}`
+    );
+    const data = await res.json();
+    return { success: true, output: data };
+  },
+});
+```
+
+### 2. Register it
+
+Add the action to the `allBuiltinActions` array in `pkg/core/src/actions/index.ts`, or register it via a plugin's `actions` array.
+
+### 3. Use it
+
+The action appears in the node palette and is available as an agent tool — no additional wiring needed.
+
+<Callout type="info">
+  For actions that only make sense as agent tools (not flow nodes), create a [standalone tool](/docs/agents/tools#option-b-standalone-tool-utility-only) instead.
+</Callout>

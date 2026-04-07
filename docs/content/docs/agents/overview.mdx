@@ -1,42 +1,92 @@
 ---
-title: Agent Overview
-description: What agent nodes are and how the iterative tool-calling loop works.
+title: AI Agents
+description: Build iterative AI agents with tool calling and multi-step reasoning.
 ---
 
-Agent nodes are different from every other node in Invect. While a Model node sends a single prompt and returns the response, an Agent node runs an **iterative loop** — it sends a prompt, the LLM may request tool calls, the tools execute, results go back to the LLM, and this continues until the agent decides it's done.
+import { Callout } from 'fumadocs-ui/components/callout';
 
-## How the loop works
+The **Agent** node runs an iterative AI loop: send a prompt to an LLM, the model calls tools, Invect executes them and returns results, and the model continues until it reaches a conclusion. This is different from the [Model](/docs/nodes/core-nodes#model) node which makes a single API call.
 
-The agent receives a **task prompt** (what to accomplish) and a set of **enabled tools** (what it can use). The cycle looks like:
+## How agents work
 
-1. Send the task prompt and tool definitions to the LLM
-2. The LLM responds with either a text answer or one or more tool calls
-3. If tool calls: execute each tool, collect results, send them back to the LLM
-4. If text answer: check the stop condition — if met, the agent is done
-5. Repeat until a stop condition triggers or max iterations are reached
+```
+┌─────────────────────────────────────────┐
+│              Agent Loop                  │
+│                                          │
+│  1. Send task prompt + tools to LLM      │
+│              ▼                           │
+│  2. LLM responds with text or tool call  │
+│              ▼                           │
+│  3. Execute tool, return result to LLM   │
+│              ▼                           │
+│  4. Repeat until stop condition          │
+│                                          │
+└─────────────────────────────────────────┘
+```
 
-Each iteration is a full round-trip to the LLM provider. The agent maintains conversation history across iterations so the model has context about what it's already tried.
+At each iteration, the LLM can:
+- **Call one or more tools** — Invect executes them and feeds results back
+- **Return a text response** — The agent loop ends
+- **Call the stop tool** — Explicitly signals completion (when using `explicit_stop`)
 
-## What agents are good for
+## Quick example
 
-Agents excel at **open-ended tasks** where the right sequence of steps isn't known upfront:
+Add an Agent node to your flow, configure it with:
 
-- "Research this topic using web search and write a summary"
-- "Check the GitHub issues in this repo and create a Slack summary"
-- "Analyse this dataset, try different JQ queries until you find the right structure"
+| Field | Value |
+|-------|-------|
+| Credential | An OpenAI or Anthropic API key |
+| Model | `gpt-4o` or `claude-sonnet-4-20250514` |
+| Task Prompt | `Research the company {{ input.company }} and create a summary` |
+| Tools | Enable `http.request`, `core.jq` |
+| Max Iterations | `10` |
+| Stop Condition | `explicit_stop` |
 
-For **deterministic pipelines** where you know the exact flow (call API A, transform with JQ, send to Slack), use regular nodes connected with edges. Agents add latency and cost from the LLM interactions.
+The agent will:
+1. Plan how to research the company
+2. Use HTTP Request to fetch data from APIs
+3. Use JQ to parse and extract relevant info
+4. Compile findings into a summary
+5. Call the stop tool when done
 
-## Agents vs. Model nodes
+## LLM providers
 
-|               | Model node                         | Agent node                       |
-| ------------- | ---------------------------------- | -------------------------------- |
-| LLM calls     | 1                                  | 1 to N (iterative)               |
-| Tool access   | None                               | Any enabled tool                 |
-| Deterministic | Yes (same prompt → similar output) | No (LLM chooses its own path)    |
-| Use case      | Single prompt/response             | Multi-step reasoning             |
-| Cost          | Predictable                        | Variable (depends on iterations) |
+Agents support three providers:
 
-## Tools
+| Provider | Models |
+|----------|--------|
+| OpenAI | `gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo`, `o1`, `o3-mini` |
+| Anthropic | `claude-sonnet-4-20250514`, `claude-sonnet-4-20250514`, `claude-3-haiku` |
+| OpenRouter | Routes to multiple providers (DeepSeek, Llama, Mistral, etc.) |
 
-Every registered action (Gmail, Slack, HTTP, JQ, JavaScript, etc.) is automatically available as an agent tool. You select which tools to enable per agent node. See [Tools](/docs/agents/tools) for the full details.
+Each provider's tool calling format is handled automatically by the adapter layer.
+
+## Stop conditions
+
+| Condition | Behavior |
+|-----------|----------|
+| `explicit_stop` | Agent must call the stop tool to end. Best for complex tasks where you want the agent to decide when it's done. |
+| `tool_result` | Agent stops after executing the first tool. Good for simple lookup-and-return patterns. |
+| `max_iterations` | Agent runs until hitting the iteration limit. Fallback — always active regardless of selected condition. |
+
+## Template expressions in prompts
+
+Agent prompts support the same [template expressions](/docs/flows/templates) as all other nodes:
+
+```
+Research {{ input.company }} and find:
+1. Their annual revenue
+2. Number of employees
+3. Key products
+
+Use the data from {{ api_context.industry_report }} as background.
+```
+
+## Parallel tool execution
+
+When `enableParallelTools` is enabled, the agent can request multiple tools in a single response. Invect executes them concurrently and returns all results at once. This is more efficient for models that support it (GPT-4o, Claude 3.5+).
+
+## Next steps
+
+- [Tools](/docs/agents/tools) — Browse available tools and configure per-instance settings
+- [Agent Configuration](/docs/agents/configuration) — All configuration options

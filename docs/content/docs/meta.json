@@ -3,15 +3,20 @@
   "title": "Documentation",
   "pages": [
     "index",
+    "---Getting Started---",
     "getting-started",
     "installation",
+    "---Building Workflows---",
     "flows",
     "nodes",
     "agents",
+    "---Configuration---",
     "credentials",
     "frontend",
     "plugins",
+    "---Production---",
     "deployment",
+    "---Reference---",
     "reference",
     "concepts"
   ]

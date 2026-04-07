@@ -19,7 +19,11 @@ export const googleAnalyticsListPropertiesAction = defineAction({
   id: 'google_analytics.list_properties',
   name: 'List Properties',
   description:
-    'List all GA4 account summaries with their properties visible to the authenticated user.',
+    'List GA4 account summaries with their properties (accountSummaries.list). Use when the user wants to discover available Analytics properties or find a property ID.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"accountSummaries": [{"displayName": "My Account", "propertySummaries": [{"property": "properties/123456", "displayName": "My Site"}]}], "accountCount": 1}\n' +
+    '```',
   provider: GOOGLE_ANALYTICS_PROVIDER,
   actionCategory: 'read',
 

@@ -1,0 +1,329 @@
+---
+title: Integrations
+description: 190+ pre-built nodes for Gmail, Slack, GitHub, Google Workspace, and more.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+Integration nodes connect your flows to third-party services. Each action handles authentication, request formatting, and response parsing — you just configure the parameters.
+
+Most integration nodes require an [OAuth2 credential](/docs/credentials/oauth2) or [API key](/docs/credentials/api-keys).
+
+## Google Workspace
+
+### Gmail
+
+| Action ID | Description |
+|-----------|-------------|
+| `gmail.list_messages` | List messages matching a query |
+| `gmail.get_message` | Get a single message by ID |
+| `gmail.send_message` | Send an email |
+
+**Credential:** Google (Gmail) OAuth2
+
+### Google Docs
+
+| Action ID | Description |
+|-----------|-------------|
+| `google_docs.get_document` | Get document content |
+| `google_docs.create_document` | Create a new document |
+
+**Credential:** Google (Docs) OAuth2
+
+### Google Sheets
+
+| Action ID | Description |
+|-----------|-------------|
+| `google_sheets.get_values` | Read cell values from a range |
+| `google_sheets.append_values` | Append rows to a sheet |
+
+**Credential:** Google (Sheets) OAuth2
+
+### Google Drive
+
+| Action ID | Description |
+|-----------|-------------|
+| `google_drive.list_files` | List files and folders |
+| `google_drive.create_file` | Upload a file |
+
+**Credential:** Google (Drive) OAuth2
+
+### Google Calendar
+
+| Action ID | Description |
+|-----------|-------------|
+| `google_calendar.list_events` | List calendar events |
+| `google_calendar.create_event` | Create a calendar event |
+
+**Credential:** Google (Calendar) OAuth2
+
+## Developer Tools
+
+### GitHub
+
+| Action ID | Description |
+|-----------|-------------|
+| `github.create_issue` | Create a repository issue |
+| `github.list_repos` | List repositories |
+
+**Credential:** GitHub OAuth2
+
+### GitLab
+
+| Action ID | Description |
+|-----------|-------------|
+| `gitlab.*` | Repository and issue management |
+
+**Credential:** GitLab OAuth2
+
+### Linear
+
+| Action ID | Description |
+|-----------|-------------|
+| `linear.create_issue` | Create a Linear issue |
+| `linear.list_issues` | List issues |
+
+**Credential:** Linear OAuth2
+
+### Sentry
+
+| Action ID | Description |
+|-----------|-------------|
+| `sentry.*` | Error tracking and monitoring |
+
+**Credential:** Sentry OAuth2
+
+### Grafana
+
+| Action ID | Description |
+|-----------|-------------|
+| `grafana.*` | Dashboard and alerting management |
+
+**Credential:** Grafana API key
+
+## Messaging
+
+### Slack
+
+| Action ID | Description |
+|-----------|-------------|
+| `slack.send_message` | Send a message to a channel |
+| `slack.list_channels` | List workspace channels |
+
+**Credential:** Slack OAuth2
+
+### Microsoft Teams
+
+| Action ID | Description |
+|-----------|-------------|
+| `microsoft_teams.*` | Send messages, manage channels |
+
+**Credential:** Microsoft 365 OAuth2
+
+## Microsoft 365
+
+| Action ID | Description |
+|-----------|-------------|
+| `microsoft.list_events` | List calendar events |
+| `microsoft.list_messages` | List email messages |
+
+**Credential:** Microsoft 365 OAuth2
+
+## Project Management
+
+### Jira
+
+| Action ID | Description |
+|-----------|-------------|
+| `jira.*` | Issue tracking and project management |
+
+**Credential:** Jira OAuth2
+
+### Asana
+
+| Action ID | Description |
+|-----------|-------------|
+| `asana.*` | Task and project management |
+
+**Credential:** Asana OAuth2
+
+### Trello
+
+| Action ID | Description |
+|-----------|-------------|
+| `trello.*` | Board and card management |
+
+**Credential:** Trello OAuth2
+
+## CRM & Sales
+
+### Salesforce
+
+| Action ID | Description |
+|-----------|-------------|
+| `salesforce.*` | Lead, contact, and opportunity management |
+
+**Credential:** Salesforce OAuth2
+
+### HubSpot
+
+| Action ID | Description |
+|-----------|-------------|
+| `hubspot.*` | Contact and deal management |
+
+**Credential:** HubSpot OAuth2
+
+## E-Commerce
+
+### Stripe
+
+| Action ID | Description |
+|-----------|-------------|
+| `stripe.*` | Payment and subscription management |
+
+**Credential:** Stripe API key
+
+### Shopify
+
+| Action ID | Description |
+|-----------|-------------|
+| `shopify.*` | Store, order, and product management |
+
+**Credential:** Shopify OAuth2
+
+### WooCommerce
+
+| Action ID | Description |
+|-----------|-------------|
+| `woocommerce.*` | WordPress e-commerce integration |
+
+**Credential:** WooCommerce API key
+
+## Customer Support
+
+### Zendesk
+
+| Action ID | Description |
+|-----------|-------------|
+| `zendesk.*` | Ticket and customer management |
+
+**Credential:** Zendesk OAuth2
+
+### Intercom
+
+| Action ID | Description |
+|-----------|-------------|
+| `intercom.*` | Messaging and support management |
+
+**Credential:** Intercom OAuth2
+
+### Freshdesk
+
+| Action ID | Description |
+|-----------|-------------|
+| `freshdesk.*` | Helpdesk and ticketing |
+
+**Credential:** Freshdesk API key
+
+## Cloud Storage
+
+### Dropbox
+
+| Action ID | Description |
+|-----------|-------------|
+| `dropbox.*` | File storage and sharing |
+
+**Credential:** Dropbox OAuth2
+
+### OneDrive
+
+| Action ID | Description |
+|-----------|-------------|
+| `onedrive.*` | Microsoft cloud storage |
+
+**Credential:** Microsoft 365 OAuth2
+
+## Email
+
+### Resend
+
+| Action ID | Description |
+|-----------|-------------|
+| `resend.*` | Transactional email delivery |
+
+**Credential:** Resend API key
+
+### SendGrid
+
+| Action ID | Description |
+|-----------|-------------|
+| `sendgrid.*` | Email delivery and marketing |
+
+**Credential:** SendGrid API key
+
+## Social Media
+
+### Twitter/X
+
+| Action ID | Description |
+|-----------|-------------|
+| `twitter.*` | Post and engagement management |
+
+**Credential:** Twitter OAuth2
+
+### LinkedIn
+
+| Action ID | Description |
+|-----------|-------------|
+| `linkedin.*` | Professional networking integration |
+
+**Credential:** LinkedIn OAuth2
+
+### Facebook
+
+| Action ID | Description |
+|-----------|-------------|
+| `facebook.*` | Page and post management |
+
+**Credential:** Facebook OAuth2
+
+## Analytics
+
+### Segment
+
+| Action ID | Description |
+|-----------|-------------|
+| `segment.*` | Customer data platform |
+
+**Credential:** Segment API key
+
+### Mixpanel
+
+| Action ID | Description |
+|-----------|-------------|
+| `mixpanel.*` | Product analytics |
+
+**Credential:** Mixpanel API key
+
+### Google Analytics
+
+| Action ID | Description |
+|-----------|-------------|
+| `google_analytics.*` | Web analytics data |
+
+**Credential:** Google OAuth2
+
+## Database
+
+### PostgreSQL
+
+| Action ID | Description |
+|-----------|-------------|
+| `postgres.execute_query` | Run SQL queries |
+| `postgres.list_tables` | List database tables |
+
+**Credential:** Database connection string
+
+## Adding custom integrations
+
+You can create custom action nodes for any service. See [Concepts > Actions System](/docs/concepts/actions-system) for how to define new actions, or use the **HTTP Request** node (`http.request`) for quick one-off integrations.

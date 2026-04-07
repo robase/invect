@@ -19,7 +19,12 @@ const paramsSchema = z.object({
 export const googleDriveGetFileAction = defineAction({
   id: 'google_drive.get_file',
   name: 'Get File',
-  description: 'Retrieve metadata of a specific file in Google Drive by its ID.',
+  description:
+    'Retrieve metadata of a file in Google Drive by its ID (files.get). Use when the user wants to get details about a specific file.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "1abc", "name": "Report.pdf", "mimeType": "application/pdf", "size": "12345", "webViewLink": "https://drive.google.com/file/d/1abc/view"}\n' +
+    '```',
   provider: GOOGLE_DRIVE_PROVIDER,
   actionCategory: 'read',
 

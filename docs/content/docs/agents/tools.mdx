@@ -1,97 +1,116 @@
 ---
-title: Tools
-description: Built-in tools, custom tools, and per-instance tool configuration.
+title: Agent Tools
+description: Tools available to AI agents — every integration action plus standalone utilities.
 ---
 
-Agent tools are what give agents their power — they're the functions the LLM can call during the iterative loop. Invect generates its tool list automatically from the action registry, plus a few standalone utilities.
+import { Callout } from 'fumadocs-ui/components/callout';
 
-## Where tools come from
+Agents use **tools** to interact with the world. Every action registered in Invect is automatically available as an agent tool, plus there are standalone utility tools.
 
-### Action-based tools
+## Tool sources
 
-Every action registered with `defineAction()` is automatically converted to an agent tool during startup. The conversion maps:
+### Action-based tools (primary)
 
-- Action `id` → tool `id`
-- Action `description` → tool description (what the LLM sees)
-- Action `params.schema` (Zod) → tool input schema (JSON Schema)
-- Action `execute` → tool executor
+Every action defined with `defineAction()` is automatically registered as both a flow node **and** an agent tool during initialization. This means all 190+ integration actions are available to agents:
 
-This means all 190+ built-in actions (Gmail, Slack, GitHub, HTTP, JQ, etc.) are available as tools without extra configuration.
+- Gmail actions → `gmail.send_message`, `gmail.list_messages`
+- Slack actions → `slack.send_message`, `slack.list_channels`
+- GitHub actions → `github.create_issue`, `github.list_repos`
+- HTTP Request → `http.request`
+- JQ → `core.jq`
+- And every other registered action
 
 ### Standalone tools
 
-Two utility tools are registered separately (not backed by a flow node):
+Utility tools that only exist as agent tools (no corresponding flow node):
 
-| Tool         | Description                       |
-| ------------ | --------------------------------- |
-| `math_eval`  | Evaluate mathematical expressions |
-| `json_logic` | Apply JsonLogic rules to data     |
+| Tool ID | Description |
+|---------|-------------|
+| `math_eval` | Evaluate mathematical expressions safely |
+| `json_logic` | Apply JSON Logic rules to data |
 
-These are for agent use only — they don't appear in the node palette.
+## Enabling tools
 
-## Selecting tools per agent
+In the Agent node config, you select which tools the agent can use. The tool selector shows all available tools organized by provider.
 
-In the agent node's config panel, the **Enabled Tools** selector lets you pick which tools the agent can access. The full list is available from the tool selector modal, grouped by provider.
+Each agent instance can have a different set of enabled tools. This lets you create focused agents — one for email tasks (Gmail tools only), another for data processing (JQ + HTTP tools), etc.
 
-Be selective — giving an agent 100 tools makes the LLM's `description` prompts very long and the model less likely to choose wisely. Enable only the tools relevant to the agent's task.
+## Tool execution context
 
-## Per-instance tool configuration
+When a tool executes in an agent context, it receives:
 
-Each tool instance on an agent can be customised:
+| Context | Description |
+|---------|-------------|
+| `credential` | OAuth2 tokens or API keys (auto-refreshed) |
+| `incomingData` | The agent's current execution data |
+| `flowInputs` | Original flow inputs |
+| `logger` | Structured logger |
+| `functions` | Service functions (getCredential, submitPrompt, etc.) |
 
-- **Custom name** — override the default tool name (useful for clarity when the same tool appears multiple times)
-- **Custom description** — override what the LLM sees about the tool
-- **Fixed parameters** — lock certain parameters so the LLM can't change them (e.g., always send to a specific Slack channel)
+Tools that require credentials (OAuth2 actions) are automatically provided with the credential configured on the agent node.
 
-This lets you create specialised tool instances without defining new actions.
+## Per-instance configuration
 
-## Custom tools
+Each tool instance on an agent can be customized:
 
-You have two options for adding tools:
+| Setting | Description |
+|---------|-------------|
+| Custom name | Override the tool name shown to the LLM |
+| Custom description | Provide more specific instructions for when to use it |
+| Custom parameters | Pre-fill or constrain tool parameters |
 
-### Option A: Create an action (recommended)
+This is useful for making generic tools more specific. For example, an `http.request` tool could be customized with a fixed base URL and description like "Fetch user data from the internal API".
 
-Define a new action with `defineAction()`. It automatically becomes both a flow node and an agent tool. See [Custom actions](/docs/nodes/custom-actions).
+## API
 
-### Option B: Standalone tool
+```bash
+# List all available agent tools
+curl http://localhost:3000/invect/agent/tools
+```
 
-For tools that don't make sense as flow nodes, register them directly:
+Returns an array of tool definitions with `id`, `name`, `description`, `inputSchema`, and `category`.
 
-```ts
-import type { AgentToolDefinition, AgentToolExecutor } from '@invect/core';
+## Adding custom tools
 
-export const myToolDefinition: AgentToolDefinition = {
-  id: 'my_custom_tool',
-  name: 'My Custom Tool',
-  description: 'What this tool does — the LLM reads this to decide when to use it',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      query: { type: 'string', description: 'The search query' },
-    },
-    required: ['query'],
+### Option A: Create a new action (recommended)
+
+The action automatically becomes both a flow node and an agent tool:
+
+```ts title="pkg/core/src/actions/my-provider/my-action.ts"
+import { defineAction } from '../define-action';
+import { z } from 'zod/v4';
+
+export const myAction = defineAction({
+  id: 'my_provider.my_action',
+  name: 'My Action',
+  description: 'What this does — the LLM reads this to decide when to use it',
+  provider: MY_PROVIDER,
+  params: {
+    schema: z.object({ query: z.string() }),
+    fields: [{ name: 'query', label: 'Query', type: 'text', required: true }],
   },
+  async execute(params, context) {
+    const result = await doSomething(params.query);
+    return { success: true, output: result };
+  },
+});
+```
+
+### Option B: Standalone tool (utility only)
+
+For tools that don't make sense as flow nodes:
+
+```ts title="pkg/core/src/services/agent-tools/builtin/my-tool.ts"
+export const myToolDefinition: AgentToolDefinition = {
+  id: 'my_tool',
+  name: 'My Tool',
+  description: 'Describe what this tool does for the LLM',
+  inputSchema: { /* JSON Schema */ },
   category: 'utility',
-  enabledByDefault: false,
+  enabledByDefault: true,
 };
 
 export const myToolExecutor: AgentToolExecutor = async (input, context) => {
-  const result = await doSomething(input.query);
-  return { success: true, output: result };
+  return { result: 'done' };
 };
 ```
-
-Register standalone tools in `pkg/core/src/services/agent-tools/builtin/index.ts`.
-
-## How tools are exposed to LLMs
-
-When the agent sends a request to the LLM (OpenAI or Anthropic), Invect converts the enabled tools into the provider's format:
-
-- **OpenAI**: Function calling format (`tools` array with `function` type)
-- **Anthropic**: Tool use format (`tools` array with `input_schema`)
-
-The conversion handles schema differences between providers automatically. The LLM sees tool names, descriptions, and JSON Schema inputs — it never sees the implementation.
-
-## Tool credentials
-
-Tools that require credentials (OAuth2 tokens, API keys) use a credential attached to the agent node or specified in the tool instance configuration. The credential is automatically decrypted and refreshed before the tool executes.

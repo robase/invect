@@ -53,7 +53,11 @@ export const microsoftListMessagesAction = defineAction({
   id: 'microsoft.list_messages',
   name: 'List Emails',
   description:
-    'List or search emails from a Microsoft 365 / Outlook mailbox. Supports keyword search, OData filtering, and folder selection.',
+    'List or search emails from a Microsoft 365 / Outlook mailbox (GET /me/messages). Use when you need to search or browse emails in Outlook.\n\n'
+    + 'Example response:\n'
+    + '```json\n'
+    + '{"id": "AAMkAGI1A...", "subject": "Quarterly Report", "from": {"emailAddress": {"name": "Jane", "address": "jane@example.com"}}, "receivedDateTime": "2025-01-15T10:30:00Z", "isRead": true}\n'
+    + '```',
   provider: MICROSOFT_PROVIDER,
   actionCategory: 'read',
 

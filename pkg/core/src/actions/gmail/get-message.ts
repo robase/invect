@@ -103,7 +103,11 @@ export const gmailGetMessageAction = defineAction({
   id: 'gmail.get_message',
   name: 'Get Email',
   description:
-    'Get the full content of a single email by its message ID, including body text, HTML, headers, and attachment info.',
+    'Get the full content of a single email by ID (users.messages.get). Use when the user wants to read a specific email\'s body, headers, or attachments.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "18e1a2b", "threadId": "18e1a2b", "from": "alice@example.com", "subject": "Hello", "textBody": "...", "attachments": []}\n' +
+    '```',
   provider: GMAIL_PROVIDER,
   actionCategory: 'read',
   tags: [

@@ -19,7 +19,12 @@ const paramsSchema = z.object({
 export const googleDriveDeleteFileAction = defineAction({
   id: 'google_drive.delete_file',
   name: 'Delete File',
-  description: 'Permanently delete a file from Google Drive. This action cannot be undone.',
+  description:
+    'Permanently delete a file from Google Drive (files.delete). Use when the user wants to remove a file. This cannot be undone.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"fileId": "1abc", "deleted": true}\n' +
+    '```',
   provider: GOOGLE_DRIVE_PROVIDER,
   actionCategory: 'delete',
 

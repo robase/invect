@@ -22,7 +22,12 @@ const paramsSchema = z.object({
 export const googleDocsReplaceTextAction = defineAction({
   id: 'google_docs.replace_text',
   name: 'Replace Text',
-  description: 'Find and replace all occurrences of a text string in a Google Docs document.',
+  description:
+    'Find and replace text in a Google Docs document (documents.batchUpdate with replaceAllText). Use when the user wants to substitute all occurrences of a string.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"documentId": "1abc...", "findText": "old", "replaceText": "new", "occurrencesChanged": 3}\n' +
+    '```',
   provider: GOOGLE_DOCS_PROVIDER,
   actionCategory: 'write',
 

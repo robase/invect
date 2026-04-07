@@ -1,0 +1,144 @@
+---
+title: Production
+description: Deploy Invect to production — database, environment, and configuration.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+## Environment variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | Database connection string |
+| `INVECT_ENCRYPTION_KEY` | Yes | AES-256-GCM key for credential encryption ([details](/docs/deployment/encryption)) |
+| `OPENAI_API_KEY` | No | Default OpenAI API key (if seeding credentials) |
+| `ANTHROPIC_API_KEY` | No | Default Anthropic API key (if seeding credentials) |
+
+If using the [Authentication Plugin](/docs/plugins/authentication):
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `INVECT_ADMIN_EMAIL` | Yes | Email for the initial admin user |
+| `INVECT_ADMIN_PASSWORD` | Yes | Password for the initial admin user |
+| `BETTER_AUTH_SECRET` | Yes | Secret key for Better Auth (min 32 chars) |
+
+## Database
+
+### SQLite
+
+Good for development and single-server deployments:
+
+```bash
+DATABASE_URL=file:./data/invect.db
+```
+
+<Callout type="warn">
+  SQLite doesn't support concurrent writes from multiple processes. For multi-instance deployments, use PostgreSQL.
+</Callout>
+
+### PostgreSQL
+
+Recommended for production:
+
+```bash
+DATABASE_URL=postgresql://user:password@host:5432/dbname
+```
+
+### MySQL
+
+```bash
+DATABASE_URL=mysql://user:password@host:3306/dbname
+```
+
+### Running migrations
+
+Before starting your server in production, ensure the database schema is up to date:
+
+```bash
+npx invect-cli generate
+npx invect-cli migrate
+```
+
+Or use `drizzle-kit push` for direct schema application (common in CI/CD):
+
+```bash
+npx drizzle-kit push
+```
+
+## Docker
+
+```dockerfile title="Dockerfile"
+FROM node:20-slim AS base
+
+WORKDIR /app
+COPY package.json pnpm-lock.yaml ./
+RUN corepack enable && pnpm install --frozen-lockfile --prod
+
+COPY . .
+RUN pnpm build
+
+EXPOSE 3000
+CMD ["node", "dist/index.js"]
+```
+
+```yaml title="docker-compose.yml"
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://invect:invect@db:5432/invect
+      INVECT_ENCRYPTION_KEY: ${INVECT_ENCRYPTION_KEY}
+    depends_on:
+      - db
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: invect
+      POSTGRES_PASSWORD: invect
+      POSTGRES_DB: invect
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
+```
+
+## Webhook configuration
+
+If using triggers or the [Webhooks Plugin](/docs/plugins/webhooks), set the public URL:
+
+```ts
+const router = await createInvectRouter({
+  // ...
+  triggers: {
+    webhookBaseUrl: 'https://your-app.com/invect',
+  },
+});
+```
+
+This is required so webhook URLs point to the correct public endpoint.
+
+## Cron scheduling
+
+Cron triggers are enabled by default. In multi-instance deployments, only one instance should run the cron scheduler to avoid duplicate executions:
+
+```ts
+const router = await createInvectRouter({
+  // ...
+  triggers: {
+    cronEnabled: process.env.CRON_ENABLED === 'true', // Only true on one instance
+  },
+});
+```
+
+## Health checks
+
+The Invect API exposes a dashboard endpoint you can use for health checks:
+
+```bash
+curl http://localhost:3000/invect/dashboard
+```
+
+Returns flow statistics if the server and database are healthy.

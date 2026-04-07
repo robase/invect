@@ -21,7 +21,11 @@ export const googleSheetsCreateSpreadsheetAction = defineAction({
   id: 'google_sheets.create_spreadsheet',
   name: 'Create Spreadsheet',
   description:
-    'Create a new Google Sheets spreadsheet with a given title and optional sheet names.',
+    'Create a new Google Sheets spreadsheet (spreadsheets.create). Use when the user wants to create a fresh spreadsheet with optional named sheets.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"spreadsheetId": "1abc...", "title": "My Sheet", "url": "https://docs.google.com/spreadsheets/d/1abc...", "sheets": [{"sheetId": 0, "title": "Sheet1"}]}\n' +
+    '```',
   provider: GOOGLE_SHEETS_PROVIDER,
   actionCategory: 'write',
 

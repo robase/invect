@@ -1,37 +1,51 @@
 ---
 title: Next.js
-description: Set up Invect in a Next.js App Router application.
+description: Set up Invect with Next.js App Router.
 ---
 
-## Packages
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+import { Callout } from 'fumadocs-ui/components/callout';
 
-```bash
-pnpm add @invect/core @invect/nextjs @invect/ui better-sqlite3 react-router
+<Steps>
+
+<Step>
+### Install packages
+
+<Tabs items={['pnpm', 'npm', 'yarn']}>
+  <Tab value="pnpm">
+  ```bash
+  pnpm add @invect/core @invect/nextjs @invect/ui
+  ```
+  </Tab>
+  <Tab value="npm">
+  ```bash
+  npm install @invect/core @invect/nextjs @invect/ui
+  ```
+  </Tab>
+  <Tab value="yarn">
+  ```bash
+  yarn add @invect/core @invect/nextjs @invect/ui
+  ```
+  </Tab>
+</Tabs>
+
+Next.js is self-contained — the API handler and frontend run in the same app.
+</Step>
+
+<Step>
+### Set environment variables
+
+```bash title=".env.local"
+DATABASE_URL=file:./dev.db
+INVECT_ENCRYPTION_KEY=   # Generate with: npx invect-cli secret
 ```
+</Step>
 
-For PostgreSQL, swap `better-sqlite3` for `postgres` and update the database config accordingly.
+<Step>
+### Create the API route handler
 
-## Database setup
-
-```ts title="invect.config.ts"
-import { defineConfig } from '@invect/core';
-
-export default defineConfig({
-  database: {
-    type: 'sqlite',
-    connectionString: 'file:./dev.db',
-  },
-});
-```
-
-```bash
-pnpm dlx @invect/cli generate
-pnpm dlx @invect/cli migrate --push
-```
-
-## API route handler
-
-Create a catch-all API route that Invect handles:
+Create a catch-all route that handles all Invect API requests:
 
 ```ts title="app/api/invect/[...invect]/route.ts"
 import { createInvectHandler } from '@invect/nextjs';
@@ -39,8 +53,9 @@ import { createInvectHandler } from '@invect/nextjs';
 const handler = createInvectHandler({
   database: {
     type: 'sqlite',
-    connectionString: 'file:./dev.db',
+    connectionString: process.env.DATABASE_URL!,
   },
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
 });
 
 export const GET = handler.GET;
@@ -50,11 +65,13 @@ export const PUT = handler.PUT;
 export const DELETE = handler.DELETE;
 ```
 
-`createInvectHandler` returns HTTP method handlers for the catch-all route. Internally, it creates a singleton `Invect` instance that persists across requests.
+The handler lazily initializes a singleton `Invect` core instance on the first request. During `next build`, initialization is skipped automatically.
+</Step>
 
-## Mounting the editor
+<Step>
+### Mount the frontend
 
-Since Next.js includes both backend and frontend, you can mount the visual editor directly as a page:
+Create a catch-all page for the Invect UI:
 
 ```tsx title="app/invect/[[...slug]]/page.tsx"
 'use client';
@@ -64,36 +81,110 @@ import '@invect/ui/styles';
 
 export default function InvectPage() {
   return (
-    <div style={{ height: '100vh' }}>
-      <Invect apiBaseUrl="/api/invect" basePath="/invect" />
-    </div>
+    <Invect
+      apiBaseUrl="/api/invect"
+      basePath="/invect"
+    />
   );
 }
 ```
 
-The `basePath` prop tells the editor's internal router where it's mounted, so navigation works correctly within the Next.js app.
+<Callout type="info">
+  The `basePath` prop tells the Invect router where it's mounted so internal navigation works correctly.
+</Callout>
+</Step>
 
-## Static export considerations
+<Step>
+### Generate and migrate the database
 
-If you're using `output: 'export'` in `next.config.js`, the API route won't work (static exports don't support API routes). In that case, run a separate Express or NestJS backend and point the frontend to it.
+```bash
+npx invect-cli generate
+npx invect-cli migrate
+```
+</Step>
 
-## Adding plugins
+<Step>
+### Start the dev server
 
-Same as other frameworks — add plugins to your config and re-run schema generation:
+```bash
+next dev
+```
 
-```ts
-import { authentication } from '@invect/user-auth';
-import { rbacPlugin } from '@invect/rbac';
+Open `http://localhost:3000/invect` — the visual flow editor is ready.
+</Step>
 
-const handler = createInvectHandler({
-  database: { type: 'sqlite', connectionString: 'file:./dev.db' },
+</Steps>
+
+## Configuration
+
+Extract your config to a shared file:
+
+```ts title="lib/invect.ts"
+import { createInvectHandler } from '@invect/nextjs';
+
+export const handler = createInvectHandler({
+  database: {
+    type: 'postgresql',
+    connectionString: process.env.DATABASE_URL!,
+  },
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+  triggers: {
+    webhookBaseUrl: process.env.NEXT_PUBLIC_APP_URL + '/api/invect',
+  },
+});
+```
+
+```ts title="app/api/invect/[...invect]/route.ts"
+import { handler } from '@/lib/invect';
+
+export const GET = handler.GET;
+export const POST = handler.POST;
+export const PATCH = handler.PATCH;
+export const PUT = handler.PUT;
+export const DELETE = handler.DELETE;
+```
+
+## With authentication and RBAC
+
+For the full-featured setup with user authentication and access control:
+
+```ts title="lib/invect.ts"
+import { createInvectHandler } from '@invect/nextjs';
+import { authentication } from '@invect/user-auth/backend';
+import { rbacPlugin } from '@invect/rbac/backend';
+import { auth } from '@/lib/auth';  // Your Better Auth instance
+
+export const handler = createInvectHandler({
+  database: {
+    type: 'postgresql',
+    connectionString: process.env.DATABASE_URL!,
+  },
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
   plugins: [
-    authentication({
-      /* ... */
-    }),
+    authentication({ auth }),
     rbacPlugin(),
   ],
 });
 ```
 
-For the auth plugin with Next.js, use `AuthenticatedInvect` from `@invect/user-auth/ui` to wrap the editor with sign-in gates. See [Authentication plugin](/docs/plugins/authentication).
+```tsx title="app/invect/[[...slug]]/page.tsx"
+'use client';
+
+import { Invect, InvectShell } from '@invect/ui';
+import { AuthenticatedInvect } from '@invect/user-auth/ui';
+import '@invect/ui/styles';
+
+export default function InvectPage() {
+  return (
+    <AuthenticatedInvect
+      apiBaseUrl="/api/invect"
+      basePath="/invect"
+      InvectComponent={Invect}
+      ShellComponent={InvectShell}
+      theme="dark"
+    />
+  );
+}
+```
+
+See [Authentication Plugin](/docs/plugins/authentication) and [Access Control Plugin](/docs/plugins/access-control) for details.

@@ -21,7 +21,12 @@ const paramsSchema = z.object({
 export const googleDriveCreateFolderAction = defineAction({
   id: 'google_drive.create_folder',
   name: 'Create Folder',
-  description: 'Create a new folder in Google Drive. Optionally place it inside a parent folder.',
+  description:
+    'Create a new folder in Google Drive (files.create with folder mimeType). Use when the user wants to organize files into a new folder.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "1abc", "name": "My Folder", "mimeType": "application/vnd.google-apps.folder", "webViewLink": "https://drive.google.com/drive/folders/1abc"}\n' +
+    '```',
   provider: GOOGLE_DRIVE_PROVIDER,
   actionCategory: 'write',
 

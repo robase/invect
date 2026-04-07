@@ -58,7 +58,11 @@ export const microsoftListCalendarEventsAction = defineAction({
   id: 'microsoft.list_calendar_events',
   name: 'List Calendar Events',
   description:
-    'List events from a Microsoft 365 calendar. Supports filtering by date range and searching by keyword. Use calendarView for date-range queries or events endpoint for general listing.',
+    'List events from a Microsoft 365 calendar (GET /me/events or /me/calendarView). Use when you need to retrieve upcoming meetings, check schedules, or search calendar events.\n\n'
+    + 'Example response:\n'
+    + '```json\n'
+    + '{"id": "AAMkAGI1A...", "subject": "Team Standup", "start": {"dateTime": "2025-01-15T09:00:00", "timeZone": "UTC"}, "end": {"dateTime": "2025-01-15T09:30:00", "timeZone": "UTC"}, "isOnlineMeeting": true}\n'
+    + '```',
   provider: MICROSOFT_PROVIDER,
   actionCategory: 'read',
 

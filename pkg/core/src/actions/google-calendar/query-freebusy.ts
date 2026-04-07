@@ -24,7 +24,11 @@ export const googleCalendarQueryFreebusyAction = defineAction({
   id: 'google_calendar.query_freebusy',
   name: 'Query Free/Busy',
   description:
-    'Check free/busy information for one or more calendars. Useful for finding when people are available for meetings.',
+    'Check free/busy information for calendars (freebusy.query). Use when the user wants to find available meeting times or check if someone is free.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"calendars": [{"calendarId": "primary", "busySlots": [{"start": "2025-03-15T10:00:00Z", "end": "2025-03-15T11:00:00Z"}], "busyCount": 1}]}\n' +
+    '```',
   provider: GOOGLE_CALENDAR_PROVIDER,
   actionCategory: 'read',
 

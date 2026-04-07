@@ -69,7 +69,11 @@ export const gmailSendMessageAction = defineAction({
   id: 'gmail.send_message',
   name: 'Send Email',
   description:
-    'Send an email via Gmail. Supports plain text and HTML, CC/BCC recipients, and reply threading.',
+    'Send an email via Gmail (users.messages.send). Use when the user wants to compose and send an email message.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "18e1a2b3c4d5e6f7", "threadId": "18e1a2b3c4d5e6f7", "labelIds": ["SENT"]}\n' +
+    '```',
   provider: GMAIL_PROVIDER,
   actionCategory: 'write',
   tags: [
@@ -161,6 +165,7 @@ export const gmailSendMessageAction = defineAction({
         defaultValue: false,
         description: 'Whether the body is HTML formatted',
         extended: true,
+        aiProvided: true,
       },
       {
         name: 'threadId',

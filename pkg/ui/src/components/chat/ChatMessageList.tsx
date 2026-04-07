@@ -87,6 +87,15 @@ export function ChatMessageList({
     isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
   }, []);
 
+  // Scroll to bottom on initial render / when history finishes loading
+  const hasScrolledOnLoad = useRef(false);
+  useEffect(() => {
+    if (!isLoadingHistory && messages.length > 0 && !hasScrolledOnLoad.current && viewportRef.current) {
+      viewportRef.current.scrollTop = viewportRef.current.scrollHeight;
+      hasScrolledOnLoad.current = true;
+    }
+  }, [isLoadingHistory, messages]);
+
   useEffect(() => {
     if (isNearBottomRef.current && viewportRef.current) {
       viewportRef.current.scrollTop = viewportRef.current.scrollHeight;

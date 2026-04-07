@@ -203,13 +203,18 @@ export const runFlowTool: ChatToolDefinition = {
   id: 'run_flow',
   name: 'Run Flow',
   description:
-    'Execute the current flow with optional inputs. Returns the run result including status and outputs.',
+    'Execute the current flow with inputs. ' +
+    'Check the "Flow Input Fields" in the context to see what fields the trigger expects, then provide appropriate values. ' +
+    'Fields with defaults will be auto-filled if omitted, but required fields MUST be provided or the flow will fail.',
   parameters: z.object({
     inputs: z
       .record(z.string(), z.unknown())
       .optional()
       .default({})
-      .describe('Flow input values (key-value pairs for input nodes)'),
+      .describe(
+        'Flow input values keyed by field name. ' +
+        'Check the flow context for expected field names (e.g. {"sender_email": "alice@example.com", "subject": "Test"})',
+      ),
   }),
   async execute(params: unknown, ctx: ChatToolContext): Promise<ChatToolResult> {
     const { inputs } = params as { inputs?: Record<string, unknown> };
@@ -221,7 +226,38 @@ export const runFlowTool: ChatToolDefinition = {
     }
 
     try {
-      const result = await invect.runs.start(flowId, inputs ?? {});
+      // Read trigger inputDefinitions and merge defaults for any missing fields
+      const mergedInputs = { ...(inputs ?? {}) };
+      try {
+        const version = await invect.versions.get(flowId, 'latest');
+        if (version) {
+          const def =
+            typeof version.invectDefinition === 'string'
+              ? JSON.parse(version.invectDefinition)
+              : version.invectDefinition;
+          const triggerNode = (def?.nodes ?? []).find(
+            (n: { type?: string }) =>
+              n.type === 'trigger.manual' || n.type === 'trigger.webhook',
+          );
+          const inputDefs = (triggerNode?.params as Record<string, unknown> | undefined)
+            ?.inputDefinitions as Array<{ name: string; defaultValue?: unknown }> | undefined;
+          if (inputDefs) {
+            for (const field of inputDefs) {
+              if (
+                mergedInputs[field.name] === undefined &&
+                field.defaultValue !== undefined &&
+                field.defaultValue !== null
+              ) {
+                mergedInputs[field.name] = field.defaultValue;
+              }
+            }
+          }
+        }
+      } catch {
+        // Non-critical — proceed with whatever inputs we have
+      }
+
+      const result = await invect.runs.start(flowId, mergedInputs);
 
       return {
         success: true,

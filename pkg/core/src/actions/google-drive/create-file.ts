@@ -24,7 +24,11 @@ export const googleDriveCreateFileAction = defineAction({
   id: 'google_drive.create_file',
   name: 'Create File',
   description:
-    'Create a new file in Google Drive with text content. Supports specifying the MIME type and parent folder.',
+    'Create a new text-based file in Google Drive (files.create with multipart upload). Use when the user wants to upload or create a file with content.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "1abc", "name": "report.txt", "mimeType": "text/plain", "size": "256", "webViewLink": "https://drive.google.com/file/d/1abc/view"}\n' +
+    '```',
   provider: GOOGLE_DRIVE_PROVIDER,
   actionCategory: 'write',
 

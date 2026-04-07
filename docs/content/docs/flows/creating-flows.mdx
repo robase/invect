@@ -1,0 +1,141 @@
+---
+title: Creating Flows
+description: Create, configure, and manage workflow definitions.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+A **flow** is a directed graph of nodes that defines a workflow. Each flow has one or more versions, a set of nodes, and edges that connect them. Flows can be created in the visual editor or programmatically via the API.
+
+## Visual editor
+
+The fastest way to create a flow is through the visual editor. Click **New Flow** on the dashboard, give it a name, and start adding nodes from the left palette.
+
+The editor supports:
+
+- **Drag-and-drop** — Add nodes from the palette onto the canvas
+- **Connection handles** — Drag from an output handle to an input handle to create edges
+- **Config panel** — Double-click a node to open its configuration
+- **Node execution** — Run individual nodes or the entire flow
+- **Execution trace** — See inputs, outputs, and errors for each node after a run
+
+## API
+
+You can also create and manage flows programmatically:
+
+```bash
+# Create a flow
+curl -X POST http://localhost:3000/invect/flows \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "My Flow", "description": "A test flow" }'
+
+# List all flows
+curl http://localhost:3000/invect/flows
+
+# Get a flow by ID
+curl http://localhost:3000/invect/flows/{flowId}
+
+# Delete a flow
+curl -X DELETE http://localhost:3000/invect/flows/{flowId}
+```
+
+See [API Reference](/docs/reference/api) for all endpoints.
+
+## Programmatic execution
+
+Trigger a flow run from your application code:
+
+```ts title="run-flow.ts"
+// Using the Express router context
+const result = await fetch('http://localhost:3000/invect/flows/{flowId}/run', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    inputs: { topic: 'Machine learning' },
+  }),
+});
+```
+
+Or directly via the core API (NestJS, custom integrations):
+
+```ts title="my.service.ts"
+const core = this.invect.getCore();
+const result = await core.startFlowRun(flowId, {
+  topic: 'Machine learning',
+});
+```
+
+## Flow structure
+
+A flow definition consists of:
+
+| Field | Description |
+|-------|-------------|
+| `id` | Unique identifier (auto-generated) |
+| `name` | Display name |
+| `description` | Optional description |
+| `nodes` | Array of node definitions |
+| `edges` | Array of connections between nodes |
+| `versions` | Version history of the flow definition |
+
+### Node definition
+
+Each node in a flow has:
+
+```ts
+{
+  id: "node-1",
+  type: "core.model",          // Action ID string
+  label: "Summarize",
+  referenceId: "summarize",    // Used in template expressions
+  params: {                    // Node-specific configuration
+    model: "gpt-4o-mini",
+    prompt: "Summarize: {{ input.topic }}"
+  },
+  position: { x: 100, y: 200 }
+}
+```
+
+The `type` field is an action ID (e.g., `core.model`, `gmail.send_message`, `http.request`). See [Nodes](/docs/nodes) for all available types.
+
+The `referenceId` is how downstream nodes reference this node's output in template expressions: `{{ summarize.result }}`.
+
+### Edges
+
+Edges define data flow between nodes:
+
+```ts
+{
+  source: "node-1",       // Source node ID
+  target: "node-2",       // Target node ID
+  sourceHandle: "output",
+  targetHandle: "input"
+}
+```
+
+## Flow versions
+
+Every time you save a flow in the editor, a new version is created. You can view the version history and restore previous versions.
+
+```bash
+# List versions for a flow
+curl http://localhost:3000/invect/flows/{flowId}/versions
+
+# Get a specific version
+curl http://localhost:3000/invect/flows/{flowId}/versions/{versionId}
+```
+
+For enhanced version management with publishing and change tracking, see the [Version Control Plugin](/docs/plugins/version-control).
+
+## Conditional logic
+
+Use **If/Else** nodes to branch your flow based on conditions. The If/Else node evaluates a JavaScript expression and routes execution to the `true` or `false` branch.
+
+```
+Input → If/Else → [true] → Send Email
+                → [false] → Log Warning
+```
+
+The If/Else node acts as a **passthrough** — its output equals its input. Downstream nodes on the active branch receive the same data, while nodes on the inactive branch are skipped.
+
+See [Nodes > If/Else](/docs/nodes/core-nodes) for configuration details.

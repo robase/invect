@@ -25,7 +25,11 @@ export const googleAnalyticsRunReportAction = defineAction({
   id: 'google_analytics.run_report',
   name: 'Run Report',
   description:
-    'Run a GA4 report for a property. Returns dimensions and metrics for the specified date range.',
+    'Run a GA4 report for a property (properties.runReport). Use when the user wants to query historical analytics data like sessions, page views, or user counts.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"metricHeaders": [{"name": "sessions"}], "rows": [{"dimensionValues": [{"value": "2025-03-15"}], "metricValues": [{"value": "1234"}]}], "rowCount": 7}\n' +
+    '```',
   provider: GOOGLE_ANALYTICS_PROVIDER,
   actionCategory: 'read',
 

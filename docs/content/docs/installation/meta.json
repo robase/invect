@@ -1,4 +1,4 @@
 {
   "title": "Installation",
-  "pages": ["express", "nestjs", "nextjs", "database"]
+  "pages": ["express", "nestjs", "nextjs"]
 }

@@ -397,6 +397,24 @@ export class ChatStreamService {
         targetId: e.target ?? e.targetId ?? '',
       }));
 
+      // Extract input fields from the manual trigger node (if any)
+      const triggerNode = (definition?.nodes ?? []).find(
+        (n: FlowNode) => n.type === 'trigger.manual' || n.type === 'trigger.webhook',
+      );
+      const triggerParams = (triggerNode?.params ?? triggerNode?.data?.params) as
+        | Record<string, unknown>
+        | undefined;
+      const rawInputDefs = triggerParams?.inputDefinitions as
+        | Array<{
+            name: string;
+            type?: string;
+            label?: string;
+            description?: string;
+            defaultValue?: unknown;
+          }>
+        | undefined;
+      const inputFields = rawInputDefs?.length ? rawInputDefs : undefined;
+
       // When a run is selected (runs view), load its error context
       let runContext: FlowContextData['runContext'];
       if (selectedRunId && viewMode === 'runs' && this.invect) {
@@ -443,6 +461,7 @@ export class ChatStreamService {
         selectedNodeId,
         viewMode: viewMode as 'edit' | 'runs' | undefined,
         runContext,
+        inputFields,
       };
     } catch (error) {
       this.logger.warn('Error loading flow context:', { error, flowId });

@@ -1,44 +1,50 @@
 ---
 title: NestJS
-description: Set up Invect in a NestJS application.
+description: Set up Invect with NestJS using the module pattern.
 ---
 
-## Packages
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+import { Step, Steps } from 'fumadocs-ui/components/steps';
 
-```bash
-pnpm add @invect/core @invect/nestjs postgres
+<Steps>
+
+<Step>
+### Install packages
+
+<Tabs items={['pnpm', 'npm', 'yarn']}>
+  <Tab value="pnpm">
+  ```bash
+  pnpm add @invect/core @invect/nestjs
+  ```
+  </Tab>
+  <Tab value="npm">
+  ```bash
+  npm install @invect/core @invect/nestjs
+  ```
+  </Tab>
+  <Tab value="yarn">
+  ```bash
+  yarn add @invect/core @invect/nestjs
+  ```
+  </Tab>
+</Tabs>
+</Step>
+
+<Step>
+### Set environment variables
+
+```bash title=".env"
+DATABASE_URL=file:./dev.db
+INVECT_ENCRYPTION_KEY=   # Generate with: npx invect-cli secret
 ```
+</Step>
 
-Use `better-sqlite3` instead of `postgres` for SQLite.
+<Step>
+### Import the module
 
-## Database setup
+Use `InvectModule.forRoot()` in your app module:
 
-Create a minimal config for the CLI:
-
-```ts title="invect.config.ts"
-import { defineConfig } from '@invect/core';
-
-export default defineConfig({
-  database: {
-    type: 'postgresql',
-    connectionString:
-      process.env.DATABASE_URL || 'postgresql://invect:invect@localhost:5432/invect',
-  },
-});
-```
-
-Generate and apply:
-
-```bash
-pnpm dlx @invect/cli generate
-pnpm dlx @invect/cli migrate --push
-```
-
-## Module registration
-
-Add `InvectModule` to your app module:
-
-```ts title="src/app.module.ts"
+```ts title="app.module.ts"
 import { Module } from '@nestjs/common';
 import { InvectModule } from '@invect/nestjs';
 
@@ -46,58 +52,108 @@ import { InvectModule } from '@invect/nestjs';
   imports: [
     InvectModule.forRoot({
       database: {
-        type: 'postgresql',
-        connectionString:
-          process.env.DATABASE_URL || 'postgresql://invect:invect@localhost:5432/invect',
+        type: 'sqlite',
+        connectionString: process.env.DATABASE_URL!,
       },
-      execution: {
-        defaultTimeout: 60000,
-        maxConcurrentExecutions: 10,
-      },
+      encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
     }),
   ],
 })
 export class AppModule {}
 ```
 
-`InvectModule.forRoot()` registers the core as a singleton provider, mounts all API endpoints as NestJS controllers, and starts the batch polling service.
+This registers:
+- `INVECT_CORE` provider — the core `Invect` instance (singleton)
+- `InvectService` — injectable service wrapping the core
+- `InvectController` — all REST API endpoints under `/invect`
+</Step>
 
-For async configuration (e.g., loading from a `ConfigService`):
+<Step>
+### Generate and migrate the database
 
-```ts
-InvectModule.forRootAsync({
-  imports: [ConfigModule],
-  inject: [ConfigService],
-  useFactory: (config: ConfigService) => ({
-    database: {
-      type: 'postgresql',
-      connectionString: config.get('DATABASE_URL'),
-    },
-  }),
-});
+```bash
+npx invect-cli generate
+npx invect-cli migrate
+```
+</Step>
+
+<Step>
+### Start the server
+
+```bash
+npx nest start --watch
+```
+
+The API is now live at `http://localhost:3000/invect`.
+</Step>
+
+</Steps>
+
+## Async configuration
+
+Use `forRootAsync` when you need to inject dependencies (e.g., `ConfigService`):
+
+```ts title="app.module.ts"
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { InvectModule } from '@invect/nestjs';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot(),
+    InvectModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        database: {
+          type: 'postgresql' as const,
+          connectionString: config.get('DATABASE_URL')!,
+        },
+        encryptionKey: config.get('INVECT_ENCRYPTION_KEY')!,
+      }),
+    }),
+  ],
+})
+export class AppModule {}
 ```
 
 ## Accessing the core instance
 
-Inject `InvectService` when you need to call Invect methods from your own services:
+Inject `InvectService` anywhere in your NestJS app to access the core directly:
 
-```ts title="src/my.service.ts"
+```ts title="my.service.ts"
 import { Injectable } from '@nestjs/common';
 import { InvectService } from '@invect/nestjs';
 
 @Injectable()
 export class MyService {
-  constructor(private readonly invectService: InvectService) {}
+  constructor(private readonly invect: InvectService) {}
 
-  async triggerWorkflow(name: string) {
-    const core = this.invectService.getCore();
-    return core.startFlowRun('my-flow-id', { name });
+  async runWorkflow(flowId: string, inputs: Record<string, unknown>) {
+    const core = this.invect.getCore();
+    return core.startFlowRun(flowId, inputs);
   }
 }
 ```
 
-The `InvectService` is exported from the module, so any module that imports `InvectModule` can inject it.
+## With plugins
 
-## Frontend
+```ts title="app.module.ts"
+import { InvectModule } from '@invect/nestjs';
+import { authentication } from '@invect/user-auth/backend';
 
-To add the visual editor, see [Embedding the editor](/docs/frontend/embedding).
+@Module({
+  imports: [
+    InvectModule.forRoot({
+      database: {
+        type: 'sqlite',
+        connectionString: process.env.DATABASE_URL!,
+      },
+      encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+      plugins: [
+        authentication({ auth }),
+      ],
+    }),
+  ],
+})
+export class AppModule {}
+```

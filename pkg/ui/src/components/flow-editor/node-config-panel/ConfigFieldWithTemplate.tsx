@@ -8,6 +8,7 @@ import type { NodeParamField } from '../../../types/node-definition.types';
 import { cn } from '../../../lib/utils';
 import { DroppableInput } from './DroppableInput';
 import { DynamicSelectField } from './DynamicSelectField';
+import { SearchableSelectField } from './SearchableSelectField';
 import { CodeMirrorJsEditor } from '../../ui/codemirror-js-editor';
 import { SwitchCasesField } from './SwitchCasesField';
 import { useFlowEditorStore } from '../flow-editor.store';
@@ -214,6 +215,25 @@ export const ConfigFieldWithTemplate = ({
         hasCurrentValue || !stringValue
           ? optionEntries
           : [{ label: stringValue, value: stringValue }, ...optionEntries];
+
+      // Use searchable combobox for selects with many options (e.g. model lists)
+      const SEARCHABLE_THRESHOLD = 10;
+      if (renderOptions.length > SEARCHABLE_THRESHOLD) {
+        return (
+          <div className="flex flex-col gap-1.5">
+            {fieldHeader}
+            <SearchableSelectField
+              id={field.name}
+              value={stringValue}
+              options={renderOptions}
+              placeholder={field.placeholder}
+              disabled={field.disabled}
+              onChange={(val) => onChange(val)}
+            />
+            {fieldError}
+          </div>
+        );
+      }
 
       return (
         <div className="flex flex-col gap-1.5">

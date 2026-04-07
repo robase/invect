@@ -1,4 +1,4 @@
 {
   "title": "Concepts",
-  "pages": ["architecture", "execution-model", "actions-system", "security", "framework-adapters"]
+  "pages": ["architecture", "execution-model", "actions-system", "security"]
 }

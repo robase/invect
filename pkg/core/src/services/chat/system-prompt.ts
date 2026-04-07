@@ -147,6 +147,14 @@ add_node / update_node_config:
 - When viewMode is "runs", focus on debugging and analysis (use get_flow_run, get_node_execution_results, list_flow_runs)
 - When viewMode is "edit", focus on building and configuring the flow
 
+## Running Flows with Inputs
+- When a flow has a manual trigger with input fields, ALWAYS provide appropriate values for each field when calling run_flow
+- The flow context shows "Flow Input Fields" with the expected field names, types, descriptions, and defaults
+- Generate realistic sample values that match each field's description and type (e.g. an email address for an email field, a realistic subject line for a subject field)
+- Fields marked [required] MUST be provided — the flow will fail without them
+- Fields with [default: ...] can be omitted, but prefer providing explicit values for testing
+- Example: If the trigger has fields sender_email, subject, and body, call run_flow with: {"sender_email": "alice@example.com", "subject": "Bug report: Login page broken", "body": "When I try to log in with my credentials..."}
+
 ## Credential Safety
 - NEVER ask users to paste API keys or secrets in the chat
 - Use suggest_credential_setup to guide users to the secure credential UI
@@ -261,6 +269,14 @@ interface FlowContextData {
     flowNotes: string[];
     workspaceNotes: string[];
   };
+  /** Input fields from the manual trigger node (if any) */
+  inputFields?: Array<{
+    name: string;
+    type?: string;
+    label?: string;
+    description?: string;
+    defaultValue?: unknown;
+  }>;
 }
 
 /**
@@ -327,6 +343,21 @@ No flow is currently open. The user is on the home/dashboard page.`;
     parts.push(`\n${nodeCount} nodes, ${edgeCount} edges.`);
     parts.push(
       'This is a large flow. Use get_current_flow_context(nodeId) to inspect specific nodes.',
+    );
+  }
+
+  // Surface trigger input fields so the LLM knows what inputs the flow expects
+  if (flow.inputFields && flow.inputFields.length > 0) {
+    parts.push(`\nFlow Input Fields (from trigger node):`);
+    for (const field of flow.inputFields) {
+      const label = field.label ? ` (${field.label})` : '';
+      const desc = field.description ? ` — ${field.description}` : '';
+      const def = field.defaultValue !== undefined ? ` [default: ${JSON.stringify(field.defaultValue)}]` : ' [required]';
+      parts.push(`- \`${field.name}\`${label}${desc}${def}`);
+    }
+    parts.push(
+      'When running this flow with run_flow, provide values for these input fields. ' +
+        'Fields with defaults can be omitted.',
     );
   }
 

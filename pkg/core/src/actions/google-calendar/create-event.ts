@@ -35,7 +35,11 @@ export const googleCalendarCreateEventAction = defineAction({
   id: 'google_calendar.create_event',
   name: 'Create Event',
   description:
-    'Create a new event on Google Calendar with summary, description, location, times, attendees, and recurrence rules.',
+    'Create a new event on Google Calendar (events.insert). Use when the user wants to schedule a meeting, appointment, or reminder.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "abc123", "summary": "Team Meeting", "start": {"dateTime": "2025-03-15T10:00:00Z"}, "htmlLink": "https://calendar.google.com/event?eid=abc"}\n' +
+    '```',
   provider: GOOGLE_CALENDAR_PROVIDER,
   actionCategory: 'write',
 
@@ -143,6 +147,7 @@ export const googleCalendarCreateEventAction = defineAction({
         ],
         description: 'Who to send email notifications to',
         extended: true,
+        aiProvided: true,
       },
       {
         name: 'recurrence',
@@ -166,6 +171,7 @@ export const googleCalendarCreateEventAction = defineAction({
         ],
         description: 'Event visibility',
         extended: true,
+        aiProvided: true,
       },
     ],
   },

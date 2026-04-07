@@ -75,7 +75,11 @@ export const gmailListMessagesAction = defineAction({
   id: 'gmail.list_messages',
   name: 'List Emails',
   description:
-    'Search and list emails from Gmail inbox. Use this when the user asks to check their email, find specific emails, or search their inbox.',
+    'Search and list emails from Gmail inbox (users.messages.list + users.messages.get). Use when the user wants to check their email, find messages, or search their inbox.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"messages": [{"id": "18e1a2b", "threadId": "18e1a2b", "from": "alice@example.com", "subject": "Hello", "snippet": "..."}], "totalEstimate": 42}\n' +
+    '```',
   provider: GMAIL_PROVIDER,
   actionCategory: 'read',
   tags: [
@@ -148,6 +152,7 @@ export const gmailListMessagesAction = defineAction({
         defaultValue: false,
         description: 'Include messages from SPAM and TRASH folders',
         extended: true,
+        aiProvided: true,
       },
     ],
   },

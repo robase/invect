@@ -23,7 +23,12 @@ const paramsSchema = z.object({
 export const teamsSendMessageAction = defineAction({
   id: 'microsoft_teams.send_message',
   name: 'Send Message',
-  description: 'Send a message to a Microsoft Teams channel. Supports HTML-formatted content.',
+  description:
+    'Send a message to a Microsoft Teams channel (POST /teams/{team-id}/channels/{channel-id}/messages). Use when you need to post a notification, update, or message to a Teams channel.\n\n'
+    + 'Example response:\n'
+    + '```json\n'
+    + '{"id": "1616990032035", "createdDateTime": "2025-01-15T10:30:00Z", "from": {"user": {"displayName": "Bot"}}, "body": {"contentType": "html", "content": "Hello World"}}\n'
+    + '```',
   provider: MICROSOFT_TEAMS_PROVIDER,
   actionCategory: 'write',
 

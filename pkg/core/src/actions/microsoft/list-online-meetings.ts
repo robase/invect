@@ -46,7 +46,11 @@ export const microsoftListOnlineMeetingsAction = defineAction({
   id: 'microsoft.list_online_meetings',
   name: 'List Online Meetings',
   description:
-    'List recent Microsoft Teams online meetings for the authenticated user. Use this to find meeting IDs needed for retrieving transcripts.',
+    'List recent Microsoft Teams online meetings (GET /me/onlineMeetings). Use when you need to find meeting IDs for retrieving transcripts or meeting details.\n\n'
+    + 'Example response:\n'
+    + '```json\n'
+    + '{"id": "MSo1N2Y5...", "subject": "Weekly Standup", "startDateTime": "2025-01-15T09:00:00Z", "endDateTime": "2025-01-15T09:30:00Z", "joinWebUrl": "https://teams.microsoft.com/l/meetup-join/..."}\n'
+    + '```',
   provider: MICROSOFT_PROVIDER,
   actionCategory: 'read',
 

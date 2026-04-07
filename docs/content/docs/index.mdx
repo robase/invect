@@ -4,26 +4,62 @@ description: Drop-in workflow orchestration for any Node.js app.
 ---
 
 import { Card, Cards } from 'fumadocs-ui/components/card';
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
 
-Invect is an open-source workflow orchestration library that you mount directly into your existing Node.js application. It provides a visual flow editor, AI agent nodes, 190+ built-in integrations, and batch processing — all as npm packages, not a separate platform.
+Invect is an open-source workflow orchestration library that you mount directly into your existing Node.js application. Visual flow editor, AI agents, 190+ integrations, and batch processing — all as npm packages, not a separate platform.
 
-## How it works
+## Quick look
 
-Install the packages. Mount a router. Open the visual editor. Build workflows that connect your AI models, APIs, and data — then trigger them from your code or on a schedule.
+<Tabs items={['Express', 'NestJS', 'Next.js']}>
+  <Tab value="Express">
+  ```ts title="index.ts"
+  import express from 'express';
+  import { createInvectRouter } from '@invect/express';
 
-```ts
-import express from 'express';
-import { createInvectRouter } from '@invect/express';
+  const app = express();
+  const router = await createInvectRouter({
+    database: { type: 'sqlite', connectionString: 'file:./dev.db' },
+    encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+  });
+  app.use('/invect', router);
+  app.listen(3000);
+  ```
+  </Tab>
+  <Tab value="NestJS">
+  ```ts title="app.module.ts"
+  import { Module } from '@nestjs/common';
+  import { InvectModule } from '@invect/nestjs';
 
-const app = express();
-const router = await createInvectRouter({
-  database: { type: 'sqlite', connectionString: 'file:./dev.db' },
-});
-app.use('/invect', router);
-app.listen(3000);
-```
+  @Module({
+    imports: [
+      InvectModule.forRoot({
+        database: { type: 'sqlite', connectionString: 'file:./dev.db' },
+        encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+      }),
+    ],
+  })
+  export class AppModule {}
+  ```
+  </Tab>
+  <Tab value="Next.js">
+  ```ts title="app/api/invect/[...invect]/route.ts"
+  import { createInvectHandler } from '@invect/nextjs';
 
-That's it. You now have a visual flow editor at `http://localhost:3000/invect` and a full REST API for managing and executing workflows.
+  const handler = createInvectHandler({
+    database: { type: 'sqlite', connectionString: 'file:./dev.db' },
+    encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+  });
+
+  export const GET = handler.GET;
+  export const POST = handler.POST;
+  export const PATCH = handler.PATCH;
+  export const PUT = handler.PUT;
+  export const DELETE = handler.DELETE;
+  ```
+  </Tab>
+</Tabs>
+
+That's it. You have a visual flow editor and a full REST API for managing and executing workflows.
 
 ## Start here
 
@@ -50,32 +86,47 @@ That's it. You now have a visual flow editor at `http://localhost:3000/invect` a
 <Cards>
   <Card
     title="Flows"
-    description="Creating flows, templates, conditional logic, triggers, and programmatic execution."
+    description="Creating, triggering, templates, and batch processing."
     href="/docs/flows/creating-flows"
   />
   <Card
     title="Nodes"
-    description="All node types — model, HTTP, JavaScript, 190+ integrations, and custom actions."
+    description="Core nodes and 190+ integration actions."
     href="/docs/nodes/overview"
   />
   <Card
     title="Agents"
-    description="Iterative AI agents with tool calling and multi-step reasoning."
+    description="AI agents with iterative tool calling."
     href="/docs/agents/overview"
   />
   <Card
+    title="Credentials"
+    description="API keys and OAuth2 for 35+ services."
+    href="/docs/credentials/api-keys"
+  />
+  <Card
+    title="Frontend"
+    description="Embed the visual editor in your React app."
+    href="/docs/frontend/embedding"
+  />
+  <Card
     title="Plugins"
-    description="Authentication, RBAC, webhooks, version control, and building your own."
+    description="Auth, RBAC, webhooks, version control, and custom."
     href="/docs/plugins/overview"
   />
   <Card
+    title="Deployment"
+    description="Production setup, encryption, and Docker."
+    href="/docs/deployment/production"
+  />
+  <Card
     title="Reference"
-    description="Complete API endpoints, CLI, configuration, and database schema."
+    description="API endpoints, CLI, config, and database schema."
     href="/docs/reference/configuration"
   />
   <Card
     title="Concepts"
-    description="Architecture, execution model, actions system, and security."
+    description="Architecture, execution model, and security."
     href="/docs/concepts/architecture"
   />
 </Cards>

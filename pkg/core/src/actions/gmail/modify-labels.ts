@@ -28,7 +28,11 @@ export const gmailModifyLabelsAction = defineAction({
   id: 'gmail.modify_labels',
   name: 'Modify Labels',
   description:
-    'Add or remove labels on a Gmail message. Use to mark as read/unread, star/unstar, archive, trash, or apply custom labels.',
+    'Add or remove labels on a Gmail message (users.messages.modify). Use when the user wants to mark emails read/unread, star/unstar, archive, trash, or organize with labels.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"messageId": "18e1a2b", "threadId": "18e1a2b", "currentLabels": ["INBOX", "STARRED"]}\n' +
+    '```',
   provider: GMAIL_PROVIDER,
   actionCategory: 'manage',
   tags: [

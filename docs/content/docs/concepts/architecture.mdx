@@ -1,78 +1,115 @@
 ---
 title: Architecture
-description: How Invect is structured — core library, service layer, and framework adapters.
+description: How Invect is structured — core, services, adapters, and the plugin system.
 ---
 
-Invect's architecture is built around a single idea: all business logic lives in `@invect/core`, and framework packages are thin adapters.
+## Core + adapter pattern
 
-## The core
-
-`@invect/core` contains:
-
-- **Invect class** (`invect-core.ts`) — the central orchestrator. This single class exposes 40+ methods for flow CRUD, execution, credentials, triggers, and tools. Framework adapters call these methods; nothing else.
-- **Services** — business logic organised by domain. `FlowsService` handles flow CRUD. `FlowOrchestrationService` runs flows. `CredentialsService` manages encrypted secrets. Each service depends on models (database layer) and other services.
-- **Actions** — the node type system. Each action is a self-contained unit with config, UI definitions, and an execute function.
-- **Database layer** — Drizzle ORM models supporting three dialects (SQLite, PostgreSQL, MySQL).
-- **Plugin manager** — initialises plugins, executes hooks, manages lifecycle.
+All business logic lives in `@invect/core`. Framework packages are thin adapters that wrap the core. This means the same logic runs identically across Express, NestJS, and Next.js.
 
 ```
-@invect/core
-├── Invect class (orchestrator)
-├── Services
-│   ├── FlowsService
-│   ├── FlowOrchestrationService
-│   ├── FlowRunCoordinator
-│   ├── NodeExecutionCoordinator
-│   ├── CredentialsService
-│   ├── BatchJobsService
-│   ├── TemplateService
-│   ├── GraphService
-│   └── ...
-├── Actions (190+ definitions)
-├── Database (Drizzle models)
-└── Plugin Manager
+┌──────────────────────────────────────┐
+│            @invect/core              │
+│                                      │
+│  Invect class (invect-core.ts)       │
+│  ├── initialize()                    │
+│  ├── createFlow()                    │
+│  ├── startFlowRun()                  │
+│  ├── createCredential()              │
+│  └── 40+ methods                     │
+│                                      │
+│  Services (business logic)           │
+│  ├── FlowOrchestrationService        │
+│  ├── FlowsService                    │
+│  ├── CredentialsService              │
+│  ├── TemplateService                 │
+│  ├── BatchJobsService                │
+│  └── ...                             │
+│                                      │
+│  Actions (node definitions)          │
+│  ├── 190+ defineAction() definitions │
+│  ├── ActionRegistry                  │
+│  └── AgentToolRegistry              │
+│                                      │
+│  Database (Drizzle ORM)              │
+│  ├── SQLite, PostgreSQL, MySQL       │
+│  ├── Models (CRUD abstraction)       │
+│  └── Schema (core + plugin tables)   │
+└──────────────────────────────────────┘
+         ▲        ▲        ▲
+         │        │        │
+┌────────┤  ┌─────┤  ┌─────┤
+│Express │  │NestJS│  │Next │
+│ Router │  │Module│  │Hndlr│
+└────────┘  └──────┘  └─────┘
 ```
 
 ## Service layer
 
-Services are the real workforce. The `Invect` class is mostly a facade — it delegates to services. Services depend on models (for database operations) and on each other (for cross-cutting logic).
+Services handle all business logic. They're created by the `ServiceFactory` during initialization and injected into the `Invect` class.
 
-Key services and their roles:
+| Service | Responsibility |
+|---------|---------------|
+| `FlowOrchestrationService` | Orchestrates complete flow execution |
+| `FlowRunCoordinator` | Coordinates full flow run lifecycle |
+| `NodeExecutionCoordinator` | Handles individual node execution + template resolution |
+| `FlowsService` | Flow CRUD operations |
+| `FlowVersionsService` | Flow version management |
+| `FlowRunsService` | Flow execution records |
+| `NodeExecutionService` | Node-level execution traces |
+| `BatchJobsService` | Batch processing integration |
+| `CredentialsService` | Secure credential storage + OAuth2 refresh |
+| `TemplateService` | Template rendering via QuickJS WASM sandbox |
+| `GraphService` | Topological sorting, dependency analysis |
+| `ReactFlowRendererService` | Flow visualization data for frontend |
 
-| Service                    | Responsibility                                                                  |
-| -------------------------- | ------------------------------------------------------------------------------- |
-| `FlowOrchestrationService` | Orchestrates complete flow execution                                            |
-| `FlowRunCoordinator`       | Manages flow run lifecycle (start → execute → complete)                         |
-| `NodeExecutionCoordinator` | Handles individual node execution, input data construction, template resolution |
-| `FlowsService`             | Flow CRUD                                                                       |
-| `FlowVersionsService`      | Flow version management                                                         |
-| `CredentialsService`       | Credential storage, encryption, OAuth2 token refresh                            |
-| `TemplateService`          | JavaScript expression evaluation in QuickJS sandbox                             |
-| `GraphService`             | Topological sorting, dependency analysis                                        |
-| `BatchJobsService`         | Batch API integration and polling                                               |
-
-Services are instantiated by `ServiceFactory`, which handles dependency injection. Each service receives its dependencies through the constructor — no global state, no singletons.
+**Services never bypass each other.** Controllers/routes delegate to the `Invect` class, which delegates to services, which delegate to models for database access.
 
 ## Database layer
 
-The database layer uses Drizzle ORM with an abstraction for multi-dialect support:
+Invect uses **Drizzle ORM** for database access, supporting three dialects:
 
+| Dialect | Driver Options |
+|---------|---------------|
+| SQLite | `better-sqlite3`, `libsql` |
+| PostgreSQL | `postgres` (postgres.js), `pg`, `neon-serverless` |
+| MySQL | `mysql2` |
+
+The database layer is abstracted through **Models** — each model handles CRUD for a specific table:
+
+```ts
+class FlowsModel {
+  constructor(private db: DatabaseConnection, private dbType: DatabaseType) {}
+
+  async create(data: NewFlow): Promise<Flow> {
+    return this.db.insert(flows).values(data).returning();
+  }
+}
 ```
-Model → Drizzle ORM → SQLite / PostgreSQL / MySQL
-```
 
-Models handle CRUD for each table. Services use models — they never write SQL directly. This separation means switching databases requires no service changes.
+**Never write raw SQL** — use Drizzle ORM methods through models.
 
-Schema generation is its own subsystem. The CLI reads core + plugin schemas (abstract format), generates dialect-specific Drizzle files, and applies migrations.
+## Initialization sequence
 
-## Framework adapters
+When you call `createInvectRouter()`, `InvectModule.forRoot()`, or `createInvectHandler()`:
 
-Each adapter is under 400 lines and follows a simple pattern: map HTTP routes to `Invect` class methods.
+1. **Action registry created** — all built-in actions registered (`defineAction()` definitions)
+2. **Plugin initialization** — for each plugin: register `plugin.actions`, call `plugin.init(context)`
+3. **Node registry initialized** — registers `AgentNodeExecutor` (only node executor)
+4. **Actions registered as tools** — every action converted to an `AgentToolDefinition`
+5. **Services initialized** — `ServiceFactory` built, `DatabaseService.initialize()` runs
+6. **Table verification** — core tables checked, then plugin tables checked
+7. **Batch polling started** — periodic check for completed batch jobs
+8. **Cron scheduler started** — if enabled, starts scheduling cron-triggered flows
 
-```
-Express:  createInvectRouter(config) → Router
-NestJS:   InvectModule.forRoot(config) → DynamicModule
-Next.js:  createInvectHandler(config) → { GET, POST, ... }
-```
+## Plugin integration
 
-See [Framework adapters](/docs/concepts/framework-adapters) for the details of each.
+Plugins are registered during initialization and can contribute:
+
+- **Actions** — new node types/agent tools
+- **Database schema** — new tables or columns on existing tables
+- **API endpoints** — custom routes
+- **Hooks** — lifecycle hooks that intercept execution
+- **Frontend components** — sidebar items, routes, panel tabs
+
+Plugins are initialized in order and shut down in reverse order. See [Plugin System](/docs/plugins/overview) for details.

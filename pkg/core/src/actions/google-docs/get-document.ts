@@ -40,7 +40,12 @@ const paramsSchema = z.object({
 export const googleDocsGetDocumentAction = defineAction({
   id: 'google_docs.get_document',
   name: 'Get Document',
-  description: 'Retrieve a Google Docs document including its metadata and text content.',
+  description:
+    'Retrieve a Google Docs document (documents.get). Use when the user wants to read or extract text from a Google Doc.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"documentId": "1abc...", "title": "My Doc", "textContent": "...", "revisionId": "ALm3..."}\n' +
+    '```',
   provider: GOOGLE_DOCS_PROVIDER,
   actionCategory: 'read',
 

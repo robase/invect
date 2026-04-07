@@ -20,7 +20,12 @@ const paramsSchema = z.object({
 export const googleDocsAppendTextAction = defineAction({
   id: 'google_docs.append_text',
   name: 'Append Text',
-  description: 'Append text to the end of a Google Docs document.',
+  description:
+    'Append text to the end of a Google Docs document (documents.batchUpdate with insertText). Use when the user wants to add content at the end of an existing doc.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"documentId": "1abc...", "appendedAt": 42, "textLength": 156}\n' +
+    '```',
   provider: GOOGLE_DOCS_PROVIDER,
   actionCategory: 'write',
 

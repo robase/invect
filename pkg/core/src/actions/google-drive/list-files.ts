@@ -27,7 +27,11 @@ export const googleDriveListFilesAction = defineAction({
   id: 'google_drive.list_files',
   name: 'List Files',
   description:
-    'List files and folders in Google Drive. Supports searching by name, type, or custom query syntax.',
+    'List files and folders in Google Drive (files.list). Use when the user wants to browse their Drive, list recent files, or filter by folder.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"files": [{"id": "1abc", "name": "Report.pdf", "mimeType": "application/pdf", "modifiedTime": "2025-03-15T10:00:00Z"}], "fileCount": 1, "hasMore": false}\n' +
+    '```',
   provider: GOOGLE_DRIVE_PROVIDER,
   actionCategory: 'read',
 

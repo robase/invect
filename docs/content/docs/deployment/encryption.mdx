@@ -1,53 +1,77 @@
 ---
 title: Encryption
-description: Securing credential storage with AES-256-GCM encryption.
+description: How Invect encrypts credentials at rest and key management.
 ---
 
-All credential secrets (API keys, OAuth2 tokens, database passwords) are encrypted at rest in the database using AES-256-GCM. The encryption key is a 32-byte value you provide.
+import { Callout } from 'fumadocs-ui/components/callout';
 
-## Setting the encryption key
+Invect encrypts all stored credentials (API keys, OAuth2 tokens, database passwords) using **AES-256-GCM** before writing them to the database.
 
-Generate a key:
+## Encryption key
 
-```bash
-pnpm dlx @invect/cli secret
-```
-
-This outputs a base64-encoded 32-byte key. Set it as an environment variable:
+The `INVECT_ENCRYPTION_KEY` environment variable must be a **base64-encoded 32-byte key**. Generate one:
 
 ```bash
-export INVECT_ENCRYPTION_KEY="your-base64-key-here"
+npx invect-cli secret
 ```
 
-**In development**, if the env var isn't set, Invect uses a deterministic default key. This lets you get started quickly but is not secure — anyone with access to the source code can derive it.
+This uses `crypto.randomBytes(32)` to generate a cryptographically secure key and outputs it as base64.
 
-**In production**, always set `INVECT_ENCRYPTION_KEY` to a randomly generated value. Store it in a secrets manager (AWS Secrets Manager, Vault, Doppler, etc.), not in environment files committed to version control.
+Alternatively:
 
-## How encryption works
+```bash
+openssl rand -base64 32
+```
 
-When a credential is stored:
+<Callout type="error">
+  **Never commit the encryption key to source control.** Store it securely in your environment variables, secrets manager, or deployment platform.
+</Callout>
 
-1. A random 12-byte IV (initialisation vector) is generated
-2. The credential's config (API keys, tokens, etc.) is serialised to JSON
-3. AES-256-GCM encrypts the JSON using the key and IV
-4. The ciphertext, IV, and authentication tag are stored together in the database
+## How it works
 
-GCM mode provides both encryption (confidentiality) and integrity checking (the auth tag detects tampering). If the ciphertext is modified, decryption fails.
+When a credential is created:
+
+1. A random 12-byte **IV** (initialization vector) is generated
+2. A random 16-byte **auth tag** is generated via GCM
+3. The credential data is encrypted with AES-256-GCM using the key + IV
+4. The IV, auth tag, and ciphertext are stored together in the database
+
+When a credential is read:
+
+1. The IV and auth tag are extracted
+2. The ciphertext is decrypted with AES-256-GCM
+3. The plaintext credential data is returned
+
+## What's encrypted
+
+| Data | Encrypted | Notes |
+|------|-----------|-------|
+| API keys | Yes | OpenAI, Anthropic, HTTP API keys |
+| OAuth2 access tokens | Yes | Refreshed tokens are re-encrypted |
+| OAuth2 refresh tokens | Yes | |
+| OAuth2 client secrets | Yes | Required for token refresh |
+| Database connection strings | Yes | PostgreSQL, MySQL credentials |
+| Credential names | No | Stored in plaintext for search/display |
+| Credential types | No | Stored in plaintext |
 
 ## Key rotation
 
-Invect doesn't have automatic key rotation. To rotate the key:
+To rotate the encryption key:
 
-1. Decrypt all existing credentials with the old key
+1. Decrypt all credentials with the old key
 2. Re-encrypt with the new key
-3. Update the environment variable
+3. Update `INVECT_ENCRYPTION_KEY`
 
-This is a manual process — plan accordingly for production.
+<Callout type="info">
+  There is no built-in key rotation command yet. You would need to implement this in a migration script that reads all credentials, decrypts with the old key, and re-encrypts with the new key.
+</Callout>
 
-## SSRF protection
+## Missing key behavior
 
-The `POST /credentials/test-request` endpoint (used for testing HTTP credentials) includes protections against Server-Side Request Forgery:
+If `INVECT_ENCRYPTION_KEY` is not set:
 
-- Private IP ranges are blocked (127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16)
-- Internal hostnames are blocked
-- Request size and timeout limits are enforced
+- Creating credentials will fail with an error
+- Existing encrypted credentials cannot be decrypted
+- The server will start but credential operations will be unavailable
+
+Always ensure the key is set before starting Invect in production.

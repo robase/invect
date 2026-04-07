@@ -22,7 +22,11 @@ export const googleDocsInsertTextAction = defineAction({
   id: 'google_docs.insert_text',
   name: 'Insert Text',
   description:
-    'Insert text at a specific position in a Google Docs document. The index is 1-based (1 = beginning of document).',
+    'Insert text at a specific position in a Google Docs document (documents.batchUpdate with insertText). Use when the user wants to add text at a precise location.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"documentId": "1abc...", "insertedAt": 1, "textLength": 42}\n' +
+    '```',
   provider: GOOGLE_DOCS_PROVIDER,
   actionCategory: 'write',
 

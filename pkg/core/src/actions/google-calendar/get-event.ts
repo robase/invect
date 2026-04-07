@@ -20,7 +20,12 @@ const paramsSchema = z.object({
 export const googleCalendarGetEventAction = defineAction({
   id: 'google_calendar.get_event',
   name: 'Get Event',
-  description: 'Retrieve full details of a specific Google Calendar event by its ID.',
+  description:
+    'Retrieve full details of a Google Calendar event by ID (events.get). Use when the user wants to see all details of a specific event.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "abc123", "summary": "Team Meeting", "start": {"dateTime": "2025-03-15T10:00:00Z"}, "attendees": [{"email": "alice@example.com"}], "htmlLink": "https://calendar.google.com/event?eid=abc"}\n' +
+    '```',
   provider: GOOGLE_CALENDAR_PROVIDER,
   actionCategory: 'read',
 

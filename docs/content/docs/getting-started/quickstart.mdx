@@ -1,0 +1,121 @@
+---
+title: Quickstart
+description: Install Invect and run your first workflow in under 5 minutes.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+import { Callout } from 'fumadocs-ui/components/callout';
+
+This guide walks you through setting up Invect with Express and SQLite. For NestJS or Next.js, see [Installation](/docs/installation).
+
+### Install the packages
+
+<Tabs items={['pnpm', 'npm', 'yarn']}>
+  <Tab value="pnpm">
+  ```bash
+  pnpm add @invect/core @invect/express
+  ```
+  </Tab>
+  <Tab value="npm">
+  ```bash
+  npm install @invect/core @invect/express
+  ```
+  </Tab>
+  <Tab value="yarn">
+  ```bash
+  yarn add @invect/core @invect/express
+  ```
+  </Tab>
+</Tabs>
+
+### Set environment variables
+
+Create a `.env` file in your project root:
+
+```bash title=".env"
+# Database URL
+DATABASE_URL=file:./dev.db
+
+# Encryption key for credential storage (AES-256-GCM, base64, 32 bytes)
+# Generate one with: npx invect-cli secret
+INVECT_ENCRYPTION_KEY=
+```
+
+Generate an encryption key:
+
+```bash
+npx invect-cli secret
+```
+
+Copy the output into your `.env` file.
+
+### Create the server
+
+```ts title="index.ts"
+import 'dotenv/config';
+import express from 'express';
+import { createInvectRouter } from '@invect/express';
+
+const app = express();
+app.use(express.json());
+
+const router = await createInvectRouter({
+  database: {
+    type: 'sqlite',
+    connectionString: process.env.DATABASE_URL!,
+  },
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+});
+
+app.use('/invect', router);
+app.listen(3000, () => {
+  console.log('Invect running at http://localhost:3000/invect');
+});
+```
+
+### Generate database tables
+
+```bash
+npx invect-cli generate
+npx invect-cli migrate
+```
+
+The CLI reads your config, generates Drizzle schema files for your database dialect, and applies them.
+
+### Start the server
+
+```bash
+npx tsx index.ts
+```
+
+Open `http://localhost:3000/invect` — you should see the Invect dashboard.
+
+<Callout type="info">
+  The backend serves both the REST API and the flow data. To add the visual editor frontend, see [Frontend](/docs/frontend).
+</Callout>
+
+### Add the frontend (optional)
+
+If you want the visual flow editor in a separate React app:
+
+```bash
+pnpm add @invect/ui
+```
+
+```tsx title="App.tsx"
+import { Invect } from '@invect/ui';
+import '@invect/ui/styles';
+
+function App() {
+  return <Invect apiBaseUrl="http://localhost:3000/invect" />;
+}
+```
+
+### What's next?
+
+You now have a working Invect instance. Continue to [Build Your First Flow](/docs/getting-started/first-flow) to create a workflow using the visual editor, or jump to:
+
+- [Flows](/docs/flows) — Creating, triggering, and managing workflows
+- [Nodes](/docs/nodes) — All available node types and integrations
+- [Agents](/docs/agents) — AI agents with tool calling
+- [Credentials](/docs/credentials) — Connect OAuth2 services and API keys

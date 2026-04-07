@@ -67,7 +67,11 @@ export const gmailCreateDraftAction = defineAction({
   id: 'gmail.create_draft',
   name: 'Create Draft',
   description:
-    'Create a draft email in Gmail for review before sending. Supports plain text, HTML, CC/BCC, and reply threading.',
+    'Create a draft email in Gmail (users.drafts.create). Use when the user wants to prepare an email for review before sending.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"draftId": "r123", "messageId": "18e1a2b", "threadId": "18e1a2b"}\n' +
+    '```',
   provider: GMAIL_PROVIDER,
   actionCategory: 'write',
   tags: ['gmail', 'google', 'email', 'mail', 'draft', 'compose', 'write', 'prepare', 'oauth2'],

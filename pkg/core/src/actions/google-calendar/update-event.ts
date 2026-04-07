@@ -27,7 +27,12 @@ const paramsSchema = z.object({
 export const googleCalendarUpdateEventAction = defineAction({
   id: 'google_calendar.update_event',
   name: 'Update Event',
-  description: 'Update an existing Google Calendar event. Only specified fields will be changed.',
+  description:
+    'Update an existing Google Calendar event (events.patch). Use when the user wants to reschedule, rename, or change details of an event.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "abc123", "summary": "Updated Meeting", "start": {"dateTime": "2025-03-15T14:00:00Z"}, "status": "confirmed"}\n' +
+    '```',
   provider: GOOGLE_CALENDAR_PROVIDER,
   actionCategory: 'write',
 
@@ -131,6 +136,7 @@ export const googleCalendarUpdateEventAction = defineAction({
         ],
         description: 'Who to send notification emails to',
         extended: true,
+        aiProvided: true,
       },
     ],
   },
