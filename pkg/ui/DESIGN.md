@@ -1,3 +1,8 @@
+---
+title: Design System
+description: Linear-inspired theme system for Invect UI components.
+---
+
 # Design System — Linear-Inspired Theme for Invect
 
 ## 1. Visual Theme & Atmosphere
