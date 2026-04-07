@@ -735,6 +735,10 @@ async function createInternalBetterAuth(
 
     const apiKeyConfig: Record<string, unknown> =
       typeof apiKeyOpt === 'object' ? { ...apiKeyOpt } : {};
+    // Default API key header to "x-invect-token" (overridable via options).
+    if (apiKeyConfig.apiKeyHeaders === undefined) {
+      apiKeyConfig.apiKeyHeaders = 'x-invect-token';
+    }
     // Ensure getSession() can resolve API keys to sessions.
     // Without this, auth.api.getSession() only checks cookies/tokens.
     if (apiKeyConfig.enableSessionForAPIKeys === undefined) {
@@ -758,7 +762,12 @@ async function createInternalBetterAuth(
     ...(passthrough.socialProviders ? { socialProviders: passthrough.socialProviders } : {}),
     ...(passthrough.account ? { account: passthrough.account } : {}),
     ...(passthrough.rateLimit ? { rateLimit: passthrough.rateLimit } : {}),
-    ...(passthrough.advanced ? { advanced: passthrough.advanced } : {}),
+    // Default cookie prefix to "invect" (cookies become invect.session_token).
+    // Users can override via betterAuthOptions.advanced.cookiePrefix.
+    advanced: {
+      cookiePrefix: 'invect',
+      ...passthrough.advanced,
+    },
     ...(passthrough.databaseHooks ? { databaseHooks: passthrough.databaseHooks } : {}),
     ...(passthrough.hooks ? { hooks: passthrough.hooks } : {}),
     ...(passthrough.disabledPaths ? { disabledPaths: passthrough.disabledPaths } : {}),

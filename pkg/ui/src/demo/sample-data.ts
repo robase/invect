@@ -539,30 +539,30 @@ export const showcaseAgentTools: Array<{
     provider: { id: 'postgres', name: 'PostgreSQL', icon: 'Database' },
   },
   {
-    id: 'sentry.search_issues',
-    name: 'Search Sentry Issues',
-    description: 'Search for error issues in Sentry by query.',
+    id: 'sentry.list_issues',
+    name: 'Sentry Issues',
+    description: 'Search Sentry for recent errors matching the ticket.',
     category: 'web',
     provider: { id: 'sentry', name: 'Sentry', icon: 'Bug' },
   },
   {
-    id: 'aws_cloudwatch.query_logs',
+    id: 'cloudwatch.start_query',
     name: 'AWS Log Insights',
-    description: 'Run a CloudWatch Logs Insights query.',
+    description: 'Query CloudWatch Logs Insights for anomalies.',
     category: 'data',
-    provider: { id: 'aws_cloudwatch', name: 'AWS CloudWatch', icon: 'Cloud' },
+    provider: { id: 'cloudwatch', name: 'CloudWatch', icon: 'Cloud' },
   },
   {
     id: 'notion.search',
     name: 'Search Notion',
-    description: 'Search pages and databases in a Notion workspace.',
+    description: 'Search Notion workspace for relevant documentation.',
     category: 'web',
     provider: { id: 'notion', name: 'Notion', icon: 'FileText' },
   },
   {
-    id: 'github.get_file_contents',
+    id: 'github.get_file_content',
     name: 'Read Source File',
-    description: 'Read a file from a GitHub repository.',
+    description: 'Read a file from the GitHub repository.',
     category: 'code',
     provider: { id: 'github', name: 'GitHub', icon: 'Github' },
   },
@@ -582,7 +582,9 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
       status: 'completed',
       executionStatus: NodeExecutionStatus.SUCCESS,
       executionOutput: demoOutput('trigger.webhook', linearWebhookPayload.data),
-      params: {},
+      params: {
+        credentialId: 'linear-test',
+      },
     },
   },
   {
@@ -592,54 +594,61 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
     data: {
       id: 's-agent',
       type: 'AGENT',
-      display_name: 'Investigate Ticket',
-      reference_id: 'investigation',
+      display_name: 'Investigation Agent',
+      reference_id: 'investigation_agent',
       status: 'completed',
       executionStatus: NodeExecutionStatus.SUCCESS,
       executionOutput: demoOutput('AGENT', investigationResult),
       params: {
-        model: 'claude-sonnet-4-20250514',
+        credentialId: 'openai-test',
+        model: 'gpt-4o',
         taskPrompt:
           'Investigate Linear ticket "{{ linear_webhook.title }}".\n\n1. Query the database for related records\n2. Search Sentry for recent errors\n3. Check AWS logs for anomalies\n4. Search Notion for relevant docs\n5. Read related source files on GitHub\n\nOutput a JSON object with: summary, root_cause, severity (critical/high/medium/low), issue_type (bug/feature_request/incident), and recommended_action.',
         systemPrompt:
           'You are a senior on-call engineer performing ticket triage. Be thorough but concise.',
         maxIterations: 10,
         stopCondition: 'explicit_stop',
+        temperature: 0.7,
+        toolTimeoutMs: 30000,
+        maxConversationTokens: 100000,
+        enableParallelTools: true,
+        useBatchProcessing: false,
+        maxTokens: 2000,
         addedTools: [
           {
-            instanceId: 'tool-pg',
+            instanceId: 'tool_qn4q8nv0',
             toolId: 'postgres.execute_query',
             name: 'Query Database',
             description: 'Query PostgreSQL for related records',
-            params: {},
+            params: { _aiChosenModes: { query: true } },
           },
           {
-            instanceId: 'tool-sentry',
-            toolId: 'sentry.search_issues',
+            instanceId: 'tool_qvs9k37e',
+            toolId: 'sentry.list_issues',
             name: 'Sentry Issues',
             description: 'Search Sentry for recent errors matching the ticket',
-            params: {},
+            params: { _aiChosenModes: { query: true } },
           },
           {
-            instanceId: 'tool-aws',
-            toolId: 'aws_cloudwatch.query_logs',
+            instanceId: 'tool_bwhiecqs',
+            toolId: 'cloudwatch.start_query',
             name: 'AWS Log Insights',
             description: 'Query CloudWatch Logs Insights for anomalies',
-            params: {},
+            params: { _aiChosenModes: { logGroupName: true, queryString: true } },
           },
           {
-            instanceId: 'tool-notion',
+            instanceId: 'tool_cxbfi7au',
             toolId: 'notion.search',
             name: 'Search Notion',
             description: 'Search Notion workspace for relevant documentation',
-            params: {},
+            params: { _aiChosenModes: { query: true } },
           },
           {
-            instanceId: 'tool-gh',
-            toolId: 'github.get_file_contents',
+            instanceId: 'tool_dez9g3z0',
+            toolId: 'github.get_file_content',
             name: 'Read Source File',
             description: 'Read a file from the GitHub repository',
-            params: {},
+            params: { _aiChosenModes: { owner: true, repo: true, path: true } },
           },
         ],
       },
@@ -654,24 +663,24 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
     data: {
       id: 's-switch',
       type: 'core.switch',
-      display_name: 'Issue Type',
-      reference_id: 'issue_type',
+      display_name: 'Route by Issue Type',
+      reference_id: 'route_by_issue_type',
       status: 'completed',
       executionStatus: NodeExecutionStatus.SUCCESS,
       executionOutput: demoOutput('core.switch', investigationResult),
       params: {
         matchMode: 'first',
         cases: [
-          { slug: 'bug', label: 'Bug', expression: '{{ investigation.issue_type === "bug" }}' },
+          { slug: 'bug', label: 'Bug', expression: 'investigation.issue_type === "bug"' },
           {
             slug: 'feature',
             label: 'Feature Request',
-            expression: '{{ investigation.issue_type === "feature_request" }}',
+            expression: 'investigation.issue_type === "feature_request"',
           },
           {
             slug: 'incident',
             label: 'Incident',
-            expression: '{{ investigation.issue_type === "incident" }}',
+            expression: 'investigation.issue_type === "incident"',
           },
         ],
       },
@@ -689,11 +698,12 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
       id: 's-gh-pr',
       type: 'github.create_pull_request',
       display_name: 'Create Fix PR',
-      reference_id: 'fix_pr',
+      reference_id: 'create_fix_pr',
       status: 'completed',
       executionStatus: NodeExecutionStatus.SUCCESS,
       executionOutput: demoOutput('github.create_pull_request', prResult),
       params: {
+        credentialId: 'github-test',
         owner: 'acme',
         repo: 'platform',
         title: 'fix: {{ linear_webhook.title }}',
@@ -717,6 +727,7 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
       status: 'skipped',
       executionStatus: NodeExecutionStatus.SKIPPED,
       params: {
+        credentialId: 'slack-test',
         channel: '#product-requests',
         text: '*New feature request:* {{ linear_webhook.title }}\n\n{{ investigation.summary }}',
       },
@@ -731,14 +742,14 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
     data: {
       id: 's-pagerduty',
       type: 'http.request',
-      display_name: 'PagerDuty Incident',
-      reference_id: 'pagerduty_incident',
+      display_name: 'PagerDuty Alert',
+      reference_id: 'pagerduty_alert',
       status: 'skipped',
       executionStatus: NodeExecutionStatus.SKIPPED,
       params: {
         method: 'POST',
         url: 'https://events.pagerduty.com/v2/enqueue',
-        body: '{{ { routing_key: "R0...", event_action: "trigger", payload: { summary: investigation.summary, severity: investigation.severity, source: "invect-triage" } } }}',
+        body: '{"routing_key": "R0123456789abcdef", "event_action": "trigger", "payload": {"summary": "{{ investigation.summary }}", "severity": "{{ investigation.severity }}", "source": "invect-triage"}}',
       },
     },
   },
@@ -756,6 +767,7 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
       status: 'skipped',
       executionStatus: NodeExecutionStatus.SKIPPED,
       params: {
+        credentialId: 'slack-test',
         channel: '#triage',
         text: '*Unclassified ticket:* {{ linear_webhook.title }}\nSeverity: {{ investigation.severity }}\n\n{{ investigation.summary }}',
       },
@@ -774,7 +786,7 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
       id: 's-linear-update',
       type: 'linear.update_issue',
       display_name: 'Update Linear Ticket',
-      reference_id: 'update_ticket',
+      reference_id: 'update_linear_ticket',
       status: 'completed',
       executionStatus: NodeExecutionStatus.SUCCESS,
       executionOutput: demoOutput('linear.update_issue', {
@@ -784,10 +796,11 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
         updatedAt: '2025-04-07T16:32:29.100Z',
       }),
       params: {
+        credentialId: 'linear-test',
         issueId: '{{ linear_webhook.identifier }}',
         stateId: 'in-progress',
         comment:
-          'Automated triage complete.\n\n**Severity:** {{ investigation.severity }}\n**Root cause:** {{ investigation.root_cause }}\n\n{{ fix_pr.html_url ? "Fix PR: " + fix_pr.html_url : "No PR created — see branch-specific action above." }}',
+          'Automated triage complete.\n\n**Severity:** {{ investigation.severity }}\n**Root cause:** {{ investigation.root_cause }}\n\n{% if fix_pr.html_url %}Fix PR: {{ fix_pr.html_url }}{% else %}No PR created — see action above.{% endif %}',
       },
     },
   },
@@ -805,7 +818,13 @@ export const showcaseFlowEdges: Edge[] = [
   },
   { id: 'se-switch-incident', source: 's-switch', target: 's-pagerduty', sourceHandle: 'incident' },
   {
-    id: 'se-switch-default',
+    id: 'se-switch-triage-output',
+    source: 's-switch',
+    target: 's-slack-default',
+    sourceHandle: 'output',
+  },
+  {
+    id: 'se-switch-triage-default',
     source: 's-switch',
     target: 's-slack-default',
     sourceHandle: 'default',
@@ -837,8 +856,8 @@ const agentToolResults = [
     executionTimeMs: 120,
   },
   {
-    toolId: 'sentry.search_issues',
-    toolName: 'Search Sentry Issues',
+    toolId: 'sentry.list_issues',
+    toolName: 'Sentry Issues',
     input: { query: 'payment stripe webhook 502', project: 'payment-service' },
     output: {
       issues: [
@@ -859,7 +878,7 @@ const agentToolResults = [
     executionTimeMs: 340,
   },
   {
-    toolId: 'aws_cloudwatch.query_logs',
+    toolId: 'cloudwatch.start_query',
     toolName: 'AWS Log Insights',
     input: {
       logGroup: '/ecs/payment-service',
@@ -919,7 +938,7 @@ const agentToolResults = [
     executionTimeMs: 210,
   },
   {
-    toolId: 'github.get_file_contents',
+    toolId: 'github.get_file_content',
     toolName: 'Read Source File',
     input: { owner: 'acme', repo: 'platform', path: 'src/services/payments/stripe-handler.ts' },
     output: {
@@ -968,8 +987,8 @@ export const showcaseFlowRun = {
   status: 'SUCCESS',
   inputs: linearWebhookPayload,
   outputs: {
-    fix_pr: prResult,
-    update_ticket: {
+    create_fix_pr: prResult,
+    update_linear_ticket: {
       id: 'LIN-4821',
       identifier: 'ENG-4821',
       state: { name: 'In Progress' },
@@ -1031,8 +1050,8 @@ export const showcaseNodeExecutions = [
           },
         },
         metadata: {
-          model: 'claude-sonnet-4-20250514',
-          provider: 'anthropic',
+          model: 'gpt-4o',
+          provider: 'openai',
           totalToolCalls: 5,
           iterations: 6,
         },
@@ -1051,7 +1070,7 @@ export const showcaseNodeExecutions = [
     nodeType: 'core.switch',
     status: 'SUCCESS',
     inputs: {
-      investigation: investigationResult,
+      investigation_agent: investigationResult,
     },
     outputs: {
       nodeType: 'core.switch',
@@ -1075,7 +1094,7 @@ export const showcaseNodeExecutions = [
     nodeType: 'github.create_pull_request',
     status: 'SUCCESS',
     inputs: {
-      issue_type: investigationResult,
+      route_by_issue_type: investigationResult,
     },
     outputs: {
       nodeType: 'github.create_pull_request',
@@ -1141,7 +1160,7 @@ export const showcaseNodeExecutions = [
     nodeType: 'linear.update_issue',
     status: 'SUCCESS',
     inputs: {
-      fix_pr: prResult,
+      create_fix_pr: prResult,
     },
     outputs: {
       nodeType: 'linear.update_issue',
@@ -1425,12 +1444,12 @@ export const sampleChatMessages = [
       toolName: 'add_node',
       args: {
         type: 'AGENT',
-        name: 'Investigate Ticket',
-        referenceId: 'investigation',
+        name: 'Investigation Agent',
+        referenceId: 'investigation_agent',
       },
       result: {
         success: true,
-        data: { nodeId: 's-agent', type: 'AGENT', name: 'Investigate Ticket' },
+        data: { nodeId: 's-agent', type: 'AGENT', name: 'Investigation Agent' },
       },
       status: 'done',
       startedAt: Date.parse(T(5)),
@@ -1474,8 +1493,8 @@ export const sampleChatMessages = [
       toolName: 'configure_agent',
       args: {
         nodeId: 's-agent',
-        credentialId: 'cred-anthropic',
-        model: 'claude-sonnet-4-20250514',
+        credentialId: 'cred-openai',
+        model: 'gpt-4o',
         taskPrompt: 'Investigate Linear ticket "{{ linear_webhook.title }}"...',
         systemPrompt: 'You are a senior on-call engineer performing ticket triage.',
         maxIterations: 10,
@@ -1512,10 +1531,10 @@ export const sampleChatMessages = [
     content: '',
     toolMeta: {
       toolName: 'add_tool_to_agent',
-      args: { nodeId: 's-agent', toolId: 'sentry.search_issues', name: 'Sentry Issues' },
+      args: { nodeId: 's-agent', toolId: 'sentry.list_issues', name: 'Sentry Issues' },
       result: {
         success: true,
-        data: { instanceId: 'tool-sentry', toolId: 'sentry.search_issues' },
+        data: { instanceId: 'tool-sentry', toolId: 'sentry.list_issues' },
       },
       status: 'done',
       startedAt: Date.parse(T(9)),
@@ -1530,10 +1549,10 @@ export const sampleChatMessages = [
     content: '',
     toolMeta: {
       toolName: 'add_tool_to_agent',
-      args: { nodeId: 's-agent', toolId: 'aws_cloudwatch.query_logs', name: 'AWS Log Insights' },
+      args: { nodeId: 's-agent', toolId: 'cloudwatch.start_query', name: 'AWS Log Insights' },
       result: {
         success: true,
-        data: { instanceId: 'tool-aws', toolId: 'aws_cloudwatch.query_logs' },
+        data: { instanceId: 'tool-aws', toolId: 'cloudwatch.start_query' },
       },
       status: 'done',
       startedAt: Date.parse(T(10)),
@@ -1563,10 +1582,10 @@ export const sampleChatMessages = [
     content: '',
     toolMeta: {
       toolName: 'add_tool_to_agent',
-      args: { nodeId: 's-agent', toolId: 'github.get_file_contents', name: 'Read Source File' },
+      args: { nodeId: 's-agent', toolId: 'github.get_file_content', name: 'Read Source File' },
       result: {
         success: true,
-        data: { instanceId: 'tool-gh', toolId: 'github.get_file_contents' },
+        data: { instanceId: 'tool-gh', toolId: 'github.get_file_content' },
       },
       status: 'done',
       startedAt: Date.parse(T(12)),
@@ -1596,21 +1615,21 @@ export const sampleChatMessages = [
       toolName: 'add_node',
       args: {
         type: 'core.switch',
-        name: 'Issue Type',
-        referenceId: 'issue_type',
+        name: 'Route by Issue Type',
+        referenceId: 'route_by_issue_type',
         params: {
           matchMode: 'first',
           cases: [
-            { slug: 'bug', label: 'Bug', expression: '{{ investigation.issue_type === "bug" }}' },
+            { slug: 'bug', label: 'Bug', expression: 'investigation.issue_type === "bug"' },
             {
               slug: 'feature',
               label: 'Feature Request',
-              expression: '{{ investigation.issue_type === "feature_request" }}',
+              expression: 'investigation.issue_type === "feature_request"',
             },
             {
               slug: 'incident',
               label: 'Incident',
-              expression: '{{ investigation.issue_type === "incident" }}',
+              expression: 'investigation.issue_type === "incident"',
             },
           ],
         },
@@ -1634,7 +1653,7 @@ export const sampleChatMessages = [
       args: {
         type: 'github.create_pull_request',
         name: 'Create Fix PR',
-        referenceId: 'fix_pr',
+        referenceId: 'create_fix_pr',
       },
       result: { success: true, data: { nodeId: 's-gh-pr' } },
       status: 'done',
@@ -1671,8 +1690,8 @@ export const sampleChatMessages = [
       toolName: 'add_node',
       args: {
         type: 'http.request',
-        name: 'PagerDuty Incident',
-        referenceId: 'pagerduty_incident',
+        name: 'PagerDuty Alert',
+        referenceId: 'pagerduty_alert',
       },
       result: { success: true, data: { nodeId: 's-pagerduty' } },
       status: 'done',
@@ -1844,8 +1863,8 @@ export const sampleChatMessages = [
     content:
       "Your Linear ticket triage flow is ready! Here's what I built:\n\n" +
       '1. **Linear Webhook** — receives incoming ticket events\n' +
-      '2. **Investigate Ticket** — an AI agent (Claude Sonnet 4) that queries your Postgres DB, searches Sentry for errors, checks AWS CloudWatch logs, searches Notion for runbooks, and reads source files on GitHub to produce a root cause analysis with severity rating\n' +
-      "3. **Issue Type Switch** — routes based on the agent's classification:\n" +
+      '2. **Investigation Agent** — an AI agent (GPT-4o) that queries your Postgres DB, searches Sentry for errors, checks AWS CloudWatch logs, searches Notion for runbooks, and reads source files on GitHub to produce a root cause analysis with severity rating\n' +
+      "3. **Route by Issue Type** — routes based on the agent's classification:\n" +
       '   - **Bug** → Creates a fix PR on GitHub\n' +
       '   - **Feature Request** → Notifies #product-requests on Slack\n' +
       '   - **Incident** → Triggers a PagerDuty incident for escalation\n' +

@@ -161,6 +161,7 @@ add_node / update_node_config:
 - When a tool needs a credential, check list_credentials first
 
 ## Agent Nodes & Tool Management
+- Agent nodes use the type "AGENT" (uppercase) — this is a legacy type, NOT an action ID. Do NOT use "core.agent".
 - Agent nodes have tools managed via the \`addedTools\` array — each entry is a tool instance with instanceId, name, description, and params
 - To add tools to an agent: use \`add_tool_to_agent\` (creates a proper tool instance)
 - To inspect a tool's parameters before adding: use \`get_tool_details\` (shows types, required, defaults)
@@ -522,6 +523,12 @@ function buildCoreActionCheatSheet(actionRegistry: ActionRegistry | null): strin
   const nodesByType = new Map(allNodes.map((n) => [n.type, n]));
 
   const lines: string[] = [];
+
+  // AGENT is a legacy node type not in the action registry — surface it explicitly
+  lines.push(
+    '- `AGENT`: params: credentialId*, model*, taskPrompt*, systemPrompt, enabledTools, maxIterations, stopCondition. AI agent that iterates with tool calls. **Type is "AGENT" not "core.agent".**',
+  );
+
   for (const id of CORE_ACTION_IDS) {
     const node = nodesByType.get(id);
     if (!node) {

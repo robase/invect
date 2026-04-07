@@ -232,7 +232,7 @@ export interface ApiKeyPluginOptions {
   enableSessionForAPIKeys?: boolean;
   /** Disable hashing of API keys (NOT recommended — insecure). */
   disableKeyHashing?: boolean;
-  /** Header(s) to read the API key from. @default 'x-api-key' */
+  /** Header(s) to read the API key from. @default 'x-invect-token' */
   apiKeyHeaders?: string | string[];
   /** Key expiration defaults. */
   keyExpiration?: {

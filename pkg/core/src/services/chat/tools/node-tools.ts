@@ -113,7 +113,7 @@ export const addNodeTool: ChatToolDefinition = {
     actionId: z
       .string()
       .describe(
-        'Action type ID (e.g. "core.model", "core.javascript", "gmail.send_message", "http.request")',
+        'Action type ID (e.g. "core.model", "core.javascript", "gmail.send_message", "http.request"). For AI agent nodes use "AGENT" (not "core.agent").',
       ),
     label: z.string().describe('Human-readable node label (e.g. "Fetch User Emails")'),
     params: z
@@ -156,9 +156,10 @@ export const addNodeTool: ChatToolDefinition = {
     }
 
     try {
-      // Validate action ID exists in the registry
+      // Validate action ID exists in the registry (AGENT is a legacy type not in the action registry)
+      const isAgentNode = actionId === 'AGENT' || actionId === 'agent';
       const availableNodes = invect.actions.getAvailableNodes();
-      const validAction = availableNodes.find((n) => n.type === actionId);
+      const validAction = isAgentNode || availableNodes.find((n) => n.type === actionId);
       if (!validAction) {
         const searchLower = actionId.toLowerCase();
         const similar = availableNodes
@@ -195,9 +196,11 @@ export const addNodeTool: ChatToolDefinition = {
       }
 
       // Add the new node
+      // Normalize legacy AGENT type to uppercase
+      const nodeType = isAgentNode ? 'AGENT' : actionId;
       nodes.push({
         id: nodeId,
-        type: actionId,
+        type: nodeType,
         label,
         referenceId,
         params: nodeParams ?? {},

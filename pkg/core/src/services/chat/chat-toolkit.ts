@@ -115,8 +115,12 @@ export class ChatToolkit {
       };
     }
 
+    // LLMs sometimes send JSON-encoded strings for object/array fields.
+    // Pre-process to parse them before Zod validation.
+    const preprocessed = this.coerceJsonStringFields(rawInput);
+
     // Validate parameters with Zod
-    const parsed = tool.parameters.safeParse(rawInput);
+    const parsed = tool.parameters.safeParse(preprocessed);
     if (!parsed.success) {
       return {
         success: false,
@@ -165,5 +169,34 @@ export class ChatToolkit {
       // Fallback for schemas that can't be converted
       return { type: 'object', properties: {} };
     }
+  }
+
+  /**
+   * LLMs sometimes send JSON-encoded strings for fields that should be objects or arrays.
+   * For example, params: '{"key": "value"}' instead of params: {"key": "value"}.
+   * This method walks the top-level fields of the input and attempts to JSON.parse
+   * any string values that look like JSON objects or arrays.
+   */
+  private coerceJsonStringFields(input: unknown): unknown {
+    if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+      return input;
+    }
+    const result: Record<string, unknown> = { ...(input as Record<string, unknown>) };
+    for (const [key, value] of Object.entries(result)) {
+      if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (
+          (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+          (trimmed.startsWith('[') && trimmed.endsWith(']'))
+        ) {
+          try {
+            result[key] = JSON.parse(trimmed);
+          } catch {
+            // Not valid JSON — keep the original string
+          }
+        }
+      }
+    }
+    return result;
   }
 }
