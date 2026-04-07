@@ -30,7 +30,10 @@ export function RunControls({
           <button
             onClick={onExecute}
             disabled={isExecuting || !onExecute}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md text-card-foreground hover:bg-accent hover:text-accent-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none"
+            className={cn(
+              'flex items-center gap-1.5 py-1.5 text-xs font-medium rounded-md bg-foreground text-background hover:bg-foreground/85 transition-colors disabled:opacity-50 disabled:pointer-events-none',
+              collapsed ? 'px-4' : 'px-3',
+            )}
             title={collapsed ? undefined : 'Run flow'}
           >
             {isExecuting ? (

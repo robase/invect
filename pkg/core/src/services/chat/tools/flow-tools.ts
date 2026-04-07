@@ -75,7 +75,9 @@ export const updateFlowDefinitionTool: ChatToolDefinition = {
         id: z.string().describe('Unique node ID (use nanoid-style IDs)'),
         type: z
           .string()
-          .describe('Action ID (e.g. "trigger.manual", "core.model", "gmail.send_message"). For AI agent nodes use "AGENT" (not "core.agent").'),
+          .describe(
+            'Action ID (e.g. "trigger.manual", "core.model", "gmail.send_message"). For AI agent nodes use "AGENT" (not "core.agent").',
+          ),
         label: z.string().describe('Human-readable node label'),
         referenceId: z
           .string()

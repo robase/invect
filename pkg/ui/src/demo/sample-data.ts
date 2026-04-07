@@ -7,21 +7,8 @@
 
 import type { DemoData } from './demo-api-client';
 import type { NodeDefinition } from '../types/node-definition.types';
-import type { ReactFlowNodeData, NodeOutput } from '@invect/core/types';
-import { NodeExecutionStatus } from '@invect/core/types';
+import type { ReactFlowNodeData } from '@invect/core/types';
 import type { Node, Edge } from '@xyflow/react';
-
-/** Wrap a raw value into the NodeOutput envelope for demo data. */
-function demoOutput(nodeType: string, value: unknown): NodeOutput {
-  return {
-    nodeType,
-    data: {
-      variables: {
-        output: { value, type: typeof value === 'object' ? 'object' : 'string' },
-      },
-    },
-  };
-}
 
 // ---------------------------------------------------------------------------
 // 1. Node Definitions — describes available node types for the palette & config
@@ -573,15 +560,13 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
   {
     id: 's-webhook',
     type: 'trigger.webhook',
-    position: { x: 0, y: 220 },
+    position: { x: 0, y: 0 },
     data: {
       id: 's-webhook',
       type: 'trigger.webhook',
       display_name: 'Linear Webhook',
       reference_id: 'linear_webhook',
-      status: 'completed',
-      executionStatus: NodeExecutionStatus.SUCCESS,
-      executionOutput: demoOutput('trigger.webhook', linearWebhookPayload.data),
+      status: 'idle',
       params: {
         credentialId: 'linear-test',
       },
@@ -590,15 +575,13 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
   {
     id: 's-agent',
     type: 'AGENT',
-    position: { x: 280, y: 130 },
+    position: { x: 0, y: 0 },
     data: {
       id: 's-agent',
       type: 'AGENT',
       display_name: 'Investigation Agent',
       reference_id: 'investigation_agent',
-      status: 'completed',
-      executionStatus: NodeExecutionStatus.SUCCESS,
-      executionOutput: demoOutput('AGENT', investigationResult),
+      status: 'idle',
       params: {
         credentialId: 'openai-test',
         model: 'gpt-4o',
@@ -659,15 +642,13 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
   {
     id: 's-switch',
     type: 'core.switch',
-    position: { x: 720, y: 175 },
+    position: { x: 0, y: 0 },
     data: {
       id: 's-switch',
       type: 'core.switch',
       display_name: 'Route by Issue Type',
       reference_id: 'route_by_issue_type',
-      status: 'completed',
-      executionStatus: NodeExecutionStatus.SUCCESS,
-      executionOutput: demoOutput('core.switch', investigationResult),
+      status: 'idle',
       params: {
         matchMode: 'first',
         cases: [
@@ -693,15 +674,13 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
   {
     id: 's-gh-pr',
     type: 'github.create_pull_request',
-    position: { x: 1100, y: 0 },
+    position: { x: 0, y: 0 },
     data: {
       id: 's-gh-pr',
       type: 'github.create_pull_request',
       display_name: 'Create Fix PR',
       reference_id: 'create_fix_pr',
-      status: 'completed',
-      executionStatus: NodeExecutionStatus.SUCCESS,
-      executionOutput: demoOutput('github.create_pull_request', prResult),
+      status: 'idle',
       params: {
         credentialId: 'github-test',
         owner: 'acme',
@@ -718,14 +697,13 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
   {
     id: 's-slack-feature',
     type: 'slack.send_message',
-    position: { x: 1100, y: 180 },
+    position: { x: 0, y: 0 },
     data: {
       id: 's-slack-feature',
       type: 'slack.send_message',
       display_name: 'Notify #product',
       reference_id: 'notify_product',
-      status: 'skipped',
-      executionStatus: NodeExecutionStatus.SKIPPED,
+      status: 'idle',
       params: {
         credentialId: 'slack-test',
         channel: '#product-requests',
@@ -738,14 +716,13 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
   {
     id: 's-pagerduty',
     type: 'http.request',
-    position: { x: 1100, y: 330 },
+    position: { x: 0, y: 0 },
     data: {
       id: 's-pagerduty',
       type: 'http.request',
       display_name: 'PagerDuty Alert',
       reference_id: 'pagerduty_alert',
-      status: 'skipped',
-      executionStatus: NodeExecutionStatus.SKIPPED,
+      status: 'idle',
       params: {
         method: 'POST',
         url: 'https://events.pagerduty.com/v2/enqueue',
@@ -758,14 +735,13 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
   {
     id: 's-slack-default',
     type: 'slack.send_message',
-    position: { x: 1100, y: 500 },
+    position: { x: 0, y: 0 },
     data: {
       id: 's-slack-default',
       type: 'slack.send_message',
       display_name: 'Notify #triage',
       reference_id: 'notify_triage',
-      status: 'skipped',
-      executionStatus: NodeExecutionStatus.SKIPPED,
+      status: 'idle',
       params: {
         credentialId: 'slack-test',
         channel: '#triage',
@@ -781,20 +757,13 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
   {
     id: 's-linear-update',
     type: 'linear.update_issue',
-    position: { x: 1480, y: 220 },
+    position: { x: 0, y: 0 },
     data: {
       id: 's-linear-update',
       type: 'linear.update_issue',
       display_name: 'Update Linear Ticket',
       reference_id: 'update_linear_ticket',
-      status: 'completed',
-      executionStatus: NodeExecutionStatus.SUCCESS,
-      executionOutput: demoOutput('linear.update_issue', {
-        id: 'LIN-4821',
-        identifier: 'ENG-4821',
-        state: { name: 'In Progress' },
-        updatedAt: '2025-04-07T16:32:29.100Z',
-      }),
+      status: 'idle',
       params: {
         credentialId: 'linear-test',
         issueId: '{{ linear_webhook.identifier }}',
