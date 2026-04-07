@@ -1,6 +1,6 @@
-import { createInvectHandler } from '@invect/nextjs';
+import { createInvectHandler, type InvectConfig } from '@invect/nextjs';
 
-const config = {
+const config: InvectConfig = {
   encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
   database: {
     connectionString: 'file:./invect.db',
@@ -15,8 +15,9 @@ const config = {
       ? [
           {
             name: 'Anthropic API Key',
-            type: 'llm',
-            authType: 'apiKey',
+            type: 'llm' as const,
+            provider: 'anthropic',
+            authType: 'apiKey' as const,
             config: { apiKey: process.env.SEED_ANTHROPIC_API_KEY },
             description: 'Anthropic Claude API credential for AI model nodes',
             isShared: true,
@@ -28,8 +29,8 @@ const config = {
       ? [
           {
             name: 'Linear OAuth2',
-            type: 'http-api',
-            authType: 'oauth2',
+            type: 'http-api' as const,
+            authType: 'oauth2' as const,
             config: {
               clientId: process.env.SEED_LINEAR_CLIENT_ID,
               clientSecret: process.env.SEED_LINEAR_CLIENT_SECRET,

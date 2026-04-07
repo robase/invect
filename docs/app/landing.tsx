@@ -423,6 +423,25 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* Flow screenshot */}
+        <section className="screenshot-section">
+          <div className="container">
+            <p className="section-label">Visual Workflow Editor</p>
+            <h2 className="section-title">Build complex workflows visually</h2>
+            <p className="section-desc">
+              Connect AI agents, API integrations, and conditional logic into production-ready
+              pipelines — all from a drag-and-drop canvas.
+            </p>
+            <div className="screenshot-wrap">
+              <img
+                src="/flow-screenshot.png"
+                alt="Invect flow editor showing a Linear ticket triage workflow with AI agent, switch routing, and integrations"
+                className="screenshot-img"
+              />
+            </div>
+          </div>
+        </section>
+
         {/* Features */}
         <section className="features" id="features">
           <div className="container">
@@ -1043,6 +1062,11 @@ const landingStyles = `
 
   /* Features */
   .landing .features { padding: 100px 0; border-top: 1px solid var(--border); }
+
+  /* Screenshot */
+  .landing .screenshot-section { padding: 100px 0; border-top: 1px solid var(--border); }
+  .landing .screenshot-wrap { border-radius: 12px; overflow: hidden; border: 1px solid var(--border); background: var(--bg-subtle); }
+  .landing .screenshot-img { width: 100%; height: auto; display: block; }
 
 
   .landing .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
