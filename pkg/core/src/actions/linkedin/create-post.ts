@@ -23,7 +23,11 @@ export const linkedinCreatePostAction = defineAction({
   id: 'linkedin.create_post',
   name: 'Create Post',
   description:
-    'Create a text post on LinkedIn. Requires the person ID (obtainable from Get Profile) and the post content.',
+    'Create a text post on LinkedIn (POST /v2/ugcPosts). Use when the user wants to publish a text post to their LinkedIn feed. Requires the person ID from Get Profile.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "urn:li:ugcPost:6935678123456", "author": "urn:li:person:abc123", "lifecycleState": "PUBLISHED"}\n' +
+    '```',
   provider: LINKEDIN_PROVIDER,
   actionCategory: 'write',
 

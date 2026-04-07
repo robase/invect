@@ -23,7 +23,11 @@ export const twitterSearchTweetsAction = defineAction({
   id: 'twitter.search_tweets',
   name: 'Search Tweets',
   description:
-    'Search recent tweets matching a query. Returns tweet text, author IDs, timestamps, and engagement metrics.',
+    'Search recent tweets matching a query (GET /2/tweets/search/recent). Use when the user wants to find tweets about a topic, hashtag, or from a specific account.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"data": [{"id": "123", "text": "Hello", "author_id": "456", "public_metrics": {"like_count": 5}}], "meta": {"result_count": 10}}\n' +
+    '```',
   provider: TWITTER_PROVIDER,
   actionCategory: 'read',
 

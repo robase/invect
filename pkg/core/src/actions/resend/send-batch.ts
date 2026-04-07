@@ -22,7 +22,11 @@ export const resendSendBatchAction = defineAction({
   id: 'resend.send_batch',
   name: 'Send Batch Emails',
   description:
-    'Send up to 100 emails in a single API call. Provide a JSON array of email objects, each with from, to, subject, and html/text.',
+    'Send up to 100 emails in a single API call (POST /emails/batch). Use when the user wants to send multiple emails efficiently in one request.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"data": [{"id": "ae2014de-c168-4c61-8267-70d2662a1ce1"}, {"id": "faccb7a5-8a28-4e9a-ac64-8da1cc3bc1cb"}]}\n' +
+    '```',
   provider: RESEND_PROVIDER,
   actionCategory: 'write',
   tags: ['resend', 'email', 'batch', 'bulk', 'send', 'transactional'],

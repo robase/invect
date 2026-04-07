@@ -129,6 +129,7 @@ export const microsoftListMessagesAction = defineAction({
         defaultValue: 'receivedDateTime desc',
         description: 'OData $orderby expression',
         extended: true,
+        aiProvided: true,
       },
       {
         name: 'includeCount',
@@ -137,6 +138,7 @@ export const microsoftListMessagesAction = defineAction({
         defaultValue: false,
         description: 'Include total matching message count (may be slower)',
         extended: true,
+        aiProvided: true,
       },
     ],
   },

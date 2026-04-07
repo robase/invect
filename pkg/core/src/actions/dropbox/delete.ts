@@ -20,7 +20,12 @@ const paramsSchema = z.object({
 export const dropboxDeleteAction = defineAction({
   id: 'dropbox.delete',
   name: 'Delete',
-  description: 'Delete a file or folder in Dropbox at the specified path.',
+  description:
+    "Delete a file or folder in Dropbox (POST /2/files/delete_v2). Use when you need to permanently remove a file or folder from the user's Dropbox.\n\n" +
+    'Example response:\n' +
+    '```json\n' +
+    '{"metadata": {".tag": "file", "name": "old-file.pdf", "path_display": "/Documents/old-file.pdf", "id": "id:a4ayc_80_OEA..."}}\n' +
+    '```',
   provider: DROPBOX_PROVIDER,
   actionCategory: 'write',
 

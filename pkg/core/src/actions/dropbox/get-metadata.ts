@@ -21,7 +21,11 @@ export const dropboxGetMetadataAction = defineAction({
   id: 'dropbox.get_metadata',
   name: 'Get Metadata',
   description:
-    'Get metadata for a file or folder in Dropbox, including name, size, and modification dates.',
+    'Get metadata for a file or folder in Dropbox (POST /2/files/get_metadata). Use when you need file size, modification dates, or to check if a path exists.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{".tag": "file", "name": "report.pdf", "path_display": "/Documents/report.pdf", "id": "id:a4ayc...", "size": 7212, "server_modified": "2025-05-12T15:50:38Z"}\n' +
+    '```',
   provider: DROPBOX_PROVIDER,
   actionCategory: 'read',
 

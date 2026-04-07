@@ -20,7 +20,13 @@ const paramsSchema = z.object({
 export const facebookGetPagePostsAction = defineAction({
   id: 'facebook.get_page_posts',
   name: 'Get Page Posts',
-  description: 'Get recent posts from a Facebook page with engagement data.',
+  description:
+    'Get recent posts from a Facebook page (GET /{page-id}/posts). Use when the user wants to review content and engagement on a Facebook page.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"data": [{"id": "123_456", "message": "Hello world!", "created_time": "2024-01-01T00:00:00+0000", "likes": {"summary": {"total_count": 42}}}]}\n' +
+    '```',
+  actionCategory: 'read',
   provider: FACEBOOK_PROVIDER,
 
   credential: {
@@ -56,6 +62,7 @@ export const facebookGetPagePostsAction = defineAction({
         type: 'number',
         description: 'Maximum number of posts to return (1-100, default 25)',
         defaultValue: 25,
+        extended: true,
         aiProvided: true,
       },
     ],

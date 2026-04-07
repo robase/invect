@@ -243,7 +243,10 @@ export class NodeExecutionCoordinator {
     const queue = [...directParentIds];
 
     while (queue.length > 0) {
-      const currentId = queue.shift()!;
+      const currentId = queue.shift();
+      if (!currentId) {
+        break;
+      }
       const parentEdges = edges.filter((e) => e.target === currentId);
       for (const pe of parentEdges) {
         if (visited.has(pe.source) || directParentIds.has(pe.source)) {

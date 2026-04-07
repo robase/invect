@@ -23,7 +23,11 @@ export const sendgridGetStatsAction = defineAction({
   id: 'sendgrid.get_stats',
   name: 'Get Email Stats',
   description:
-    'Retrieve global email sending statistics (delivered, opens, clicks, bounces, etc.) for a date range.',
+    'Retrieve global email sending statistics (GET /v3/stats). Use when the user wants to analyze email performance — deliveries, opens, clicks, bounces, and spam reports.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '[{"date": "2024-01-01", "stats": [{"metrics": {"requests": 100, "delivered": 98, "opens": 45, "clicks": 12, "bounces": 2}}]}]\n' +
+    '```',
   provider: SENDGRID_PROVIDER,
   actionCategory: 'read',
   tags: ['sendgrid', 'email', 'stats', 'analytics', 'metrics', 'reporting'],
@@ -70,6 +74,7 @@ export const sendgridGetStatsAction = defineAction({
         required: false,
         placeholder: '2024-01-31',
         description: 'End date in YYYY-MM-DD format. Defaults to today.',
+        extended: true,
         aiProvided: true,
       },
       {
@@ -84,6 +89,7 @@ export const sendgridGetStatsAction = defineAction({
           { label: 'Week', value: 'week' },
           { label: 'Month', value: 'month' },
         ],
+        extended: true,
         aiProvided: true,
       },
     ],

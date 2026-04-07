@@ -20,7 +20,11 @@ export const linkedinGetProfileAction = defineAction({
   id: 'linkedin.get_profile',
   name: 'Get Profile',
   description:
-    "Get the authenticated LinkedIn user's profile including name, email, picture, and person ID.",
+    "Get the authenticated LinkedIn user's profile via OpenID Connect (GET /v2/userinfo). Use when you need the user's person ID, name, email, or profile picture.\n\n" +
+    'Example response:\n' +
+    '```json\n' +
+    '{"sub": "abc123def", "name": "Jane Smith", "email": "jane@example.com", "picture": "https://media.licdn.com/...jpg", "email_verified": true}\n' +
+    '```',
   provider: LINKEDIN_PROVIDER,
   actionCategory: 'read',
 

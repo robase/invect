@@ -21,7 +21,12 @@ const paramsSchema = z.object({
 export const dropboxSearchAction = defineAction({
   id: 'dropbox.search',
   name: 'Search',
-  description: 'Search for files and folders in Dropbox by name or content.',
+  description:
+    'Search for files and folders in Dropbox by name or content (POST /2/files/search_v2). Use when you need to find files matching a keyword across the entire Dropbox account.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"matches": [{"metadata": {"metadata": {".tag": "file", "name": "report.pdf", "path_display": "/Documents/report.pdf", "id": "id:a4ayc..."}}}], "has_more": false}\n' +
+    '```',
   provider: DROPBOX_PROVIDER,
   actionCategory: 'read',
 

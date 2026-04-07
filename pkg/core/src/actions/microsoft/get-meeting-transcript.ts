@@ -160,6 +160,7 @@ export const microsoftGetMeetingTranscriptAction = defineAction({
         ],
         description: 'How to return the transcript content',
         extended: true,
+        aiProvided: true,
       },
     ],
   },

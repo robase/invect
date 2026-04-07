@@ -49,7 +49,7 @@ export const sendgridSendEmailAction = defineAction({
   id: 'sendgrid.send_email',
   name: 'Send Email',
   description:
-    'Send a transactional email via SendGrid. Supports HTML/text, CC/BCC, reply-to, scheduled sending, and dynamic templates.',
+    'Send a transactional email via SendGrid (POST /v3/mail/send). Use when the user wants to send an email with HTML/text content or a dynamic template. Returns HTTP 202 Accepted with no response body — the x-message-id header contains the tracking ID.',
   provider: SENDGRID_PROVIDER,
   actionCategory: 'write',
   tags: ['sendgrid', 'twilio', 'email', 'send', 'transactional', 'mail', 'notify'],
@@ -98,6 +98,7 @@ export const sendgridSendEmailAction = defineAction({
         required: false,
         placeholder: 'Your Company',
         description: 'Friendly sender display name',
+        extended: true,
         aiProvided: true,
       },
       {

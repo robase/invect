@@ -21,7 +21,11 @@ export const linkedinGetCompanyAction = defineAction({
   id: 'linkedin.get_company',
   name: 'Get Company',
   description:
-    'Get information about a LinkedIn company/organization by ID, including name, description, website, and industry.',
+    'Get information about a LinkedIn company/organization by its numeric ID (GET /v2/organizations/{id}). Use when you need company details like name, description, website, or employee count.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": 12345678, "localizedName": "Acme Inc", "vanityName": "acme", "localizedDescription": "Technology company", "localizedWebsite": "https://acme.com"}\n' +
+    '```',
   provider: LINKEDIN_PROVIDER,
   actionCategory: 'read',
 

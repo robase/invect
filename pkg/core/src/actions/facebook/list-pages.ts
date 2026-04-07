@@ -19,7 +19,12 @@ export const facebookListPagesAction = defineAction({
   id: 'facebook.list_pages',
   name: 'List Pages',
   description:
-    'List Facebook pages managed by the authenticated user, including page access tokens.',
+    'List Facebook pages managed by the authenticated user (GET /me/accounts). Use when the user needs to find which pages they can post to or manage.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"data": [{"id": "123456789", "name": "My Page", "category": "Business", "fan_count": 1500}]}\n' +
+    '```',
+  actionCategory: 'read',
   provider: FACEBOOK_PROVIDER,
 
   credential: {

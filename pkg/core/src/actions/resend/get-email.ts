@@ -21,7 +21,12 @@ const paramsSchema = z.object({
 export const resendGetEmailAction = defineAction({
   id: 'resend.get_email',
   name: 'Get Email',
-  description: 'Retrieve details and delivery status of a previously sent email by its ID.',
+  description:
+    'Retrieve details and delivery status of a previously sent email (GET /emails/:id). Use when the user wants to check if an email was delivered, opened, or bounced.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "4ef9a417-02e9-4d39-ad75-9611e0fcc33c", "to": ["user@example.com"], "subject": "Hello", "last_event": "delivered", "created_at": "2023-04-03T22:13:42.674Z"}\n' +
+    '```',
   provider: RESEND_PROVIDER,
   actionCategory: 'read',
   tags: ['resend', 'email', 'get', 'retrieve', 'status', 'delivery'],

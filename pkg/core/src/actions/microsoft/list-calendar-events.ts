@@ -141,6 +141,7 @@ export const microsoftListCalendarEventsAction = defineAction({
         defaultValue: 'start/dateTime',
         description: 'OData $orderby expression (e.g. "start/dateTime", "subject")',
         extended: true,
+        aiProvided: true,
       },
     ],
   },

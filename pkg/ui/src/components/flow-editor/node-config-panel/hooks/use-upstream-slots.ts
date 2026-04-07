@@ -156,7 +156,10 @@ export function useUpstreamSlots({ nodeId, flowId }: UseUpstreamSlotsOptions) {
     const allAncestorIds = new Set<string>();
     const queue = [...directParentIds];
     while (queue.length > 0) {
-      const current = queue.shift()!;
+      const current = queue.shift();
+      if (!current) {
+        break;
+      }
       const parentEdges = edges.filter((e) => e.target === current);
       for (const pe of parentEdges) {
         if (!allAncestorIds.has(pe.source) && !directParentIds.has(pe.source)) {

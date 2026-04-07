@@ -22,7 +22,11 @@ export const twitterGetUserTweetsAction = defineAction({
   id: 'twitter.get_user_tweets',
   name: 'Get User Tweets',
   description:
-    'Get recent tweets posted by a Twitter user. Returns tweet text, timestamps, and engagement metrics.',
+    'Get recent tweets posted by a Twitter/X user (GET /2/users/:id/tweets). Use when the user wants to see what a specific account has been posting.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"data": [{"id": "123", "text": "Hello", "created_at": "2024-01-01T00:00:00Z", "public_metrics": {"like_count": 10, "retweet_count": 2}}], "meta": {"result_count": 5}}\n' +
+    '```',
   provider: TWITTER_PROVIDER,
   actionCategory: 'read',
 

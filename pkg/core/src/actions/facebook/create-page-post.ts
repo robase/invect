@@ -22,7 +22,12 @@ const paramsSchema = z.object({
 export const facebookCreatePagePostAction = defineAction({
   id: 'facebook.create_page_post',
   name: 'Create Page Post',
-  description: 'Create a new post on a Facebook page with an optional link attachment.',
+  description:
+    'Create a new post on a Facebook page (POST /{page-id}/feed). Use when the user wants to publish content to a Facebook page they manage.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "123456789_987654321"}\n' +
+    '```',
   provider: FACEBOOK_PROVIDER,
   actionCategory: 'write',
 
@@ -68,6 +73,7 @@ export const facebookCreatePagePostAction = defineAction({
         type: 'text',
         description: 'Optional URL to attach to the post',
         placeholder: 'https://example.com',
+        extended: true,
         aiProvided: true,
       },
     ],

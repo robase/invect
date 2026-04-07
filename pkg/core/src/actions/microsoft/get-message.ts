@@ -105,6 +105,7 @@ export const microsoftGetMessageAction = defineAction({
         defaultValue: true,
         description: 'Fetch attachment metadata (names, sizes, content types)',
         extended: true,
+        aiProvided: true,
       },
       {
         name: 'preferTextBody',

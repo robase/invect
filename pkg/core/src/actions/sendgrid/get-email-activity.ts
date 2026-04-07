@@ -23,7 +23,11 @@ export const sendgridGetEmailActivityAction = defineAction({
   id: 'sendgrid.get_email_activity',
   name: 'Get Email Activity',
   description:
-    'Query the SendGrid Email Activity Feed to find messages and their delivery events (delivered, opened, bounced, etc.).',
+    'Query the SendGrid Email Activity Feed (GET /v3/messages). Use when the user wants to track specific emails and their delivery status.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"messages": [{"msg_id": "abc123", "from_email": "sender@example.com", "to_email": "user@example.com", "subject": "Hello", "status": "delivered"}]}\n' +
+    '```',
   provider: SENDGRID_PROVIDER,
   actionCategory: 'read',
   tags: ['sendgrid', 'email', 'activity', 'tracking', 'events', 'delivery'],
@@ -71,6 +75,7 @@ export const sendgridGetEmailActivityAction = defineAction({
         required: false,
         defaultValue: 10,
         description: 'Maximum number of messages to return (1–1000)',
+        extended: true,
         aiProvided: true,
       },
     ],

@@ -21,7 +21,11 @@ export const twitterGetUserAction = defineAction({
   id: 'twitter.get_user',
   name: 'Get User',
   description:
-    'Get a Twitter user profile by username, including bio, follower counts, and profile image.',
+    'Look up a Twitter/X user profile by username (GET /2/users/by/username/:username). Use when the user wants to find information about a specific Twitter account.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"data": {"id": "2244994945", "name": "X Developers", "username": "XDevelopers", "description": "The voice of the X developer community", "public_metrics": {"followers_count": 583423}}}\n' +
+    '```',
   provider: TWITTER_PROVIDER,
   actionCategory: 'read',
 

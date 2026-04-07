@@ -18,7 +18,13 @@ const paramsSchema = z.object({
 export const facebookGetMeAction = defineAction({
   id: 'facebook.get_me',
   name: 'Get Me',
-  description: 'Get the authenticated Facebook user profile (id, name, email).',
+  description:
+    'Get the authenticated Facebook user profile (GET /me). Use when the user wants to verify their Facebook identity or retrieve their account info.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "10158012345678901", "name": "John Doe", "email": "john@example.com"}\n' +
+    '```',
+  actionCategory: 'read',
   provider: FACEBOOK_PROVIDER,
 
   credential: {

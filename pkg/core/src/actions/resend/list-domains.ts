@@ -21,7 +21,12 @@ const paramsSchema = z.object({
 export const resendListDomainsAction = defineAction({
   id: 'resend.list_domains',
   name: 'List Domains',
-  description: 'List all configured sending domains and their verification status.',
+  description:
+    'List all configured sending domains and their verification status (GET /domains). Use when the user wants to check which domains are available for sending emails.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"data": [{"id": "d91cd9bd-1176-453e-8fc1-35364d380206", "name": "example.com", "status": "not_started", "region": "us-east-1"}]}\n' +
+    '```',
   provider: RESEND_PROVIDER,
   actionCategory: 'read',
   tags: ['resend', 'domains', 'list', 'email', 'configuration'],

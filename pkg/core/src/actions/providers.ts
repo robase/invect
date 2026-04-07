@@ -240,7 +240,7 @@ export const TWITTER_PROVIDER: ProviderDef = {
   category: 'custom',
   nodeCategory: 'Integrations',
   description: 'Twitter/X — tweets, users, and timelines',
-  docsUrl: 'https://developer.twitter.com/en/docs/twitter-api',
+  docsUrl: 'https://docs.x.com/x-api',
 };
 
 export const GRAFANA_PROVIDER: ProviderDef = {

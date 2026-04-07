@@ -24,7 +24,11 @@ export const twitterCreateTweetAction = defineAction({
   id: 'twitter.create_tweet',
   name: 'Create Tweet',
   description:
-    "Post a new tweet to the authenticated user's timeline. Text is limited to 280 characters.",
+    "Post a new tweet to the authenticated user's timeline (POST /2/tweets). Use when the user wants to publish a tweet or status update on X/Twitter. Text is limited to 280 characters.\n\n" +
+    'Example response:\n' +
+    '```json\n' +
+    '{"data": {"id": "1346889436626259968", "text": "Hello world!"}}\n' +
+    '```',
   provider: TWITTER_PROVIDER,
   actionCategory: 'write',
 

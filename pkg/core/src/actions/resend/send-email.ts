@@ -31,7 +31,11 @@ export const resendSendEmailAction = defineAction({
   id: 'resend.send_email',
   name: 'Send Email',
   description:
-    'Send a transactional email via Resend. Supports HTML/text bodies, CC/BCC, reply-to, and scheduled delivery.',
+    'Send a transactional email via Resend (POST /emails). Use when the user wants to send a single email with HTML or plain text content.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"id": "49a3999c-0ce1-4ea6-ab68-afcd6dc2e794"}\n' +
+    '```',
   provider: RESEND_PROVIDER,
   actionCategory: 'write',
   tags: ['resend', 'email', 'send', 'transactional', 'mail', 'notify'],

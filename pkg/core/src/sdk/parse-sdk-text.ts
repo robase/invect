@@ -109,7 +109,7 @@ function isEdgeTuple(item: unknown): item is EdgeInput {
 function stripComments(text: string): string {
   return text
     .replace(/\/\/.*$/gm, '') // single-line comments
-    .replace(/\/\*[^*]*(?:\*(?!\/)[^*]*)*\*\//g, ''); // block comments (unrolled loop)
+    .replace(/\/\*[\s\S]*?\*\//g, ''); // block comments
 }
 
 // ---------------------------------------------------------------------------

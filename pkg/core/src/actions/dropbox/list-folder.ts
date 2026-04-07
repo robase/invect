@@ -23,7 +23,12 @@ const paramsSchema = z.object({
 export const dropboxListFolderAction = defineAction({
   id: 'dropbox.list_folder',
   name: 'List Folder',
-  description: 'List files and folders in a Dropbox path. An empty path lists the root folder.',
+  description:
+    'List files and folders in a Dropbox directory (POST /2/files/list_folder). Use when you need to browse or enumerate the contents of a folder. An empty path lists the root.\n\n' +
+    'Example response:\n' +
+    '```json\n' +
+    '{"entries": [{".tag": "file", "name": "report.pdf", "path_display": "/Documents/report.pdf", "id": "id:a4ayc...", "size": 7212}], "has_more": false}\n' +
+    '```',
   provider: DROPBOX_PROVIDER,
   actionCategory: 'read',
 

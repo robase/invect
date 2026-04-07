@@ -21,7 +21,11 @@ export const twitterGetMeAction = defineAction({
   id: 'twitter.get_me',
   name: 'Get Me',
   description:
-    "Get the authenticated Twitter user's profile, including bio, follower counts, and profile image.",
+    "Get the authenticated Twitter/X user's profile (GET /2/users/me). Use when the user wants to check their own account details, bio, or follower counts.\n\n" +
+    'Example response:\n' +
+    '```json\n' +
+    '{"data": {"id": "2244994945", "name": "X Dev", "username": "xdev", "public_metrics": {"followers_count": 5000, "tweet_count": 1200}}}\n' +
+    '```',
   provider: TWITTER_PROVIDER,
   actionCategory: 'read',
 
