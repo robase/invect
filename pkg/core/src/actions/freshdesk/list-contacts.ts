@@ -168,12 +168,24 @@ export const freshdeskListContactsAction = defineAction({
     try {
       const queryParams = new URLSearchParams();
       queryParams.set('per_page', String(perPage));
-      if (page !== undefined) {queryParams.set('page', String(page));}
-      if (email) {queryParams.set('email', email);}
-      if (phone) {queryParams.set('phone', phone);}
-      if (companyId !== undefined) {queryParams.set('company_id', String(companyId));}
-      if (state) {queryParams.set('state', state);}
-      if (updatedSince) {queryParams.set('updated_since', updatedSince);}
+      if (page !== undefined) {
+        queryParams.set('page', String(page));
+      }
+      if (email) {
+        queryParams.set('email', email);
+      }
+      if (phone) {
+        queryParams.set('phone', phone);
+      }
+      if (companyId !== undefined) {
+        queryParams.set('company_id', String(companyId));
+      }
+      if (state) {
+        queryParams.set('state', state);
+      }
+      if (updatedSince) {
+        queryParams.set('updated_since', updatedSince);
+      }
 
       const response = await fetch(`${baseUrl}/api/v2/contacts?${queryParams.toString()}`, {
         headers: {

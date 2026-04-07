@@ -113,7 +113,9 @@ export const freshdeskGetTicketAction = defineAction({
 
     try {
       const queryParams = new URLSearchParams();
-      if (include) {queryParams.set('include', include);}
+      if (include) {
+        queryParams.set('include', include);
+      }
       const qs = queryParams.toString();
       const url = `${baseUrl}/api/v2/tickets/${encodeURIComponent(ticketId)}${qs ? `?${qs}` : ''}`;
 

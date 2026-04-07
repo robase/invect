@@ -173,6 +173,12 @@ export async function applyElkLayout<N extends LayoutNode, E extends LayoutEdge>
     // Alignment of nodes within each layer (AUTOMATIC, LEFT, RIGHT, TOP, BOTTOM, CENTER)
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- merged with DEFAULT_ELK_OPTIONS
     'elk.alignment': opts.alignment!,
+
+    // === Model order ===
+    // When crossing minimization has ties (e.g. all branches converge to one node),
+    // use the model order of edges to break ties. This ensures branch targets are
+    // placed in the same vertical order as their source handle positions.
+    'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
   };
 
   // First, collect all unique source and target handles per node from edges
@@ -271,6 +277,25 @@ export async function applyElkLayout<N extends LayoutNode, E extends LayoutEdge>
     // Use node-prefixed handle ID if provided, otherwise use target node ID directly
     targets: [edge.targetHandle ? `${edge.target}-${edge.targetHandle}` : edge.target],
   }));
+
+  // Sort edges by source port index so that considerModelOrder breaks ties correctly.
+  // When branches converge to one node, the backward crossing-minimization sweep sees
+  // equal barycenters; model order is the tiebreaker, so edges from the same source
+  // must appear in port order (e.g. bug before feature before incident before default).
+  const portGlobalIndex = new Map<string, number>();
+  let portIdx = 0;
+  for (const child of elkChildren) {
+    if (child.ports) {
+      for (const port of child.ports) {
+        portGlobalIndex.set(port.id, portIdx++);
+      }
+    }
+  }
+  elkEdges.sort((a, b) => {
+    const aIdx = portGlobalIndex.get(a.sources[0]) ?? Number.MAX_SAFE_INTEGER;
+    const bIdx = portGlobalIndex.get(b.sources[0]) ?? Number.MAX_SAFE_INTEGER;
+    return aIdx - bIdx;
+  });
 
   // Build the complete graph
   const graph: ElkNode = {

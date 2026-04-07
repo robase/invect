@@ -126,9 +126,15 @@ export const woocommerceListProductsAction = defineAction({
     try {
       const url = new URL(`${siteUrl}/wp-json/wc/v3/products`);
       url.searchParams.set('per_page', String(perPage));
-      if (search) {url.searchParams.set('search', search);}
-      if (category) {url.searchParams.set('category', category);}
-      if (status && status !== 'any') {url.searchParams.set('status', status);}
+      if (search) {
+        url.searchParams.set('search', search);
+      }
+      if (category) {
+        url.searchParams.set('category', category);
+      }
+      if (status && status !== 'any') {
+        url.searchParams.set('status', status);
+      }
 
       const response = await fetch(url.toString(), {
         headers: {

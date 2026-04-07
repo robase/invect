@@ -99,7 +99,7 @@ export default defineConfig(({ mode }) => ({
       copyDtsFiles: true,
       exclude: ['src/**/*.test.*', 'src/**/*.spec.*'],
     }),
-    // extractInlinedFonts(), // temporarily disabled
+    extractInlinedFonts(),
   ],
   resolve: {
     tsconfigPaths: true,

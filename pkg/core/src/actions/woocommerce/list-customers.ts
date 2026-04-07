@@ -104,8 +104,12 @@ export const woocommerceListCustomersAction = defineAction({
     try {
       const url = new URL(`${siteUrl}/wp-json/wc/v3/customers`);
       url.searchParams.set('per_page', String(perPage));
-      if (search) {url.searchParams.set('search', search);}
-      if (email) {url.searchParams.set('email', email);}
+      if (search) {
+        url.searchParams.set('search', search);
+      }
+      if (email) {
+        url.searchParams.set('email', email);
+      }
 
       const response = await fetch(url.toString(), {
         headers: {

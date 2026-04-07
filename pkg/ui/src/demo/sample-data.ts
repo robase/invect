@@ -7,8 +7,21 @@
 
 import type { DemoData } from './demo-api-client';
 import type { NodeDefinition } from '../types/node-definition.types';
-import type { ReactFlowNodeData } from '@invect/core/types';
+import type { ReactFlowNodeData, NodeOutput } from '@invect/core/types';
+import { NodeExecutionStatus } from '@invect/core/types';
 import type { Node, Edge } from '@xyflow/react';
+
+/** Wrap a raw value into the NodeOutput envelope for demo data. */
+function demoOutput(nodeType: string, value: unknown): NodeOutput {
+  return {
+    nodeType,
+    data: {
+      variables: {
+        output: { value, type: typeof value === 'object' ? 'object' : 'string' },
+      },
+    },
+  };
+}
 
 // ---------------------------------------------------------------------------
 // 1. Node Definitions — describes available node types for the palette & config
@@ -566,9 +579,9 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
       type: 'trigger.webhook',
       display_name: 'Linear Webhook',
       reference_id: 'linear_webhook',
-      status: 'success',
-      executionStatus: 'SUCCESS',
-      executionOutput: linearWebhookPayload.data,
+      status: 'completed',
+      executionStatus: NodeExecutionStatus.SUCCESS,
+      executionOutput: demoOutput('trigger.webhook', linearWebhookPayload.data),
       params: {},
     },
   },
@@ -581,9 +594,9 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
       type: 'AGENT',
       display_name: 'Investigate Ticket',
       reference_id: 'investigation',
-      status: 'success',
-      executionStatus: 'SUCCESS',
-      executionOutput: investigationResult,
+      status: 'completed',
+      executionStatus: NodeExecutionStatus.SUCCESS,
+      executionOutput: demoOutput('AGENT', investigationResult),
       params: {
         model: 'claude-sonnet-4-20250514',
         taskPrompt:
@@ -643,9 +656,9 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
       type: 'core.switch',
       display_name: 'Issue Type',
       reference_id: 'issue_type',
-      status: 'success',
-      executionStatus: 'SUCCESS',
-      executionOutput: investigationResult,
+      status: 'completed',
+      executionStatus: NodeExecutionStatus.SUCCESS,
+      executionOutput: demoOutput('core.switch', investigationResult),
       params: {
         matchMode: 'first',
         cases: [
@@ -677,9 +690,9 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
       type: 'github.create_pull_request',
       display_name: 'Create Fix PR',
       reference_id: 'fix_pr',
-      status: 'success',
-      executionStatus: 'SUCCESS',
-      executionOutput: prResult,
+      status: 'completed',
+      executionStatus: NodeExecutionStatus.SUCCESS,
+      executionOutput: demoOutput('github.create_pull_request', prResult),
       params: {
         owner: 'acme',
         repo: 'platform',
@@ -702,7 +715,7 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
       display_name: 'Notify #product',
       reference_id: 'notify_product',
       status: 'skipped',
-      executionStatus: 'SKIPPED',
+      executionStatus: NodeExecutionStatus.SKIPPED,
       params: {
         channel: '#product-requests',
         text: '*New feature request:* {{ linear_webhook.title }}\n\n{{ investigation.summary }}',
@@ -721,7 +734,7 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
       display_name: 'PagerDuty Incident',
       reference_id: 'pagerduty_incident',
       status: 'skipped',
-      executionStatus: 'SKIPPED',
+      executionStatus: NodeExecutionStatus.SKIPPED,
       params: {
         method: 'POST',
         url: 'https://events.pagerduty.com/v2/enqueue',
@@ -741,7 +754,7 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
       display_name: 'Notify #triage',
       reference_id: 'notify_triage',
       status: 'skipped',
-      executionStatus: 'SKIPPED',
+      executionStatus: NodeExecutionStatus.SKIPPED,
       params: {
         channel: '#triage',
         text: '*Unclassified ticket:* {{ linear_webhook.title }}\nSeverity: {{ investigation.severity }}\n\n{{ investigation.summary }}',
@@ -762,14 +775,14 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
       type: 'linear.update_issue',
       display_name: 'Update Linear Ticket',
       reference_id: 'update_ticket',
-      status: 'success',
-      executionStatus: 'SUCCESS',
-      executionOutput: {
+      status: 'completed',
+      executionStatus: NodeExecutionStatus.SUCCESS,
+      executionOutput: demoOutput('linear.update_issue', {
         id: 'LIN-4821',
         identifier: 'ENG-4821',
         state: { name: 'In Progress' },
         updatedAt: '2025-04-07T16:32:29.100Z',
-      },
+      }),
       params: {
         issueId: '{{ linear_webhook.identifier }}',
         stateId: 'in-progress',

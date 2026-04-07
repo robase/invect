@@ -197,13 +197,27 @@ export const freshdeskListTicketsAction = defineAction({
     try {
       const queryParams = new URLSearchParams();
       queryParams.set('per_page', String(perPage));
-      if (page !== undefined) {queryParams.set('page', String(page));}
-      if (orderBy) {queryParams.set('order_by', orderBy);}
-      if (orderType) {queryParams.set('order_type', orderType);}
-      if (updatedSince) {queryParams.set('updated_since', updatedSince);}
-      if (filter) {queryParams.set('filter', filter);}
-      if (email) {queryParams.set('email', email);}
-      if (requesterId !== undefined) {queryParams.set('requester_id', String(requesterId));}
+      if (page !== undefined) {
+        queryParams.set('page', String(page));
+      }
+      if (orderBy) {
+        queryParams.set('order_by', orderBy);
+      }
+      if (orderType) {
+        queryParams.set('order_type', orderType);
+      }
+      if (updatedSince) {
+        queryParams.set('updated_since', updatedSince);
+      }
+      if (filter) {
+        queryParams.set('filter', filter);
+      }
+      if (email) {
+        queryParams.set('email', email);
+      }
+      if (requesterId !== undefined) {
+        queryParams.set('requester_id', String(requesterId));
+      }
 
       const response = await fetch(`${baseUrl}/api/v2/tickets?${queryParams.toString()}`, {
         headers: {
