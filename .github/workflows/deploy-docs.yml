@@ -23,31 +23,34 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: docs
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/configure-pages@v5
 
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: pnpm
 
-      - name: Install docs dependencies
-        run: npm install
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace packages
+        run: pnpm --filter @invect/core --filter @invect/layouts --filter @invect/ui run build
 
       - name: Build docs
-        run: npm run build
+        run: pnpm --filter @invect/docs run build
         env:
           DOCS_BASE_PATH: ''
 
       - name: Disable Jekyll processing
-        run: touch out/.nojekyll
+        run: touch docs/out/.nojekyll
 
       - name: Configure custom domain
-        run: printf '%s\n' "$CUSTOM_DOMAIN" > out/CNAME
+        run: printf '%s\n' "$CUSTOM_DOMAIN" > docs/out/CNAME
 
       - uses: actions/upload-pages-artifact@v3
         with:
