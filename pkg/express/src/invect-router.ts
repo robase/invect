@@ -11,6 +11,9 @@ import {
   createPluginDatabaseApi,
 } from '@invect/core';
 import type { CredentialFilters } from '@invect/core';
+import type { QueryOptions } from '@invect/core';
+import type { FlowRun } from '@invect/core';
+import type { NodeExecution } from '@invect/core';
 import { asyncHandler } from './async-handler';
 import { ZodError } from 'zod';
 
@@ -489,7 +492,10 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
     requirePermission('flow-run:read', (req) => req.params.flowId),
     asyncHandler(async (req: Request, res: Response) => {
       const paginationOpts = parsePaginationFromQuery(req.query as Record<string, unknown>);
-      const flowRuns = await invect.runs.listByFlowId(req.params.flowId, paginationOpts);
+      const flowRuns = await invect.runs.listByFlowId(
+        req.params.flowId,
+        paginationOpts as QueryOptions<FlowRun>,
+      );
       res.json(flowRuns);
     }),
   );
@@ -501,7 +507,7 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
    */
   router.post(
     '/flow-runs/:flowRunId/resume',
-    requirePermission('flow-run:update'),
+    requirePermission('flow-run:cancel'),
     asyncHandler(async (req: Request, res: Response) => {
       const result = await invect.runs.resume(req.params.flowRunId);
       res.json(result);
@@ -515,7 +521,7 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
    */
   router.post(
     '/flow-runs/:flowRunId/cancel',
-    requirePermission('flow-run:update'),
+    requirePermission('flow-run:cancel'),
     asyncHandler(async (req: Request, res: Response) => {
       const result = await invect.runs.cancel(req.params.flowRunId);
       res.json(result);
@@ -529,7 +535,7 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
    */
   router.post(
     '/flow-runs/:flowRunId/pause',
-    requirePermission('flow-run:update'),
+    requirePermission('flow-run:cancel'),
     asyncHandler(async (req: Request, res: Response) => {
       const { reason } = req.body;
       const result = await invect.runs.pause(req.params.flowRunId, reason);
@@ -554,7 +560,7 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
       const paginationOpts = parsePaginationFromQuery(req.query as Record<string, unknown>);
       const nodeExecutions = await invect.runs.getNodeExecutions(
         req.params.flowRunId,
-        paginationOpts,
+        paginationOpts as QueryOptions<NodeExecution>,
       );
       res.json(nodeExecutions);
     }),

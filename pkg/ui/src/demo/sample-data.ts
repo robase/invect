@@ -560,7 +560,7 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
   {
     id: 's-webhook',
     type: 'trigger.webhook',
-    position: { x: 0, y: 0 },
+    position: { x: 0, y: 240 },
     data: {
       id: 's-webhook',
       type: 'trigger.webhook',
@@ -575,7 +575,7 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
   {
     id: 's-agent',
     type: 'AGENT',
-    position: { x: 0, y: 0 },
+    position: { x: 280, y: 240 },
     data: {
       id: 's-agent',
       type: 'AGENT',
@@ -642,7 +642,7 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
   {
     id: 's-switch',
     type: 'core.switch',
-    position: { x: 0, y: 0 },
+    position: { x: 580, y: 220 },
     data: {
       id: 's-switch',
       type: 'core.switch',
@@ -674,7 +674,7 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
   {
     id: 's-gh-pr',
     type: 'github.create_pull_request',
-    position: { x: 0, y: 0 },
+    position: { x: 900, y: 80 },
     data: {
       id: 's-gh-pr',
       type: 'github.create_pull_request',
@@ -697,7 +697,7 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
   {
     id: 's-slack-feature',
     type: 'slack.send_message',
-    position: { x: 0, y: 0 },
+    position: { x: 900, y: 190 },
     data: {
       id: 's-slack-feature',
       type: 'slack.send_message',
@@ -716,7 +716,7 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
   {
     id: 's-pagerduty',
     type: 'http.request',
-    position: { x: 0, y: 0 },
+    position: { x: 900, y: 290 },
     data: {
       id: 's-pagerduty',
       type: 'http.request',
@@ -735,7 +735,7 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
   {
     id: 's-slack-default',
     type: 'slack.send_message',
-    position: { x: 0, y: 0 },
+    position: { x: 900, y: 390 },
     data: {
       id: 's-slack-default',
       type: 'slack.send_message',
@@ -757,7 +757,7 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
   {
     id: 's-linear-update',
     type: 'linear.update_issue',
-    position: { x: 0, y: 0 },
+    position: { x: 1300, y: 240 },
     data: {
       id: 's-linear-update',
       type: 'linear.update_issue',

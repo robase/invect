@@ -44,10 +44,10 @@ function buildMapper(opts: MapperOptions): MapperConfig {
 }
 
 /** Base node builder — shared by all helpers. */
-function makeNode(
+function makeNode<T extends object>(
   type: string,
   referenceId: string,
-  params: Record<string, unknown>,
+  params: T,
   options?: { label?: string; mapper?: MapperOptions },
 ): FlowNodeDefinitions {
   const node: FlowNodeDefinitions = {
@@ -55,7 +55,7 @@ function makeNode(
     type,
     label: options?.label ?? humanize(referenceId),
     referenceId,
-    params,
+    params: params as Record<string, unknown>,
   };
   if (options?.mapper) {
     node.mapper = buildMapper(options.mapper);
@@ -156,10 +156,10 @@ export function agent(
  * @example
  * node('linear.create_issue', 'create_task', { title: 'Fix bug', teamId: '...' })
  */
-export function node(
+export function node<T extends object>(
   type: string,
   referenceId: string,
-  params: GenericParams = {},
+  params: T = {} as T,
   options?: NodeOptions,
 ): FlowNodeDefinitions {
   return makeNode(type, referenceId, params, options);

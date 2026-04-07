@@ -147,7 +147,7 @@ export class ChatStreamService {
       config: resolvedConfig,
       adapter,
       identity,
-      invect: this.invect as NonNullable<typeof this.invect>,
+      invect: this.invect as InvectInstance,
       actionRegistry: this.actionRegistry,
     });
 

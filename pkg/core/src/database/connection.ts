@@ -288,7 +288,8 @@ export class DatabaseConnectionFactory {
         const pool = new (neonMod.Pool as new (o: Record<string, unknown>) => unknown)({
           connectionString: config.connectionString,
         });
-        return schema ? drizzleNeon(pool, { schema }) : drizzleNeon(pool);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return schema ? drizzleNeon(pool as any, { schema }) : drizzleNeon(pool as any);
       }
       default:
         throw new Error(`Unsupported PostgreSQL driver type: ${driver.type}`);

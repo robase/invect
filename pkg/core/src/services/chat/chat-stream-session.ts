@@ -128,7 +128,7 @@ export class ChatStreamSession {
         });
 
         // 5. Call the LLM via the existing adapter (with retry on rate-limit)
-        let response: AgentPromptResult;
+        let response: AgentPromptResult | undefined;
         const MAX_RETRIES = 3;
         let lastError: unknown;
 

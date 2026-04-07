@@ -36,7 +36,7 @@ export const searchFlowsTool: ChatToolDefinition = {
     const maxResults = limit ?? 20;
 
     try {
-      const { data: flows } = await invect.flows.list({ limit: 100 });
+      const { data: flows } = await invect.flows.list({ pagination: { page: 1, limit: 100 } });
 
       let filtered = flows;
       if (query) {

@@ -211,7 +211,7 @@ export function CodeMirrorJsEditor({
         },
         '.cm-content': {
           padding: '8px 0',
-          minHeight: hideGutter ? undefined : '120px',
+          minHeight: hideGutter ? null : '120px',
         },
         '.cm-line': {
           padding: '0 8px',
