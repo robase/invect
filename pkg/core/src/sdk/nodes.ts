@@ -17,7 +17,6 @@ import type {
   HttpRequestParams,
   AgentParams,
   MapperOptions,
-  GenericParams,
 } from './types';
 
 // ── Utilities ───────────────────────────────────────────────────────────
@@ -48,7 +47,7 @@ function makeNode<T extends object>(
   type: string,
   referenceId: string,
   params: T,
-  options?: { label?: string; mapper?: MapperOptions },
+  options?: { label?: string; position?: { x: number; y: number }; mapper?: MapperOptions },
 ): FlowNodeDefinitions {
   const node: FlowNodeDefinitions = {
     id: `node-${referenceId}`,
@@ -57,6 +56,9 @@ function makeNode<T extends object>(
     referenceId,
     params: params as Record<string, unknown>,
   };
+  if (options?.position) {
+    node.position = options.position;
+  }
   if (options?.mapper) {
     node.mapper = buildMapper(options.mapper);
   }
@@ -67,6 +69,7 @@ function makeNode<T extends object>(
 
 export interface NodeOptions {
   label?: string;
+  position?: { x: number; y: number };
   mapper?: MapperOptions;
 }
 

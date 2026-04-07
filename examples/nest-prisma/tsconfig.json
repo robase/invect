@@ -19,6 +19,7 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false
   },
+  "include": ["src/**/*", "test/**/*"],
   "exclude": ["node_modules", "dist", "coverage"],
   "watchOptions": {
     "watchFile": "useFsEvents",

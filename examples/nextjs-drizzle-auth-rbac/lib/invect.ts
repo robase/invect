@@ -26,8 +26,9 @@ export const invectConfig = defineConfig({
       ? [
           {
             name: 'Anthropic API Key',
-            type: 'llm',
-            authType: 'apiKey',
+            type: 'llm' as const,
+            provider: 'anthropic',
+            authType: 'apiKey' as const,
             config: { apiKey: process.env.SEED_ANTHROPIC_API_KEY },
             description: 'Anthropic Claude API credential for AI model nodes',
             isShared: true,
@@ -39,8 +40,8 @@ export const invectConfig = defineConfig({
       ? [
           {
             name: 'Linear OAuth2',
-            type: 'http-api',
-            authType: 'oauth2',
+            type: 'http-api' as const,
+            authType: 'oauth2' as const,
             config: {
               clientId: process.env.SEED_LINEAR_CLIENT_ID,
               clientSecret: process.env.SEED_LINEAR_CLIENT_SECRET,

@@ -88,12 +88,21 @@ function regenToolInstanceIds(params: Record<string, unknown>): Record<string, u
  * and edge tuples → ClipboardEdge.
  */
 function sdkResultToClipboard({ nodes, edges }: ParsedSDK, flowId: string): ClipboardData {
+  // Compute absolute positions for each node (use parsed position or default horizontal layout)
+  const positions = nodes.map((n, i) => n.position ?? { x: i * 250, y: 0 });
+
+  // Compute bounding box origin for relative positioning
+  const minX = positions.length > 0 ? Math.min(...positions.map((p) => p.x)) : 0;
+  const minY = positions.length > 0 ? Math.min(...positions.map((p) => p.y)) : 0;
+
   const clipboardNodes: ClipboardNode[] = nodes.map((n, i) => {
     const ref = n.referenceId ?? n.id;
+    const pos = positions[i];
     return {
       originalId: n.id,
       type: n.type,
-      relativePosition: n.position ?? { x: i * 250, y: 0 },
+      relativePosition: { x: pos.x - minX, y: pos.y - minY },
+      absolutePosition: pos,
       data: {
         display_name: n.label ?? ref,
         reference_id: ref,
@@ -191,6 +200,10 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
           x: node.position.x - minX,
           y: node.position.y - minY,
         },
+        absolutePosition: {
+          x: node.position.x,
+          y: node.position.y,
+        },
         data: {
           display_name: (data.display_name as string) ?? '',
           reference_id: (data.reference_id as string) ?? '',
@@ -224,6 +237,7 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
     (clipboard: ClipboardData, anchor: { x: number; y: number }) => {
       const { nodes: existingNodes } = useFlowEditorStore.getState();
       const isCrossFlow = clipboard.sourceFlowId !== flowId;
+      const isEmptyFlow = existingNodes.length === 0;
 
       // Build the ID remap table
       const idMap = new Map<string, string>();
@@ -268,13 +282,17 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
         }
         params = regenToolInstanceIds(params);
 
+        // When the flow is empty, use the absolute/content positions directly;
+        // otherwise anchor relative positions to the cursor/viewport point.
+        const position =
+          isEmptyFlow && cn.absolutePosition
+            ? { x: cn.absolutePosition.x, y: cn.absolutePosition.y }
+            : { x: anchor.x + cn.relativePosition.x, y: anchor.y + cn.relativePosition.y };
+
         const node: Node = {
           id: newId,
           type: cn.type,
-          position: {
-            x: anchor.x + cn.relativePosition.x,
-            y: anchor.y + cn.relativePosition.y,
-          },
+          position,
           selected: true,
           data: {
             id: newId,
@@ -521,12 +539,22 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
         return;
       }
 
+      // If the user has a text selection anywhere in the document, let the
+      // browser handle copy/cut natively (e.g. copying AI assistant output).
+      const hasTextSelection = (window.getSelection()?.toString().length ?? 0) > 0;
+
       const isMod = e.metaKey || e.ctrlKey;
 
       if (isMod && e.key === 'c') {
+        if (hasTextSelection) {
+          return;
+        } // let browser copy selected text
         e.preventDefault();
         await copy();
       } else if (isMod && e.key === 'x') {
+        if (hasTextSelection) {
+          return;
+        }
         e.preventDefault();
         await cut();
       } else if (isMod && e.key === 'v') {

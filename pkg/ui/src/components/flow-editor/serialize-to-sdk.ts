@@ -66,6 +66,11 @@ function formatValue(value: unknown, indent: number): string {
     .join('\n');
 }
 
+/** Format a position as a JS object literal. */
+function formatPosition(pos: { x: number; y: number }): string {
+  return `{ x: ${Math.round(pos.x)}, y: ${Math.round(pos.y)} }`;
+}
+
 /**
  * Render a params object as formatted key-value pairs inside `{ }`.
  * Omits empty objects. Inlines small objects on one line.
@@ -104,35 +109,26 @@ function serializeNode(node: ClipboardNode): string {
   const ref = node.data.reference_id;
   const params = node.data.params;
   const type = node.type;
+  const pos = node.relativePosition;
 
   // Determine which helper to use
   const coreHelper = CORE_HELPERS[type];
   const providerHelper = PROVIDER_HELPERS[type];
 
   const hasParams = Object.keys(params).length > 0;
-  const formattedParams = hasParams ? formatParams(params, 0) : '';
+  const formattedParams = hasParams ? formatParams(params, 0) : '{}';
+  const optionsStr = `{ position: ${formatPosition(pos)} }`;
 
   if (coreHelper) {
-    // input('ref') or input('ref', { ... })
-    if (!hasParams) {
-      return `${coreHelper}('${ref}')`;
-    }
-    return `${coreHelper}('${ref}', ${formattedParams})`;
+    return `${coreHelper}('${ref}', ${formattedParams}, ${optionsStr})`;
   }
 
   if (providerHelper) {
-    // gmail.sendMessage('ref', { ... })
-    if (!hasParams) {
-      return `${providerHelper}('${ref}')`;
-    }
-    return `${providerHelper}('${ref}', ${formattedParams})`;
+    return `${providerHelper}('${ref}', ${formattedParams}, ${optionsStr})`;
   }
 
-  // Fallback: node('type', 'ref', { ... })
-  if (!hasParams) {
-    return `node('${type}', '${ref}')`;
-  }
-  return `node('${type}', '${ref}', ${formattedParams})`;
+  // Fallback: node('type', 'ref', { ... }, { position })
+  return `node('${type}', '${ref}', ${formattedParams}, ${optionsStr})`;
 }
 
 // ---------------------------------------------------------------------------

@@ -16,6 +16,7 @@ export interface ClipboardNode {
   originalId: string;
   type: string;
   relativePosition: { x: number; y: number };
+  absolutePosition?: { x: number; y: number };
   data: {
     display_name: string;
     reference_id: string;

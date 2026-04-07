@@ -1149,6 +1149,9 @@ const landingStyles = `
     .landing .hero-canvas-wrap { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.15; aspect-ratio: auto; max-height: none; }
     .landing .features-grid { grid-template-columns: 1fr; }
     .landing .code-section > .container { grid-template-columns: 1fr; }
+    .landing .code-block { overflow-x: auto; }
+    .landing .section-title { font-size: clamp(24px, 6vw, 40px); word-break: break-word; }
+    .landing .section-desc { max-width: 100%; }
     .landing .why-item { grid-template-columns: 1fr; }
     .landing .why-item:nth-child(even) { direction: ltr; }
     .landing .nav-links { gap: 16px; }
