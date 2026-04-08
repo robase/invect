@@ -23,6 +23,7 @@ export const metadata = {
     default: 'Invect Docs',
   },
   description: 'Documentation for Invect — drop-in workflow orchestration for any Node.js app.',
+  icons: { icon: '/favicon.ico' },
 };
 
 export default function Layout({ children }: { children: ReactNode }) {

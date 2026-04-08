@@ -1,11 +1,12 @@
 {
   "title": "Plugins",
+  "defaultOpen": true,
   "pages": [
     "overview",
     "authentication",
     "access-control",
     "webhooks",
     "version-control",
-    "building-plugins"
+    "build-your-own"
   ]
 }

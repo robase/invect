@@ -3,21 +3,12 @@
   "title": "Documentation",
   "pages": [
     "index",
-    "---Getting Started---",
-    "getting-started",
+    "quickstart",
     "installation",
-    "---Building Workflows---",
-    "flows",
-    "nodes",
-    "agents",
-    "---Configuration---",
-    "credentials",
-    "frontend",
+    "triggers",
+    "execution-model",
     "plugins",
-    "---Production---",
-    "deployment",
-    "---Reference---",
-    "reference",
-    "concepts"
+    "security",
+    "reference"
   ]
 }

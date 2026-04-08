@@ -1,98 +1,54 @@
 ---
-title: Plugin System
-description: How plugins extend Invect — hooks, schema, endpoints, and lifecycle.
+title: Plugins
+description: Extend Invect with authentication, access control, webhooks, and more.
 ---
 
-Plugins extend Invect at every layer: database tables, API endpoints, flow execution hooks, and frontend components. They're plain objects implementing the `InvectPlugin` interface, passed in the `plugins` config array.
+import { Card, Cards } from 'fumadocs-ui/components/card';
 
-## What a plugin can do
-
-A plugin can declare any combination of:
-
-- **Actions** — additional flow nodes and agent tools
-- **Schema** — database tables (abstract format, dialect-agnostic)
-- **Endpoints** — custom API routes, mounted under `/plugins/{pluginId}/`
-- **Hooks** — interceptors for requests, flow execution, and authorization
-- **Init/shutdown** — setup and cleanup logic
-
-Only `id` is required. A plugin that adds just hooks is valid. A plugin that adds just actions is valid.
-
-## Hooks
-
-Hooks are the main way plugins intercept and extend behaviour.
-
-**Request hooks:**
-
-- `onRequest` — fires before every API request. Can inspect, modify, or short-circuit (return a response to block the request). Used by the auth plugin to resolve sessions.
-- `onResponse` — fires after the route handler responds. Can inspect or replace the response.
-
-**Execution hooks:**
-
-- `beforeFlowRun` — fires before flow execution. Can cancel the run or modify inputs.
-- `afterFlowRun` — fires after flow execution (success or failure).
-- `beforeNodeExecute` — fires before each node. Can skip the node or override params.
-- `afterNodeExecute` — fires after each node. Can override the output.
-
-**Authorization:**
-
-- `onAuthorize` — fires during permission checks. Returns `{ allowed: true/false }`. Used by the RBAC plugin to enforce flow-level access.
-
-When multiple plugins register the same hook, they execute in declaration order. For short-circuit hooks (`onRequest`, `onAuthorize`), the first plugin to return a response wins.
-
-## Database schema
-
-Plugins declare tables using an abstract format. The CLI merges them with core tables and generates dialect-specific Drizzle files:
+Plugins extend Invect with additional capabilities — database tables, API endpoints, flow execution hooks, and frontend components. Pass them in the `plugins` config array:
 
 ```ts
-schema: {
-  my_plugin_table: {
-    fields: {
-      id: { type: 'string', primaryKey: true },
-      flowId: { type: 'string', references: { table: 'flows', field: 'id' } },
-      data: { type: 'string', required: true },
-    },
-  },
-}
+import { authentication } from '@invect/user-auth/backend';
+import { rbacPlugin } from '@invect/rbac/backend';
+
+const router = await createInvectRouter({
+  // ...
+  plugins: [authentication({ auth }), rbacPlugin()],
+});
 ```
 
-Plugins can also extend core tables (additive only):
+After adding plugins with database tables, regenerate and migrate:
 
-```ts
-schema: {
-  flows: {
-    fields: {
-      tenantId: { type: 'string' },  // Adds a column to the core flows table
-    },
-  },
-}
+```bash
+npx invect-cli generate
+npx invect-cli migrate --push
 ```
-
-After adding a plugin with schema, run `npx invect-cli generate` and `npx invect-cli migrate --push` to create the tables.
-
-At startup, Invect verifies that all required tables exist. Missing tables produce a clear error with the plugin name and setup instructions.
-
-## Lifecycle
-
-**Initialization** (during `Invect.initialize()`): plugins init in declaration order. Each plugin's actions are registered, then its `init()` function is called.
-
-**Shutdown**: plugins shut down in reverse order. The last initialized is the first to shut down.
-
-## Endpoint routing
-
-Plugin endpoints are mounted at `/plugins/{pluginId}/`:
-
-```ts
-endpoints: [
-  { method: 'GET', path: '/status', handler: async (req, res) => { ... } },
-  // Becomes: GET /plugins/my-plugin/status
-]
-```
-
-Auth hooks still apply to plugin endpoints unless the endpoint declares `skipAuth: true`.
 
 ## Official plugins
 
-- [Authentication](/docs/plugins/authentication) — user login + session management
-- [Access Control](/docs/plugins/access-control) — flow-level RBAC
-- [Webhooks](/docs/plugins/webhooks) — inbound webhook triggers
-- [Version Control](/docs/plugins/version-control) — flow export/import + version management
+<Cards>
+  <Card
+    title="Authentication"
+    description="User login, sessions, and admin-only user management via Better Auth."
+    href="/docs/plugins/authentication"
+  />
+  <Card
+    title="Access Control"
+    description="Flow-level RBAC — control who can view, edit, and run each flow."
+    href="/docs/plugins/access-control"
+  />
+  <Card
+    title="Webhooks"
+    description="Trigger flows from external HTTP requests with unique webhook URLs."
+    href="/docs/plugins/webhooks"
+  />
+  <Card
+    title="Version Control"
+    description="Flow export/import and version management."
+    href="/docs/plugins/version-control"
+  />
+</Cards>
+
+## Build your own
+
+Plugins are plain objects with an `id`. Add hooks, actions, database tables, API endpoints, and frontend components — only what you need. See [Build Your Own](/docs/plugins/build-your-own) for the full guide.

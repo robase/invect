@@ -9,7 +9,7 @@ import { Callout } from 'fumadocs-ui/components/callout';
 
 All credentials (API keys, OAuth2 tokens, connection strings) are encrypted at rest using **AES-256-GCM**. Each credential has a unique IV (initialization vector) and authentication tag.
 
-See [Deployment > Encryption](/docs/deployment/encryption) for key generation and management.
+Generate a key with `npx invect-cli secret`. See [CLI Reference](/docs/reference/cli) for details.
 
 ## Template sandboxing
 
@@ -69,5 +69,4 @@ Plugin database tables are verified at startup. Each plugin's `requiredTables` a
 - **Always set `INVECT_ENCRYPTION_KEY`** in production — without it, credentials cannot be encrypted
 - **Use HTTPS** in production — credential data transits between the frontend and backend
 - **Use the Authentication Plugin** for shared instances — without it, the API is unauthenticated
-- **Limit agent tools** — only enable the tools an agent needs to reduce the attack surface
 - **Review plugin code** — plugins have full access to the core instance and database

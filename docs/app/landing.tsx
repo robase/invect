@@ -309,7 +309,7 @@ export default function LandingPage() {
                 <a href="#features">Features</a>
               </li>
               <li>
-                <Link href="/docs/getting-started/quickstart">Quickstart</Link>
+                <Link href="/docs/quickstart">Quickstart</Link>
               </li>
               <li>
                 <Link href="/docs">Docs</Link>
@@ -393,7 +393,7 @@ export default function LandingPage() {
                 </span>
               </div>
               <div className="hero-actions">
-                <Link href="/docs/getting-started/quickstart" className="btn-primary">
+                <Link href="/docs/quickstart" className="btn-primary">
                   <svg
                     width="18"
                     height="18"
@@ -460,7 +460,7 @@ export default function LandingPage() {
                     <li>Scale horizontally the same way you scale the rest of your&nbsp;app</li>
                     <li>No per-execution pricing — it&apos;s a library, not a&nbsp;service</li>
                   </ul>
-                  <Link href="/docs/installation/express" className="why-link">
+                  <Link href="/docs/installation" className="why-link">
                     See integration guides →
                   </Link>
                 </div>
@@ -478,7 +478,8 @@ export default function LandingPage() {
 
 <span class="comment">// Mount alongside your existing routes</span>
 app.<span class="func">use</span>(<span class="string">'/api'</span>, yourRouter);
-app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <span class="func">createInvectRouter</span>({
+app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <span class="keyword">await</span> <span class="func">createInvectRouter</span>({
+  <span class="type">encryptionKey</span>: process.env.<span class="type">INVECT_ENCRYPTION_KEY</span>,
   <span class="type">database</span>: {
     <span class="type">type</span>: <span class="string">'sqlite'</span>,
     <span class="type">connectionString</span>: process.env.<span class="type">DATABASE_URL</span>,
@@ -499,7 +500,7 @@ app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <spa
                     Invect has a custom-built execution engine from the ground up. Topological sort
                     determines node order. If/else branches auto-prune unreachable subgraphs — no
                     wasted API calls. It&apos;s an orchestration runtime, not a thin layer over
-                    someone else&apos;s&nbsp;abstractions.
+                    library &nbsp;abstractions.
                   </p>
                   <ul>
                     <li>
@@ -512,33 +513,31 @@ app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <spa
                       Full JavaScript expressions in config params via QuickJS WASM&nbsp;sandbox
                     </li>
                   </ul>
-                  <Link href="/docs/concepts" className="why-link">
+                  <Link href="/docs/execution-model" className="why-link">
                     Learn about the execution model →
                   </Link>
                 </div>
-                <div className="why-code">
-                  <div className="code-header">
-                    <span className="code-dot red" />
-                    <span className="code-dot yellow" />
-                    <span className="code-dot green" />
-                    <span>node config</span>
+                <div className="why-visual">
+                  <div className="visual-label">Incoming data for each node</div>
+                  <div className="merge-entries">
+                    <div className="merge-entry">
+                      <span className="merge-key">fetch_users</span>
+                      <span className="merge-val">{`[{ id: 1, name: "Alice" }]`}</span>
+                    </div>
+                    <div className="merge-entry">
+                      <span className="merge-key">get_config</span>
+                      <span className="merge-val">{`{ env: "prod" }`}</span>
+                    </div>
+                    <div className="merge-entry">
+                      <span className="merge-key">api_response</span>
+                      <span className="merge-val">{`{ status: 200 }`}</span>
+                    </div>
                   </div>
-                  <pre
-                    dangerouslySetInnerHTML={{
-                      __html: `<span class="comment">// Every node sees all upstream outputs</span>
-<span class="comment">// as a single merged object:</span>
-{
-  <span class="string">"fetch_users"</span>:  [{ <span class="string">"id"</span>: 1, ... }],
-  <span class="string">"get_config"</span>:   { <span class="string">"env"</span>: <span class="string">"prod"</span> },
-  <span class="string">"api_response"</span>: { <span class="string">"status"</span>: 200 }
-}
-
-<span class="comment">// Use full JS in any param field:</span>
-<span class="string">"Process {{ fetch_users.filter(</span>
-<span class="string">  u =&gt; u.active).length }} users</span>
-<span class="string"> in {{ get_config.env }}"</span>`,
-                    }}
-                  />
+                  <div className="visual-divider" />
+                  <div className="visual-sublabel">Full JS in any config field</div>
+                  <div className="merge-template">
+                    <code>{`Process {{ fetch_users.filter(u => u.active).length }} users in {{ get_config.env }}`}</code>
+                  </div>
                 </div>
               </div>
 
@@ -557,35 +556,84 @@ app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <spa
                     <li>Background polling handles the full batch lifecycle&nbsp;automatically</li>
                     <li>No custom polling infrastructure or webhooks&nbsp;required</li>
                   </ul>
-                  <Link href="/docs/concepts" className="why-link">
+                  <Link href="/docs/execution-model" className="why-link">
                     Learn about batch processing →
                   </Link>
                 </div>
-                <div className="why-code">
-                  <div className="code-header">
-                    <span className="code-dot red" />
-                    <span className="code-dot yellow" />
-                    <span className="code-dot green" />
-                    <span>execution timeline</span>
+                <div className="why-visual">
+                  <div className="timeline">
+                    <div className="timeline-step is-done">
+                      <svg
+                        className="tl-icon"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      <span>Fetch data</span>
+                    </div>
+                    <div className="timeline-step is-done">
+                      <svg
+                        className="tl-icon"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      <span>Transform inputs</span>
+                    </div>
+                    <div className="timeline-step is-paused">
+                      <svg className="tl-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <rect x="6" y="4" width="4" height="16" rx="1" />
+                        <rect x="14" y="4" width="4" height="16" rx="1" />
+                      </svg>
+                      <div>
+                        <span>AI Model</span>
+                        <div className="tl-detail">
+                          <span>→ batch submitted, flow pauses</span>
+                          <span>→ polling checks batch status</span>
+                          <span>→ completes after ~20 min</span>
+                          <span>→ flow resumes automatically</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="timeline-step is-done">
+                      <svg
+                        className="tl-icon"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      <span>Process results</span>
+                    </div>
+                    <div className="timeline-step is-done">
+                      <svg
+                        className="tl-icon"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      <span>Send notification</span>
+                    </div>
                   </div>
-                  <pre
-                    dangerouslySetInnerHTML={{
-                      __html: `<span class="comment">// Flow execution with batch processing</span>
-
-<span class="type">Node 1</span>  ✓  Fetch data
-<span class="type">Node 2</span>  ✓  Transform inputs
-<span class="type">Node 3</span>  ⏸  AI Model <span class="comment">(batch submitted)</span>
-         <span class="string">→ flow pauses automatically</span>
-         <span class="string">→ polling checks batch status</span>
-         <span class="string">→ batch completes after ~20 min</span>
-         <span class="string">→ flow resumes from Node 3</span>
-<span class="type">Node 4</span>  ✓  Process results
-<span class="type">Node 5</span>  ✓  Send notification
-
-<span class="comment">// 50% cheaper than real-time API calls.</span>
-<span class="comment">// Zero custom infrastructure.</span>`,
-                    }}
-                  />
                 </div>
               </div>
 
@@ -602,7 +650,7 @@ app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <spa
                     <li>Roll back instantly if something goes&nbsp;wrong</li>
                     <li>Full audit trail of every flow&nbsp;change</li>
                   </ul>
-                  <Link href="/docs/concepts" className="why-link">
+                  <Link href="/docs/plugins/version-control" className="why-link">
                     Learn about flow versioning →
                   </Link>
                 </div>
@@ -615,16 +663,18 @@ app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <spa
                   </div>
                   <pre
                     dangerouslySetInnerHTML={{
-                      __html: `<span class="keyword">import</span> { <span class="type">Invect</span> } <span class="keyword">from</span> <span class="string">'@invect/core'</span>;
+                      __html: `<span class="keyword">import</span> { <span class="type">createInvect</span> } <span class="keyword">from</span> <span class="string">'@invect/core'</span>;
 
-<span class="keyword">const</span> core = <span class="keyword">new</span> <span class="type">Invect</span>({ <span class="type">database</span>: {
-  <span class="type">type</span>: <span class="string">'postgres'</span>,
-  <span class="type">connectionString</span>: process.env.<span class="type">DATABASE_URL</span>,
-}});
-<span class="keyword">await</span> core.<span class="func">initialize</span>();
+<span class="keyword">const</span> invect = <span class="keyword">await</span> <span class="func">createInvect</span>({
+  <span class="type">encryptionKey</span>: process.env.<span class="type">INVECT_ENCRYPTION_KEY</span>,
+  <span class="type">database</span>: {
+    <span class="type">type</span>: <span class="string">'postgresql'</span>,
+    <span class="type">connectionString</span>: process.env.<span class="type">DATABASE_URL</span>,
+  },
+});
 
 <span class="comment">// Run the tested, pinned version in prod</span>
-<span class="keyword">const</span> result = <span class="keyword">await</span> core.<span class="func">startFlowRun</span>(
+<span class="keyword">const</span> result = <span class="keyword">await</span> invect.runs.<span class="func">start</span>(
   flowId,
   { order },
   { <span class="type">version</span>: <span class="string">5</span> }  <span class="comment">// immutable — always the same</span>
@@ -657,31 +707,47 @@ app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <spa
                     <li>Test workflows in CI with in-memory SQLite — no Docker&nbsp;required</li>
                   </ul>
                 </div>
-                <div className="why-code">
-                  <div className="code-header">
-                    <span className="code-dot red" />
-                    <span className="code-dot yellow" />
-                    <span className="code-dot green" />
-                    <span>comparison</span>
+                <div className="why-visual">
+                  <div className="compare-group">
+                    <div className="compare-label">Hosted platforms</div>
+                    <div className="compare-row">
+                      <span>Zapier</span>
+                      <span className="compare-cost">$0.01–0.05 / task</span>
+                    </div>
+                    <div className="compare-row">
+                      <span>Make</span>
+                      <span className="compare-cost">metered ops</span>
+                    </div>
+                    <div className="compare-row">
+                      <span>Inngest</span>
+                      <span className="compare-cost">per-execution pricing</span>
+                    </div>
                   </div>
-                  <pre
-                    dangerouslySetInnerHTML={{
-                      __html: `<span class="comment">// Hosted platforms</span>
-Zapier       →  $0.01–0.05 / task
-Make         →  metered ops
-Inngest      →  per-execution pricing
-
-<span class="comment">// Self-hosted alternatives</span>
-n8n          →  separate Docker service
-Temporal     →  cluster + workers + DB
-Windmill     →  dedicated server
-
-<span class="comment">// Invect</span>
-<span class="keyword">npm install</span> <span class="string">@invect/core</span>
-<span class="comment">// Runs in your app. Uses your database.</span>
-<span class="comment">// Costs nothing beyond your existing infra.</span>`,
-                    }}
-                  />
+                  <div className="compare-group">
+                    <div className="compare-label">Self-hosted alternatives</div>
+                    <div className="compare-row">
+                      <span>n8n</span>
+                      <span className="compare-cost">separate Docker service</span>
+                    </div>
+                    <div className="compare-row">
+                      <span>Temporal</span>
+                      <span className="compare-cost">cluster + workers + DB</span>
+                    </div>
+                    <div className="compare-row">
+                      <span>Windmill</span>
+                      <span className="compare-cost">dedicated server</span>
+                    </div>
+                  </div>
+                  <div className="compare-group is-invect">
+                    <div className="compare-label">Invect</div>
+                    <div className="compare-invect">
+                      <code>npm install @invect/core</code>
+                      <p>
+                        Runs in your app. Uses your database. Costs nothing beyond your
+                        existing&nbsp;infra.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -694,7 +760,7 @@ Windmill     →  dedicated server
             <p className="section-label">Integrations</p>
             <h2 className="section-title">Works with your stack</h2>
             <div className="framework-logos">
-              <Link href="/docs/installation/express" className="framework-item">
+              <Link href="/docs/installation#express" className="framework-item">
                 <div className="framework-icon">
                   <svg width="24" height="24" viewBox="0 0 128 128" fill="none">
                     <path
@@ -705,7 +771,7 @@ Windmill     →  dedicated server
                 </div>
                 Express
               </Link>
-              <Link href="/docs/installation/nestjs" className="framework-item">
+              <Link href="/docs/installation#nestjs" className="framework-item">
                 <div className="framework-icon">
                   <svg width="24" height="24" viewBox="0 0 128 128" fill="none">
                     <path
@@ -716,7 +782,7 @@ Windmill     →  dedicated server
                 </div>
                 NestJS
               </Link>
-              <Link href="/docs/installation/nextjs" className="framework-item">
+              <Link href="/docs/installation#nextjs" className="framework-item">
                 <div className="framework-icon">
                   <svg width="24" height="24" viewBox="0 0 128 128" fill="none">
                     <path
@@ -774,12 +840,9 @@ Windmill     →  dedicated server
           <div className="container">
             <div className="cta-box">
               <h2>Start building workflows today</h2>
-              <p>
-                Invect is free, open-source, and ready for production. Add it to your project
-                in&nbsp;minutes.
-              </p>
+              <p>Invect is free, open-source. Add it to your project in&nbsp;minutes.</p>
               <div className="cta-buttons">
-                <Link href="/docs/getting-started/quickstart" className="btn-primary">
+                <Link href="/docs/quickstart" className="btn-primary">
                   <svg
                     width="18"
                     height="18"
@@ -967,6 +1030,41 @@ const landingStyles = `
   .landing .why-code .type { color: #f0c96e; }
   .landing .why-code .func { color: #6dc0ff; }
   .landing .why-code .comment { color: #5c5c5c; font-style: italic; }
+
+  /* Visual cards (non-code why-item panels) */
+  .landing .why-visual { background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 8px; padding: 28px; }
+  .landing .visual-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); margin-bottom: 20px; }
+  .landing .visual-sublabel { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); margin-bottom: 10px; }
+  .landing .visual-divider { height: 1px; background: var(--border); margin: 20px 0; }
+  .landing .visual-footnote { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); font-style: italic; }
+
+  /* Merge visual (execution model) */
+  .landing .merge-entries { display: flex; flex-direction: column; gap: 12px; }
+  .landing .merge-entry { display: flex; align-items: baseline; gap: 16px; font-family: var(--font-mono); font-size: 13px; }
+  .landing .merge-key { color: var(--accent-bright); min-width: 110px; font-weight: 500; }
+  .landing .merge-val { color: var(--text-muted); }
+  .landing .merge-template code { display: block; background: var(--bg-card); border: 1px solid var(--border); padding: 12px 16px; border-radius: 6px; font-size: 13px; line-height: 1.6; color: var(--text); }
+
+  /* Timeline visual (batch processing) */
+  .landing .timeline { display: flex; flex-direction: column; }
+  .landing .timeline-step { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; font-size: 14px; line-height: 1.4; color: var(--text); border-left: 2px solid var(--border); padding-left: 20px; position: relative; }
+  .landing .timeline-step::before { content: ''; position: absolute; left: -5px; top: 17px; width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+  .landing .timeline-step.is-done::before { background: var(--accent); }
+  .landing .timeline-step.is-paused { color: #f0c96e; }
+  .landing .timeline-step.is-paused::before { background: #f0c96e; }
+  .landing .tl-icon { flex-shrink: 0; width: 16px; height: 16px; margin-top: 2.5px; }
+  .landing .tl-detail { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; font-size: 12px; color: var(--text-muted); }
+
+  /* Comparison visual (deploy anywhere) */
+  .landing .compare-group { margin-bottom: 20px; }
+  .landing .compare-group:last-child { margin-bottom: 0; }
+  .landing .compare-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); margin-bottom: 8px; }
+  .landing .compare-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; color: var(--text); border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent); }
+  .landing .compare-cost { color: var(--text-muted); font-size: 12px; }
+  .landing .compare-group.is-invect { background: color-mix(in srgb, var(--accent) 8%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 8px; padding: 16px; }
+  .landing .compare-group.is-invect .compare-label { color: var(--accent-bright); }
+  .landing .compare-invect code { display: block; font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .landing .compare-invect p { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin: 0; }
 
   /* Frameworks */
   .landing .frameworks { padding: 80px 0; text-align: center; border-top: 1px solid var(--border); }

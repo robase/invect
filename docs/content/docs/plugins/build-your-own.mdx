@@ -1,0 +1,209 @@
+---
+title: Build Your Own
+description: Create a custom Invect plugin with hooks, actions, database tables, and API endpoints.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+An Invect plugin is a plain object with an `id`. Everything else is opt-in — add only what you need.
+
+```ts
+import type { InvectPlugin } from '@invect/core';
+
+export function myPlugin(): InvectPlugin {
+  return {
+    id: 'my-plugin',
+    name: 'My Plugin',
+  };
+}
+```
+
+Register it in your config:
+
+```ts
+const router = await createInvectRouter({
+  // ...
+  plugins: [myPlugin()],
+});
+```
+
+## Intercept requests with hooks
+
+Hooks let you run logic before or after requests and flow executions. Return `{ response }` to short-circuit, or `{}` to continue normally.
+
+```ts
+export function rateLimiter(): InvectPlugin {
+  const counts = new Map<string, number>();
+
+  return {
+    id: 'rate-limiter',
+    hooks: {
+      onRequest: async ({ request }) => {
+        const ip = request.headers['x-forwarded-for'] || 'unknown';
+        const count = (counts.get(ip) || 0) + 1;
+        counts.set(ip, count);
+
+        if (count > 100) {
+          return { response: { status: 429, body: { error: 'Rate limited' } } };
+        }
+        return {};
+      },
+    },
+  };
+}
+```
+
+**Available hooks:**
+
+| Hook                | When it fires                    | Can short-circuit?                |
+| ------------------- | -------------------------------- | --------------------------------- |
+| `onRequest`         | Before every API request         | Yes — return `{ response }`       |
+| `onResponse`        | After the route handler responds | No, but can replace the response  |
+| `beforeFlowRun`     | Before flow execution            | Yes — return `{ cancel: true }`   |
+| `afterFlowRun`      | After flow execution             | No                                |
+| `beforeNodeExecute` | Before each node                 | Yes — return `{ skip: true }`     |
+| `afterNodeExecute`  | After each node                  | Can override `{ output }`         |
+| `onAuthorize`       | During permission checks         | Yes — return `{ allowed: false }` |
+
+When multiple plugins register the same hook, they run in declaration order.
+
+## Add custom flow nodes
+
+Define actions using `defineAction()`. They automatically appear in the node palette and as agent tools.
+
+```ts
+import { defineAction } from '@invect/core';
+import { z } from 'zod/v4';
+
+const myAction = defineAction({
+  id: 'my_plugin.transform',
+  name: 'My Transform',
+  description: 'Custom data transformation',
+  provider: { id: 'my_plugin', name: 'My Plugin', icon: 'Blocks' },
+  params: {
+    schema: z.object({ format: z.string() }),
+    fields: [{ name: 'format', label: 'Format', type: 'text', required: true }],
+  },
+  async execute(params, context) {
+    return { success: true, output: { formatted: params.format } };
+  },
+});
+
+export function myPlugin(): InvectPlugin {
+  return {
+    id: 'my-plugin',
+    actions: [myAction],
+  };
+}
+```
+
+## Add database tables
+
+Declare tables in an abstract, dialect-agnostic format. The CLI generates the Drizzle schema files for you.
+
+```ts
+export function myPlugin(): InvectPlugin {
+  return {
+    id: 'my-plugin',
+    schema: {
+      my_plugin_logs: {
+        fields: {
+          id: { type: 'string', primaryKey: true },
+          flowRunId: { type: 'string', references: { table: 'flow_runs', field: 'id' } },
+          message: { type: 'string', required: true },
+          createdAt: { type: 'string', required: true },
+        },
+      },
+    },
+    requiredTables: ['my_plugin_logs'],
+  };
+}
+```
+
+After adding the plugin, run:
+
+```bash
+npx invect-cli generate
+npx invect-cli migrate --push
+```
+
+Invect verifies required tables exist at startup and shows a clear error if they're missing.
+
+You can also extend core tables (additive only):
+
+```ts
+schema: {
+  flows: {
+    fields: {
+      tenantId: { type: 'string' },  // Adds a column to the core flows table
+    },
+  },
+}
+```
+
+## Add API endpoints
+
+Plugin endpoints are mounted at `/plugins/{pluginId}/`:
+
+```ts
+export function myPlugin(): InvectPlugin {
+  return {
+    id: 'my-plugin',
+    endpoints: [
+      {
+        method: 'GET',
+        path: '/stats',
+        handler: async (req, res) => {
+          res.json({ requests: 42 });
+        },
+      },
+    ],
+  };
+}
+// Accessible at: GET /plugins/my-plugin/stats
+```
+
+Auth hooks still apply unless the endpoint declares `skipAuth: true`.
+
+## Init and shutdown
+
+Use `init` for setup work and `shutdown` for cleanup. Init runs during `Invect.initialize()` in declaration order. Shutdown runs in reverse.
+
+```ts
+export function myPlugin(): InvectPlugin {
+  let interval: NodeJS.Timeout;
+
+  return {
+    id: 'my-plugin',
+    async init(ctx) {
+      ctx.logger.info('My plugin initializing');
+      interval = setInterval(() => {
+        /* background work */
+      }, 60000);
+    },
+    async shutdown() {
+      clearInterval(interval);
+    },
+  };
+}
+```
+
+## Frontend plugins
+
+Frontend plugins contribute UI elements to the Invect editor:
+
+| Contribution    | What it adds                            |
+| --------------- | --------------------------------------- |
+| `sidebar`       | Navigation items                        |
+| `routes`        | Full pages                              |
+| `panelTabs`     | Tabs in the node editor panel           |
+| `headerActions` | Toolbar buttons                         |
+| `providers`     | React context providers                 |
+| `apiHeaders`    | Headers injected into every API request |
+
+Frontend plugins are passed to the `Invect` component and composed at render time.
+
+<Callout type="info">
+  Keep backend and frontend code in separate directories (`src/backend/`, `src/frontend/`). Shared
+  types in `src/shared/` must be browser-safe — no Node.js imports.
+</Callout>

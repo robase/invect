@@ -25,14 +25,16 @@ describe('secret command', () => {
     await secretCommand.parseAsync([], { from: 'user' });
 
     // Find the log call that contains our key (second call, after the header)
-    const allCalls = consoleLogSpy.mock.calls.map((c) => c[0] as string);
+    // eslint-disable-next-line no-control-regex
+    const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, '');
+    const allCalls = consoleLogSpy.mock.calls.map((c) => stripAnsi(c[0] as string));
     const keyLine = allCalls.find((line) => {
       return typeof line === 'string' && /[A-Za-z0-9+/=]{40,}/.test(line);
     });
 
     expect(keyLine).toBeDefined();
 
-    // Extract the base64 key from the colored output
+    // Extract the base64 key from the output (ANSI codes already stripped)
     const base64Match = keyLine!.match(/[A-Za-z0-9+/=]{40,}/);
     expect(base64Match).not.toBeNull();
 

@@ -1,0 +1,493 @@
+---
+title: Installation
+description: Set up Invect with Express, NestJS, or Next.js.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+
+The fastest way to install Invect is with the CLI:
+
+```bash
+npx invect-cli init
+```
+
+It detects your framework, installs packages, generates database schemas, and runs the initial migration. The manual steps below are for reference.
+
+## Express
+
+<Steps>
+
+<Step>
+### Install packages
+
+<Tabs items={['pnpm', 'npm', 'yarn', 'bun']}>
+  <Tab value="pnpm">
+  ```bash
+  pnpm add @invect/core @invect/express
+  ```
+  </Tab>
+  <Tab value="npm">
+  ```bash
+  npm install @invect/core @invect/express
+  ```
+  </Tab>
+  <Tab value="yarn">
+  ```bash
+  yarn add @invect/core @invect/express
+  ```
+  </Tab>
+  <Tab value="bun">
+  ```bash
+  bun add @invect/core @invect/express
+  ```
+  </Tab>
+</Tabs>
+</Step>
+
+<Step>
+### Set environment variables
+
+```bash title=".env"
+DATABASE_URL=file:./dev.db
+INVECT_ENCRYPTION_KEY=   # Generate with: npx invect-cli secret
+```
+
+</Step>
+
+<Step>
+### Create the router
+
+```ts title="index.ts"
+import 'dotenv/config';
+import express from 'express';
+import { createInvectRouter } from '@invect/express';
+
+const app = express();
+app.use(express.json());
+
+const router = await createInvectRouter({
+  database: {
+    type: 'sqlite',
+    connectionString: process.env.DATABASE_URL!,
+  },
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+});
+
+app.use('/invect', router);
+app.listen(3000, () => {
+  console.log('Invect API at http://localhost:3000/invect');
+});
+```
+
+</Step>
+
+<Step>
+### Generate and migrate the database
+
+```bash
+npx invect-cli generate
+npx invect-cli migrate
+```
+
+</Step>
+
+<Step>
+### Start the server
+
+```bash
+npx tsx index.ts
+```
+
+The API is now live at `http://localhost:3000/invect`. Add the [frontend](#frontend) to get the visual flow editor.
+
+</Step>
+
+</Steps>
+
+### Configuration
+
+The `createInvectRouter` function accepts the full [`InvectConfig`](/docs/reference/configuration) object:
+
+```ts title="index.ts"
+const router = await createInvectRouter({
+  database: {
+    type: 'sqlite',
+    connectionString: process.env.DATABASE_URL!,
+  },
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+  execution: {
+    defaultTimeout: 60000,
+    maxConcurrentExecutions: 10,
+  },
+  triggers: {
+    cronEnabled: true,
+    webhookBaseUrl: 'https://your-app.com/invect',
+  },
+  plugins: [
+    // Add plugins here
+  ],
+  defaultCredentials: [
+    {
+      name: 'OpenAI',
+      type: 'llm',
+      provider: 'openai',
+      authType: 'api_key',
+      config: { apiKey: process.env.OPENAI_API_KEY! },
+    },
+  ],
+});
+```
+
+### With plugins
+
+```ts title="index.ts"
+import { createInvectRouter } from '@invect/express';
+import { authentication } from '@invect/user-auth/backend';
+import { rbacPlugin } from '@invect/rbac/backend';
+
+const router = await createInvectRouter({
+  database: {
+    type: 'sqlite',
+    connectionString: process.env.DATABASE_URL!,
+  },
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+  plugins: [
+    authentication({
+      auth, // Your Better Auth instance
+    }),
+    rbacPlugin(),
+  ],
+});
+```
+
+After adding plugins with database tables, run `npx invect-cli generate` and `npx invect-cli migrate` again to add the plugin tables.
+
+---
+
+## NestJS
+
+<Steps>
+
+<Step>
+### Install packages
+
+<Tabs items={['pnpm', 'npm', 'yarn', 'bun']}>
+  <Tab value="pnpm">
+  ```bash
+  pnpm add @invect/core @invect/nestjs
+  ```
+  </Tab>
+  <Tab value="npm">
+  ```bash
+  npm install @invect/core @invect/nestjs
+  ```
+  </Tab>
+  <Tab value="yarn">
+  ```bash
+  yarn add @invect/core @invect/nestjs
+  ```
+  </Tab>
+  <Tab value="bun">
+  ```bash
+  bun add @invect/core @invect/nestjs
+  ```
+  </Tab>
+</Tabs>
+</Step>
+
+<Step>
+### Set environment variables
+
+```bash title=".env"
+DATABASE_URL=file:./dev.db
+INVECT_ENCRYPTION_KEY=   # Generate with: npx invect-cli secret
+```
+
+</Step>
+
+<Step>
+### Import the module
+
+```ts title="app.module.ts"
+import { Module } from '@nestjs/common';
+import { InvectModule } from '@invect/nestjs';
+
+@Module({
+  imports: [
+    InvectModule.forRoot({
+      database: {
+        type: 'sqlite',
+        connectionString: process.env.DATABASE_URL!,
+      },
+      encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+This registers:
+
+- `INVECT_CORE` provider — the core `Invect` instance (singleton)
+- `InvectService` — injectable service wrapping the core
+- `InvectController` — all REST API endpoints under `/invect`
+
+</Step>
+
+<Step>
+### Generate and migrate the database
+
+```bash
+npx invect-cli generate
+npx invect-cli migrate
+```
+
+</Step>
+
+<Step>
+### Start the server
+
+```bash
+npx nest start --watch
+```
+
+The API is now live at `http://localhost:3000/invect`.
+
+</Step>
+
+</Steps>
+
+### Async configuration
+
+Use `forRootAsync` when you need to inject dependencies (e.g., `ConfigService`):
+
+```ts title="app.module.ts"
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { InvectModule } from '@invect/nestjs';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot(),
+    InvectModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        database: {
+          type: 'postgresql' as const,
+          connectionString: config.get('DATABASE_URL')!,
+        },
+        encryptionKey: config.get('INVECT_ENCRYPTION_KEY')!,
+      }),
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+### Accessing the core instance
+
+```ts title="my.service.ts"
+import { Injectable } from '@nestjs/common';
+import { InvectService } from '@invect/nestjs';
+
+@Injectable()
+export class MyService {
+  constructor(private readonly invect: InvectService) {}
+
+  async runWorkflow(flowId: string, inputs: Record<string, unknown>) {
+    const core = this.invect.getCore();
+    return core.startFlowRun(flowId, inputs);
+  }
+}
+```
+
+### With plugins
+
+```ts title="app.module.ts"
+import { InvectModule } from '@invect/nestjs';
+import { authentication } from '@invect/user-auth/backend';
+
+@Module({
+  imports: [
+    InvectModule.forRoot({
+      database: {
+        type: 'sqlite',
+        connectionString: process.env.DATABASE_URL!,
+      },
+      encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+      plugins: [authentication({ auth })],
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+---
+
+## Next.js
+
+<Steps>
+
+<Step>
+### Install packages
+
+<Tabs items={['pnpm', 'npm', 'yarn', 'bun']}>
+  <Tab value="pnpm">``` pnpm add @invect/core @invect/nextjs @invect/ui ```</Tab>
+  <Tab value="npm">``` npm install @invect/core @invect/nextjs @invect/ui ```</Tab>
+  <Tab value="yarn">``` yarn add @invect/core @invect/nextjs @invect/ui ```</Tab>
+  <Tab value="bun">``` bun add @invect/core @invect/nextjs @invect/ui ```</Tab>
+</Tabs>
+
+Next.js is self-contained — the API handler and frontend run in the same app.
+
+</Step>
+
+<Step>
+### Set environment variables
+
+```bash title=".env.local"
+DATABASE_URL=file:./dev.db
+INVECT_ENCRYPTION_KEY=   # Generate with: npx invect-cli secret
+```
+
+</Step>
+
+<Step>
+### Create the API route handler
+
+```ts title="app/api/invect/[...invect]/route.ts"
+import { createInvectHandler } from '@invect/nextjs';
+
+const handler = createInvectHandler({
+  database: {
+    type: 'sqlite',
+    connectionString: process.env.DATABASE_URL!,
+  },
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+});
+
+export const GET = handler.GET;
+export const POST = handler.POST;
+export const PATCH = handler.PATCH;
+export const PUT = handler.PUT;
+export const DELETE = handler.DELETE;
+```
+
+</Step>
+
+<Step>
+### Mount the frontend
+
+```tsx title="app/invect/[[...slug]]/page.tsx"
+'use client';
+
+import { Invect } from '@invect/ui';
+import '@invect/ui/styles';
+
+export default function InvectPage() {
+  return <Invect apiBaseUrl="/api/invect" basePath="/invect" />;
+}
+```
+
+<Callout type="info">
+  The `basePath` prop tells the Invect router where it's mounted so internal navigation works correctly.
+</Callout>
+</Step>
+
+<Step>
+### Generate and migrate the database
+
+```bash
+npx invect-cli generate
+npx invect-cli migrate
+```
+
+</Step>
+
+<Step>
+### Start the dev server
+
+```bash
+next dev
+```
+
+Open `http://localhost:3000/invect` — the visual flow editor is ready.
+
+</Step>
+
+</Steps>
+
+### With authentication and RBAC
+
+```ts title="lib/invect.ts"
+import { createInvectHandler } from '@invect/nextjs';
+import { authentication } from '@invect/user-auth/backend';
+import { rbacPlugin } from '@invect/rbac/backend';
+import { auth } from '@/lib/auth'; // Your Better Auth instance
+
+export const handler = createInvectHandler({
+  database: {
+    type: 'postgresql',
+    connectionString: process.env.DATABASE_URL!,
+  },
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+  plugins: [authentication({ auth }), rbacPlugin()],
+});
+```
+
+```tsx title="app/invect/[[...slug]]/page.tsx"
+'use client';
+
+import { Invect, InvectShell } from '@invect/ui';
+import { AuthenticatedInvect } from '@invect/user-auth/ui';
+import '@invect/ui/styles';
+
+export default function InvectPage() {
+  return (
+    <AuthenticatedInvect
+      apiBaseUrl="/api/invect"
+      basePath="/invect"
+      InvectComponent={Invect}
+      ShellComponent={InvectShell}
+      theme="dark"
+    />
+  );
+}
+```
+
+See [Authentication Plugin](/docs/plugins/authentication) and [Access Control Plugin](/docs/plugins/access-control) for details.
+
+---
+
+## Frontend
+
+To add the visual flow editor to a separate React app (not needed for Next.js):
+
+<Tabs items={['pnpm', 'npm', 'yarn', 'bun']}>
+  <Tab value="pnpm">``` pnpm add @invect/ui ```</Tab>
+  <Tab value="npm">``` npm install @invect/ui ```</Tab>
+  <Tab value="yarn">``` yarn add @invect/ui ```</Tab>
+  <Tab value="bun">``` bun add @invect/ui ```</Tab>
+</Tabs>
+
+```tsx title="App.tsx"
+import { Invect } from '@invect/ui';
+import '@invect/ui/styles';
+
+function App() {
+  return <Invect apiBaseUrl="http://localhost:3000/invect" />;
+}
+```
+
+## PostgreSQL
+
+Any framework can use PostgreSQL by changing the database config:
+
+```ts
+database: {
+  type: 'postgresql',
+  connectionString: 'postgresql://user:pass@localhost:5432/myapp',
+},
+```
