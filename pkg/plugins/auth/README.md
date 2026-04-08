@@ -25,34 +25,45 @@ pnpm add @invect/user-auth better-auth
 
 ## Backend
 
+The simplest setup — the plugin manages Better Auth internally using Invect's database:
+
+```ts
+import { createInvectRouter } from '@invect/express';
+import { authentication } from '@invect/user-auth';
+
+const invectRouter = await createInvectRouter({
+  database: { type: 'sqlite', connectionString: 'file:./dev.db' },
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+  plugins: [
+    authentication({
+      globalAdmins: [
+        { email: process.env.INVECT_ADMIN_EMAIL!, pw: process.env.INVECT_ADMIN_PASSWORD! },
+      ],
+    }),
+  ],
+});
+
+app.use('/invect', invectRouter);
+```
+
+For full control, provide your own Better Auth instance:
+
 ```ts
 import { betterAuth } from 'better-auth';
 import { authentication } from '@invect/user-auth';
-import { createInvectRouter } from '@invect/express';
 
 const auth = betterAuth({
   database: { url: 'file:./auth.db', type: 'sqlite' },
   emailAndPassword: { enabled: true },
 });
 
-app.use(
-  '/invect',
-  createInvectRouter({
-    database: { type: 'sqlite', connectionString: 'file:./dev.db' },
-    plugins: [
-      authentication({
-        auth,
-        globalAdmins: [
-          {
-            email: process.env.INVECT_ADMIN_EMAIL,
-            pw: process.env.INVECT_ADMIN_PASSWORD,
-            name: 'Admin',
-          },
-        ],
-      }),
-    ],
-  }),
-);
+const invectRouter = await createInvectRouter({
+  database: { type: 'sqlite', connectionString: 'file:./dev.db' },
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+  plugins: [authentication({ auth })],
+});
+
+app.use('/invect', invectRouter);
 ```
 
 Sign-up is disabled in the UI. The initial admin is seeded from `globalAdmins`. Subsequent users are created by admins through the user management UI or API.

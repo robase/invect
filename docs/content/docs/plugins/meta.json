@@ -7,6 +7,7 @@
     "access-control",
     "webhooks",
     "version-control",
+    "mcp",
     "build-your-own"
   ]
 }

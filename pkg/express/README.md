@@ -37,16 +37,15 @@ import { createInvectRouter } from '@invect/express';
 
 const app = express();
 
-app.use(
-  '/invect',
-  createInvectRouter({
-    database: {
-      type: 'sqlite',
-      connectionString: 'file:./dev.db',
-    },
-  }),
-);
+const invectRouter = await createInvectRouter({
+  database: {
+    type: 'sqlite',
+    connectionString: 'file:./dev.db',
+  },
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!, // npx invect-cli secret
+});
 
+app.use('/invect', invectRouter);
 app.listen(3000);
 ```
 
@@ -58,13 +57,16 @@ That's it. The router handles initialization, batch polling, and all API routes.
 import { authentication } from '@invect/user-auth';
 import { rbacPlugin } from '@invect/rbac';
 
-app.use(
-  '/invect',
-  createInvectRouter({
-    database: { type: 'sqlite', connectionString: 'file:./dev.db' },
-    plugins: [authentication({ auth }), rbacPlugin()],
-  }),
-);
+const invectRouter = await createInvectRouter({
+  database: { type: 'sqlite', connectionString: 'file:./dev.db' },
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+  plugins: [
+    authentication({ globalAdmins: [{ email: 'admin@example.com', pw: 'secret' }] }),
+    rbacPlugin(),
+  ],
+});
+
+app.use('/invect', invectRouter);
 ```
 
 ## Frontend

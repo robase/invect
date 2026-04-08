@@ -42,6 +42,7 @@ const handler = createInvectHandler({
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL || 'file:./dev.db',
   },
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!, // npx invect-cli secret
 });
 
 export const GET = handler.GET;

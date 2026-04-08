@@ -71,7 +71,3 @@ import '@invect/ui/styles';
 ## License
 
 [MIT](../../LICENSE)
-
-## License
-
-[MIT](../../LICENSE)

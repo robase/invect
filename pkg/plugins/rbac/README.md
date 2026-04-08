@@ -29,16 +29,16 @@ pnpm add @invect/rbac
 import { authentication } from '@invect/user-auth';
 import { rbacPlugin } from '@invect/rbac';
 
-app.use(
-  '/invect',
-  createInvectRouter({
-    database: { type: 'sqlite', connectionString: 'file:./dev.db' },
-    plugins: [
-      authentication({ auth }), // Must come first
-      rbacPlugin(),
-    ],
-  }),
-);
+const invectRouter = await createInvectRouter({
+  database: { type: 'sqlite', connectionString: 'file:./dev.db' },
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+  plugins: [
+    authentication({ globalAdmins: [{ email: 'admin@example.com', pw: 'secret' }] }), // Must come first
+    rbacPlugin(),
+  ],
+});
+
+app.use('/invect', invectRouter);
 ```
 
 ## Frontend

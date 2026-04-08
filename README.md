@@ -51,16 +51,15 @@ import { createInvectRouter } from '@invect/express';
 
 const app = express();
 
-app.use(
-  '/invect',
-  createInvectRouter({
-    database: {
-      type: 'sqlite',
-      connectionString: 'file:./dev.db',
-    },
-  }),
-);
+const invectRouter = await createInvectRouter({
+  database: {
+    type: 'sqlite',
+    connectionString: 'file:./dev.db',
+  },
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!, // npx invect-cli secret
+});
 
+app.use('/invect', invectRouter);
 app.listen(3000);
 ```
 
@@ -80,22 +79,25 @@ export default () => <Invect apiBaseUrl="http://localhost:3000/invect" />;
 - **50+ Built-in Actions** — Gmail, Slack, GitHub, Google Drive, Linear, Postgres, and more.
 - **Batch Processing** — Cut AI costs 50% with native OpenAI and Anthropic batch APIs.
 - **AI-Assisted Builder** — Describe what you need in plain language and the assistant wires up nodes for you.
-- **Multi-Database** — SQLite, PostgreSQL, and MySQL via Drizzle ORM.
+- **Multi-Database** — SQLite, PostgreSQL, and MySQL. Works with Drizzle ORM, Prisma, or raw SQL migrations.
 - **OAuth2 Credentials** — AES-256-GCM encrypted credential storage with full OAuth2 support.
 - **Framework Agnostic** — One core, thin adapters for Express, NestJS, and Next.js.
 
 ## Packages
 
-| Package                                 | Description                                                     |
-| --------------------------------------- | --------------------------------------------------------------- |
-| [`@invect/core`](pkg/core)              | Framework-agnostic engine — flows, execution, actions, database |
-| [`@invect/express`](pkg/express)        | Express router adapter                                          |
-| [`@invect/nestjs`](pkg/nestjs)          | NestJS module adapter                                           |
-| [`@invect/nextjs`](pkg/nextjs)          | Next.js App Router handler                                      |
-| [`@invect/ui`](pkg/ui)                  | React flow editor and dashboard                                 |
-| [`@invect/cli`](pkg/cli)                | CLI for schema generation, migrations, and project setup        |
-| [`@invect/user-auth`](pkg/plugins/auth) | Authentication plugin (Better Auth)                             |
-| [`@invect/rbac`](pkg/plugins/rbac)      | Role-based access control plugin                                |
+| Package                                                    | Description                                                     |
+| ---------------------------------------------------------- | --------------------------------------------------------------- |
+| [`@invect/core`](pkg/core)                                 | Framework-agnostic engine — flows, execution, actions, database |
+| [`@invect/express`](pkg/express)                           | Express router adapter                                          |
+| [`@invect/nestjs`](pkg/nestjs)                             | NestJS module adapter                                           |
+| [`@invect/nextjs`](pkg/nextjs)                             | Next.js App Router handler                                      |
+| [`@invect/ui`](pkg/ui)                                     | React flow editor and dashboard                                 |
+| [`@invect/cli`](pkg/cli)                                   | CLI for schema generation, migrations, and project setup        |
+| [`@invect/user-auth`](pkg/plugins/auth)                    | Authentication plugin (Better Auth)                             |
+| [`@invect/rbac`](pkg/plugins/rbac)                         | Role-based access control plugin                                |
+| [`@invect/webhooks`](pkg/plugins/webhooks)                 | Webhook triggers with signature verification and rate limiting  |
+| [`@invect/version-control`](pkg/plugins/version-control)   | Sync flows to GitHub as `.flow.ts` files                        |
+| [`@invect/mcp`](pkg/plugins/mcp)                           | Model Context Protocol server for AI coding agents              |
 
 ## Examples
 

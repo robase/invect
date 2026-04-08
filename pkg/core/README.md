@@ -34,20 +34,19 @@ npm install @invect/core
 ## Usage
 
 ```ts
-import { Invect } from '@invect/core';
+import { createInvect } from '@invect/core';
 
-const core = new Invect({
+const invect = await createInvect({
   database: {
     type: 'sqlite',
     connectionString: 'file:./dev.db',
   },
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!, // npx invect-cli secret
 });
 
-await core.initialize();
-
 // Create and run flows programmatically
-const flow = await core.createFlow({ name: 'My Workflow' });
-const result = await core.startFlowRun(flow.id, { message: 'Hello' });
+const flow = await invect.createFlow({ name: 'My Workflow' });
+const result = await invect.startFlowRun(flow.id, { message: 'Hello' });
 ```
 
 ## What's Inside
@@ -57,7 +56,7 @@ const result = await core.startFlowRun(flow.id, { message: 'Hello' });
 - **AI agents** — Iterative tool-calling loops with OpenAI and Anthropic APIs.
 - **Batch processing** — Native OpenAI and Anthropic batch API support with automatic pause/resume.
 - **Credentials** — AES-256-GCM encrypted storage with full OAuth2 flow support.
-- **Multi-database** — SQLite, PostgreSQL, and MySQL via Drizzle ORM.
+- **Multi-database** — SQLite, PostgreSQL, and MySQL. Works with Drizzle ORM, Prisma, or raw SQL migrations.
 - **Plugin system** — Composable plugins for auth, RBAC, and custom extensions.
 
 ## Types
@@ -67,10 +66,6 @@ Import types for frontend consumption from the `/types` subpath (no runtime code
 ```ts
 import type { FlowDefinition, FlowRunResult } from '@invect/core/types';
 ```
-
-## License
-
-[MIT](../../LICENSE)
 
 ## License
 
