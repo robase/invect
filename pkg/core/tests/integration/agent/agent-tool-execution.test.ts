@@ -612,36 +612,38 @@ describe('Agent Node + Tool Execution', () => {
     it('should resolve nested object properties in templates', async () => {
       responseQueue.push(textResponse('Got the data.'));
 
-      const result = await runAgentFlow({
-        nodes: [
-          {
-            id: 'input-1',
-            type: 'core.input',
-            label: 'Data',
-            referenceId: 'data',
-            params: {
-              variableName: 'payload',
-              defaultValue: '{"user": {"name": "Alice", "age": 30}}',
+      const result = await runAgentFlow(
+        {
+          nodes: [
+            {
+              id: 'input-1',
+              type: 'core.input',
+              label: 'Data',
+              referenceId: 'data',
+              params: {
+                variableName: 'payload',
+              },
+              position: { x: 0, y: 0 },
             },
-            position: { x: 0, y: 0 },
-          },
-          {
-            id: 'js-1',
-            type: 'core.javascript',
-            label: 'Extract',
-            referenceId: 'extract',
-            params: { code: '$input.data' },
-            position: { x: 200, y: 0 },
-          },
-          agentNode({
-            taskPrompt: 'Greet {{ extract }}',
-          }),
-        ],
-        edges: [
-          { id: 'e1', source: 'input-1', target: 'js-1' },
-          { id: 'e2', source: 'js-1', target: 'agent-1' },
-        ],
-      });
+            {
+              id: 'js-1',
+              type: 'core.javascript',
+              label: 'Extract',
+              referenceId: 'extract',
+              params: { code: '$input.data' },
+              position: { x: 200, y: 0 },
+            },
+            agentNode({
+              taskPrompt: 'Greet {{ extract }}',
+            }),
+          ],
+          edges: [
+            { id: 'e1', source: 'input-1', target: 'js-1' },
+            { id: 'e2', source: 'js-1', target: 'agent-1' },
+          ],
+        },
+        { payload: { user: { name: 'Alice', age: 30 } } },
+      );
 
       expect(result.status).toBe(FlowRunStatus.SUCCESS);
     });
@@ -734,26 +736,17 @@ describe('Agent Node + Tool Execution', () => {
   // Multiple enabled tools
   // -------------------------------------------------------------------------
   describe('multiple tools', () => {
-    it('should make both math_eval and json_logic available to the agent', async () => {
-      // LLM calls json_logic first
-      responseQueue.push(
-        toolCallResponse([
-          {
-            id: 'jl1',
-            name: 'inst_json',
-            arguments: {
-              rule: { '>': [{ var: 'age' }, 18] },
-              data: { age: 25 },
-            },
-          },
-        ]),
-      );
-      // Then calls math
+    it('should make multiple tool instances available to the agent', async () => {
+      // LLM calls first math instance
       responseQueue.push(
         toolCallResponse([{ id: 'me1', name: 'inst_math', arguments: { expression: '25 - 18' } }]),
       );
+      // Then calls second math instance
+      responseQueue.push(
+        toolCallResponse([{ id: 'me2', name: 'inst_math_2', arguments: { expression: '7 * 2' } }]),
+      );
       // Final text
-      responseQueue.push(textResponse('Age 25 is adult, 7 years over 18.'));
+      responseQueue.push(textResponse('25 - 18 = 7, and 7 * 2 = 14.'));
 
       const result = await runAgentFlow({
         nodes: [
@@ -767,10 +760,10 @@ describe('Agent Node + Tool Execution', () => {
                 params: {},
               },
               {
-                instanceId: 'inst_json',
-                toolId: 'json_logic',
-                name: 'JSON Logic',
-                description: 'Evaluate JSON logic',
+                instanceId: 'inst_math_2',
+                toolId: 'math_eval',
+                name: 'Math Evaluate 2',
+                description: 'Another math evaluator',
                 params: {},
               },
             ],
@@ -785,8 +778,8 @@ describe('Agent Node + Tool Execution', () => {
       expect(output.toolResults).toHaveLength(2);
 
       const toolIds = output.toolResults.map((r) => r.toolId);
-      expect(toolIds).toContain('inst_json');
       expect(toolIds).toContain('inst_math');
+      expect(toolIds).toContain('inst_math_2');
     });
 
     it('should pass enabled tool definitions to OpenAI in correct format', async () => {
@@ -804,10 +797,10 @@ describe('Agent Node + Tool Execution', () => {
                 params: {},
               },
               {
-                instanceId: 'inst_json',
-                toolId: 'json_logic',
-                name: 'JSON Logic',
-                description: 'Evaluate JSON logic',
+                instanceId: 'inst_math_2',
+                toolId: 'math_eval',
+                name: 'Math Evaluate 2',
+                description: 'Another math evaluator',
                 params: {},
               },
             ],
@@ -828,7 +821,7 @@ describe('Agent Node + Tool Execution', () => {
 
       const toolNames = tools.map((t) => t.function.name);
       expect(toolNames).toContain('inst_math');
-      expect(toolNames).toContain('inst_json');
+      expect(toolNames).toContain('inst_math_2');
 
       // Each tool should have a valid JSON Schema for parameters
       for (const tool of tools) {

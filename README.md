@@ -17,6 +17,16 @@
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License" /></a>
 </p>
 
+<p align="center">
+  <a href="https://invect.dev/demo">
+    <img src=".github/assets/flow-screenshot.png" alt="Invect Flow Editor" width="800" />
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://invect.dev/demo"><strong>Try the live demo →</strong></a>
+</p>
+
 ---
 
 Invect is an open-source workflow orchestration library you mount directly into your existing Express, NestJS, or Next.js app. Visual flow editor, AI agent nodes, 50+ built-in integrations, and batch processing — all as a library, not a platform.
