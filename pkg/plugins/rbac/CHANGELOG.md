@@ -1,5 +1,16 @@
 # @invect/rbac
 
+## 0.0.7
+
+### Patch Changes
+
+- fix dynamic imports
+
+- Updated dependencies []:
+  - @invect/core@0.0.7
+  - @invect/user-auth@0.0.7
+  - @invect/ui@0.0.7
+
 ## 0.0.6
 
 ### Patch Changes

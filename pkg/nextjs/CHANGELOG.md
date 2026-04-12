@@ -1,5 +1,14 @@
 # @invect/nextjs
 
+## 0.0.7
+
+### Patch Changes
+
+- fix dynamic imports
+
+- Updated dependencies []:
+  - @invect/core@0.0.7
+
 ## 0.0.6
 
 ### Patch Changes
