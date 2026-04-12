@@ -11,8 +11,9 @@ Ensure every provider action (defined via `defineAction()`) meets these quality 
 
 1. **Documentation link** — The provider's `docsUrl` in `pkg/core/src/actions/providers.ts` must link to the official API reference. Each action's description should reference the specific API endpoint or docs section it wraps.
 2. **Example response shape** — Actions that make external API calls must include a representative JSON response shape in their `description` field so AI agents understand what data they'll get back.
-3. **Accuracy** — The action's params, description, and behavior must match the current state of the provider's official API. Flag deprecated endpoints, renamed fields, or missing required params.
-4. **Coverage** — The most common use cases for each provider should have corresponding actions. Identify gaps (e.g., a Gmail provider without `search_messages`, or a Stripe provider without `create_payment_intent`).
+3. **Invocation summary** — Action descriptions must briefly summarize how the tool should be called, including expected params, useful filters/query arguments, and request body shape when applicable.
+4. **Accuracy** — The action's params, description, and behavior must match the current state of the provider's official API. Flag deprecated endpoints, renamed fields, or missing required params.
+5. **Coverage** — The most common use cases for each provider should have corresponding actions. Identify gaps (e.g., a Gmail provider without `search_messages`, or a Stripe provider without `create_payment_intent`).
 
 ## Key Files
 
@@ -28,6 +29,7 @@ Each action is defined with `defineAction()` and auto-registers as both a **flow
 
 - **Provider-level** `docsUrl` lives in `ProviderDef` (in `providers.ts`)
 - **Action-level** documentation goes in the `description` string field
+- Invocation guidance should live in the `description` string field as a short “call with …” summary
 - Response shapes should be embedded in the action `description` as a brief JSON example
 - Credential requirements are in the `credential` field (OAuth2 scopes, API key, etc.)
 
@@ -56,7 +58,8 @@ When asked to audit a provider:
 
 1. Check that the provider has a `docsUrl` in `providers.ts`. If missing, look up the official API reference URL and **auto-fix it**.
 2. For each action, verify the `description` references the relevant API endpoint or operation
-3. **Auto-fix** generic descriptions by adding the specific API method/endpoint name
+3. Verify the `description` tells the agent what to pass in: expected params, important filters/query args, and request body shape when relevant
+4. **Auto-fix** generic descriptions by adding the specific API method/endpoint name and invocation summary
 
 ### Step 4: Verify Response Shapes
 
@@ -82,6 +85,7 @@ When asked to audit a provider:
 | ------------------------------------------------------ | ----------- |
 | Missing/wrong `docsUrl` in providers.ts                | ✓ Auto-fix  |
 | Generic or inaccurate descriptions                     | ✓ Auto-fix  |
+| Missing invocation summary in descriptions             | ✓ Auto-fix  |
 | Missing response shape examples in descriptions        | ✓ Auto-fix  |
 | Incorrect param metadata (labels, placeholders, types) | ✓ Auto-fix  |
 | Missing OAuth2 scopes                                  | ✓ Auto-fix  |
@@ -131,7 +135,7 @@ Before:
   description: 'Send an email via Gmail'
 
 After:
-  description: 'Send an email via Gmail (messages.send). Supports plain text/HTML, CC/BCC, and threading.\n\nExample response:\n```json\n{"id": "msg123", "threadId": "thread456", "labelIds": ["SENT"]}\n```'
+  description: 'Send an email via Gmail (messages.send). Call with `to`, `subject`, and either a plain-text or HTML body; optional `cc`, `bcc`, and `threadId` are supported.\n\nExample response:\n```json\n{"id": "msg123", "threadId": "thread456", "labelIds": ["SENT"]}\n```'
 ````
 
-Keep descriptions under ~500 chars. The JSON example should show 2-5 representative fields.
+Keep descriptions under ~500 chars. The invocation summary should mention the main params and any important filters or body fields. The JSON example should show 2-5 representative fields.

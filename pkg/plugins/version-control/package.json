@@ -1,6 +1,6 @@
 {
   "name": "@invect/version-control",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Version control plugin for Invect — sync flows to GitHub/GitLab/Bitbucket as .flow.ts files",
   "license": "MIT",
   "files": [
@@ -58,7 +58,7 @@
     "vitest": "^3.2.4"
   },
   "peerDependencies": {
-    "@invect/ui": ">=0.1.4",
+    "@invect/ui": ">=0.0.2",
     "@tanstack/react-query": ">=5.0.0",
     "react": ">=18.0.0",
     "react-dom": ">=18.0.0"
