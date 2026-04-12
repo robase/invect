@@ -372,8 +372,16 @@ export const initCommand = new Command('init')
       // 4. Install dependencies
       step('Install Dependencies');
 
-      const depsToInstall: string[] = ['@invect/core'];
-      const devDepsToInstall: string[] = ['@invect/cli'];
+      const depsToInstall: string[] = [];
+      const devDepsToInstall: string[] = [];
+
+      if (!('@invect/core' in allDeps)) {
+        depsToInstall.push(getPreferredPackageSpec('@invect/core'));
+      }
+
+      if (!('@invect/cli' in allDeps)) {
+        devDepsToInstall.push(getPreferredPackageSpec('@invect/cli'));
+      }
 
       // @invect/core ships postgres, better-sqlite3, mysql2, and @libsql/client
       // as direct dependencies, so they're installed transitively.
@@ -404,38 +412,50 @@ export const initCommand = new Command('init')
 
       // Framework adapter
       if (framework.adapterPackage && !(framework.adapterPackage in allDeps)) {
-        depsToInstall.push(framework.adapterPackage);
+        depsToInstall.push(getPreferredPackageSpec(framework.adapterPackage));
       }
 
       // Frontend package
       if (framework.id !== 'other') {
         if (!('@invect/ui' in allDeps)) {
-          depsToInstall.push('@invect/ui');
+          depsToInstall.push(getPreferredPackageSpec('@invect/ui'));
         }
       }
 
-      console.log(pc.dim(`  Dependencies: ${depsToInstall.join(', ')}`));
+      const hasPackagesToInstall = depsToInstall.length > 0 || devDepsToInstall.length > 0;
+
+      if (depsToInstall.length > 0) {
+        console.log(pc.dim(`  Dependencies: ${depsToInstall.join(', ')}`));
+      }
       if (devDepsToInstall.length > 0) {
         console.log(pc.dim(`  Dev dependencies: ${devDepsToInstall.join(', ')}`));
       }
+      if (!hasPackagesToInstall) {
+        console.log(pc.dim('  All required packages are already installed'));
+      }
 
-      let installSucceeded = false;
+      let installSucceeded = !hasPackagesToInstall;
 
-      const { shouldInstall } = await prompts(
-        {
-          type: 'confirm',
-          name: 'shouldInstall',
-          message: `Install packages using ${pc.bold(pm)}?`,
-          initial: true,
-        },
-        { onCancel },
-      );
+      if (hasPackagesToInstall) {
+        const { shouldInstall } = await prompts(
+          {
+            type: 'confirm',
+            name: 'shouldInstall',
+            message: `Install packages using ${pc.bold(pm)}?`,
+            initial: true,
+          },
+          { onCancel },
+        );
 
-      if (shouldInstall) {
+        if (!shouldInstall) {
+          installSucceeded = false;
+        } else {
         try {
-          const installCmd = getInstallCommand(pm, depsToInstall, false);
-          console.log(pc.dim(`  $ ${installCmd}`));
-          execSync(installCmd, { stdio: 'inherit', cwd: process.cwd() });
+          if (depsToInstall.length > 0) {
+            const installCmd = getInstallCommand(pm, depsToInstall, false);
+            console.log(pc.dim(`  $ ${installCmd}`));
+            execSync(installCmd, { stdio: 'inherit', cwd: process.cwd() });
+          }
 
           if (devDepsToInstall.length > 0) {
             const devCmd = getInstallCommand(pm, devDepsToInstall, true);
@@ -454,6 +474,7 @@ export const initCommand = new Command('init')
           }
           debugError('Package installation error', error);
         }
+      }
       }
 
       // 5. Create config file
@@ -499,9 +520,7 @@ export const initCommand = new Command('init')
       if (schemaTool.id === 'drizzle' && !existingDrizzleConfig) {
         step('Setup Drizzle');
 
-        const defaultSchemaPath = existingSchemaPath
-          ? path.relative(process.cwd(), existingSchemaPath)
-          : `${configDir === 'src' ? './src/database' : './database'}/schema.ts`;
+        const defaultSchemaPath = getDefaultDrizzleSchemaPath(existingSchemaPath);
 
         const drizzleConfigCode = generateDrizzleConfigFile(database, defaultSchemaPath);
         fs.writeFileSync(path.join(process.cwd(), 'drizzle.config.ts'), drizzleConfigCode, 'utf-8');
@@ -887,6 +906,87 @@ export default defineConfig({
 ${dbCredentials[database.id]}
 });
 `;
+}
+
+/** @internal — exported for testing */
+export function getDefaultDrizzleSchemaPath(existingSchemaPath?: string | null): string {
+  if (existingSchemaPath) {
+    const relativePath = path.relative(process.cwd(), existingSchemaPath);
+    return relativePath.startsWith('.') ? relativePath : `./${relativePath}`;
+  }
+
+  return './db/schema.ts';
+}
+
+/** @internal — exported for testing */
+export function getPreferredPackageSpec(packageName: string, cwd = process.cwd()): string {
+  if (!packageName.startsWith('@invect/')) {
+    return packageName;
+  }
+
+  const workspaceRoot = findWorkspaceRoot(cwd);
+  if (!workspaceRoot) {
+    return packageName;
+  }
+
+  return hasWorkspacePackage(workspaceRoot, packageName)
+    ? `${packageName}@workspace:*`
+    : packageName;
+}
+
+function findWorkspaceRoot(startDir: string): string | null {
+  let currentDir = path.resolve(startDir);
+
+  while (true) {
+    if (fs.existsSync(path.join(currentDir, 'pnpm-workspace.yaml'))) {
+      return currentDir;
+    }
+
+    const parentDir = path.dirname(currentDir);
+    if (parentDir === currentDir) {
+      return null;
+    }
+
+    currentDir = parentDir;
+  }
+}
+
+function hasWorkspacePackage(workspaceRoot: string, packageName: string): boolean {
+  const packageDirs = [
+    path.join(workspaceRoot, 'pkg'),
+    path.join(workspaceRoot, 'pkg', 'plugins'),
+    path.join(workspaceRoot, 'examples'),
+    path.join(workspaceRoot, 'docs'),
+  ];
+
+  for (const packageDir of packageDirs) {
+    if (!fs.existsSync(packageDir)) {
+      continue;
+    }
+
+    const entries = fs.readdirSync(packageDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory()) {
+        continue;
+      }
+
+      const packageJsonPath = path.join(packageDir, entry.name, 'package.json');
+      if (!fs.existsSync(packageJsonPath)) {
+        continue;
+      }
+
+      try {
+        const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')) as { name?: string };
+        if (pkg.name === packageName) {
+          return true;
+        }
+      } catch (error) {
+        debugError(`Failed to read workspace package metadata from ${packageJsonPath}`, error);
+      }
+    }
+  }
+
+  return false;
 }
 
 function findExistingPrismaSchema(): string | null {

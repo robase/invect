@@ -11,11 +11,14 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import {
   generateConfigFile,
   getInstallCommand,
   generateDrizzleConfigFile,
+  getDefaultDrizzleSchemaPath,
+  getPreferredPackageSpec,
   parseDrizzleConfig,
   FRAMEWORKS,
   DATABASES,
@@ -336,6 +339,61 @@ describe('generateDrizzleConfigFile()', () => {
   it('should export default defineConfig', () => {
     const config = generateDrizzleConfigFile(sqliteDb, './db/schema.ts');
     expect(config).toContain('export default defineConfig');
+  });
+});
+
+// =============================================================================
+// getDefaultDrizzleSchemaPath()
+// =============================================================================
+
+describe('getDefaultDrizzleSchemaPath()', () => {
+  it('should default to db/schema.ts for new projects', () => {
+    expect(getDefaultDrizzleSchemaPath()).toBe('./db/schema.ts');
+  });
+
+  it('should preserve relative existing schema paths', () => {
+    const existingSchemaPath = path.join(process.cwd(), 'src/database/schema.ts');
+    expect(getDefaultDrizzleSchemaPath(existingSchemaPath)).toBe('./src/database/schema.ts');
+  });
+});
+
+// =============================================================================
+// getPreferredPackageSpec()
+// =============================================================================
+
+describe('getPreferredPackageSpec()', () => {
+  it('should keep non-Invect packages unchanged', () => {
+    expect(getPreferredPackageSpec('react')).toBe('react');
+  });
+
+  it('should prefer workspace protocol for local Invect packages', () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'invect-cli-workspace-'));
+
+    try {
+      fs.writeFileSync(path.join(tempRoot, 'pnpm-workspace.yaml'), 'packages:\n  - pkg/*\n');
+      fs.mkdirSync(path.join(tempRoot, 'pkg', 'cli'), { recursive: true });
+      fs.writeFileSync(
+        path.join(tempRoot, 'pkg', 'cli', 'package.json'),
+        JSON.stringify({ name: '@invect/cli' }),
+      );
+      fs.mkdirSync(path.join(tempRoot, 'examples', 'app'), { recursive: true });
+
+      expect(getPreferredPackageSpec('@invect/cli', path.join(tempRoot, 'examples', 'app'))).toBe(
+        '@invect/cli@workspace:*',
+      );
+    } finally {
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('should leave Invect packages unchanged outside a workspace', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'invect-cli-no-workspace-'));
+
+    try {
+      expect(getPreferredPackageSpec('@invect/cli', tempDir)).toBe('@invect/cli');
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 });
 

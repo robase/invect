@@ -1,12 +1,24 @@
-import {
+import type {
   BatchProvider,
-  createInvect,
-  InvectConfig,
+  CredentialFilters,
   GraphNodeType,
-  createPluginDatabaseApi,
+  InvectConfig,
+  InvectIdentity,
+  InvectInstance,
 } from '@invect/core';
-import type { InvectInstance } from '@invect/core';
 import { ZodError } from 'zod';
+
+type CoreModule = typeof import('@invect/core');
+
+let coreModule: CoreModule | null = null;
+
+const loadCoreModule = async (): Promise<CoreModule> => {
+  if (!coreModule) {
+    coreModule = await import('@invect/core');
+  }
+
+  return coreModule;
+};
 
 /**
  * Invect Next.js API Route Handler
@@ -73,6 +85,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
             throw new Error('Skipping database initialization during build');
           }
 
+          const { createInvect } = await loadCoreModule();
           core = await createInvect(config);
           await core.startBatchPolling();
           // eslint-disable-next-line no-console
@@ -484,6 +497,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
           return Response.json(await initializedCore.testing.getModelsForCredential(credentialId));
         }
         if (providerParam) {
+          const { BatchProvider } = await loadCoreModule();
           const normalized = providerParam.trim().toUpperCase();
           if (!Object.values(BatchProvider).includes(normalized as BatchProvider)) {
             return Response.json(
@@ -511,6 +525,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
         const rawNodeType = path.split('/')[1] ?? '';
         const nodeTypeParam = rawNodeType.includes('.') ? rawNodeType : rawNodeType.toUpperCase();
 
+        const { GraphNodeType } = await loadCoreModule();
         const isLegacyEnum = !rawNodeType.includes('.') && nodeTypeParam in GraphNodeType;
         const isActionId = rawNodeType.includes('.');
 
@@ -759,9 +774,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
           filters.isActive = isActive === 'true';
         }
         return Response.json(
-          await initializedCore.credentials.list(
-            filters as import('@invect/core').CredentialFilters,
-          ),
+          await initializedCore.credentials.list(filters as CredentialFilters),
         );
       }
 
@@ -1005,7 +1018,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
         const pluginRequestContext = {
           path: '/' + path.replace(/^plugins\/?/, ''),
           method,
-          identity: null as import('@invect/core').InvectIdentity | null,
+          identity: null as InvectIdentity | null,
         };
         const hookResult = await initializedCore.plugins
           .getHookRunner()
@@ -1026,7 +1039,9 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
             return h;
           })(),
           identity: pluginRequestContext.identity,
-          database: createPluginDatabaseApi(initializedCore.plugins.getDatabaseConnection()),
+          database: (await loadCoreModule()).createPluginDatabaseApi(
+            initializedCore.plugins.getDatabaseConnection(),
+          ),
           request: requestClone,
           core: {
             getPermissions: (identity) => initializedCore.auth.getPermissions(identity),
@@ -1093,6 +1108,7 @@ export function createInvectEndpoint(config: InvectConfig) {
     if (!initializationPromise) {
       initializationPromise = (async () => {
         try {
+          const { createInvect } = await loadCoreModule();
           core = await createInvect(config);
           await core.startBatchPolling();
           // eslint-disable-next-line no-console
@@ -1158,4 +1174,8 @@ export function createInvectEndpoint(config: InvectConfig) {
 
 // Re-export types from core for convenience
 export type { InvectConfig, InvectInstance } from '@invect/core';
-export { createInvect } from '@invect/core';
+
+export async function createInvect(config: InvectConfig): Promise<InvectInstance> {
+  const { createInvect: createCoreInvect } = await loadCoreModule();
+  return createCoreInvect(config);
+}

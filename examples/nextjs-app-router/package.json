@@ -24,6 +24,7 @@
     "tailwindcss": "^4.1.12"
   },
   "devDependencies": {
+    "@invect/cli": "workspace:*",
     "@types/node": "^20",
     "@types/react": "^18.3.7",
     "@types/react-dom": "^18.3.7",

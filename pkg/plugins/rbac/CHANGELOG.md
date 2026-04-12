@@ -1,5 +1,16 @@
 # @invect/rbac
 
+## 0.0.6
+
+### Patch Changes
+
+- secure-exec -> quickjs revert
+
+- Updated dependencies []:
+  - @invect/core@0.0.6
+  - @invect/user-auth@0.0.6
+  - @invect/ui@0.0.6
+
 ## 0.0.5
 
 ### Patch Changes

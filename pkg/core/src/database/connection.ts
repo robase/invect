@@ -1,8 +1,13 @@
 // Database connection management for Invect core
-import { drizzle } from 'drizzle-orm/postgres-js';
-import { drizzle as drizzleSQLite } from 'drizzle-orm/better-sqlite3';
-import { drizzle as drizzleMySQL } from 'drizzle-orm/mysql2';
-import Database from 'better-sqlite3';
+//
+// All database driver packages (better-sqlite3, @libsql/client, postgres,
+// pg, mysql2, drizzle-orm/*) are imported dynamically so that bundlers
+// (webpack / Next.js) don't try to resolve them statically.  This prevents
+// errors like the @libsql `require.context` pulling in README.md.
+import type { drizzle as drizzlePostgresType } from 'drizzle-orm/postgres-js';
+import type { drizzle as drizzleSQLiteType } from 'drizzle-orm/better-sqlite3';
+import type { drizzle as drizzleMySQLType } from 'drizzle-orm/mysql2';
+import type Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
 
@@ -17,7 +22,7 @@ import { Logger, InvectDatabaseConfig } from 'src/schemas';
  * Covers both better-sqlite3 and libsql drivers (they share the same schema API).
  */
 type DrizzleSQLiteDb<S extends Record<string, unknown> = Record<string, unknown>> = ReturnType<
-  typeof drizzleSQLite<S>
+  typeof drizzleSQLiteType<S>
 >;
 
 /**
@@ -30,7 +35,7 @@ type DrizzleSQLiteDb<S extends Record<string, unknown> = Record<string, unknown>
 export type DatabaseConnection =
   | {
       type: 'postgresql';
-      db: ReturnType<typeof drizzle<typeof postgresqlSchema>>;
+      db: ReturnType<typeof drizzlePostgresType<typeof postgresqlSchema>>;
       schema: typeof postgresqlSchema;
       driver: DatabaseDriver;
     }
@@ -42,7 +47,7 @@ export type DatabaseConnection =
     }
   | {
       type: 'mysql';
-      db: ReturnType<typeof drizzleMySQL<typeof mysqlSchema>>;
+      db: ReturnType<typeof drizzleMySQLType<typeof mysqlSchema>>;
       schema: typeof mysqlSchema;
       driver: DatabaseDriver;
     };
@@ -53,7 +58,7 @@ export type DatabaseConnection =
 export type QueryDatabaseConnection =
   | {
       type: 'postgresql';
-      db: ReturnType<typeof drizzle>;
+      db: ReturnType<typeof drizzlePostgresType>;
       config: InvectDatabaseConfig;
       driver: DatabaseDriver;
     }
@@ -65,7 +70,7 @@ export type QueryDatabaseConnection =
     }
   | {
       type: 'mysql';
-      db: ReturnType<typeof drizzleMySQL>;
+      db: ReturnType<typeof drizzleMySQLType>;
       config: InvectDatabaseConfig;
       driver: DatabaseDriver;
     };
@@ -228,7 +233,7 @@ export class DatabaseConnectionFactory {
    * Only used for the better-sqlite3 direct Drizzle path; the DatabaseDriver
    * abstraction handles pragmas internally.
    */
-  private static configureSQLitePragmas(client: InstanceType<typeof Database>): void {
+  private static configureSQLitePragmas(client: InstanceType<typeof Database> | { pragma(sql: string): void }): void {
     client.pragma('journal_mode = WAL');
     client.pragma('synchronous = NORMAL');
     client.pragma('foreign_keys = ON');
@@ -246,13 +251,13 @@ export class DatabaseConnectionFactory {
     config: InvectDatabaseConfig,
     driver: DatabaseDriver,
     logger: Logger,
-  ): Promise<ReturnType<typeof drizzle<typeof postgresqlSchema>>> {
+  ): Promise<ReturnType<typeof drizzlePostgresType<typeof postgresqlSchema>>> {
     return this.createDrizzlePostgresDb(
       config,
       driver,
       logger,
       postgresqlSchema,
-    ) as unknown as ReturnType<typeof drizzle<typeof postgresqlSchema>>;
+    ) as unknown as ReturnType<typeof drizzlePostgresType<typeof postgresqlSchema>>;
   }
 
   /**
@@ -269,10 +274,11 @@ export class DatabaseConnectionFactory {
     switch (driver.type) {
       case 'postgres': {
         const postgres = (await import('postgres')).default;
+        const { drizzle: drizzlePostgres } = await import('drizzle-orm/postgres-js');
         const client = postgres(config.connectionString, {
           onnotice: (notice: unknown) => logger.debug('PostgreSQL notice', notice),
         });
-        return schema ? drizzle(client, { schema }) : drizzle(client);
+        return schema ? drizzlePostgres(client, { schema }) : drizzlePostgres(client);
       }
       case 'pg': {
         const { Pool } = await import('pg');
@@ -329,8 +335,10 @@ export class DatabaseConnectionFactory {
         typeof sqliteSchema
       >;
     } else {
+      const BetterSqlite3 = (await import('better-sqlite3')).default;
+      const { drizzle: drizzleSQLite } = await import('drizzle-orm/better-sqlite3');
       const dbPath = filePath === ':memory:' ? ':memory:' : filePath;
-      const client = new Database(dbPath);
+      const client = new BetterSqlite3(dbPath);
       this.configureSQLitePragmas(client);
       db = drizzleSQLite(client, { schema: sqliteSchema });
     }
@@ -350,12 +358,13 @@ export class DatabaseConnectionFactory {
     config: InvectDatabaseConfig,
     _driver: DatabaseDriver,
     logger: Logger,
-  ): Promise<ReturnType<typeof drizzleMySQL<typeof mysqlSchema>>> {
+  ): Promise<ReturnType<typeof drizzleMySQLType<typeof mysqlSchema>>> {
     const mysql = await import('mysql2/promise');
+    const { drizzle: drizzleMySQL } = await import('drizzle-orm/mysql2');
     const connection = mysql.createPool(config.connectionString);
     const db = drizzleMySQL(connection, { schema: mysqlSchema, mode: 'default' });
     logger.debug('MySQL Drizzle ORM instance created');
-    return db as unknown as ReturnType<typeof drizzleMySQL<typeof mysqlSchema>>;
+    return db as unknown as ReturnType<typeof drizzleMySQLType<typeof mysqlSchema>>;
   }
 
   /**
@@ -365,9 +374,9 @@ export class DatabaseConnectionFactory {
     config: InvectDatabaseConfig,
     driver: DatabaseDriver,
     logger: Logger,
-  ): Promise<ReturnType<typeof drizzle>> {
+  ): Promise<ReturnType<typeof drizzlePostgresType>> {
     return this.createDrizzlePostgresDb(config, driver, logger) as unknown as ReturnType<
-      typeof drizzle
+      typeof drizzlePostgresType
     >;
   }
 
@@ -398,8 +407,10 @@ export class DatabaseConnectionFactory {
       const client = createClient({ url });
       db = drizzleLibSQL(client) as unknown as DrizzleSQLiteDb;
     } else {
+      const BetterSqlite3 = (await import('better-sqlite3')).default;
+      const { drizzle: drizzleSQLite } = await import('drizzle-orm/better-sqlite3');
       const dbPath = filePath === ':memory:' ? ':memory:' : filePath;
-      const client = new Database(dbPath);
+      const client = new BetterSqlite3(dbPath);
       this.configureSQLitePragmas(client);
       db = drizzleSQLite(client);
     }
@@ -415,12 +426,13 @@ export class DatabaseConnectionFactory {
     config: InvectDatabaseConfig,
     _driver: DatabaseDriver,
     logger: Logger,
-  ): Promise<ReturnType<typeof drizzleMySQL>> {
+  ): Promise<ReturnType<typeof drizzleMySQLType>> {
     const mysql = await import('mysql2/promise');
+    const { drizzle: drizzleMySQL } = await import('drizzle-orm/mysql2');
     const connection = mysql.createPool(config.connectionString);
     const db = drizzleMySQL(connection, { mode: 'default' });
     logger.debug('MySQL Drizzle query instance created');
-    return db as unknown as ReturnType<typeof drizzleMySQL>;
+    return db as unknown as ReturnType<typeof drizzleMySQLType>;
   }
 
   /**
