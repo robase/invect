@@ -76,7 +76,6 @@
     "@codemirror/view": "^6.38.8",
     "@fsegurai/codemirror-theme-vscode-dark": "^6.2.4",
     "@fsegurai/codemirror-theme-vscode-light": "^6.2.4",
-    "@invect/core": "workspace:*",
     "@invect/layouts": "workspace:*",
     "@lezer/highlight": "^1.2.3",
     "@radix-ui/react-accordion": "^1.2.12",
@@ -111,6 +110,7 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
+    "@invect/core": "workspace:*",
     "@tailwindcss/postcss": "^4.1.0",
     "@types/node": "^24.0.13",
     "@types/react": "18.3.7",

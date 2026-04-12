@@ -72,8 +72,6 @@ const external = [
   'lucide-react',
   'react-router',
   'react-router-dom',
-  '@invect/core',
-  '@invect/core/types',
   'node:module',
   'perf_hooks',
   'crypto',
