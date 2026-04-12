@@ -1,5 +1,14 @@
 # @invect/nestjs
 
+## 0.0.4
+
+### Patch Changes
+
+- fix: nextjs imports
+
+- Updated dependencies []:
+  - @invect/core@0.0.4
+
 ## 0.0.3
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @invect/layouts
 
+## 0.0.4
+
+### Patch Changes
+
+- fix: nextjs imports
+
 ## 0.0.3
 
 ### Patch Changes
