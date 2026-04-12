@@ -541,7 +541,7 @@ export const testExpressionTool: ChatToolDefinition = {
     'Use this to verify that {{ }} templates or JavaScript code work correctly BEFORE writing them into node params. ' +
     'Supports two modes:\n' +
     '- "template": Evaluates a {{ expr }} template (same engine used in node params)\n' +
-    '- "javascript": Evaluates raw JavaScript in a secure-exec V8 sandbox (same engine used in core.javascript nodes)',
+    '- "javascript": Evaluates raw JavaScript in a sandboxed QuickJS runtime (same engine used in core.javascript nodes)',
   parameters: z.object({
     type: z
       .enum(['template', 'javascript'])

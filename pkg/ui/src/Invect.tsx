@@ -33,16 +33,6 @@ export interface InvectProps {
   plugins?: InvectFrontendPlugin[];
   /** Pre-configured API client instance (e.g. for demo mode). When provided, apiPath is ignored. */
   apiClient?: ApiClient;
-  /**
-   * Invect configuration object (from defineConfig).
-   * When provided, `apiPath` and `frontendPath` are read from the config
-   * unless explicitly overridden by the individual props.
-   */
-  config?: {
-    apiPath?: string;
-    frontendPath?: string;
-    plugins?: Array<{ frontend?: InvectFrontendPlugin }>;
-  };
 }
 
 // Create a default QueryClient if none is provided
@@ -208,15 +198,10 @@ export const Invect = React.memo(
     useMemoryRouter = false,
     plugins,
     apiClient,
-    config,
   }: InvectProps) => {
-    const apiBaseUrl = apiPathProp ?? config?.apiPath ?? 'http://localhost:3000/invect';
-    const basePath = frontendPathProp ?? config?.frontendPath ?? '/invect';
-    const resolvedPlugins =
-      plugins ??
-      config?.plugins
-        ?.map((p) => p.frontend)
-        .filter((p): p is InvectFrontendPlugin => p !== null && p !== undefined);
+    const apiBaseUrl = apiPathProp ?? 'http://localhost:3000/invect';
+    const basePath = frontendPathProp ?? '/invect';
+    const resolvedPlugins = plugins;
     const client = reactQueryClient || createDefaultQueryClient();
     const hasRouter = useHasRouterContext();
 

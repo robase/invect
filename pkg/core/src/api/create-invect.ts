@@ -10,8 +10,12 @@ import { DefaultNodeRegistryFactory, NodeExecutorRegistry } from '../nodes/execu
 import { InvectConfig, InvectConfigSchema } from '../schemas';
 import { DatabaseError } from '../types/common/errors.types';
 import { LoggerManager, type ScopedLoggingConfig } from '../utils/logger';
-import { JsExpressionService, getTemplateService } from '../services/templating';
-import type { TemplateService } from '../services/templating';
+import { getTemplateService } from '../services/templating/template.service';
+import type { TemplateService } from '../services/templating/template.service';
+import {
+  JsExpressionService,
+  type JsExpressionService as JsExpressionServiceType,
+} from '../services/templating/js-expression.service';
 import { PluginManager } from '../services/plugin-manager';
 import type { InvectPlugin, InvectPluginDefinition } from '../types/plugin.types';
 import { AuthorizationService, createAuthorizationService } from '../services/auth';
@@ -268,8 +272,8 @@ export async function createInvect(config: InvectConfig): Promise<InvectInstance
       (agentExecutor as unknown as AgentNodeExecutor).setToolRegistry(toolRegistry);
     }
 
-    // Initialize JS expression engine (secure-exec sandbox for data mapper)
-    let jsExpressionService: JsExpressionService | null = null;
+    // Initialize JS expression engine (sandboxed QuickJS runtime for data mapper)
+    let jsExpressionService: JsExpressionServiceType | null = null;
     let templateService: TemplateService | null = null;
     try {
       jsExpressionService = new JsExpressionService({}, logger);

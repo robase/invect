@@ -218,28 +218,12 @@ describe('JsExpressionService', () => {
   // ── Sandbox safety ─────────────────────────────────────────────────────────
 
   describe('sandbox safety', () => {
-    // secure-exec leaks unhandled rejections when the sandbox tries to
-    // clone non-serializable values (fs.Stats from require, Promise from
-    // import). Suppress them to avoid Vitest exiting with code 1.
-    let unhandledHandler: (reason: unknown) => void;
-    beforeAll(() => {
-      unhandledHandler = () => {
-        /* swallow known sandbox leaks */
-      };
-      process.on('unhandledRejection', unhandledHandler);
-    });
-    afterAll(() => {
-      process.removeListener('unhandledRejection', unhandledHandler);
-    });
-
     it('require is not defined', async () => {
       await expect(service.evaluate("require('fs')", {})).rejects.toThrow(JsExpressionError);
     });
 
     it('globalThis has no Node.js APIs', async () => {
-      // secure-exec provides a minimal process shim with an empty env object
-      const result = await service.evaluate('process.env', {});
-      expect(result).toEqual({});
+      await expect(service.evaluate('process.env', {})).rejects.toThrow(JsExpressionError);
     });
 
     it('import() is not available', async () => {
@@ -277,6 +261,17 @@ describe('JsExpressionService', () => {
     it('throws if not initialized', async () => {
       const uninit = new JsExpressionService();
       await expect(uninit.evaluate('1 + 1', {})).rejects.toThrow('not initialized');
+    });
+
+    it('interrupts runaway code when the CPU deadline is exceeded', async () => {
+      const timeoutService = new JsExpressionService({ cpuTimeLimitMs: 10 });
+      await timeoutService.initialize();
+
+      await expect(
+        timeoutService.evaluate('while (true) { if (false) { return 1; } }', {}),
+      ).rejects.toThrow('CPU time limit exceeded');
+
+      timeoutService.dispose();
     });
   });
 

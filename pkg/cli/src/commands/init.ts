@@ -659,7 +659,7 @@ export const initCommand = new Command('init')
           `);`,
           ``,
           `export default function InvectPage() {`,
-          `  return <Invect apiBaseUrl="/api/invect" basePath="/invect" />;`,
+          `  return <Invect apiPath="/api/invect" frontendPath="/invect" />;`,
           `}`,
         ]
           .map((l) => `  ${pc.cyan(l)}`)

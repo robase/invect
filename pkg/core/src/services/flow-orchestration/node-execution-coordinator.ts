@@ -15,7 +15,7 @@ import { BatchProvider } from '../ai/base-client';
 import type { PluginHookRunner } from 'src/types/plugin.types';
 import { detectProviderFromCredential } from 'src/utils/provider-detection';
 import { TemplateService, createTemplateService } from '../templating/template.service';
-import { JsExpressionService, JsExpressionError } from '../templating/js-expression.service';
+import type { JsExpressionService } from '../templating/js-expression.service';
 import type { MapperConfig } from '../flow-versions/schemas-fresh';
 import { getGlobalActionRegistry } from 'src/actions/action-registry';
 import { executeActionAsNode } from 'src/actions/action-executor';
@@ -827,8 +827,7 @@ export class NodeExecutionCoordinator {
       mappedResult = await jsService.evaluate(mapperConfig.expression, incomingData);
     } catch (e) {
       // Mapper expression failed — create a failed trace with the error
-      const errorMessage =
-        e instanceof JsExpressionError ? e.message : `Mapper expression error: ${String(e)}`;
+      const errorMessage = e instanceof Error ? e.message : `Mapper expression error: ${String(e)}`;
       logger.error('Mapper expression failed', {
         flowRunId,
         nodeId: node.id,

@@ -62,8 +62,12 @@ import { FlowRunStatus, NodeExecutionStatus } from './types/base';
 import type { ExecutionStreamEvent } from './services/execution-event-bus';
 
 // Template + JS expression engine
-import { JsExpressionService, getTemplateService } from './services/templating';
-import type { TemplateService } from './services/templating';
+import { getTemplateService } from './services/templating/template.service';
+import type { TemplateService } from './services/templating/template.service';
+import {
+  JsExpressionService,
+  type JsExpressionService as JsExpressionServiceType,
+} from './services/templating/js-expression.service';
 
 // React Flow renderer types
 import type { ReactFlowData } from './services/react-flow-renderer.service';
@@ -197,7 +201,7 @@ export class Invect {
   protected serviceFactory: ServiceFactory | null = null;
   protected nodeRegistry: NodeExecutorRegistry | null = null;
   protected actionRegistry: ActionRegistry | null = null;
-  private jsExpressionService: JsExpressionService | null = null;
+  private jsExpressionService: JsExpressionServiceType | null = null;
   private templateService: TemplateService | null = null;
   private pluginManager: PluginManager;
   private initialized = false;
@@ -497,7 +501,7 @@ export class Invect {
       // Initialize node registry first
       this.nodeRegistry = await this.initializeNodes();
 
-      // Initialize JS expression engine (secure-exec sandbox for data mapper)
+      // Initialize JS expression engine (sandboxed QuickJS runtime for data mapper)
       try {
         this.jsExpressionService = new JsExpressionService({}, this.config.logger);
         await this.jsExpressionService.initialize();
@@ -1252,7 +1256,7 @@ export class Invect {
   }
 
   /**
-   * Test a JS expression in the secure-exec sandbox.
+   * Test a JS expression in the sandboxed QuickJS runtime.
    * Used by the frontend data mapper preview.
    */
   async testJsExpression(request: {

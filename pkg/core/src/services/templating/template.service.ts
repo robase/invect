@@ -2,7 +2,7 @@
  * Template Service
  *
  * Evaluates {{ expression }} blocks as JavaScript using the JsExpressionService
- * (secure-exec V8 isolate sandbox). Drop-in replacement for NunjucksService.
+ * (QuickJS WASM sandbox). Drop-in replacement for NunjucksService.
  *
  * Behavior:
  * - "Pure expression" templates (entire value is a single {{ expr }})
@@ -12,7 +12,7 @@
  * - Errors inside {{ }} in mixed templates produce empty string (matches
  *   Nunjucks' throwOnUndefined:false behavior).
  *
- * Context keys are injected as local variables in the secure-exec V8 sandbox.
+ * Context keys are injected as local variables in the QuickJS sandbox.
  * `$input` is always available as the full context object.
  */
 import type { JsExpressionService } from './js-expression.service';

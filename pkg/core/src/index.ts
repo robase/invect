@@ -338,20 +338,17 @@ export type {
 } from './types/node-config-update.types';
 
 // Re-export template service for param field templating
-export { TemplateService, getTemplateService, createTemplateService } from './services/templating';
-
-export type { TemplateValidationResult, TemplateRenderResult } from './services/templating';
-
-// Re-export JS expression service for data mapper
 export {
-  JsExpressionService,
-  JsExpressionError,
-  getJsExpressionService,
-  createJsExpressionService,
-  disposeJsExpressionService,
-} from './services/templating';
+  TemplateService,
+  getTemplateService,
+  createTemplateService,
+  resetTemplateService,
+} from './services/templating/template.service';
 
-export type { JsExpressionServiceConfig } from './services/templating';
+export type {
+  TemplateValidationResult,
+  TemplateRenderResult,
+} from './services/templating/template.service';
 
 // Re-export React Flow types
 export type {

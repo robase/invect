@@ -26,7 +26,7 @@ export const mapperConfigSchema = z
 
     /**
      * JS expression that receives all upstream outputs as local variables.
-     * Executed in a secure-exec V8 sandbox. Use `return` to produce a value.
+     * Executed in a sandboxed QuickJS runtime. Use `return` to produce a value.
      * Single expressions (no `return` keyword) auto-return.
      *
      * @example
