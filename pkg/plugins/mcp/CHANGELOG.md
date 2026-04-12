@@ -1,5 +1,15 @@
 # @invect/mcp
 
+## 0.0.5
+
+### Patch Changes
+
+-
+
+- Updated dependencies []:
+  - @invect/core@0.0.5
+  - @invect/user-auth@0.0.5
+
 ## 0.0.4
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@invect/user-auth",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Better Auth plugin for Invect — adds user authentication, session management, identity resolution, and auth UI components",
   "keywords": [
     "auth",
@@ -81,7 +81,7 @@
   },
   "peerDependencies": {
     "@better-auth/api-key": ">=1.0.0",
-    "@invect/ui": ">=0.0.4",
+    "@invect/ui": ">=0.0.5",
     "@tanstack/react-query": ">=5.0.0",
     "better-auth": ">=1.0.0",
     "better-sqlite3": ">=9.0.0",
