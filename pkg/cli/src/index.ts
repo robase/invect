@@ -19,6 +19,7 @@
  *   npx invect-cli mcp --url http://localhost:3000/invect --api-key YOUR_KEY
  */
 
+import { createRequire } from 'node:module';
 import { Command } from 'commander';
 import { initCommand } from './commands/init.js';
 import { generateCommand } from './commands/generate.js';
@@ -29,6 +30,9 @@ import { mcpCommand } from './commands/mcp.js';
 
 import 'dotenv/config';
 
+const require = createRequire(import.meta.url);
+const { version } = require('../package.json');
+
 // Handle exit signals
 process.on('SIGINT', () => process.exit(0));
 process.on('SIGTERM', () => process.exit(0));
@@ -38,7 +42,7 @@ async function main() {
 
   program
     .description('CLI for managing Invect workflow engine projects')
-    .version('0.1.0')
+    .version(version)
     .option('--debug', 'Show detailed error messages and stack traces');
 
   program

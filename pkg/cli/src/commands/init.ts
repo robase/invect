@@ -633,7 +633,7 @@ export const initCommand = new Command('init')
           `export const PUT = handler.PUT;`,
           `export const DELETE = handler.DELETE;`,
         ]
-          .map((l) => `  ${pc.dim('│')} ${pc.cyan(l)}`)
+          .map((l) => `  ${pc.cyan(l)}`)
           .join('\n');
 
         nextSteps.push(`  ${n++}. Create ${pc.cyan(routeFile)}:\n\n${routeSnippet}\n`);
@@ -667,7 +667,7 @@ export const initCommand = new Command('init')
           `  return <Invect config={config} />;`,
           `}`,
         ]
-          .map((l) => `  ${pc.dim('│')} ${pc.cyan(l)}`)
+          .map((l) => `  ${pc.cyan(l)}`)
           .join('\n');
 
         nextSteps.push(`  ${n++}. Create ${pc.cyan(pageFile)}:\n\n${pageSnippet}\n`);

@@ -15,6 +15,9 @@ import {
   generateSqliteSchema,
   generatePostgresSchema,
   generateMysqlSchema,
+  generateSqliteSchemaAppend,
+  generatePostgresSchemaAppend,
+  generateMysqlSchemaAppend,
   CORE_TABLE_NAMES,
 } from '@invect/core';
 
@@ -774,12 +777,6 @@ describe('foreign key references use correct JS variable names', () => {
 // =============================================================================
 
 describe('append-mode schema generators', () => {
-  const {
-    generateSqliteSchemaAppend,
-    generatePostgresSchemaAppend,
-    generateMysqlSchemaAppend,
-  } = require('@invect/core');
-
   const merged = mergeSchemas([]);
 
   it('should generate SQLite append-mode schema with imports and code', () => {
