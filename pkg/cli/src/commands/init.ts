@@ -646,16 +646,11 @@ export const initCommand = new Command('init')
       // Frontend UI step
       if (framework.id === 'nextjs') {
         const pageFile = 'app/invect/[[...slug]]/page.tsx';
-        const configRelPath = path.relative(process.cwd(), configPath);
-        const pageImportPath = path
-          .relative(path.dirname(pageFile), configRelPath)
-          .replace(/\.ts$/, '');
 
         const pageSnippet = [
           `'use client';`,
           ``,
           `import dynamic from 'next/dynamic';`,
-          `import { config } from '${pageImportPath}';`,
           `import '@invect/ui/styles';`,
           ``,
           `const Invect = dynamic(`,
@@ -664,7 +659,7 @@ export const initCommand = new Command('init')
           `);`,
           ``,
           `export default function InvectPage() {`,
-          `  return <Invect config={config} />;`,
+          `  return <Invect apiBaseUrl="/api/invect" basePath="/invect" />;`,
           `}`,
         ]
           .map((l) => `  ${pc.cyan(l)}`)

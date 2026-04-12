@@ -1,5 +1,15 @@
 # @invect/user-auth
 
+## 0.0.3
+
+### Patch Changes
+
+- fix core exports issue
+
+- Updated dependencies []:
+  - @invect/core@0.0.3
+  - @invect/ui@0.0.3
+
 ## 0.0.2
 
 ### Patch Changes
