@@ -410,4 +410,18 @@ export interface AuthenticationPluginOptions {
    * @see https://better-auth.com/docs/plugins/api-key
    */
   apiKey?: boolean | ApiKeyPluginOptions;
+
+  /**
+   * Frontend plugin (sidebar, routes, providers) for the auth UI.
+   *
+   * Import from `@invect/user-auth/ui` and pass here.
+   * Omit for backend-only setups (Express without React).
+   *
+   * @example
+   * ```ts
+   * import { authFrontend } from '@invect/user-auth/ui';
+   * auth({ frontend: authFrontend })
+   * ```
+   */
+  frontend?: unknown;
 }

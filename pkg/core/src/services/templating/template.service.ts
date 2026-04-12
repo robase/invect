@@ -2,7 +2,7 @@
  * Template Service
  *
  * Evaluates {{ expression }} blocks as JavaScript using the JsExpressionService
- * (QuickJS WASM sandbox). Drop-in replacement for NunjucksService.
+ * (secure-exec V8 isolate sandbox). Drop-in replacement for NunjucksService.
  *
  * Behavior:
  * - "Pure expression" templates (entire value is a single {{ expr }})
@@ -12,7 +12,7 @@
  * - Errors inside {{ }} in mixed templates produce empty string (matches
  *   Nunjucks' throwOnUndefined:false behavior).
  *
- * Context keys are injected as local variables in the QuickJS sandbox.
+ * Context keys are injected as local variables in the secure-exec V8 sandbox.
  * `$input` is always available as the full context object.
  */
 import type { JsExpressionService } from './js-expression.service';
@@ -58,7 +58,7 @@ const EXPRESSION_BLOCK_PATTERN = /\{\{([\s\S]*?)\}\}/g;
 const _VALID_JS_IDENT = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
 
 /**
- * Helper functions injected into every QuickJS evaluation context.
+ * Helper functions injected into every sandbox evaluation context.
  * These provide backward compatibility with the Nunjucks custom filters/globals.
  *
  * Stored as individual entries so we can skip ones that collide with context keys.
@@ -117,7 +117,7 @@ export class TemplateService {
    * - Pure expression (entire value is `{{ expr }}`): returns raw JS value.
    * - Mixed template: returns interpolated string.
    */
-  render(template: string, context: Record<string, unknown>): unknown {
+  async render(template: string, context: Record<string, unknown>): Promise<unknown> {
     // Pure expression — return raw value (object, array, number, etc.)
     const pureMatch = isPureExpression(template);
     if (pureMatch) {
@@ -125,32 +125,45 @@ export class TemplateService {
     }
 
     // Mixed template — string interpolation, errors → empty string
-    return template.replace(EXPRESSION_BLOCK_PATTERN, (_match, expr: string) => {
+    // Cannot use String.replace with async callback, so iterate matches manually.
+    let result = '';
+    let lastIndex = 0;
+    const pattern = new RegExp(EXPRESSION_BLOCK_PATTERN.source, 'g');
+    let match: RegExpExecArray | null;
+    while ((match = pattern.exec(template)) !== null) {
+      result += template.slice(lastIndex, match.index);
+      const expr = match[1].trim();
       try {
-        const result = this.evaluateExpression(expr.trim(), context);
-        if (result === null || result === undefined) {
-          return '';
+        const exprResult = await this.evaluateExpression(expr, context);
+        if (exprResult === null || exprResult === undefined) {
+          // empty string
+        } else if (typeof exprResult === 'object') {
+          result += JSON.stringify(exprResult);
+        } else {
+          result += String(exprResult);
         }
-        if (typeof result === 'object') {
-          return JSON.stringify(result);
-        }
-        return String(result);
       } catch (error) {
         this.logger?.debug('Template expression error (swallowed)', {
-          expression: expr.trim(),
+          expression: expr,
           error: error instanceof Error ? error.message : String(error),
         });
-        return '';
+        // empty string on error
       }
-    });
+      lastIndex = match.index + match[0].length;
+    }
+    result += template.slice(lastIndex);
+    return result;
   }
 
   /**
    * Render a template with error handling, returning a result object.
    */
-  safeRender(template: string, context: Record<string, unknown>): TemplateRenderResult {
+  async safeRender(
+    template: string,
+    context: Record<string, unknown>,
+  ): Promise<TemplateRenderResult> {
     try {
-      const value = this.render(template, context);
+      const value = await this.render(template, context);
       return { success: true, value };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -161,7 +174,7 @@ export class TemplateService {
   /**
    * Validate a template string by checking expression syntax without executing.
    */
-  validate(template: string): TemplateValidationResult {
+  async validate(template: string): Promise<TemplateValidationResult> {
     const expressions: string[] = [];
     let match;
     // oxlint-disable-next-line security/detect-non-literal-regexp -- creating global variant of existing pattern
@@ -178,7 +191,7 @@ export class TemplateService {
     for (const expr of expressions) {
       try {
         // Use a dummy context to check syntax; runtime errors are fine
-        this.evaluateExpression(expr, {});
+        await this.evaluateExpression(expr, {});
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
         // Only treat syntax errors as invalid; runtime errors (undefined vars) are OK
@@ -220,9 +233,12 @@ export class TemplateService {
    * Wraps the expression with compat helpers and context destructuring,
    * then delegates to JsExpressionService.evaluate().
    */
-  private evaluateExpression(expression: string, context: Record<string, unknown>): unknown {
+  private async evaluateExpression(
+    expression: string,
+    context: Record<string, unknown>,
+  ): Promise<unknown> {
     // Build compat helpers, skipping any whose name collides with a context key
-    // (QuickJS disallows re-declaring a `const`-destructured variable as a function).
+    // (sandbox disallows re-declaring a `const`-destructured variable as a function).
     const contextKeys = new Set(Object.keys(context));
     const helpers = COMPAT_HELPER_ENTRIES.filter((h) => !contextKeys.has(h.name))
       .map((h) => h.code)

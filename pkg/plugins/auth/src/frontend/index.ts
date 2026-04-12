@@ -46,7 +46,7 @@ export { SidebarUserMenu } from './components/SidebarUserMenu';
 export type { SidebarUserMenuProps } from './components/SidebarUserMenu';
 
 // Frontend plugin definition
-export { authFrontendPlugin } from './plugins/authFrontendPlugin';
+export { authFrontend } from './plugins/authFrontendPlugin';
 
 // Re-export shared types for convenience
 export type {

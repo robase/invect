@@ -102,7 +102,7 @@ export const switchAction = defineAction({
 
     for (const c of cases) {
       try {
-        const result = jsService.evaluate(c.expression, evaluationData);
+        const result = await jsService.evaluate(c.expression, evaluationData);
         const matched = Boolean(result);
         caseResults.push({ slug: c.slug, label: c.label, matched });
 

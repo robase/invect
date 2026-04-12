@@ -6,7 +6,7 @@ import { ifElseAction } from 'src/actions/core/if-else';
 
 // Mock JsExpressionService
 vi.mock('src/services/templating/js-expression.service', () => {
-  const evaluate = (expression: string, data: Record<string, unknown>): unknown => {
+  const evaluate = async (expression: string, data: Record<string, unknown>): Promise<unknown> => {
     const keys = Object.keys(data);
     const values = Object.values(data);
     // eslint-disable-next-line @typescript-eslint/no-implied-eval

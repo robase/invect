@@ -196,11 +196,12 @@ export type { PaginatedResponse, QueryOptions } from './schemas/pagination-sort-
 export { FlowRunStatus, NodeExecutionStatus } from './types/base';
 
 export type { InvectConfig } from './schemas/invect-config';
-export { defineConfig } from './schemas/invect-config';
+export { defineConfig, definePlugin } from './schemas/invect-config';
 
 // Plugin system
 export type {
   InvectPlugin,
+  InvectPluginDefinition,
   InvectPluginSchema,
   InvectPluginHooks,
   InvectPluginEndpoint,

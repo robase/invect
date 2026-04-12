@@ -24,9 +24,9 @@ interface FlowRow {
 }
 
 interface FlowVersionRow {
-  flowId: string;
+  flow_id: string;
   version: number;
-  invectDefinition: string;
+  invect_definition: string;
 }
 
 type Logger = {
@@ -127,6 +127,15 @@ export class VcSyncService {
 
   async pushFlow(db: PluginDatabaseApi, flowId: string, identity?: string): Promise<VcSyncResult> {
     const config = await this.requireConfig(db, flowId);
+
+    if (config.syncDirection === 'pull') {
+      return {
+        success: false,
+        error: 'Push is not allowed — this flow is configured for pull-only sync.',
+        action: 'push',
+      };
+    }
+
     const { content, version } = await this.exportFlow(db, flowId);
 
     try {
@@ -192,6 +201,15 @@ export class VcSyncService {
 
   async pullFlow(db: PluginDatabaseApi, flowId: string, identity?: string): Promise<VcSyncResult> {
     const config = await this.requireConfig(db, flowId);
+
+    if (config.syncDirection === 'push') {
+      return {
+        success: false,
+        error: 'Pull is not allowed — this flow is configured for push-only sync.',
+        action: 'pull',
+      };
+    }
+
     const remote = await this.provider.getFileContent(config.repo, config.filePath, config.branch);
 
     if (!remote) {
@@ -589,9 +607,9 @@ export class VcSyncService {
     const fv = versions[0];
 
     const definition =
-      typeof fv.invectDefinition === 'string'
-        ? JSON.parse(fv.invectDefinition)
-        : fv.invectDefinition;
+      typeof fv.invect_definition === 'string'
+        ? JSON.parse(fv.invect_definition)
+        : fv.invect_definition;
 
     let tags: string[] | undefined;
     if (flow.tags) {
@@ -617,74 +635,49 @@ export class VcSyncService {
     content: string,
     identity?: string,
   ): Promise<void> {
-    // 1. Write .flow.ts content to a temp file
-    const { writeFileSync, unlinkSync, mkdtempSync } = await import('node:fs');
-    const { join } = await import('node:path');
-    const { tmpdir } = await import('node:os');
+    // Parse the .flow.ts content statically — no eval/jiti to avoid
+    // arbitrary code execution from untrusted remote files.
+    const definition = parseFlowTsContent(content);
 
-    const tmpDir = mkdtempSync(join(tmpdir(), 'invect-vc-'));
-    const tmpFile = join(tmpDir, 'import.flow.ts');
-
-    try {
-      writeFileSync(tmpFile, content, 'utf-8');
-
-      // 2. Load the .flow.ts file via jiti (resolves defineFlow + helpers)
-      const { createJiti } = await import('jiti');
-      const jiti = createJiti(import.meta.url, { interopDefault: true });
-      const result = await jiti.import(tmpFile);
-
-      // The file's default export should be an InvectDefinition (from defineFlow)
-      const definition = (result as Record<string, unknown>).default ?? result;
-
-      if (
-        !definition ||
-        typeof definition !== 'object' ||
-        !('nodes' in definition) ||
-        !('edges' in definition)
-      ) {
-        throw new Error(
-          'Imported .flow.ts file did not produce a valid InvectDefinition. ' +
-            'Expected an object with "nodes" and "edges" arrays.',
-        );
-      }
-
-      // 3. Get current latest version number
-      const versions = await db.query<{ version: number }>(
-        'SELECT MAX(version) as version FROM flow_versions WHERE flow_id = ?',
-        [flowId],
+    if (
+      !definition ||
+      typeof definition !== 'object' ||
+      !Array.isArray(definition.nodes) ||
+      !Array.isArray(definition.edges)
+    ) {
+      throw new Error(
+        'Imported .flow.ts file did not produce a valid InvectDefinition. ' +
+          'Expected an object with "nodes" and "edges" arrays.',
       );
-      const nextVersion = (versions[0]?.version ?? 0) + 1;
-
-      // 4. Insert new flow version
-      const defJson = typeof definition === 'string' ? definition : JSON.stringify(definition);
-
-      await db.execute(
-        `INSERT INTO flow_versions (flow_id, version, invect_definition, created_at, created_by)
-         VALUES (?, ?, ?, ?, ?)`,
-        [flowId, nextVersion, defJson, new Date().toISOString(), identity ?? null],
-      );
-
-      // 5. Update flow's live version
-      await db.execute('UPDATE flows SET live_version_number = ?, updated_at = ? WHERE id = ?', [
-        nextVersion,
-        new Date().toISOString(),
-        flowId,
-      ]);
-
-      this.logger.info('Flow imported from remote', {
-        flowId,
-        version: nextVersion,
-      });
-    } finally {
-      // Clean up temp file
-      try {
-        unlinkSync(tmpFile);
-        const { rmdirSync } = await import('node:fs');
-        rmdirSync(tmpDir);
-      } catch {
-        // Ignore cleanup errors
-      }
     }
+
+    // Get current latest version number
+    const versions = await db.query<{ version: number }>(
+      'SELECT MAX(version) as version FROM flow_versions WHERE flow_id = ?',
+      [flowId],
+    );
+    const nextVersion = (versions[0]?.version ?? 0) + 1;
+
+    // Insert new flow version
+    const defJson = JSON.stringify(definition);
+
+    await db.execute(
+      `INSERT INTO flow_versions (flow_id, version, invect_definition, created_at, created_by)
+       VALUES (?, ?, ?, ?, ?)`,
+      [flowId, nextVersion, defJson, new Date().toISOString(), identity ?? null],
+    );
+
+    // Update flow's live version
+    await db.execute('UPDATE flows SET live_version_number = ?, updated_at = ? WHERE id = ?', [
+      nextVersion,
+      new Date().toISOString(),
+      flowId,
+    ]);
+
+    this.logger.info('Flow imported from remote', {
+      flowId,
+      version: nextVersion,
+    });
   }
 
   // =========================================================================
@@ -838,4 +831,212 @@ function mapHistoryRow(r: VcSyncHistoryRow): VcSyncHistoryRecord {
     createdAt: r.created_at,
     createdBy: r.created_by,
   };
+}
+
+// =============================================================================
+// Static .flow.ts parser — extracts definition without eval
+// =============================================================================
+
+/**
+ * Parse a .flow.ts file content to extract the InvectDefinition.
+ *
+ * This is a static parser that does NOT evaluate the TypeScript file.
+ * It works by extracting the `defineFlow({ ... })` call's argument as a
+ * JS object literal string and parsing it with a safe JSON5-like approach.
+ *
+ * Falls back to extracting raw `nodes` and `edges` arrays if defineFlow
+ * wrapper is not found.
+ */
+function parseFlowTsContent(content: string): { nodes: unknown[]; edges: unknown[] } | null {
+  // Strategy 1 (preferred): Look for the embedded JSON block comment.
+  // The serializer embeds `/* @invect-definition {...} */` for reliable round-tripping.
+  const jsonCommentMatch = content.match(/\/\*\s*@invect-definition\s+([\s\S]*?)\s*\*\//);
+  if (jsonCommentMatch) {
+    try {
+      return JSON.parse(jsonCommentMatch[1]);
+    } catch {
+      // Fall through to strategy 2
+    }
+  }
+
+  // Strategy 2 (fallback): Extract the defineFlow({ ... }) argument.
+  // Used for hand-written or older .flow.ts files without the JSON comment.
+  const defineFlowMatch = content.match(/defineFlow\s*\(\s*\{/);
+  if (defineFlowMatch && defineFlowMatch.index !== undefined) {
+    const startIdx = defineFlowMatch.index + defineFlowMatch[0].length - 1; // { position
+    const objStr = extractBalancedBraces(content, startIdx);
+    if (objStr) {
+      try {
+        const parsed = parseObjectLiteral(objStr);
+        if (parsed && Array.isArray(parsed.nodes) && Array.isArray(parsed.edges)) {
+          return { nodes: parsed.nodes, edges: parsed.edges };
+        }
+      } catch {
+        // Fall through
+      }
+    }
+  }
+
+  return null;
+}
+
+/** Extract a balanced {} block from a string starting at the given { index */
+function extractBalancedBraces(str: string, startIdx: number): string | null {
+  let depth = 0;
+  let inString: string | false = false;
+  let escaped = false;
+
+  for (let i = startIdx; i < str.length; i++) {
+    const ch = str[i];
+
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+
+    if (ch === '\\') {
+      escaped = true;
+      continue;
+    }
+
+    if (inString) {
+      if (ch === inString) {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (ch === '"' || ch === "'" || ch === '`') {
+      inString = ch;
+      continue;
+    }
+
+    if (ch === '{' || ch === '[') {
+      depth++;
+    } else if (ch === '}' || ch === ']') {
+      depth--;
+      if (depth === 0) {
+        return str.slice(startIdx, i + 1);
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Parse a JS object literal string into a JSON-compatible value.
+ *
+ * Handles: unquoted keys, single-quoted strings, trailing commas,
+ * template literals (simplified), and function calls by converting
+ * them to strings.
+ */
+function parseObjectLiteral(objStr: string): Record<string, unknown> | null {
+  try {
+    // Normalize JS object literal to JSON:
+    // 1. Strip single-line comments
+    let normalized = objStr.replace(/\/\/.*$/gm, '');
+    // 2. Strip multi-line comments
+    normalized = normalized.replace(/\/\*[\s\S]*?\*\//g, '');
+    // 3. Replace single quotes with double quotes (outside existing double quotes)
+    normalized = replaceQuotes(normalized);
+    // 4. Quote unquoted keys
+    normalized = normalized.replace(/(?<=[{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)(?=\s*:)/g, '"$1"');
+    // 5. Remove trailing commas before } or ]
+    normalized = normalized.replace(/,\s*([}\]])/g, '$1');
+    // 6. Replace function calls like input("ref", {...}) with a placeholder string
+    // This handles the helper calls in the nodes array
+    normalized = replaceFunctionCalls(normalized);
+
+    return JSON.parse(normalized);
+  } catch {
+    return null;
+  }
+}
+
+/** Replace single-quoted strings with double-quoted */
+function replaceQuotes(str: string): string {
+  let result = '';
+  let inDouble = false;
+  let inSingle = false;
+  let escaped = false;
+
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+
+    if (escaped) {
+      result += ch;
+      escaped = false;
+      continue;
+    }
+
+    if (ch === '\\') {
+      result += ch;
+      escaped = true;
+      continue;
+    }
+
+    if (!inSingle && ch === '"') {
+      inDouble = !inDouble;
+      result += ch;
+    } else if (!inDouble && ch === "'") {
+      inSingle = !inSingle;
+      result += '"';
+    } else {
+      result += ch;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Replace function calls like `input("ref", { ... })` with a JSON object
+ * that captures the node structure. This handles the SDK helper calls
+ * in the serialized .flow.ts nodes array.
+ *
+ * Pattern: `helperName("refId", { params })` → `{ "type": "helperName", "referenceId": "refId", "params": { ... } }`
+ * Also handles namespaced: `ns.helperName("refId", { ... })`
+ */
+function replaceFunctionCalls(str: string): string {
+  // Match function calls: word.word( or word( at the start of array items
+  const callPattern =
+    /([a-zA-Z_$][\w$]*\.[a-zA-Z_$][\w$]*|[a-zA-Z_$][\w$]*)\s*\(\s*"([^"]*)"\s*,\s*(\{)/g;
+
+  let result = str;
+  let match: RegExpExecArray | null;
+  let offset = 0;
+
+  // Reset lastIndex
+  callPattern.lastIndex = 0;
+
+  while ((match = callPattern.exec(str)) !== null) {
+    const fnName = match[1];
+    const refId = match[2];
+    const braceStart = match.index + match[0].length - 1;
+
+    const paramsBlock = extractBalancedBraces(str, braceStart);
+    if (!paramsBlock) {
+      continue;
+    }
+
+    // Find the closing ) after the params block
+    const afterParams = braceStart + paramsBlock.length;
+    let closeParen = afterParams;
+    while (closeParen < str.length && str[closeParen] !== ')') {
+      closeParen++;
+    }
+
+    const fullCall = str.slice(match.index, closeParen + 1);
+    const replacement = `{ "__type": "${fnName}", "referenceId": "${refId}", "params": ${paramsBlock} }`;
+
+    result =
+      result.slice(0, match.index + offset) +
+      replacement +
+      result.slice(match.index + offset + fullCall.length);
+
+    offset += replacement.length - fullCall.length;
+  }
+
+  return result;
 }

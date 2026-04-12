@@ -45,9 +45,9 @@ app.use('/invect', invectRouter);
 mcpPlugin({
   sessionTtlMs: 30 * 60 * 1000, // Session TTL (default: 30 minutes)
   audit: {
-    enabled: true,               // Enable audit logging (default: true)
-    persist: false,              // Persist audit logs to database (default: false)
-    logLevel: 'info',            // Log level (default: 'info')
+    enabled: true, // Enable audit logging (default: true)
+    persist: false, // Persist audit logs to database (default: false)
+    logLevel: 'info', // Log level (default: 'info')
   },
 });
 ```
@@ -75,23 +75,23 @@ npx invect-mcp --url http://localhost:3000/invect --api-key YOUR_KEY
 
 ## MCP Tools
 
-| Category        | Tools                                                                         |
-| --------------- | ----------------------------------------------------------------------------- |
-| **Flows**       | `flow_list`, `flow_get`, `flow_create`, `flow_update`, `flow_delete`, `flow_validate` |
-| **Versions**    | `version_list`, `version_get`, `version_publish`                              |
+| Category        | Tools                                                                                      |
+| --------------- | ------------------------------------------------------------------------------------------ |
+| **Flows**       | `flow_list`, `flow_get`, `flow_create`, `flow_update`, `flow_delete`, `flow_validate`      |
+| **Versions**    | `version_list`, `version_get`, `version_publish`                                           |
 | **Runs**        | `run_start`, `run_to_node`, `run_list`, `run_get`, `run_cancel`, `run_pause`, `run_resume` |
-| **Debug**       | `debug_node_executions`, `debug_test_node`, `debug_test_expression`, `debug_test_mapper` |
-| **Credentials** | Credential CRUD and secrets management                                        |
-| **Triggers**    | Trigger CRUD operations                                                       |
-| **Nodes**       | Query available node types and providers                                      |
+| **Debug**       | `debug_node_executions`, `debug_test_node`, `debug_test_expression`, `debug_test_mapper`   |
+| **Credentials** | Credential CRUD and secrets management                                                     |
+| **Triggers**    | Trigger CRUD operations                                                                    |
+| **Nodes**       | Query available node types and providers                                                   |
 
 ## Exports
 
-| Entry Point       | Content                        |
-| ------------------ | ------------------------------ |
-| `@invect/mcp`      | Backend plugin (Node.js)       |
-| `@invect/mcp/types` | Shared types                  |
-| `invect-mcp` (bin) | Standalone stdio MCP server    |
+| Entry Point         | Content                     |
+| ------------------- | --------------------------- |
+| `@invect/mcp`       | Backend plugin (Node.js)    |
+| `@invect/mcp/types` | Shared types                |
+| `invect-mcp` (bin)  | Standalone stdio MCP server |
 
 ## License
 

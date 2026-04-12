@@ -57,6 +57,10 @@ describe('serializeFlowToTs', () => {
     expect(result).toContain('edges:');
     expect(result).toContain('["query", "answer"]');
     expect(result).toContain('["answer", "result"]');
+
+    // Verify embedded JSON block for round-tripping
+    expect(result).toContain('/* @invect-definition');
+    expect(result).toContain('*/');
   });
 
   it('serializes provider actions with namespaced helpers', () => {
@@ -123,7 +127,9 @@ describe('serializeFlowToTs', () => {
     const result = serializeFlowToTs(definition, { name: 'Cred Test' });
 
     expect(result).toContain('OPENAI_ABC_CREDENTIAL');
-    expect(result).not.toContain('cred_openai_abc');
+    // The embedded JSON block at the end preserves raw IDs for round-tripping
+    const humanReadable = result.split('/* @invect-definition')[0];
+    expect(humanReadable).not.toContain('cred_openai_abc');
   });
 
   it('includes tags when present', () => {
@@ -172,6 +178,8 @@ describe('serializeFlowToTs', () => {
     const result = serializeFlowToTs(definition, { name: 'Test' });
 
     expect(result).toContain('["a", "b"]');
-    expect(result).not.toContain('node-a');
+    // The embedded JSON block at the end preserves raw node IDs for round-tripping
+    const humanReadable = result.split('/* @invect-definition')[0];
+    expect(humanReadable).not.toContain('node-a');
   });
 });

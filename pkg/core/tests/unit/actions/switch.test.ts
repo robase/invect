@@ -8,7 +8,7 @@ import { switchAction } from 'src/actions/core/switch';
 
 // Mock JsExpressionService
 vi.mock('src/services/templating/js-expression.service', () => {
-  const evaluate = (expression: string, data: Record<string, unknown>): unknown => {
+  const evaluate = async (expression: string, data: Record<string, unknown>): Promise<unknown> => {
     // Simple evaluator for test purposes — uses Function constructor
     // (acceptable in test environment only)
     const keys = Object.keys(data);

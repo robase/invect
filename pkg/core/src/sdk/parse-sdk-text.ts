@@ -11,13 +11,23 @@
  *
  * @example
  * ```typescript
+ * // Structured format (from clipboard copy)
+ * const result = parseSDKText(`
+ *   nodes: [
+ *     input('query', { variableName: 'query' }),
+ *     model('answer', { model: 'gpt-4o', prompt: '{{ query }}' }),
+ *   ],
+ *   edges: [
+ *     ['query', 'answer'],
+ *   ],
+ * `);
+ *
+ * // Flat format (legacy, still supported)
  * const result = parseSDKText(`
  *   input('query', { variableName: 'query' }),
  *   model('answer', { model: 'gpt-4o', prompt: '{{ query }}' }),
  *   ['query', 'answer'],
  * `);
- * // result.nodes = [FlowNodeDefinitions, FlowNodeDefinitions]
- * // result.edges = [['query', 'answer']]
  * ```
  */
 
@@ -119,8 +129,8 @@ function stripComments(text: string): string {
 /**
  * Parse SDK source text into node definitions and edge tuples.
  *
- * The text should contain comma-separated SDK helper calls and/or edge
- * tuples — exactly the format produced by `serializeToSDK()`.
+ * The text should contain `nodes: [...]` and `edges: [...]` properties —
+ * exactly the format produced by `serializeToSDK()`.
  *
  * Throws if the text contains syntax errors or produces unexpected values.
  */
@@ -130,40 +140,41 @@ export function parseSDKText(text: string): ParsedSDK {
     return { nodes: [], edges: [] };
   }
 
-  // Wrap the comma-separated expressions in an array literal so we can
-  // collect all values in one evaluation.
-  const body = `"use strict"; return [\n${cleaned}\n]`;
+  // Wrap in an object literal so `nodes:` and `edges:` become properties.
+  const body = `"use strict"; return ({\n${cleaned}\n})`;
 
-  let items: unknown[];
+  let result: unknown;
   try {
     // eslint-disable-next-line no-new-func
     const fn = new Function(...HELPER_NAMES, body);
-    items = fn(...HELPER_VALUES) as unknown[];
+    result = fn(...HELPER_VALUES);
   } catch (err) {
     throw new Error(
       `Failed to parse SDK text: ${err instanceof Error ? err.message : String(err)}`,
     );
   }
 
-  if (!Array.isArray(items)) {
-    throw new Error('SDK text evaluation did not produce an array');
+  if (typeof result !== 'object' || result === null) {
+    throw new Error('SDK text evaluation did not produce an object');
   }
 
-  // Separate nodes from edges, ignoring undefined/null (trailing commas)
+  const obj = result as Record<string, unknown>;
+  const rawNodes = Array.isArray(obj.nodes) ? obj.nodes : [];
+  const rawEdges = Array.isArray(obj.edges) ? obj.edges : [];
+
   const nodes: FlowNodeDefinitions[] = [];
   const edges: EdgeInput[] = [];
 
-  for (const item of items) {
-    if (item === null || item === undefined) {
-      continue;
-    }
-
-    if (isNodeDefinition(item)) {
+  for (const item of rawNodes) {
+    if (item !== null && item !== undefined && isNodeDefinition(item)) {
       nodes.push(item);
-    } else if (isEdgeTuple(item)) {
+    }
+  }
+
+  for (const item of rawEdges) {
+    if (item !== null && item !== undefined && isEdgeTuple(item)) {
       edges.push(item as EdgeInput);
     }
-    // Silently skip unrecognised items (e.g. stray strings)
   }
 
   return { nodes, edges };

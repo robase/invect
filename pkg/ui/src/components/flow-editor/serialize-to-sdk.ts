@@ -155,19 +155,19 @@ function serializeEdge(edge: ClipboardEdge, nodeIdToRef: Map<string, string>): s
 /**
  * Convert clipboard nodes and edges into SDK source code text.
  *
- * Returns a string like:
+ * Returns a string shaped like a `defineFlow()` body:
  * ```
- * // Nodes
- * input('query', { variableName: 'query' }),
- *
- * model('answer', {
- *   credentialId: 'cred-abc',
- *   model: 'gpt-4o-mini',
- *   prompt: '{{ query }}',
- * }),
- *
- * // Edges
- * ['query', 'answer'],
+ * nodes: [
+ *   input('query', { variableName: 'query' }),
+ *   model('answer', {
+ *     credentialId: 'cred-abc',
+ *     model: 'gpt-4o-mini',
+ *     prompt: '{{ query }}',
+ *   }),
+ * ],
+ * edges: [
+ *   ['query', 'answer'],
+ * ],
  * ```
  */
 export function serializeToSDK(nodes: ClipboardNode[], edges: ClipboardEdge[]): string {
@@ -179,25 +179,26 @@ export function serializeToSDK(nodes: ClipboardNode[], edges: ClipboardEdge[]): 
 
   const parts: string[] = [];
 
-  // Nodes section
+  // Nodes array
   if (nodes.length > 0) {
-    parts.push('// Nodes');
+    parts.push('nodes: [');
     for (const n of nodes) {
-      parts.push(serializeNode(n) + ',');
-      parts.push('');
+      parts.push('  ' + serializeNode(n) + ',');
     }
+    parts.push('],');
   }
 
-  // Edges section
+  // Edges array
   const serializedEdges = edges
     .map((e) => serializeEdge(e, nodeIdToRef))
     .filter((e): e is string => e !== null);
 
   if (serializedEdges.length > 0) {
-    parts.push('// Edges');
+    parts.push('edges: [');
     for (const e of serializedEdges) {
-      parts.push(e + ',');
+      parts.push('  ' + e + ',');
     }
+    parts.push('],');
   }
 
   return parts.join('\n').trimEnd();

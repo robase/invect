@@ -5,10 +5,10 @@
  * whenever plugins are added or removed.
  */
 
-import { authentication } from '@invect/user-auth';
-import { rbacPlugin } from '@invect/rbac';
-import { webhooksPlugin } from '@invect/webhooks';
-import { mcpPlugin } from '@invect/mcp';
+import { auth } from '@invect/user-auth';
+import { rbac } from '@invect/rbac';
+import { webhooks } from '@invect/webhooks';
+import { mcp } from '@invect/mcp';
 import { defineConfig } from '@invect/core';
 
 const webhookBaseUrl = process.env.INVECT_WEBHOOK_BASE_URL || 'http://localhost:3000/invect';
@@ -75,7 +75,7 @@ export const invectConfig = defineConfig({
       ]
     : [],
   plugins: [
-    authentication({
+    auth({
       onSessionError: 'continue',
       trustedOrigins: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
       betterAuthOptions: {
@@ -90,10 +90,10 @@ export const invectConfig = defineConfig({
         },
       ],
     }),
-    rbacPlugin(),
-    webhooksPlugin({
+    rbac(),
+    webhooks({
       webhookBaseUrl,
     }),
-    mcpPlugin(),
+    mcp(),
   ],
 });

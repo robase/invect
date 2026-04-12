@@ -19,56 +19,56 @@ describe('JsExpressionService', () => {
   // ── Auto-return (one-liner) expressions ────────────────────────────────────
 
   describe('auto-return (one-liners)', () => {
-    it('simple property access', () => {
-      const result = service.evaluate('user.name', { user: { name: 'alice' } });
+    it('simple property access', async () => {
+      const result = await service.evaluate('user.name', { user: { name: 'alice' } });
       expect(result).toBe('alice');
     });
 
-    it('nested property access', () => {
-      const result = service.evaluate('user.address.city', {
+    it('nested property access', async () => {
+      const result = await service.evaluate('user.address.city', {
         user: { address: { city: 'NYC' } },
       });
       expect(result).toBe('NYC');
     });
 
-    it('array filter', () => {
-      const result = service.evaluate('items.filter(x => x > 2)', { items: [1, 2, 3, 4, 5] });
+    it('array filter', async () => {
+      const result = await service.evaluate('items.filter(x => x > 2)', { items: [1, 2, 3, 4, 5] });
       expect(result).toEqual([3, 4, 5]);
     });
 
-    it('array map', () => {
-      const result = service.evaluate('users.map(u => u.name)', {
+    it('array map', async () => {
+      const result = await service.evaluate('users.map(u => u.name)', {
         users: [{ name: 'alice' }, { name: 'bob' }],
       });
       expect(result).toEqual(['alice', 'bob']);
     });
 
-    it('reduce', () => {
-      const result = service.evaluate('orders.reduce((s, o) => s + o.amount, 0)', {
+    it('reduce', async () => {
+      const result = await service.evaluate('orders.reduce((s, o) => s + o.amount, 0)', {
         orders: [{ amount: 50 }, { amount: 100 }],
       });
       expect(result).toBe(150);
     });
 
-    it('array length (number)', () => {
-      const result = service.evaluate('items.length', { items: [1, 2, 3] });
+    it('array length (number)', async () => {
+      const result = await service.evaluate('items.length', { items: [1, 2, 3] });
       expect(result).toBe(3);
     });
 
-    it('ternary expression', () => {
-      const result = service.evaluate("active ? 'yes' : 'no'", { active: true });
+    it('ternary expression', async () => {
+      const result = await service.evaluate("active ? 'yes' : 'no'", { active: true });
       expect(result).toBe('yes');
     });
 
-    it('passthrough array (variable name only)', () => {
-      const result = service.evaluate('users', {
+    it('passthrough array (variable name only)', async () => {
+      const result = await service.evaluate('users', {
         users: [{ id: 1 }, { id: 2 }],
       });
       expect(result).toEqual([{ id: 1 }, { id: 2 }]);
     });
 
-    it('flatMap cross-product', () => {
-      const result = service.evaluate(
+    it('flatMap cross-product', async () => {
+      const result = await service.evaluate(
         'users.flatMap(u => roles.map(r => ({ user: u, role: r })))',
         { users: ['alice', 'bob'], roles: ['admin', 'viewer'] },
       );
@@ -80,8 +80,8 @@ describe('JsExpressionService', () => {
       ]);
     });
 
-    it('zip two arrays', () => {
-      const result = service.evaluate('users.map((u, i) => ({ ...u, score: scores[i] }))', {
+    it('zip two arrays', async () => {
+      const result = await service.evaluate('users.map((u, i) => ({ ...u, score: scores[i] }))', {
         users: [{ name: 'alice' }, { name: 'bob' }],
         scores: [95, 87],
       });
@@ -91,8 +91,8 @@ describe('JsExpressionService', () => {
       ]);
     });
 
-    it('null/undefined returns null', () => {
-      const result = service.evaluate('data.missing', { data: {} });
+    it('null/undefined returns null', async () => {
+      const result = await service.evaluate('data.missing', { data: {} });
       expect(result).toBeUndefined();
     });
   });
@@ -100,16 +100,16 @@ describe('JsExpressionService', () => {
   // ── Explicit return (multi-statement) ──────────────────────────────────────
 
   describe('explicit return (multi-statement)', () => {
-    it('filter then map with return', () => {
-      const result = service.evaluate(
+    it('filter then map with return', async () => {
+      const result = await service.evaluate(
         'const a = items.filter(x => x > 2); return a.map(x => x * 10);',
         { items: [1, 2, 3, 4, 5] },
       );
       expect(result).toEqual([30, 40, 50]);
     });
 
-    it('multiple inputs combined', () => {
-      const result = service.evaluate(
+    it('multiple inputs combined', async () => {
+      const result = await service.evaluate(
         `const u = users.filter(u => u.active);
          return u.map((u, i) => ({ ...u, score: scores[i] }));`,
         {
@@ -127,32 +127,32 @@ describe('JsExpressionService', () => {
       ]);
     });
 
-    it('object literal return', () => {
-      const result = service.evaluate('return { name: user.name, count: items.length }', {
+    it('object literal return', async () => {
+      const result = await service.evaluate('return { name: user.name, count: items.length }', {
         user: { name: 'alice' },
         items: [1, 2, 3],
       });
       expect(result).toEqual({ name: 'alice', count: 3 });
     });
 
-    it('conditional early return', () => {
-      const result = service.evaluate(
+    it('conditional early return', async () => {
+      const result = await service.evaluate(
         'if (!items || items.length === 0) return []; return items.filter(x => x > 2);',
         { items: [1, 2, 3, 4, 5] },
       );
       expect(result).toEqual([3, 4, 5]);
     });
 
-    it('conditional early return — empty case', () => {
-      const result = service.evaluate(
+    it('conditional early return — empty case', async () => {
+      const result = await service.evaluate(
         'if (!items || items.length === 0) return []; return items.filter(x => x > 2);',
         { items: [] },
       );
       expect(result).toEqual([]);
     });
 
-    it('aggregate then return object', () => {
-      const result = service.evaluate(
+    it('aggregate then return object', async () => {
+      const result = await service.evaluate(
         'return { total: orders.reduce((s, o) => s + o.amount, 0), count: orders.length }',
         { orders: [{ amount: 50 }, { amount: 100 }] },
       );
@@ -163,19 +163,19 @@ describe('JsExpressionService', () => {
   // ── $input escape hatch ────────────────────────────────────────────────────
 
   describe('$input escape hatch', () => {
-    it('$input provides full context', () => {
-      const result = service.evaluate('$input.user.name', { user: { name: 'alice' } });
+    it('$input provides full context', async () => {
+      const result = await service.evaluate('$input.user.name', { user: { name: 'alice' } });
       expect(result).toBe('alice');
     });
 
-    it('$input works when key collides with JS global', () => {
+    it('$input works when key collides with JS global', async () => {
       // "name" is a valid JS identifier but also a property of Function.name etc.
-      const result = service.evaluate('$input.name', { name: 'my-flow' });
+      const result = await service.evaluate('$input.name', { name: 'my-flow' });
       expect(result).toBe('my-flow');
     });
 
-    it('$input.length works (length is a common collision)', () => {
-      const result = service.evaluate('$input.length', { length: 42 });
+    it('$input.length works (length is a common collision)', async () => {
+      const result = await service.evaluate('$input.length', { length: 42 });
       expect(result).toBe(42);
     });
   });
@@ -183,34 +183,34 @@ describe('JsExpressionService', () => {
   // ── Type preservation ──────────────────────────────────────────────────────
 
   describe('type preservation', () => {
-    it('returns number', () => {
-      const result = service.evaluate('a + b', { a: 1, b: 2 });
+    it('returns number', async () => {
+      const result = await service.evaluate('a + b', { a: 1, b: 2 });
       expect(result).toBe(3);
       expect(typeof result).toBe('number');
     });
 
-    it('returns boolean', () => {
-      const result = service.evaluate('a > b', { a: 5, b: 3 });
+    it('returns boolean', async () => {
+      const result = await service.evaluate('a > b', { a: 5, b: 3 });
       expect(result).toBe(true);
     });
 
-    it('returns string', () => {
-      const result = service.evaluate("a + ' ' + b", { a: 'hello', b: 'world' });
+    it('returns string', async () => {
+      const result = await service.evaluate("a + ' ' + b", { a: 'hello', b: 'world' });
       expect(result).toBe('hello world');
     });
 
-    it('returns null', () => {
-      const result = service.evaluate('null', {});
+    it('returns null', async () => {
+      const result = await service.evaluate('null', {});
       expect(result).toBeNull();
     });
 
-    it('returns array of objects', () => {
-      const result = service.evaluate('[{ a: 1 }, { a: 2 }]', {});
+    it('returns array of objects', async () => {
+      const result = await service.evaluate('[{ a: 1 }, { a: 2 }]', {});
       expect(result).toEqual([{ a: 1 }, { a: 2 }]);
     });
 
-    it('returns nested object', () => {
-      const result = service.evaluate('return { a: { b: { c: 1 } } }', {});
+    it('returns nested object', async () => {
+      const result = await service.evaluate('return { a: { b: { c: 1 } } }', {});
       expect(result).toEqual({ a: { b: { c: 1 } } });
     });
   });
@@ -218,37 +218,55 @@ describe('JsExpressionService', () => {
   // ── Sandbox safety ─────────────────────────────────────────────────────────
 
   describe('sandbox safety', () => {
-    it('require is not defined', () => {
-      expect(() => service.evaluate("require('fs')", {})).toThrow(JsExpressionError);
+    // secure-exec leaks unhandled rejections when the sandbox tries to
+    // clone non-serializable values (fs.Stats from require, Promise from
+    // import). Suppress them to avoid Vitest exiting with code 1.
+    let unhandledHandler: (reason: unknown) => void;
+    beforeAll(() => {
+      unhandledHandler = () => {
+        /* swallow known sandbox leaks */
+      };
+      process.on('unhandledRejection', unhandledHandler);
+    });
+    afterAll(() => {
+      process.removeListener('unhandledRejection', unhandledHandler);
     });
 
-    it('globalThis has no Node.js APIs', () => {
-      expect(() => service.evaluate('process.env', {})).toThrow(JsExpressionError);
+    it('require is not defined', async () => {
+      await expect(service.evaluate("require('fs')", {})).rejects.toThrow(JsExpressionError);
     });
 
-    it('import() is not available', () => {
-      expect(() => service.evaluate("import('fs')", {})).toThrow();
+    it('globalThis has no Node.js APIs', async () => {
+      // secure-exec provides a minimal process shim with an empty env object
+      const result = await service.evaluate('process.env', {});
+      expect(result).toEqual({});
     });
 
-    it('fetch is not defined', () => {
-      expect(() => service.evaluate("fetch('http://evil.com')", {})).toThrow(JsExpressionError);
+    it('import() is not available', async () => {
+      await expect(service.evaluate("import('fs')", {})).rejects.toThrow();
+    });
+
+    it('fetch is not defined', async () => {
+      await expect(service.evaluate("fetch('http://evil.com')", {})).rejects.toThrow(
+        JsExpressionError,
+      );
     });
   });
 
   // ── Error handling ─────────────────────────────────────────────────────────
 
   describe('error handling', () => {
-    it('throws JsExpressionError on syntax error', () => {
-      expect(() => service.evaluate('const x = ;', {})).toThrow(JsExpressionError);
+    it('throws JsExpressionError on syntax error', async () => {
+      await expect(service.evaluate('const x = ;', {})).rejects.toThrow(JsExpressionError);
     });
 
-    it('throws JsExpressionError on runtime error', () => {
-      expect(() => service.evaluate('nonexistent.property', {})).toThrow(JsExpressionError);
+    it('throws JsExpressionError on runtime error', async () => {
+      await expect(service.evaluate('nonexistent.property', {})).rejects.toThrow(JsExpressionError);
     });
 
-    it('error includes the expression text', () => {
+    it('error includes the expression text', async () => {
       try {
-        service.evaluate('undefined_var.foo', {});
+        await service.evaluate('undefined_var.foo', {});
         expect.fail('Should have thrown');
       } catch (e) {
         expect(e).toBeInstanceOf(JsExpressionError);
@@ -256,59 +274,62 @@ describe('JsExpressionService', () => {
       }
     });
 
-    it('throws if not initialized', () => {
+    it('throws if not initialized', async () => {
       const uninit = new JsExpressionService();
-      expect(() => uninit.evaluate('1 + 1', {})).toThrow('not initialized');
+      await expect(uninit.evaluate('1 + 1', {})).rejects.toThrow('not initialized');
     });
   });
 
   // ── Edge cases ─────────────────────────────────────────────────────────────
 
   describe('edge cases', () => {
-    it('empty expression returns undefined', () => {
-      const result = service.evaluate('return undefined', {});
+    it('empty expression returns undefined', async () => {
+      const result = await service.evaluate('return undefined', {});
       expect(result).toBeUndefined();
     });
 
-    it('empty context works', () => {
-      const result = service.evaluate('1 + 2', {});
+    it('empty context works', async () => {
+      const result = await service.evaluate('1 + 2', {});
       expect(result).toBe(3);
     });
 
-    it('large array (1000 items)', () => {
+    it('large array (1000 items)', async () => {
       const items = Array.from({ length: 1000 }, (_, i) => i);
-      const result = service.evaluate('items.filter(x => x % 2 === 0).length', { items });
+      const result = await service.evaluate('items.filter(x => x % 2 === 0).length', { items });
       expect(result).toBe(500);
     });
 
-    it('context with special characters in values', () => {
-      const result = service.evaluate('msg', { msg: 'hello "world" \n\ttab' });
+    it('context with special characters in values', async () => {
+      const result = await service.evaluate('msg', { msg: 'hello "world" \n\ttab' });
       expect(result).toBe('hello "world" \n\ttab');
     });
 
-    it('auto-return does not trigger on "return" inside a string', () => {
+    it('auto-return does not trigger on "return" inside a string', async () => {
       // The word "return" appears in the string, but not as a keyword
-      const result = service.evaluate(`const msg = "please return the item"; return msg;`, {});
+      const result = await service.evaluate(
+        `const msg = "please return the item"; return msg;`,
+        {},
+      );
       expect(result).toBe('please return the item');
     });
 
-    it('Math built-in works', () => {
-      const result = service.evaluate('Math.max(...nums)', { nums: [3, 1, 4, 1, 5] });
+    it('Math built-in works', async () => {
+      const result = await service.evaluate('Math.max(...nums)', { nums: [3, 1, 4, 1, 5] });
       expect(result).toBe(5);
     });
 
-    it('JSON built-in works', () => {
-      const result = service.evaluate('JSON.stringify({ a: 1 })', {});
+    it('JSON built-in works', async () => {
+      const result = await service.evaluate('JSON.stringify({ a: 1 })', {});
       expect(result).toBe('{"a":1}');
     });
 
-    it('Date constructor works', () => {
-      const result = service.evaluate('typeof new Date()', {});
+    it('Date constructor works', async () => {
+      const result = await service.evaluate('typeof new Date()', {});
       expect(result).toBe('object');
     });
 
-    it('RegExp works', () => {
-      const result = service.evaluate('/^hello/.test(msg)', { msg: 'hello world' });
+    it('RegExp works', async () => {
+      const result = await service.evaluate('/^hello/.test(msg)', { msg: 'hello world' });
       expect(result).toBe(true);
     });
   });

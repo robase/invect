@@ -2,7 +2,7 @@
  * @invect/rbac/ui — Frontend Plugin Entry Point
  *
  * This is the browser-safe entry point that exports the RBAC frontend plugin.
- * Import via: `import { rbacFrontendPlugin } from '@invect/rbac/ui'`
+ * Import via: `import { rbacFrontend } from '@invect/rbac/ui'`
  *
  * No Node.js dependencies. No @invect/core runtime imports.
  */
@@ -18,7 +18,7 @@ import type { InvectFrontendPlugin } from './types';
 // RBAC Frontend Plugin Definition
 // ─────────────────────────────────────────────────────────────
 
-export const rbacFrontendPlugin: InvectFrontendPlugin = {
+export const rbacFrontend: InvectFrontendPlugin = {
   id: 'rbac',
   name: 'Role-Based Access Control',
 

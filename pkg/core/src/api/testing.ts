@@ -14,13 +14,13 @@ import type { BatchProvider } from '../services/ai/base-client';
 /**
  * Resolve {{ expression }} templates in params using the provided context.
  */
-function resolveTemplateParams(
+async function resolveTemplateParams(
   templateService: TemplateService,
   logger: Logger,
   params: Record<string, unknown>,
   context: Record<string, unknown>,
   skipKeys: string[] = [],
-): Record<string, unknown> {
+): Promise<Record<string, unknown>> {
   const resolved: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(params)) {
@@ -31,7 +31,7 @@ function resolveTemplateParams(
 
     if (typeof value === 'string' && templateService.isTemplate(value)) {
       try {
-        const renderedValue = templateService.render(value, context);
+        const renderedValue = await templateService.render(value, context);
         resolved[key] = renderedValue;
       } catch (error) {
         logger.warn('Failed to resolve template param for test', {
@@ -119,7 +119,7 @@ export function createTestingAPI(
       // Resolve templates in params using inputData as context
       let resolvedParams = mergedParams;
       if (templateService) {
-        resolvedParams = resolveTemplateParams(
+        resolvedParams = await resolveTemplateParams(
           templateService,
           logger,
           mergedParams,
@@ -262,54 +262,52 @@ export function createTestingAPI(
       if (!jsExpressionService) {
         return Promise.resolve({ success: false, error: 'JS expression engine not initialized' });
       }
-      try {
-        const result = jsExpressionService.evaluate(request.expression, request.context);
-        return Promise.resolve({ success: true, result });
-      } catch (e) {
-        return Promise.resolve({
-          success: false,
+      return jsExpressionService.evaluate(request.expression, request.context).then(
+        (result) => ({ success: true as const, result }),
+        (e) => ({
+          success: false as const,
           error: e instanceof Error ? e.message : String(e),
-        });
-      }
+        }),
+      );
     },
 
     testMapper(request) {
       if (!jsExpressionService) {
         return Promise.resolve({ success: false, error: 'JS expression engine not initialized' });
       }
-      try {
-        const result = jsExpressionService.evaluate(request.expression, request.incomingData);
-        const mode = request.mode ?? 'auto';
-        const isArray = Array.isArray(result);
-        let resultType: 'array' | 'object' | 'primitive';
+      return jsExpressionService.evaluate(request.expression, request.incomingData).then(
+        (result) => {
+          const mode = request.mode ?? 'auto';
+          const isArray = Array.isArray(result);
+          let resultType: 'array' | 'object' | 'primitive';
 
-        if (isArray) {
-          resultType = 'array';
-        } else if (result !== null && typeof result === 'object') {
-          resultType = 'object';
-        } else {
-          resultType = 'primitive';
-        }
+          if (isArray) {
+            resultType = 'array';
+          } else if (result !== null && typeof result === 'object') {
+            resultType = 'object';
+          } else {
+            resultType = 'primitive';
+          }
 
-        if (mode === 'iterate' && !isArray) {
-          return Promise.resolve({
-            success: false,
-            error: `Mode is "iterate" but expression returned ${resultType}, not an array`,
-          });
-        }
+          if (mode === 'iterate' && !isArray) {
+            return {
+              success: false as const,
+              error: `Mode is "iterate" but expression returned ${resultType}, not an array`,
+            };
+          }
 
-        return Promise.resolve({
-          success: true,
-          result,
-          resultType,
-          itemCount: isArray ? (result as unknown[]).length : undefined,
-        });
-      } catch (e) {
-        return Promise.resolve({
-          success: false,
+          return {
+            success: true as const,
+            result,
+            resultType,
+            itemCount: isArray ? (result as unknown[]).length : undefined,
+          };
+        },
+        (e) => ({
+          success: false as const,
           error: e instanceof Error ? e.message : String(e),
-        });
-      }
+        }),
+      );
     },
 
     async testModelPrompt(request) {

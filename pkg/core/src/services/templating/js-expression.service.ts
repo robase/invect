@@ -2,7 +2,7 @@
  * JS Expression Service
  *
  * Provides sandboxed JavaScript evaluation for data mapper expressions.
- * Uses QuickJS (via quickjs-emscripten) for safe, isolated execution.
+ * Uses secure-exec (V8 isolate sandbox) for safe, isolated execution.
  *
  * User code is wrapped in a function body — use `return` to produce a value.
  * For single-expression one-liners (no `return` keyword), `return` is auto-prepended.
@@ -10,39 +10,37 @@
  * Context keys from upstream nodes are injected as local variables.
  * `$input` is always available as the full context object (escape hatch for name collisions).
  */
-import { newQuickJSWASMModule } from 'quickjs-emscripten';
-import type { QuickJSWASMModule, QuickJSRuntime } from 'quickjs-emscripten';
+import { NodeRuntime, createNodeDriver, createNodeRuntimeDriverFactory } from 'secure-exec';
 import type { Logger } from 'src/schemas';
 
 export interface JsExpressionServiceConfig {
-  /** Memory limit for the QuickJS runtime in bytes. Default: 16MB */
-  memoryLimitBytes?: number;
-  /** Max stack size in bytes. Default: 1MB */
-  maxStackSizeBytes?: number;
+  /** Memory limit for the sandbox runtime in MB. Default: 16 */
+  memoryLimitMB?: number;
+  /** CPU time limit per evaluation in milliseconds. Default: 5000 */
+  cpuTimeLimitMs?: number;
 }
 
-const DEFAULT_MEMORY_LIMIT = 16 * 1024 * 1024; // 16 MB
-const DEFAULT_MAX_STACK_SIZE = 1024 * 1024; // 1 MB
+const DEFAULT_MEMORY_LIMIT_MB = 128;
+const DEFAULT_CPU_TIME_LIMIT_MS = 5000;
 
 /** Matches a valid JavaScript identifier (used to filter context keys for safe destructuring). */
 const VALID_JS_IDENT = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
 
 export class JsExpressionService {
-  private module: QuickJSWASMModule | null = null;
-  private runtime: QuickJSRuntime | null = null;
+  private runtime: NodeRuntime | null = null;
   private logger?: Logger;
   private config: Required<JsExpressionServiceConfig>;
 
   constructor(config: JsExpressionServiceConfig = {}, logger?: Logger) {
     this.logger = logger;
     this.config = {
-      memoryLimitBytes: config.memoryLimitBytes ?? DEFAULT_MEMORY_LIMIT,
-      maxStackSizeBytes: config.maxStackSizeBytes ?? DEFAULT_MAX_STACK_SIZE,
+      memoryLimitMB: config.memoryLimitMB ?? DEFAULT_MEMORY_LIMIT_MB,
+      cpuTimeLimitMs: config.cpuTimeLimitMs ?? DEFAULT_CPU_TIME_LIMIT_MS,
     };
   }
 
   /**
-   * Initialize the QuickJS WASM module and runtime.
+   * Initialize the secure-exec runtime.
    * Must be called before evaluate(). Safe to call multiple times.
    */
   async initialize(): Promise<void> {
@@ -50,14 +48,16 @@ export class JsExpressionService {
       return;
     }
 
-    this.module = await newQuickJSWASMModule();
-    this.runtime = this.module.newRuntime();
-    this.runtime.setMemoryLimit(this.config.memoryLimitBytes);
-    this.runtime.setMaxStackSize(this.config.maxStackSizeBytes);
+    this.runtime = new NodeRuntime({
+      systemDriver: createNodeDriver(),
+      runtimeDriverFactory: createNodeRuntimeDriverFactory(),
+      memoryLimit: this.config.memoryLimitMB,
+      cpuTimeLimitMs: this.config.cpuTimeLimitMs,
+    });
 
     this.logger?.debug('JsExpressionService initialized', {
-      memoryLimit: this.config.memoryLimitBytes,
-      maxStackSize: this.config.maxStackSizeBytes,
+      memoryLimitMB: this.config.memoryLimitMB,
+      cpuTimeLimitMs: this.config.cpuTimeLimitMs,
     });
   }
 
@@ -71,65 +71,67 @@ export class JsExpressionService {
    *
    * @example
    * // Auto-return (one-liner):
-   * evaluate("users.filter(u => u.active)", { users: [...] })
+   * await evaluate("users.filter(u => u.active)", { users: [...] })
    *
    * // Explicit return (multi-statement):
-   * evaluate(`
+   * await evaluate(`
    *   const active = users.filter(u => u.active);
    *   return active.map(u => ({ ...u, rank: 1 }));
    * `, { users: [...] })
    */
-  evaluate(expression: string, context: Record<string, unknown>): unknown {
+  async evaluate(expression: string, context: Record<string, unknown>): Promise<unknown> {
     if (!this.runtime) {
       throw new Error('JsExpressionService not initialized. Call initialize() first.');
     }
 
-    const vm = this.runtime.newContext();
+    // Inject context as a JSON-serialized global, then destructure into locals.
+    const contextJson = JSON.stringify(context);
+    // Only destructure keys that are valid JS identifiers to prevent code injection.
+    // Non-identifier keys (e.g. "my-key") are still accessible via $input["my-key"].
+    const safeKeys = Object.keys(context).filter((k) => VALID_JS_IDENT.test(k));
+
+    // Build the wrapped code:
+    // 1. Parse the serialized context into $input
+    // 2. Destructure safe context keys into local variables
+    // 3. Execute user code in a function body (with auto-return for one-liners)
+    const userBody = needsAutoReturn(expression) ? `return (${expression})` : expression;
+    const destructure = safeKeys.length > 0 ? `const {${safeKeys.join(',')}} = $input;` : '';
+    const fnBody = `const $input = JSON.parse(${JSON.stringify(contextJson)});${destructure}${userBody}`;
+    const wrapped = `export default (function(){${fnBody}})()`;
+
+    let result: Awaited<ReturnType<NodeRuntime['run']>>;
     try {
-      // Inject context as a JSON-serialized global, then destructure into locals.
-      // This avoids per-key handle creation and is faster for large contexts.
-      const contextJson = JSON.stringify(context);
-      // Only destructure keys that are valid JS identifiers to prevent code injection.
-      // Non-identifier keys (e.g. "my-key") are still accessible via $input["my-key"].
-      const safeKeys = Object.keys(context).filter((k) => VALID_JS_IDENT.test(k));
-
-      // Build the wrapped code:
-      // 1. Parse the serialized context into $input
-      // 2. Destructure safe context keys into local variables
-      // 3. Execute user code in a function body (with auto-return for one-liners)
-      const userBody = needsAutoReturn(expression) ? `return (${expression})` : expression;
-      const destructure = safeKeys.length > 0 ? `const {${safeKeys.join(',')}} = $input;` : '';
-      // eslint-disable-next-line codeql/js-bad-code-sanitization -- User expression is evaluated inside a QuickJS WASM sandbox (not Node.js eval). Context is injected as JSON-parsed data. The sandbox IS the sanitization.
-      const wrapped = `(function(){const $input = JSON.parse(${JSON.stringify(contextJson)});${destructure}${userBody}})()`;
-
-      const result = vm.evalCode(wrapped);
-      if (result.error) {
-        const errorObj = vm.dump(result.error);
-        result.error.dispose();
-        const message =
-          typeof errorObj === 'object' && errorObj !== null && 'message' in errorObj
-            ? (errorObj as { message: string }).message
-            : String(errorObj);
-        throw new JsExpressionError(message, expression);
+      result = await this.runtime.run<{ default: unknown }>(wrapped);
+    } catch (error: unknown) {
+      // The V8 isolate may be permanently disposed after certain fatal errors
+      // (e.g. dynamic import attempts). Auto-recover by reinitializing the runtime.
+      if (error instanceof Error && error.message?.includes('Isolate is disposed')) {
+        this.logger?.warn('V8 isolate disposed, reinitializing runtime');
+        this.runtime = null;
+        await this.initialize();
+        throw new JsExpressionError('Runtime was reset after isolate disposal', expression);
       }
-
-      const value = vm.dump(result.value);
-      result.value.dispose();
-      return value;
-    } finally {
-      vm.dispose();
+      throw error;
     }
+
+    if (result.code !== 0) {
+      throw new JsExpressionError(
+        result.errorMessage ?? 'Expression evaluation failed',
+        expression,
+      );
+    }
+
+    return result.exports?.default;
   }
 
   /**
-   * Dispose the QuickJS runtime. Call on Invect shutdown.
+   * Dispose the secure-exec runtime. Call on Invect shutdown.
    */
   dispose(): void {
     if (this.runtime) {
       this.runtime.dispose();
       this.runtime = null;
     }
-    this.module = null;
     this.logger?.debug('JsExpressionService disposed');
   }
 }

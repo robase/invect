@@ -1,7 +1,7 @@
 /**
  * @invect/webhooks — Backend Entry Point
  */
-export { webhooksPlugin } from './plugin';
+export { webhooks } from './plugin';
 export type { WebhooksPluginOptions } from './plugin';
 export { WebhookSignatureService, WEBHOOK_PROVIDER_SIGNATURES } from './webhook-signature.service';
 export type { WebhookProviderSignatureConfig } from './webhook-signature.service';

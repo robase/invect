@@ -199,7 +199,7 @@ export class NodeDataService {
 
     try {
       if (this.templateService) {
-        const result = this.templateService.render(template, variables);
+        const result = await this.templateService.render(template, variables);
         this.logger.debug('Template processed successfully', { templateLength: template.length });
         // Always return string for this API (used by template_string action)
         if (result === null || result === undefined) {

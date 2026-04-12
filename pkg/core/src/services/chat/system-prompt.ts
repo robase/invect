@@ -504,9 +504,9 @@ const CORE_ACTION_IDS = [
 /** Format hints that can't be derived from param schemas. */
 const FORMAT_HINTS: Record<string, string> = {
   'core.if_else':
-    'expression is a JavaScript expression evaluated in a QuickJS sandbox. Upstream vars as locals. Example: user_data.age >= 18',
+    'expression is a JavaScript expression evaluated in a secure-exec V8 sandbox. Upstream vars as locals. Example: user_data.age >= 18',
   'core.javascript':
-    'QuickJS sandbox, no network/Node.js. Upstream vars as locals. $input has full incoming data.',
+    'Secure-exec V8 sandbox, no network/Node.js. Upstream vars as locals. $input has full incoming data.',
   'trigger.cron': 'Standard 5-field cron (minute hour day month weekday)',
 };
 

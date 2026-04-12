@@ -460,8 +460,7 @@ export const initCommand = new Command('init')
       step('Create Configuration');
 
       const configCode = generateConfigFile(framework, database);
-      const configDir = fs.existsSync(path.join(process.cwd(), 'src')) ? 'src' : '.';
-      const configPath = path.join(process.cwd(), configDir, 'invect.config.ts');
+      const configPath = path.join(process.cwd(), 'invect.config.ts');
 
       if (fs.existsSync(configPath)) {
         console.log(
@@ -562,6 +561,7 @@ export const initCommand = new Command('init')
             await generateAction({
               config: configPath,
               output: outputDir,
+              adapter: 'drizzle',
               dialect: database.id,
               yes: true,
             });
@@ -614,12 +614,66 @@ export const initCommand = new Command('init')
           `  ${n++}. Mount the router: ${pc.cyan("app.use('/invect', createInvectRouter(config))")}`,
         );
       } else if (framework.id === 'nextjs') {
-        nextSteps.push(
-          `  ${n++}. Create a catch-all route: ${pc.cyan('app/api/invect/[...invect]/route.ts')}`,
-        );
+        const routeFile = 'app/api/invect/[...invect]/route.ts';
+        const configRelPath = path.relative(process.cwd(), configPath);
+        // Compute import path from route file to config (e.g. "../../../../invect.config")
+        const routeImportPath = path
+          .relative(path.dirname(routeFile), configRelPath)
+          .replace(/\.ts$/, '');
+
+        const routeSnippet = [
+          `import { createInvectHandler } from '@invect/nextjs';`,
+          `import { config } from '${routeImportPath}';`,
+          ``,
+          `const handler = createInvectHandler(config);`,
+          ``,
+          `export const GET = handler.GET;`,
+          `export const POST = handler.POST;`,
+          `export const PATCH = handler.PATCH;`,
+          `export const PUT = handler.PUT;`,
+          `export const DELETE = handler.DELETE;`,
+        ]
+          .map((l) => `  ${pc.dim('│')} ${pc.cyan(l)}`)
+          .join('\n');
+
+        nextSteps.push(`  ${n++}. Create ${pc.cyan(routeFile)}:\n\n${routeSnippet}\n`);
       } else if (framework.id === 'nestjs') {
         nextSteps.push(
           `  ${n++}. Import ${pc.cyan('InvectModule.forRoot(config)')} in your AppModule`,
+        );
+      }
+
+      // Frontend UI step
+      if (framework.id === 'nextjs') {
+        const pageFile = 'app/invect/[[...slug]]/page.tsx';
+        const configRelPath = path.relative(process.cwd(), configPath);
+        const pageImportPath = path
+          .relative(path.dirname(pageFile), configRelPath)
+          .replace(/\.ts$/, '');
+
+        const pageSnippet = [
+          `'use client';`,
+          ``,
+          `import dynamic from 'next/dynamic';`,
+          `import { config } from '${pageImportPath}';`,
+          `import '@invect/ui/styles';`,
+          ``,
+          `const Invect = dynamic(`,
+          `  () => import('@invect/ui').then((mod) => ({ default: mod.Invect })),`,
+          `  { ssr: false },`,
+          `);`,
+          ``,
+          `export default function InvectPage() {`,
+          `  return <Invect config={config} />;`,
+          `}`,
+        ]
+          .map((l) => `  ${pc.dim('│')} ${pc.cyan(l)}`)
+          .join('\n');
+
+        nextSteps.push(`  ${n++}. Create ${pc.cyan(pageFile)}:\n\n${pageSnippet}\n`);
+      } else if (framework.id === 'express') {
+        nextSteps.push(
+          `  ${n++}. Add the frontend — see ${pc.cyan('https://invect.dev/docs/frontend')}`,
         );
       }
 
@@ -742,6 +796,8 @@ export function generateConfigFile(framework: Framework, database: Database): st
     ? `// import { ... } from '${framework.adapterPackage}';\n`
     : '';
 
+  const apiPath = framework.id === 'nextjs' ? '/api/invect' : '/invect';
+
   return `/**
  * Invect Configuration
  *
@@ -753,11 +809,13 @@ export function generateConfigFile(framework: Framework, database: Database): st
 
 import { defineConfig } from '@invect/core';
 ${adapterImport}
-export default defineConfig({
+export const config = defineConfig({
   encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
 ${dbConfig}
+  frontendPath: '/invect',
+  apiPath: '${apiPath}',
 
-  // Add plugins here
+  // Plugins (each has backend + frontend parts)
   // plugins: [],
 });
 `;

@@ -2,9 +2,9 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { Invect, InvectShell, OAuth2CallbackHandler } from '@invect/ui';
-import { AuthenticatedInvect, authFrontendPlugin } from '@invect/user-auth/ui';
-import { rbacFrontendPlugin } from '@invect/rbac/ui';
-import { webhooksFrontendPlugin } from '@invect/webhooks/ui';
+import { AuthenticatedInvect, authFrontend } from '@invect/user-auth/ui';
+import { rbacFrontend } from '@invect/rbac/ui';
+import { webhooksFrontend } from '@invect/webhooks/ui';
 
 import './app.css';
 
@@ -30,7 +30,7 @@ export const App = () => {
                 apiBaseUrl={apiBaseUrl}
                 InvectComponent={Invect}
                 ShellComponent={InvectShell}
-                plugins={[authFrontendPlugin, rbacFrontendPlugin, webhooksFrontendPlugin]}
+                plugins={[authFrontend, rbacFrontend, webhooksFrontend]}
               />
             </div>
           }

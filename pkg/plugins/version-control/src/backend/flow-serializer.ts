@@ -88,6 +88,13 @@ export function serializeFlowToTs(
   lines.push('});');
   lines.push('');
 
+  // Embed machine-readable JSON for reliable round-tripping on import.
+  // The static parser uses this to avoid eval/jiti.
+  lines.push('/* @invect-definition');
+  lines.push(JSON.stringify(definition));
+  lines.push('*/');
+  lines.push('');
+
   return lines.join('\n');
 }
 

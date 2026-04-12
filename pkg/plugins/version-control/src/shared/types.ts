@@ -3,10 +3,12 @@
 // =============================================================================
 
 /** Supported sync modes */
-export type VcSyncMode = 'direct-commit' | 'pr-per-save' | 'pr-per-publish';
+export const VC_SYNC_MODES = ['direct-commit', 'pr-per-save', 'pr-per-publish'] as const;
+export type VcSyncMode = (typeof VC_SYNC_MODES)[number];
 
 /** Sync direction */
-export type VcSyncDirection = 'push' | 'pull' | 'bidirectional';
+export const VC_SYNC_DIRECTIONS = ['push', 'pull', 'bidirectional'] as const;
+export type VcSyncDirection = (typeof VC_SYNC_DIRECTIONS)[number];
 
 /** Sync history action types */
 export type VcSyncAction = 'push' | 'pull' | 'pr-created' | 'pr-merged' | 'conflict';

@@ -67,7 +67,7 @@ export const ifElseAction = defineAction({
 
     try {
       const jsService = await getJsExpressionService(context.logger);
-      const result = jsService.evaluate(params.expression, evaluationData);
+      const result = await jsService.evaluate(params.expression, evaluationData);
       evaluationResult = Boolean(result);
     } catch (error) {
       evaluationError =

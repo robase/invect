@@ -9,6 +9,7 @@
 
 import type {
   InvectPlugin,
+  InvectPluginDefinition,
   InvectPluginSchema,
   InvectPluginEndpoint,
   PluginEndpointContext,
@@ -34,6 +35,14 @@ export interface WebhooksPluginOptions {
   rateLimitWindowMs?: number;
   /** Dedup TTL in ms. @default 86400000 (24h) */
   dedupTtlMs?: number;
+
+  /**
+   * Frontend plugin (sidebar, routes) for the webhooks UI.
+   *
+   * Import from `@invect/webhooks/ui` and pass here.
+   * Omit for backend-only setups.
+   */
+  frontend?: unknown;
 }
 
 const WEBHOOK_TRIGGERS_SCHEMA: InvectPluginSchema = {
@@ -98,7 +107,17 @@ function generateWebhookPath(): string {
 
 // ─── Plugin Factory ─────────────────────────────────────────────────
 
-export function webhooksPlugin(options?: WebhooksPluginOptions): InvectPlugin {
+export function webhooks(options?: WebhooksPluginOptions): InvectPluginDefinition {
+  const { frontend, ...backendOptions } = options ?? {};
+  return {
+    id: 'webhooks',
+    name: 'Webhooks',
+    backend: _webhooksBackendPlugin(backendOptions),
+    frontend,
+  };
+}
+
+function _webhooksBackendPlugin(options?: Omit<WebhooksPluginOptions, 'frontend'>): InvectPlugin {
   let state: PluginState | null = null;
 
   // ── Endpoints ────────────────────────────────────────────────────

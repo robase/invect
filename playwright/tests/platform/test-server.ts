@@ -21,7 +21,7 @@ import { fileURLToPath } from 'node:url';
 import express from 'express';
 import cors from 'cors';
 import { createInvectRouter } from '../../../pkg/express/dist/index.js';
-import { webhooksPlugin } from '../../../pkg/plugins/webhooks/src/backend/index.ts';
+import { webhooks } from '../../../pkg/plugins/webhooks/src/backend/index.ts';
 import {
   startExternalApiMocks,
   stopExternalApiMocks,
@@ -86,7 +86,7 @@ app.use(
       connectionString: `file:${dbPath}`,
     },
     logging: { level: 'warn' },
-    plugins: [webhooksPlugin()],
+    plugins: [webhooks()],
   }),
 );
 

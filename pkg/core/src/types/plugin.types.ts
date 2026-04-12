@@ -702,6 +702,39 @@ export interface InvectPlugin {
 }
 
 // =============================================================================
+// Unified Plugin Definition
+// =============================================================================
+
+/**
+ * A unified plugin definition that bundles both backend and frontend parts.
+ *
+ * Returned by plugin factory functions and passed to `defineConfig({ plugins: [...] })`.
+ * The backend extracts `.backend`, the `<Invect>` component extracts `.frontend`.
+ *
+ * @example
+ * ```typescript
+ * import { auth } from '@invect/user-auth';
+ * import { authFrontend } from '@invect/user-auth/ui';
+ *
+ * export const config = defineConfig({
+ *   plugins: [
+ *     auth({ frontend: authFrontend, adminEmail: '...' }),
+ *   ],
+ * });
+ * ```
+ */
+export interface InvectPluginDefinition {
+  /** Unique plugin identifier */
+  id: string;
+  /** Human-readable name */
+  name?: string;
+  /** Backend plugin (hooks, endpoints, schema, actions) */
+  backend?: InvectPlugin;
+  /** Frontend plugin (sidebar, routes, providers, components). Typed as `unknown` to avoid React dependency in core. */
+  frontend?: unknown;
+}
+
+// =============================================================================
 // Plugin Hook Runner (internal utility)
 // =============================================================================
 

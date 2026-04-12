@@ -26,7 +26,7 @@ const InvectEditor = dynamic(
             InvectComponent={frontend.Invect}
             ShellComponent={frontend.InvectShell}
             theme="light"
-            plugins={[authUi.authFrontendPlugin, rbacUi.rbacFrontendPlugin]}
+            plugins={[authUi.authFrontend, rbacUi.rbacFrontend]}
           />
         );
       },

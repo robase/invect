@@ -84,7 +84,12 @@ import {
 
 // Plugin system
 import { PluginManager } from './services/plugin-manager';
-import type { InvectPlugin, InvectPluginEndpoint, PluginHookRunner } from './types/plugin.types';
+import type {
+  InvectPlugin,
+  InvectPluginDefinition,
+  InvectPluginEndpoint,
+  PluginHookRunner,
+} from './types/plugin.types';
 import type { AgentToolDefinition, AgentPromptResult } from './types/agent-tool.types';
 
 // Action registry (Provider-Actions architecture)
@@ -226,10 +231,12 @@ export class Invect {
       logger: this.config.logger,
     });
 
-    // Initialize plugin manager
-    this.pluginManager = new PluginManager(
-      (this.config.plugins as InvectPlugin[] | undefined) ?? [],
-    );
+    // Initialize plugin manager — extract backend plugins from unified definitions
+    const rawPlugins = (this.config.plugins as InvectPluginDefinition[] | undefined) ?? [];
+    const backendPlugins = rawPlugins
+      .map((p) => p.backend)
+      .filter((p): p is InvectPlugin => p !== null && p !== undefined);
+    this.pluginManager = new PluginManager(backendPlugins);
   }
 
   // =====================================
@@ -490,7 +497,7 @@ export class Invect {
       // Initialize node registry first
       this.nodeRegistry = await this.initializeNodes();
 
-      // Initialize JS expression engine (QuickJS sandbox for data mapper)
+      // Initialize JS expression engine (secure-exec sandbox for data mapper)
       try {
         this.jsExpressionService = new JsExpressionService({}, this.config.logger);
         await this.jsExpressionService.initialize();
@@ -1245,7 +1252,7 @@ export class Invect {
   }
 
   /**
-   * Test a JS expression in the QuickJS sandbox.
+   * Test a JS expression in the secure-exec sandbox.
    * Used by the frontend data mapper preview.
    */
   async testJsExpression(request: {
@@ -1257,7 +1264,7 @@ export class Invect {
       return { success: false, error: 'JS expression engine not initialized' };
     }
     try {
-      const result = this.jsExpressionService.evaluate(request.expression, request.context);
+      const result = await this.jsExpressionService.evaluate(request.expression, request.context);
       return { success: true, result };
     } catch (e) {
       return {
@@ -1288,7 +1295,10 @@ export class Invect {
       return { success: false, error: 'JS expression engine not initialized' };
     }
     try {
-      const result = this.jsExpressionService.evaluate(request.expression, request.incomingData);
+      const result = await this.jsExpressionService.evaluate(
+        request.expression,
+        request.incomingData,
+      );
       const mode = request.mode ?? 'auto';
       const isArray = Array.isArray(result);
       let resultType: 'array' | 'object' | 'primitive';
@@ -1443,11 +1453,11 @@ export class Invect {
    * @param context - The context to use for template resolution
    * @param skipKeys - Keys to skip (their values should not be resolved as templates)
    */
-  private resolveTemplateParams(
+  private async resolveTemplateParams(
     params: Record<string, unknown>,
     context: Record<string, unknown>,
     skipKeys: string[] = [],
-  ): Record<string, unknown> {
+  ): Promise<Record<string, unknown>> {
     const templateService = this.getTemplateServiceOrThrow();
     const resolved: Record<string, unknown> = {};
 
@@ -1460,7 +1470,7 @@ export class Invect {
 
       if (typeof value === 'string' && templateService.isTemplate(value)) {
         try {
-          const renderedValue = templateService.render(value, context);
+          const renderedValue = await templateService.render(value, context);
           resolved[key] = renderedValue;
           this.config.logger.debug('Resolved template param for test', {
             param: key,
@@ -1531,7 +1541,7 @@ export class Invect {
     }
 
     // Resolve templates in params using inputData as context
-    const resolvedParams = this.resolveTemplateParams(
+    const resolvedParams = await this.resolveTemplateParams(
       mergedParams,
       inputData,
       skipTemplateResolutionKeys,

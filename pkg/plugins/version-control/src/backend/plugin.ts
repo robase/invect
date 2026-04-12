@@ -2,12 +2,13 @@
 // Version Control Plugin — Main Entry Point
 // =============================================================================
 
-import type { InvectPlugin, PluginEndpointContext } from '@invect/core';
+import type { InvectPlugin, InvectPluginDefinition, PluginEndpointContext } from '@invect/core';
+import { randomUUID } from 'node:crypto';
 
 import type { VersionControlPluginOptions } from './types';
-import type { ConfigureSyncInput } from '../shared/types';
 import { VC_SCHEMA } from './schema';
 import { VcSyncService } from './sync-service';
+import { configureSyncInputSchema, historyLimitSchema } from './validation';
 
 /**
  * Create the Version Control plugin.
@@ -29,7 +30,17 @@ import { VcSyncService } from './sync-service';
  * });
  * ```
  */
-export function versionControl(options: VersionControlPluginOptions): InvectPlugin {
+export function versionControl(options: VersionControlPluginOptions): InvectPluginDefinition {
+  const { frontend, ...backendOptions } = options;
+  return {
+    id: 'version-control',
+    name: 'Version Control',
+    backend: _vcBackendPlugin(backendOptions),
+    frontend,
+  };
+}
+
+function _vcBackendPlugin(options: Omit<VersionControlPluginOptions, 'frontend'>): InvectPlugin {
   let syncService: VcSyncService;
   let pluginLogger: { debug: Function; info: Function; warn: Function; error: Function } = console;
 
@@ -65,8 +76,11 @@ export function versionControl(options: VersionControlPluginOptions): InvectPlug
         path: '/vc/flows/:flowId/configure',
         handler: async (ctx: PluginEndpointContext) => {
           const { flowId } = ctx.params;
-          const input = ctx.body as ConfigureSyncInput;
-          const config = await syncService.configureSyncForFlow(ctx.database, flowId, input);
+          const parsed = configureSyncInputSchema.safeParse(ctx.body);
+          if (!parsed.success) {
+            return { status: 400, body: { error: 'Invalid input', details: parsed.error.issues } };
+          }
+          const config = await syncService.configureSyncForFlow(ctx.database, flowId, parsed.data);
           return { status: 200, body: config };
         },
       },
@@ -258,7 +272,7 @@ export function versionControl(options: VersionControlPluginOptions): InvectPlug
         path: '/vc/flows/:flowId/history',
         handler: async (ctx: PluginEndpointContext) => {
           const { flowId } = ctx.params;
-          const limit = ctx.query.limit ? parseInt(ctx.query.limit, 10) : 20;
+          const limit = historyLimitSchema.parse(ctx.query.limit);
           const history = await syncService.getSyncHistory(ctx.database, flowId, limit);
           return { status: 200, body: { flowId, history } };
         },
@@ -269,12 +283,12 @@ export function versionControl(options: VersionControlPluginOptions): InvectPlug
     // Hooks
     // =======================================================================
 
-    // NOTE: Auto-sync on flow version creation is intentionally NOT implemented
-    // as a hook. The onResponse hook context doesn't include database access.
-    // Instead, auto-sync is handled by the frontend calling POST /vc/flows/:id/push
-    // after saving a flow version. This matches the "opt-in per flow" decision —
-    // only flows with an enabled vc_sync_config record get synced.
-
+    // NOTE: Remote cleanup on flow deletion (deleting the file from GitHub,
+    // closing active PRs, removing draft branches) requires calling
+    // DELETE /vc/flows/:flowId/disconnect before deleting the flow.
+    // DB records (vc_sync_config, vc_sync_history) cascade-delete via FK.
+    // The plugin hook system does not provide database access in onRequest,
+    // so automatic remote cleanup on flow delete is not possible via hooks.
     hooks: {},
   };
 
@@ -286,13 +300,25 @@ export function versionControl(options: VersionControlPluginOptions): InvectPlug
     db: import('@invect/core').PluginDatabaseApi,
     prNumber: number,
   ): Promise<void> {
-    // Find the sync config with this active PR
-    const rows = await db.query<{ flow_id: string }>(
-      'SELECT flow_id FROM vc_sync_config WHERE active_pr_number = ?',
-      [prNumber],
-    );
+    // Find the sync config with this active PR — read draft_branch BEFORE clearing it
+    const rows = await db.query<{
+      flow_id: string;
+      draft_branch: string | null;
+      repo: string;
+    }>('SELECT flow_id, draft_branch, repo FROM vc_sync_config WHERE active_pr_number = ?', [
+      prNumber,
+    ]);
 
     for (const row of rows) {
+      // Try to clean up the draft branch before clearing the reference
+      if (row.draft_branch) {
+        try {
+          await options.provider.deleteBranch(row.repo, row.draft_branch);
+        } catch {
+          // Branch may already be deleted by the merge
+        }
+      }
+
       // Clear PR state, update sync status
       await db.execute(
         `UPDATE vc_sync_config
@@ -302,7 +328,6 @@ export function versionControl(options: VersionControlPluginOptions): InvectPlug
       );
 
       // Record history
-      const { randomUUID } = await import('node:crypto');
       await db.execute(
         `INSERT INTO vc_sync_history (id, flow_id, action, pr_number, message, created_at)
          VALUES (?, ?, ?, ?, ?, ?)`,
@@ -315,19 +340,6 @@ export function versionControl(options: VersionControlPluginOptions): InvectPlug
           new Date().toISOString(),
         ],
       );
-
-      // Try to clean up the draft branch
-      const configs = await db.query<{ draft_branch: string | null; repo: string }>(
-        'SELECT draft_branch, repo FROM vc_sync_config WHERE flow_id = ?',
-        [row.flow_id],
-      );
-      if (configs[0]?.draft_branch) {
-        try {
-          await options.provider.deleteBranch(configs[0].repo, configs[0].draft_branch);
-        } catch {
-          // Branch may already be deleted by the merge
-        }
-      }
 
       pluginLogger.info('PR merged — sync updated', { flowId: row.flow_id, prNumber });
     }

@@ -29,7 +29,7 @@ import { dirname, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { createInvect } from '../../../src/api/create-invect';
 import type { InvectInstance } from '../../../src/api/types';
-import { rbacPlugin } from '../../../../plugins/rbac/src/backend/plugin';
+import { rbac } from '../../../../plugins/rbac/src/backend/plugin';
 import type { InvectIdentity } from '../../../src/types/auth.types';
 import type {
   InvectPlugin,
@@ -314,7 +314,7 @@ describe('RBAC Plugin — Security Red Team', () => {
     sqlite.close();
 
     // 7. Create plugin + Invect
-    plugin = rbacPlugin({ enableTeams: true });
+    plugin = rbac({ enableTeams: true });
     invect = await createInvect({
       encryptionKey: 'dGVzdC1lbmNyeXB0aW9uLWtleS0xMjM0NTY3ODkw',
       database: {

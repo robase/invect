@@ -75,6 +75,7 @@ export type {
   FlowRunHookContext,
   NodeExecutionHookContext,
   NodeExecutionHookResult,
+  InvectPluginDefinition,
 } from './types/plugin.types';
 
 export type { ExecutionConfig, LoggingConfig, Logger, InvectDatabaseConfig } from './schemas';

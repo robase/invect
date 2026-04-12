@@ -143,6 +143,7 @@
       "@tailwindcss/oxide",
       "better-sqlite3",
       "esbuild",
+      "isolated-vm",
       "msw",
       "prisma",
       "sharp",

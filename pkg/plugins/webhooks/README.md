@@ -42,9 +42,9 @@ app.use('/invect', invectRouter);
 ```ts
 webhooksPlugin({
   webhookBaseUrl: 'https://example.com/api/invect', // Base URL for webhook endpoints
-  rateLimitMaxRequests: 60,                          // Max requests per window (default: 60)
-  rateLimitWindowMs: 60_000,                         // Rate limit window in ms (default: 60s)
-  dedupTtlMs: 86_400_000,                           // Deduplication TTL in ms (default: 24h)
+  rateLimitMaxRequests: 60, // Max requests per window (default: 60)
+  rateLimitWindowMs: 60_000, // Rate limit window in ms (default: 60s)
+  dedupTtlMs: 86_400_000, // Deduplication TTL in ms (default: 24h)
 });
 ```
 
@@ -68,11 +68,11 @@ The plugin adds a Webhooks page to the sidebar for managing webhook triggers.
 
 ## Exports
 
-| Entry Point            | Content                                                    |
-| ---------------------- | ---------------------------------------------------------- |
-| `@invect/webhooks`     | Backend plugin (Node.js)                                   |
-| `@invect/webhooks/ui`  | Frontend plugin — `webhooksFrontendPlugin`, `WebhooksPage` |
-| `@invect/webhooks/types` | Shared types                                             |
+| Entry Point              | Content                                                    |
+| ------------------------ | ---------------------------------------------------------- |
+| `@invect/webhooks`       | Backend plugin (Node.js)                                   |
+| `@invect/webhooks/ui`    | Frontend plugin — `webhooksFrontendPlugin`, `WebhooksPage` |
+| `@invect/webhooks/types` | Shared types                                               |
 
 ## License
 

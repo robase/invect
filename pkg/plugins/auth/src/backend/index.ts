@@ -8,31 +8,24 @@
  * - Authorization hook integration
  * - Express/NestJS middleware helpers
  *
- * The `auth` parameter is optional — when omitted, the plugin creates an
- * internal better-auth instance using Invect's database configuration.
- *
  * @example
  * ```ts
  * // Simple — no separate auth setup needed:
- * import { authentication } from '@invect/user-auth';
+ * import { auth } from '@invect/user-auth';
  *
- * createInvectRouter({
- *   databaseUrl: 'file:./dev.db',
- *   plugins: [authentication()],
+ * defineConfig({
+ *   plugins: [auth()],
  * });
  * ```
  *
  * @example
  * ```ts
- * // Advanced — provide your own better-auth instance:
- * import { betterAuth } from 'better-auth';
- * import { authentication } from '@invect/user-auth';
+ * // With frontend UI:
+ * import { auth } from '@invect/user-auth';
+ * import { authFrontend } from '@invect/user-auth/ui';
  *
- * const auth = betterAuth({ ... });
- *
- * createInvectRouter({
- *   databaseUrl: 'file:./dev.db',
- *   plugins: [authentication({ auth })],
+ * defineConfig({
+ *   plugins: [auth({ frontend: authFrontend })],
  * });
  * ```
  *
@@ -48,3 +41,29 @@ export type {
   BetterAuthSession,
   BetterAuthSessionResult,
 } from './types';
+
+import type { InvectPluginDefinition } from '@invect/core';
+import type { AuthenticationPluginOptions } from './types';
+import { authentication } from './plugin';
+
+/**
+ * Create the auth plugin definition for Invect config.
+ *
+ * @example
+ * ```ts
+ * // Express (backend only):
+ * auth({ adminEmail: '...' })
+ *
+ * // Next.js (with frontend):
+ * import { authFrontend } from '@invect/user-auth/ui';
+ * auth({ adminEmail: '...', frontend: authFrontend })
+ * ```
+ */
+export function auth(options: AuthenticationPluginOptions): InvectPluginDefinition {
+  return {
+    id: 'user-auth',
+    name: 'User Authentication',
+    backend: authentication(options),
+    frontend: options.frontend,
+  };
+}

@@ -13,7 +13,15 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   deps: {
-    neverBundle: ['@invect/core', 'jiti'],
+    neverBundle: [
+      '@invect/core',
+      '@invect/ui',
+      '@tanstack/react-query',
+      'react',
+      'react-dom',
+      'lucide-react',
+      'zod',
+    ],
   },
   outExtension({ format }) {
     return {

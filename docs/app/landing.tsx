@@ -834,7 +834,13 @@ app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <spa
               <div className="framework-item">
                 <div className="framework-icon">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2L2 19.5h20L12 2z" fill="none" stroke="#a1a1aa" strokeWidth="1.5" strokeLinejoin="round" />
+                    <path
+                      d="M12 2L2 19.5h20L12 2z"
+                      fill="none"
+                      stroke="#a1a1aa"
+                      strokeWidth="1.5"
+                      strokeLinejoin="round"
+                    />
                     <path d="M12 2v17.5" stroke="#a1a1aa" strokeWidth="1.5" />
                     <path d="M12 19.5L2 19.5" stroke="#a1a1aa" strokeWidth="1.5" />
                   </svg>
@@ -844,7 +850,10 @@ app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <spa
               <div className="framework-item">
                 <div className="framework-icon">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M21.8 13.1C21.93 12.42 22 11.72 22 11c0-5.52-4.48-10-10-10S2 5.48 2 11c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3l-.5 3H13v5.95c5.05-.5 9-4.76 9-9.85 0-.35-.02-.7-.05-1.05" fill="#a1a1aa" />
+                    <path
+                      d="M21.8 13.1C21.93 12.42 22 11.72 22 11c0-5.52-4.48-10-10-10S2 5.48 2 11c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3l-.5 3H13v5.95c5.05-.5 9-4.76 9-9.85 0-.35-.02-.7-.05-1.05"
+                      fill="#a1a1aa"
+                    />
                   </svg>
                 </div>
                 Prisma

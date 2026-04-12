@@ -5,8 +5,8 @@
  * to discover plugins and their schemas for code generation.
  */
 
-import { authentication } from '@invect/user-auth';
-import { rbacPlugin } from '@invect/rbac';
+import { auth } from '@invect/user-auth';
+import { rbac } from '@invect/rbac';
 import { invectAuth } from './auth';
 import { defineConfig } from '@invect/core';
 
@@ -55,7 +55,7 @@ export const invectConfig = defineConfig({
       : []),
   ],
   plugins: [
-    authentication({
+    auth({
       auth: invectAuth,
       onSessionError: 'continue',
       globalAdmins: [
@@ -66,6 +66,6 @@ export const invectConfig = defineConfig({
         },
       ],
     }),
-    rbacPlugin(),
+    rbac(),
   ],
 });

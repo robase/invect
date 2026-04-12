@@ -199,9 +199,9 @@ describe('generateConfigFile()', () => {
     expect(config).not.toContain('driver:');
   });
 
-  it('should include export default defineConfig', () => {
+  it('should include export const config = defineConfig', () => {
     const config = generateConfigFile(expressFramework, sqliteDb);
-    expect(config).toContain('export default defineConfig');
+    expect(config).toContain('export const config = defineConfig');
   });
 
   it('should include plugins placeholder comment', () => {

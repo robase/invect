@@ -88,6 +88,7 @@
     "codemirror": "^6.0.2",
     "nanoid": "^5.1.6",
     "prettier": "^3.8.1",
+    "react-hotkeys-hook": "^5.2.4",
     "react-markdown": "^10.1.0",
     "react-resizable-panels": "^3.0.6",
     "remark-gfm": "^4.0.1",

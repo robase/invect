@@ -47,7 +47,7 @@ export function registerDebugTools(server: McpServer, client: InvectClient): voi
 
   server.tool(
     TOOL_IDS.DEBUG_TEST_EXPRESSION,
-    'Test a JavaScript template expression ({{ ... }}) against a sample data context. Uses the QuickJS WASM sandbox.',
+    'Test a JavaScript template expression ({{ ... }}) against a sample data context. Uses the secure-exec V8 sandbox.',
     {
       expression: z
         .string()

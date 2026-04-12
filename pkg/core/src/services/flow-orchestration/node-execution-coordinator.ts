@@ -276,11 +276,11 @@ export class NodeExecutionCoordinator {
    * @param incomingData - Context data keyed by source node reference IDs
    * @param skipKeys - Param keys to skip (their values should not be resolved as templates)
    */
-  resolveTemplateParams(
+  async resolveTemplateParams(
     params: Record<string, unknown>,
     incomingData: NodeIncomingDataObject,
     skipKeys: string[] = [],
-  ): Record<string, unknown> {
+  ): Promise<Record<string, unknown>> {
     const resolved: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(params)) {
@@ -292,7 +292,7 @@ export class NodeExecutionCoordinator {
 
       if (typeof value === 'string' && this.templateService.isTemplate(value)) {
         try {
-          const renderedValue = this.templateService.render(value, incomingData);
+          const renderedValue = await this.templateService.render(value, incomingData);
           resolved[key] = renderedValue;
           this.deps.logger.debug('Resolved template param', {
             param: key,
@@ -499,7 +499,7 @@ export class NodeExecutionCoordinator {
     // Resolve templates in node params using incoming data (keyed by source node reference IDs)
     // Templates should use {{ source_node_ref }} format to access upstream node outputs
     const resolvedParams = incomingData
-      ? this.resolveTemplateParams(nodeParams, incomingData, skipTemplateResolutionKeys)
+      ? await this.resolveTemplateParams(nodeParams, incomingData, skipTemplateResolutionKeys)
       : nodeParams;
 
     logger.debug('Resolved node params', {
@@ -824,7 +824,7 @@ export class NodeExecutionCoordinator {
     // ── Evaluate mapper expression ───────────────────────────────────
     let mappedResult: unknown;
     try {
-      mappedResult = jsService.evaluate(mapperConfig.expression, incomingData);
+      mappedResult = await jsService.evaluate(mapperConfig.expression, incomingData);
     } catch (e) {
       // Mapper expression failed — create a failed trace with the error
       const errorMessage =

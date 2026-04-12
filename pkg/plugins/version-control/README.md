@@ -48,12 +48,12 @@ app.use('/invect', invectRouter);
 ```ts
 versionControl({
   provider: githubProvider({ auth: '...' }), // Git hosting provider
-  repo: 'owner/repo',                        // Default repository (owner/name)
-  defaultBranch: 'main',                     // Target branch
-  path: 'flows/',                            // Directory in the repo for flow files
-  mode: 'pr-per-publish',                    // "pr-per-publish" | "auto-sync" | "manual-only"
-  syncDirection: 'push',                     // "push" | "pull" | "bidirectional"
-  webhookSecret: '...',                      // Webhook secret for PR merge events
+  repo: 'owner/repo', // Default repository (owner/name)
+  defaultBranch: 'main', // Target branch
+  path: 'flows/', // Directory in the repo for flow files
+  mode: 'pr-per-publish', // "pr-per-publish" | "auto-sync" | "manual-only"
+  syncDirection: 'push', // "push" | "pull" | "bidirectional"
+  webhookSecret: '...', // Webhook secret for PR merge events
 });
 ```
 
@@ -67,11 +67,11 @@ versionControl({
 
 ## Exports
 
-| Entry Point                              | Content                                 |
-| ---------------------------------------- | --------------------------------------- |
-| `@invect/version-control`                | Backend plugin (Node.js)                |
-| `@invect/version-control/providers/github` | GitHub provider                       |
-| `@invect/version-control/types`          | Shared types                            |
+| Entry Point                                | Content                  |
+| ------------------------------------------ | ------------------------ |
+| `@invect/version-control`                  | Backend plugin (Node.js) |
+| `@invect/version-control/providers/github` | GitHub provider          |
+| `@invect/version-control/types`            | Shared types             |
 
 ## License
 

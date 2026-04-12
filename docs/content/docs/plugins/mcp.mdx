@@ -32,18 +32,18 @@ export const invectConfig = defineConfig({
 
 ### Options
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `sessionTtlMs` | `number` | `1800000` (30 min) | How long idle MCP sessions stay alive. |
-| `audit.enabled` | `boolean` | `true` | Log every tool invocation. |
-| `audit.persist` | `boolean` | `false` | Persist audit logs to the database. |
-| `audit.logLevel` | `'debug' \| 'info' \| 'warn'` | `'info'` | Minimum level for audit entries. |
+| Option           | Type                          | Default            | Description                            |
+| ---------------- | ----------------------------- | ------------------ | -------------------------------------- |
+| `sessionTtlMs`   | `number`                      | `1800000` (30 min) | How long idle MCP sessions stay alive. |
+| `audit.enabled`  | `boolean`                     | `true`             | Log every tool invocation.             |
+| `audit.persist`  | `boolean`                     | `false`            | Persist audit logs to the database.    |
+| `audit.logLevel` | `'debug' \| 'info' \| 'warn'` | `'info'`           | Minimum level for audit entries.       |
 
 ```ts title="invect.config.ts"
 mcpPlugin({
   sessionTtlMs: 60 * 60 * 1000, // 1 hour sessions
   audit: { enabled: true, persist: true, logLevel: 'debug' },
-})
+});
 ```
 
 ## Connecting an AI assistant
@@ -65,7 +65,14 @@ Output:
   "mcpServers": {
     "invect": {
       "command": "npx",
-      "args": ["invect-cli", "mcp", "--url", "http://localhost:3000/invect", "--api-key", "YOUR_KEY"]
+      "args": [
+        "invect-cli",
+        "mcp",
+        "--url",
+        "http://localhost:3000/invect",
+        "--api-key",
+        "YOUR_KEY"
+      ]
     }
   }
 }
@@ -80,7 +87,14 @@ Add to your `.vscode/mcp.json`:
   "servers": {
     "invect": {
       "command": "npx",
-      "args": ["invect-cli", "mcp", "--url", "http://localhost:3000/invect", "--api-key", "YOUR_KEY"]
+      "args": [
+        "invect-cli",
+        "mcp",
+        "--url",
+        "http://localhost:3000/invect",
+        "--api-key",
+        "YOUR_KEY"
+      ]
     }
   }
 }
@@ -95,7 +109,14 @@ Add to your Cursor MCP settings (`~/.cursor/mcp.json`):
   "mcpServers": {
     "invect": {
       "command": "npx",
-      "args": ["invect-cli", "mcp", "--url", "http://localhost:3000/invect", "--api-key", "YOUR_KEY"]
+      "args": [
+        "invect-cli",
+        "mcp",
+        "--url",
+        "http://localhost:3000/invect",
+        "--api-key",
+        "YOUR_KEY"
+      ]
     }
   }
 }
@@ -123,63 +144,63 @@ Once connected, the AI assistant has access to the following tools:
 
 ### Flow management
 
-| Tool | Description |
-| --- | --- |
-| `flow_list` | List all flows with names, IDs, and status. |
-| `flow_get` | Get detailed metadata for a specific flow. |
+| Tool                  | Description                                          |
+| --------------------- | ---------------------------------------------------- |
+| `flow_list`           | List all flows with names, IDs, and status.          |
+| `flow_get`            | Get detailed metadata for a specific flow.           |
 | `flow_get_definition` | Get the full flow definition (nodes, edges, params). |
-| `flow_create` | Create a new flow. |
-| `flow_update` | Update a flow's definition or metadata. |
-| `flow_delete` | Delete a flow. |
-| `flow_validate` | Validate a flow definition for errors. |
+| `flow_create`         | Create a new flow.                                   |
+| `flow_update`         | Update a flow's definition or metadata.              |
+| `flow_delete`         | Delete a flow.                                       |
+| `flow_validate`       | Validate a flow definition for errors.               |
 
 ### Version management
 
-| Tool | Description |
-| --- | --- |
-| `version_list` | List all versions of a flow. |
-| `version_get` | Get a specific version's definition. |
-| `version_publish` | Publish a new version of a flow. |
+| Tool              | Description                          |
+| ----------------- | ------------------------------------ |
+| `version_list`    | List all versions of a flow.         |
+| `version_get`     | Get a specific version's definition. |
+| `version_publish` | Publish a new version of a flow.     |
 
 ### Flow execution
 
-| Tool | Description |
-| --- | --- |
-| `run_start` | Start a flow run with inputs. |
+| Tool          | Description                                           |
+| ------------- | ----------------------------------------------------- |
+| `run_start`   | Start a flow run with inputs.                         |
 | `run_to_node` | Run a flow up to a specific node (partial execution). |
-| `run_list` | List recent flow runs. |
-| `run_get` | Get details of a specific run. |
-| `run_cancel` | Cancel a running flow. |
-| `run_pause` | Pause a running flow. |
-| `run_resume` | Resume a paused flow. |
+| `run_list`    | List recent flow runs.                                |
+| `run_get`     | Get details of a specific run.                        |
+| `run_cancel`  | Cancel a running flow.                                |
+| `run_pause`   | Pause a running flow.                                 |
+| `run_resume`  | Resume a paused flow.                                 |
 
 ### Debugging
 
-| Tool | Description |
-| --- | --- |
-| `debug_node_executions` | Get per-node execution traces for a run. |
-| `debug_test_node` | Test a single node with custom input data. |
+| Tool                    | Description                                       |
+| ----------------------- | ------------------------------------------------- |
+| `debug_node_executions` | Get per-node execution traces for a run.          |
+| `debug_test_node`       | Test a single node with custom input data.        |
 | `debug_test_expression` | Evaluate a template expression against test data. |
-| `debug_test_mapper` | Test an input data mapper configuration. |
+| `debug_test_mapper`     | Test an input data mapper configuration.          |
 
 ### Credentials & triggers
 
-| Tool | Description |
-| --- | --- |
-| `credential_list` | List available credentials. |
+| Tool              | Description                       |
+| ----------------- | --------------------------------- |
+| `credential_list` | List available credentials.       |
 | `credential_test` | Test a credential's connectivity. |
-| `trigger_list` | List triggers for a flow. |
-| `trigger_get` | Get trigger details. |
-| `trigger_create` | Create a new trigger. |
-| `trigger_update` | Update an existing trigger. |
-| `trigger_delete` | Delete a trigger. |
+| `trigger_list`    | List triggers for a flow.         |
+| `trigger_get`     | Get trigger details.              |
+| `trigger_create`  | Create a new trigger.             |
+| `trigger_update`  | Update an existing trigger.       |
+| `trigger_delete`  | Delete a trigger.                 |
 
 ### Node reference
 
-| Tool | Description |
-| --- | --- |
+| Tool                  | Description                                                   |
+| --------------------- | ------------------------------------------------------------- |
 | `node_list_providers` | List all available node providers (core, gmail, slack, etc.). |
-| `node_list_available` | List all available node types with their schemas. |
+| `node_list_available` | List all available node types with their schemas.             |
 
 ## Resources and prompts
 

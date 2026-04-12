@@ -1,11 +1,11 @@
 /**
  * @invect/mcp — Plugin entry point
  *
- * Exports the `mcpPlugin()` factory that creates an InvectPlugin providing
+ * Exports the `mcp()` factory that creates an InvectPluginDefinition providing
  * MCP (Model Context Protocol) endpoints for AI coding agents.
  */
 
-import type { InvectPlugin, InvectPluginContext } from '@invect/core';
+import type { InvectPlugin, InvectPluginDefinition, InvectPluginContext } from '@invect/core';
 import type { McpPluginOptions } from '../shared/types';
 import { DirectClient } from './client/direct-client';
 import { createMcpServer } from './mcp-server';
@@ -19,21 +19,24 @@ import { AuditLogger } from './audit';
  * at `/plugins/mcp/` that implement the Model Context Protocol. MCP clients
  * (Claude Desktop, VS Code Copilot, Cursor, etc.) connect to these endpoints.
  *
- * Authentication flows through the host app's existing auth middleware — the
- * MCP SDK's Streamable HTTP transport receives the request identity resolved
- * by the framework adapter.
- *
  * @example
  * ```typescript
- * import { createInvect } from '@invect/core';
- * import { mcpPlugin } from '@invect/mcp';
+ * import { mcp } from '@invect/mcp';
  *
- * const invect = await createInvect({
- *   plugins: [mcpPlugin()],
+ * defineConfig({
+ *   plugins: [mcp()],
  * });
  * ```
  */
-export function mcpPlugin(options: McpPluginOptions = {}): InvectPlugin {
+export function mcp(options: McpPluginOptions = {}): InvectPluginDefinition {
+  return {
+    id: 'mcp',
+    name: 'Model Context Protocol',
+    backend: _mcpBackendPlugin(options),
+  };
+}
+
+function _mcpBackendPlugin(options: McpPluginOptions = {}): InvectPlugin {
   const sessionTtlMs = options.sessionTtlMs ?? 30 * 60 * 1000;
   const sessionManager = new SessionManager(sessionTtlMs);
   let auditLogger: AuditLogger | undefined;

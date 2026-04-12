@@ -26,13 +26,23 @@ import { AppSideMenu } from './components/side-menu/side-menu';
 
 export interface InvectProps {
   reactQueryClient?: QueryClient;
-  apiBaseUrl?: string;
-  basePath?: string;
+  apiPath?: string;
+  frontendPath?: string;
   useMemoryRouter?: boolean; // Use MemoryRouter instead of BrowserRouter (useful for testing)
   /** Frontend plugins that contribute sidebar items, routes, panel tabs, header actions, etc. */
   plugins?: InvectFrontendPlugin[];
-  /** Pre-configured API client instance (e.g. for demo mode). When provided, apiBaseUrl is ignored. */
+  /** Pre-configured API client instance (e.g. for demo mode). When provided, apiPath is ignored. */
   apiClient?: ApiClient;
+  /**
+   * Invect configuration object (from defineConfig).
+   * When provided, `apiPath` and `frontendPath` are read from the config
+   * unless explicitly overridden by the individual props.
+   */
+  config?: {
+    apiPath?: string;
+    frontendPath?: string;
+    plugins?: Array<{ frontend?: InvectFrontendPlugin }>;
+  };
 }
 
 // Create a default QueryClient if none is provided
@@ -193,12 +203,20 @@ InvectRoutes.displayName = 'InvectRoutes';
 export const Invect = React.memo(
   ({
     reactQueryClient,
-    apiBaseUrl = 'http://localhost:3000/invect',
-    basePath = '/invect',
+    apiPath: apiPathProp,
+    frontendPath: frontendPathProp,
     useMemoryRouter = false,
     plugins,
     apiClient,
+    config,
   }: InvectProps) => {
+    const apiBaseUrl = apiPathProp ?? config?.apiPath ?? 'http://localhost:3000/invect';
+    const basePath = frontendPathProp ?? config?.frontendPath ?? '/invect';
+    const resolvedPlugins =
+      plugins ??
+      config?.plugins
+        ?.map((p) => p.frontend)
+        .filter((p): p is InvectFrontendPlugin => p !== null && p !== undefined);
     const client = reactQueryClient || createDefaultQueryClient();
     const hasRouter = useHasRouterContext();
 
@@ -208,7 +226,7 @@ export const Invect = React.memo(
         apiBaseUrl={apiBaseUrl}
         apiClient={apiClient}
         basePath={basePath}
-        plugins={plugins}
+        plugins={resolvedPlugins}
       />
     );
 

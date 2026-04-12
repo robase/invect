@@ -14,6 +14,7 @@
 
 import type {
   InvectPlugin,
+  InvectPluginDefinition,
   InvectPluginContext,
   InvectPermission,
   InvectPluginSchema,
@@ -45,8 +46,8 @@ import type {
  * ```ts
  * import { resolveTeamIds } from '@invect/rbac/backend';
  *
- * authentication({
- *   auth,
+ * auth({
+ *   auth: betterAuthInstance,
  *   mapUser: async (user, session) => ({
  *     id: user.id,
  *     name: user.name ?? undefined,
@@ -82,6 +83,14 @@ export interface RbacPluginOptions {
    * @default true
    */
   enableTeams?: boolean;
+
+  /**
+   * Frontend plugin (sidebar, routes, providers) for the RBAC UI.
+   *
+   * Import from `@invect/rbac/ui` and pass here.
+   * Omit for backend-only setups.
+   */
+  frontend?: unknown;
 }
 
 const FLOW_RESOURCE_TYPES = new Set(['flow', 'flow-version', 'flow-run', 'node-execution']);
@@ -624,7 +633,17 @@ async function resolveAccessChangeNames(
 // Plugin factory
 // ─────────────────────────────────────────────────────────────
 
-export function rbacPlugin(options: RbacPluginOptions = {}): InvectPlugin {
+export function rbac(options: RbacPluginOptions = {}): InvectPluginDefinition {
+  const { frontend, ...backendOptions } = options;
+  return {
+    id: 'rbac',
+    name: 'Role-Based Access Control',
+    backend: _rbacBackendPlugin(backendOptions),
+    frontend,
+  };
+}
+
+function _rbacBackendPlugin(options: Omit<RbacPluginOptions, 'frontend'> = {}): InvectPlugin {
   const { adminPermission = 'flow:read', enableTeams = true } = options;
 
   // ── Plugin-owned tables ─────────────────────────────────────
@@ -772,7 +791,7 @@ export function rbacPlugin(options: RbacPluginOptions = {}): InvectPlugin {
         ctx.logger.warn(
           'RBAC plugin requires the @invect/user-auth plugin. ' +
             'RBAC will work with reduced functionality (no session resolution). ' +
-            'Make sure authentication() is registered before rbacPlugin().',
+            'Make sure auth() is registered before rbac().',
         );
       }
 

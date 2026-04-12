@@ -52,7 +52,7 @@ vi.mock('src/actions/action-executor', () => ({
 import { NodeExecutionCoordinator } from '../../../src/services/flow-orchestration/node-execution-coordinator';
 import type { NodeExecutionCoordinatorDeps } from '../../../src/services/flow-orchestration/node-execution-coordinator';
 
-// ── Shared QuickJS instance (expensive to init, reuse across tests) ──────────
+// ── Shared secure-exec instance (expensive to init, reuse across tests) ──────────
 
 let jsService: JsExpressionService;
 

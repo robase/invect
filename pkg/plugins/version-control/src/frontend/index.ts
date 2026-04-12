@@ -1,5 +1,49 @@
-// Frontend components will be added when the UI is implemented.
-// For now, export shared types for frontend consumption.
+/**
+ * @invect/version-control/ui — Frontend Plugin Entry Point
+ *
+ * Browser-safe entry point that exports the Version Control frontend plugin.
+ * Import via: `import { vcFrontendPlugin } from '@invect/version-control/ui'`
+ */
+
+import { GitBranch } from 'lucide-react';
+import { VcSyncPanel } from './components/VcSyncPanel';
+import { VcHeaderButton } from './components/VcHeaderButton';
+import type { InvectFrontendPlugin } from '@invect/ui';
+
+// ─────────────────────────────────────────────────────────────────────
+// Version Control Frontend Plugin Definition
+// ─────────────────────────────────────────────────────────────────────
+
+export const vcFrontendPlugin: InvectFrontendPlugin = {
+  id: 'version-control',
+  name: 'Version Control',
+
+  // ─── Panel Tabs ───
+  panelTabs: [
+    {
+      context: 'flowEditor',
+      label: 'Git Sync',
+      icon: GitBranch,
+      component: VcSyncPanel,
+    },
+  ],
+
+  // ─── Header Actions ───
+  headerActions: [
+    {
+      context: 'flowHeader',
+      component: VcHeaderButton,
+    },
+  ],
+
+  // ─── Component Implementations ───
+  components: {
+    'vc.SyncPanel': VcSyncPanel as unknown as React.ComponentType<Record<string, unknown>>,
+    'vc.HeaderButton': VcHeaderButton as unknown as React.ComponentType<Record<string, unknown>>,
+  },
+};
+
+// ─── Re-export types for frontend consumers ───
 export type {
   VcSyncConfig,
   VcSyncHistoryRecord,
@@ -10,3 +54,18 @@ export type {
   VcSyncResult,
   ConfigureSyncInput,
 } from '../shared/types';
+
+// ─── Re-export hooks ───
+export {
+  useFlowSyncStatus,
+  useFlowSyncHistory,
+  useSyncedFlows,
+  usePushFlow,
+  usePullFlow,
+  useForcePushFlow,
+  useForcePullFlow,
+  usePublishFlow,
+  useConfigureSync,
+  useDisconnectSync,
+  vcQueryKeys,
+} from './hooks/useFlowSync';

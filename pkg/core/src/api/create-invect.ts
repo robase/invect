@@ -13,7 +13,7 @@ import { LoggerManager, type ScopedLoggingConfig } from '../utils/logger';
 import { JsExpressionService, getTemplateService } from '../services/templating';
 import type { TemplateService } from '../services/templating';
 import { PluginManager } from '../services/plugin-manager';
-import type { InvectPlugin } from '../types/plugin.types';
+import type { InvectPlugin, InvectPluginDefinition } from '../types/plugin.types';
 import { AuthorizationService, createAuthorizationService } from '../services/auth';
 import {
   ActionRegistry,
@@ -209,10 +209,12 @@ export async function createInvect(config: InvectConfig): Promise<InvectInstance
     // Initialize authorization service
     const authService: AuthorizationService = createAuthorizationService({ logger });
 
-    // Initialize plugin manager
-    const pluginManager = new PluginManager(
-      (parsedConfig.plugins as InvectPlugin[] | undefined) ?? [],
-    );
+    // Initialize plugin manager — extract backend plugins from unified definitions
+    const rawPlugins = (parsedConfig.plugins as InvectPluginDefinition[] | undefined) ?? [];
+    const backendPlugins = rawPlugins
+      .map((p) => p.backend)
+      .filter((p): p is InvectPlugin => p !== null && p !== undefined);
+    const pluginManager = new PluginManager(backendPlugins);
 
     // Initialize action registry + built-in actions
     const actionRegistry: ActionRegistry = initializeGlobalActionRegistry(logger);
@@ -266,7 +268,7 @@ export async function createInvect(config: InvectConfig): Promise<InvectInstance
       (agentExecutor as unknown as AgentNodeExecutor).setToolRegistry(toolRegistry);
     }
 
-    // Initialize JS expression engine (QuickJS sandbox for data mapper)
+    // Initialize JS expression engine (secure-exec sandbox for data mapper)
     let jsExpressionService: JsExpressionService | null = null;
     let templateService: TemplateService | null = null;
     try {

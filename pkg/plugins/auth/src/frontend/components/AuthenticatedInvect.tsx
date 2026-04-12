@@ -128,8 +128,8 @@ export interface AuthenticatedInvectProps<TPlugin = unknown> {
    *
    * @example
    * ```tsx
-   * import { rbacFrontendPlugin } from '@invect/rbac/ui';
-   * <AuthenticatedInvect plugins={[rbacFrontendPlugin]} />
+   * import { rbacFrontend } from '@invect/rbac/ui';
+   * <AuthenticatedInvect plugins={[rbacFrontend]} />
    * ```
    */
   plugins?: TPlugin[];

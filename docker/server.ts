@@ -3,9 +3,9 @@ import type { ErrorRequestHandler } from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createInvectRouter } from '@invect/express';
-import { authentication } from '@invect/user-auth';
-import { rbacPlugin } from '@invect/rbac';
-import { webhooksPlugin } from '@invect/webhooks';
+import { auth } from '@invect/user-auth';
+import { rbac } from '@invect/rbac';
+import { webhooks } from '@invect/webhooks';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -43,7 +43,7 @@ const logLevel = (process.env.INVECT_LOG_LEVEL as 'debug' | 'info' | 'warn' | 'e
 
 // --- Plugins ---
 const plugins = [
-  authentication({
+  auth({
     onSessionError: 'continue',
     trustedOrigins,
     betterAuthOptions: {
@@ -57,8 +57,8 @@ const plugins = [
       },
     ],
   }),
-  rbacPlugin(),
-  webhooksPlugin({ webhookBaseUrl }),
+  rbac(),
+  webhooks({ webhookBaseUrl }),
 ];
 
 // --- Body parsing ---

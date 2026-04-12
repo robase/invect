@@ -27,4 +27,10 @@ export interface VersionControlPluginOptions {
 
   /** Webhook secret for verifying incoming webhooks */
   webhookSecret?: string;
+
+  /**
+   * Frontend plugin for the version control UI.
+   * Omit for backend-only setups.
+   */
+  frontend?: unknown;
 }

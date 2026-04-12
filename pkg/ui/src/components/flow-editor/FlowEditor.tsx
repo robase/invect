@@ -42,6 +42,9 @@ import { useNodeExecutions } from '~/api/executions.api';
 import { extractOutputValue } from './node-config-panel/utils';
 import { nanoid } from 'nanoid';
 import { useCopyPaste } from './use-copy-paste';
+import { useKeyboardShortcuts } from './use-keyboard-shortcuts';
+import { FlowCommandPalette } from './FlowCommandPalette';
+import { ShortcutsHelpDialog } from './ShortcutsHelpDialog';
 
 // Stable references for React Flow - defined at module scope to avoid re-renders
 const EDGE_TYPES: EdgeTypes = {
@@ -250,6 +253,15 @@ export function FlowWorkbenchView({
 
   // Copy/paste/cut/duplicate/delete keyboard shortcuts
   useCopyPaste({ flowId, reactFlowInstance });
+
+  // Command palette, keyboard shortcuts, and help dialog
+  const {
+    commandPaletteOpen,
+    setCommandPaletteOpen,
+    shortcutsHelpOpen,
+    setShortcutsHelpOpen,
+    commandPaletteActions,
+  } = useKeyboardShortcuts();
 
   // Use React Flow's built-in hook to detect when nodes have been initialized
   // This is true when all nodes have been measured and their handles registered
@@ -997,6 +1009,12 @@ export function FlowWorkbenchView({
         availableTools={availableTools}
         initialToolInstanceId={configPanelToolInstanceId}
       />
+      <FlowCommandPalette
+        open={commandPaletteOpen}
+        onOpenChange={setCommandPaletteOpen}
+        actions={commandPaletteActions}
+      />
+      <ShortcutsHelpDialog open={shortcutsHelpOpen} onOpenChange={setShortcutsHelpOpen} />
     </>
   );
 }

@@ -23,7 +23,7 @@ import pc from 'picocolors';
  * for schema generation. We don't need the full Zod-validated config.
  */
 interface ResolvedConfig {
-  /** The resolved plugins array */
+  /** The resolved backend plugins extracted from unified plugin definitions */
   plugins: Array<{
     id: string;
     name?: string;
@@ -212,19 +212,29 @@ export async function loadConfig(configPath: string): Promise<ResolvedConfig> {
   }
 
   const config = raw as Record<string, unknown>;
-  const plugins = Array.isArray(config.plugins) ? config.plugins : [];
+  const rawPlugins = Array.isArray(config.plugins) ? config.plugins : [];
 
-  // Validate plugins have IDs
-  for (let i = 0; i < plugins.length; i++) {
-    const plugin = plugins[i];
-    if (!plugin || typeof plugin !== 'object' || !('id' in plugin)) {
+  // Extract backend plugins from unified shape: { id, backend?, frontend? }
+  const backendPlugins: Array<Record<string, unknown>> = [];
+  for (let i = 0; i < rawPlugins.length; i++) {
+    const plugin = rawPlugins[i];
+    if (!plugin || typeof plugin !== 'object') {
+      console.warn(pc.yellow(`⚠ Plugin at index ${i} is not an object — skipping`));
+      continue;
+    }
+    const def = plugin as Record<string, unknown>;
+    if (!('id' in def)) {
       console.warn(pc.yellow(`⚠ Plugin at index ${i} does not have an 'id' property — skipping`));
+      continue;
+    }
+    const backend = def.backend as Record<string, unknown> | undefined;
+    if (backend && typeof backend === 'object') {
+      backendPlugins.push(backend);
     }
   }
 
-  const validPlugins = plugins.filter(
-    (p: unknown): p is ResolvedConfig['plugins'][number] =>
-      p !== null && typeof p === 'object' && 'id' in p,
+  const validPlugins = backendPlugins.filter(
+    (p): p is ResolvedConfig['plugins'][number] => 'id' in p,
   );
 
   return {

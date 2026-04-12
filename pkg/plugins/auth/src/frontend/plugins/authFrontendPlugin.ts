@@ -16,7 +16,7 @@ import { UserManagementPage } from '../components/UserManagementPage';
 import { SidebarUserMenu } from '../components/SidebarUserMenu';
 import type { InvectFrontendPlugin } from '@invect/ui';
 
-export const authFrontendPlugin: InvectFrontendPlugin = {
+export const authFrontend: InvectFrontendPlugin = {
   id: 'user-auth',
   name: 'User Authentication',
 

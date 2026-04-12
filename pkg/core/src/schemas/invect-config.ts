@@ -123,7 +123,17 @@ export const InvectConfigSchema = z.object({
     level: 'info' as const,
   })).optional(),
   logger: z.any().optional(),
-  basePath: z.string().optional(),
+  /**
+   * The path where the Invect frontend UI is mounted.
+   * @example '/invect'
+   */
+  frontendPath: z.string().optional(),
+  /**
+   * The path where the Invect API is mounted.
+   * Used by the frontend to make API requests.
+   * @example '/api/invect'
+   */
+  apiPath: z.string().optional(),
   /**
    * Execution settings: flow timeout, heartbeat interval, stale run detection.
    */
@@ -152,25 +162,25 @@ export const InvectConfigSchema = z.object({
 
   /**
    * Plugins extend Invect with additional capabilities:
-   * actions, hooks, endpoints, database schema, and middleware.
+   * actions, hooks, endpoints, database schema, frontend UI, and middleware.
    *
-   * Plugins are plain objects satisfying the `InvectPlugin` interface.
-   * They are initialized in array order during `Invect.initialize()`.
+   * Each plugin is an `InvectPluginDefinition` with `{ id, backend?, frontend? }`.
+   * Use plugin factory functions which accept a `frontend` option for the UI.
    *
-   * Database schema changes from plugins require running `npx invect-cli generate`
-   * to regenerate the Drizzle schema files, then `npx invect-cli migrate` to apply.
+   * The backend extracts `.backend`, the `<Invect>` component extracts `.frontend`.
    *
    * @example
    * ```typescript
-   * import { rbac } from '@invect/plugin-rbac';
-   * import { auditLog } from '@invect/plugin-audit-log';
+   * import { auth } from '@invect/user-auth';
+   * import { authFrontend } from '@invect/user-auth/ui';
+   * import { rbac } from '@invect/rbac';
    *
-   * const config = {
+   * const config = defineConfig({
    *   plugins: [
-   *     rbac({ resolveUser: (req) => req.user }),
-   *     auditLog({ destination: 'database' }),
+   *     auth({ frontend: authFrontend, adminEmail: '...' }),
+   *     rbac(),
    *   ],
-   * };
+   * });
    * ```
    */
   plugins: z.array(z.any()).optional(),
@@ -265,6 +275,27 @@ export type InvectConfig = z.infer<typeof InvectConfigSchema>;
  */
 export function defineConfig(config: InvectConfig): InvectConfig {
   return config;
+}
+
+/**
+ * Identity function that provides TypeScript type inference for
+ * unified plugin definitions with backend + frontend parts.
+ *
+ * @example
+ * ```typescript
+ * import { definePlugin } from '@invect/core';
+ *
+ * export const myPlugin = definePlugin({
+ *   id: 'my-plugin',
+ *   backend: backendPlugin,
+ *   frontend: frontendPlugin,
+ * });
+ * ```
+ */
+export function definePlugin<T extends { id: string; backend?: unknown; frontend?: unknown }>(
+  plugin: T,
+): T {
+  return plugin;
 }
 
 export interface Logger {

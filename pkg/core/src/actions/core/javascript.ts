@@ -2,7 +2,7 @@
  * core.javascript — JavaScript data transformation action
  *
  * Evaluates arbitrary JavaScript against incoming upstream node data.
- * Uses the JsExpressionService (QuickJS WASM sandbox) for safe execution.
+ * Uses the JsExpressionService (secure-exec V8 sandbox) for safe execution.
  *
  * Upstream node outputs are available as local variables (by reference ID).
  * `$input` is always available as the full context object.
@@ -27,7 +27,7 @@ export const javascriptAction = defineAction({
   id: 'core.javascript',
   name: 'JavaScript',
   description:
-    'Transform and process data using JavaScript in a sandboxed QuickJS WASM environment. Use when you need to filter, map, reshape, or compute values from upstream node outputs. Upstream variables are available by their reference ID; `$input` holds the full context object. Single expressions auto-return; use explicit `return` for multi-line code.',
+    'Transform and process data using JavaScript in a sandboxed V8 isolate environment. Use when you need to filter, map, reshape, or compute values from upstream node outputs. Upstream variables are available by their reference ID; `$input` holds the full context object. Single expressions auto-return; use explicit `return` for multi-line code.',
   provider: CORE_PROVIDER,
   icon: 'Braces',
   tags: [
@@ -69,7 +69,7 @@ export const javascriptAction = defineAction({
 
     try {
       const jsService = await getJsExpressionService(context.logger);
-      const result = jsService.evaluate(code, data);
+      const result = await jsService.evaluate(code, data);
 
       // Stringify non-string results for the output variable
       const outputValue =

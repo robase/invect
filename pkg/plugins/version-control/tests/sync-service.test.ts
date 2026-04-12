@@ -175,7 +175,7 @@ describe('VcSyncService', () => {
           {
             flowId: 'flow-1',
             version: 1,
-            invectDefinition: JSON.stringify({
+            invect_definition: JSON.stringify({
               nodes: [
                 {
                   id: 'node-x',
@@ -245,7 +245,7 @@ describe('VcSyncService', () => {
           {
             flowId: 'flow-1',
             version: 1,
-            invectDefinition: JSON.stringify({
+            invect_definition: JSON.stringify({
               nodes: [
                 {
                   id: 'node-x',
