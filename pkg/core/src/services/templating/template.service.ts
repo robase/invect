@@ -128,6 +128,7 @@ export class TemplateService {
     // Cannot use String.replace with async callback, so iterate matches manually.
     let result = '';
     let lastIndex = 0;
+    // oxlint-disable-next-line security/detect-non-literal-regexp -- creating global variant of existing pattern
     const pattern = new RegExp(EXPRESSION_BLOCK_PATTERN.source, 'g');
     let match: RegExpExecArray | null;
     while ((match = pattern.exec(template)) !== null) {
