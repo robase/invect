@@ -41,19 +41,19 @@ git commit -m "fix(ui): resolve sidebar flicker"
 
 #### Commit Types
 
-| Type       | When to Use                          |
-|------------|--------------------------------------|
-| `feat`     | New feature                          |
-| `fix`      | Bug fix                              |
-| `docs`     | Documentation only                   |
-| `style`    | Formatting, missing semicolons, etc. |
+| Type       | When to Use                             |
+| ---------- | --------------------------------------- |
+| `feat`     | New feature                             |
+| `fix`      | Bug fix                                 |
+| `docs`     | Documentation only                      |
+| `style`    | Formatting, missing semicolons, etc.    |
 | `refactor` | Code change that neither fixes nor adds |
-| `perf`     | Performance improvement              |
-| `test`     | Adding or updating tests             |
-| `build`    | Build system or external deps        |
-| `ci`       | CI configuration                     |
-| `chore`    | Maintenance tasks                    |
-| `revert`   | Reverting a previous commit          |
+| `perf`     | Performance improvement                 |
+| `test`     | Adding or updating tests                |
+| `build`    | Build system or external deps           |
+| `ci`       | CI configuration                        |
+| `chore`    | Maintenance tasks                       |
+| `revert`   | Reverting a previous commit             |
 
 #### Scopes (Optional)
 
@@ -68,6 +68,7 @@ pnpm changeset
 ```
 
 This walks you through:
+
 1. **Which packages changed** — select the affected `@invect/*` packages
 2. **Semver bump** — `patch` (bug fix), `minor` (new feature), or `major` (breaking change)
 3. **Summary** — a short description that goes into the CHANGELOG
@@ -114,22 +115,22 @@ The release workflow detects there are no pending changesets (they were consumed
 
 All packages under `pkg/` are published to npm as `@invect/*`. Example apps and the root package are excluded.
 
-| Package | npm Name |
-|---------|----------|
-| `pkg/core` | `@invect/core` |
-| `pkg/express` | `@invect/express` |
-| `pkg/nestjs` | `@invect/nestjs` |
-| `pkg/nextjs` | `@invect/nextjs` |
-| `pkg/ui` | `@invect/ui` |
-| `pkg/cli` | `@invect/cli` |
-| `pkg/layouts` | `@invect/layouts` |
-| `pkg/invect` | `invect-cli` |
-| `pkg/plugins/auth` | `@invect/user-auth` |
-| `pkg/plugins/rbac` | `@invect/rbac` |
-| `pkg/plugins/webhooks` | `@invect/webhooks` |
-| `pkg/plugins/version-control` | `@invect/version-control` |
+| Package                         | npm Name                    |
+| ------------------------------- | --------------------------- |
+| `pkg/core`                      | `@invect/core`              |
+| `pkg/express`                   | `@invect/express`           |
+| `pkg/nestjs`                    | `@invect/nestjs`            |
+| `pkg/nextjs`                    | `@invect/nextjs`            |
+| `pkg/ui`                        | `@invect/ui`                |
+| `pkg/cli`                       | `@invect/cli`               |
+| `pkg/layouts`                   | `@invect/layouts`           |
+| `pkg/invect`                    | `invect-cli`                |
+| `pkg/plugins/auth`              | `@invect/user-auth`         |
+| `pkg/plugins/rbac`              | `@invect/rbac`              |
+| `pkg/plugins/webhooks`          | `@invect/webhooks`          |
+| `pkg/plugins/version-control`   | `@invect/version-control`   |
 | `pkg/plugins/cloudflare-agents` | `@invect/cloudflare-agents` |
-| `pkg/plugins/mcp` | `@invect/mcp` |
+| `pkg/plugins/mcp`               | `@invect/mcp`               |
 
 ## Configuration
 
@@ -146,10 +147,10 @@ Extends `@commitlint/config-conventional`. Commit types and scopes are enforced 
 
 ## Required Secrets
 
-| Secret | Where | Purpose |
-|--------|-------|---------|
-| `NPM_PUB_TOKEN` | GitHub Actions secrets | npm publish authentication |
-| `GITHUB_TOKEN` | Automatic | PR creation, tagging, GitHub releases |
+| Secret          | Where                  | Purpose                               |
+| --------------- | ---------------------- | ------------------------------------- |
+| `NPM_PUB_TOKEN` | GitHub Actions secrets | npm publish authentication            |
+| `GITHUB_TOKEN`  | Automatic              | PR creation, tagging, GitHub releases |
 
 ## Manual Release (Emergency)
 
