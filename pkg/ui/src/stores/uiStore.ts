@@ -28,6 +28,7 @@ interface UIState {
 
   // Node sidebar (for adding nodes)
   nodeSidebarOpen: boolean;
+  nodeSidebarExpandedGroups: string[];
 
   // Bottom toolbar
   toolbarCollapsed: boolean;
@@ -53,6 +54,8 @@ interface UIActions {
   // Node sidebar
   toggleNodeSidebar: () => void;
   setNodeSidebarOpen: (open: boolean) => void;
+  toggleNodeSidebarGroup: (groupId: string) => void;
+  setNodeSidebarExpandedGroups: (groups: string[]) => void;
 
   // Bottom toolbar
   toggleToolbarCollapsed: () => void;
@@ -71,6 +74,7 @@ const initialState: UIState = {
   validationPanelOpen: false,
   logsPanelOpen: false,
   nodeSidebarOpen: true,
+  nodeSidebarExpandedGroups: ['core'],
   toolbarCollapsed: false,
 };
 
@@ -146,6 +150,23 @@ export const useUIStore: UseBoundStore<StoreApi<UIStore>> = create<UIStore>()(
             state.nodeSidebarOpen = open;
           }),
 
+        toggleNodeSidebarGroup: (groupId) =>
+          set((state) => {
+            if (state.nodeSidebarExpandedGroups.includes(groupId)) {
+              state.nodeSidebarExpandedGroups = state.nodeSidebarExpandedGroups.filter(
+                (existingGroupId) => existingGroupId !== groupId,
+              );
+              return;
+            }
+
+            state.nodeSidebarExpandedGroups = [...state.nodeSidebarExpandedGroups, groupId];
+          }),
+
+        setNodeSidebarExpandedGroups: (groups) =>
+          set((state) => {
+            state.nodeSidebarExpandedGroups = groups;
+          }),
+
         // Bottom toolbar
         toggleToolbarCollapsed: () =>
           set((state) => {
@@ -162,6 +183,7 @@ export const useUIStore: UseBoundStore<StoreApi<UIStore>> = create<UIStore>()(
           sidebarCollapsed: state.sidebarCollapsed,
           activeSidebarTab: state.activeSidebarTab,
           nodeSidebarOpen: state.nodeSidebarOpen,
+          nodeSidebarExpandedGroups: state.nodeSidebarExpandedGroups,
           toolbarCollapsed: state.toolbarCollapsed,
         }),
       },
@@ -178,6 +200,7 @@ export const useModalData = () => useUIStore((s) => s.modalData);
 export const useValidationPanelOpen = () => useUIStore((s) => s.validationPanelOpen);
 export const useLogsPanelOpen = () => useUIStore((s) => s.logsPanelOpen);
 export const useNodeSidebarOpen = () => useUIStore((s) => s.nodeSidebarOpen);
+export const useNodeSidebarExpandedGroups = () => useUIStore((s) => s.nodeSidebarExpandedGroups);
 
 // Combined selectors
 export const useModals = () =>

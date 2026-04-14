@@ -7,6 +7,7 @@ import type { NodeDefinition } from '../../types/node-definition.types';
 import type { ToolDefinition, AddedToolInstance } from '../nodes/ToolSelectorModal';
 import { ProviderIcon } from '../shared/ProviderIcon';
 import { useFlowEditorStore } from './flow-editor.store';
+import { useUIStore } from '../../stores/uiStore';
 import { ActionsSidebar } from './ActionsSidebar';
 import { Search, Plus, X, ChevronRight, PanelLeftClose } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -65,22 +66,14 @@ function NodesSidebar({
   onCollapse?: () => void;
 }) {
   const [search, setSearch] = useState('');
-  // Tracks which groups the user has manually expanded (all start collapsed)
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const { isLoading, nodeDefinitions } = useNodeRegistry();
+  const expandedGroups = useUIStore((s) => s.nodeSidebarExpandedGroups);
+  const toggleNodeSidebarGroup = useUIStore((s) => s.toggleNodeSidebarGroup);
 
   const isSearching = search.trim().length > 0;
 
   const toggleGroup = (providerId: string) => {
-    setExpandedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(providerId)) {
-        next.delete(providerId);
-      } else {
-        next.add(providerId);
-      }
-      return next;
-    });
+    toggleNodeSidebarGroup(providerId);
   };
 
   const totalVisible = useMemo(
@@ -225,7 +218,7 @@ function NodesSidebar({
         <div className="p-3 space-y-4">
           {sortedProviderIds.map((providerId) => {
             const group = providerGroups[providerId];
-            const isCollapsed = isSearching ? false : !expandedGroups.has(providerId);
+            const isCollapsed = isSearching ? false : !expandedGroups.includes(providerId);
             return (
               <div key={providerId}>
                 <button

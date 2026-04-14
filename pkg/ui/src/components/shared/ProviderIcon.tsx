@@ -18,7 +18,9 @@ const PROVIDERS_WITH_SVG_ICON = new Set(
  * Providers whose dark-fill logo is invisible on dark backgrounds.
  * For these we ship a `{id}_light` variant and swap via CSS.
  */
-const PROVIDERS_WITH_LIGHT_VARIANT = new Set(['github', 'anthropic']);
+const PROVIDERS_WITH_LIGHT_VARIANT = new Set(['github', 'anthropic', 'core']);
+
+const PROVIDERS_WITH_TALL_ASPECT = new Set(['core']);
 
 /**
  * Resolve a Lucide icon component from its name string.
@@ -56,6 +58,8 @@ export const ProviderIcon = memo(function ProviderIcon({
   svgIcon,
   className,
 }: ProviderIconProps) {
+  const isTallLogo = providerId ? PROVIDERS_WITH_TALL_ASPECT.has(providerId) : false;
+
   // 1. Bundled inline SVG for known providers
   if (providerId && PROVIDERS_WITH_SVG_ICON.has(providerId)) {
     const svgMarkup = PROVIDER_SVG_ICONS[providerId];
@@ -63,6 +67,24 @@ export const ProviderIcon = memo(function ProviderIcon({
     // Providers with a dark logo that needs a light variant for dark mode
     if (PROVIDERS_WITH_LIGHT_VARIANT.has(providerId)) {
       const lightSvgMarkup = PROVIDER_SVG_ICONS[`${providerId}_light`];
+
+      if (isTallLogo) {
+        return (
+          <span className={cn('inline-flex items-center justify-center shrink-0', className)}>
+            <span
+              className="inline-flex items-center justify-center h-full dark:hidden [&>svg]:w-auto [&>svg]:h-full"
+              style={{ aspectRatio: '109 / 209' }}
+              dangerouslySetInnerHTML={{ __html: svgMarkup }}
+            />
+            <span
+              className="hidden items-center justify-center h-full dark:inline-flex [&>svg]:w-auto [&>svg]:h-full"
+              style={{ aspectRatio: '109 / 209' }}
+              dangerouslySetInnerHTML={{ __html: lightSvgMarkup }}
+            />
+          </span>
+        );
+      }
+
       return (
         <>
           <span
@@ -80,6 +102,18 @@ export const ProviderIcon = memo(function ProviderIcon({
             dangerouslySetInnerHTML={{ __html: lightSvgMarkup }}
           />
         </>
+      );
+    }
+
+    if (isTallLogo) {
+      return (
+        <span className={cn('inline-flex items-center justify-center shrink-0', className)}>
+          <span
+            className="inline-flex items-center justify-center h-full [&>svg]:w-auto [&>svg]:h-full"
+            style={{ aspectRatio: '109 / 209' }}
+            dangerouslySetInnerHTML={{ __html: svgMarkup }}
+          />
+        </span>
       );
     }
 
