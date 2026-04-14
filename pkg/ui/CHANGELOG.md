@@ -1,5 +1,14 @@
 # @invect/ui
 
+## 0.0.8
+
+### Patch Changes
+
+- fix frontend api
+
+- Updated dependencies []:
+  - @invect/layouts@0.0.8
+
 ## 0.0.7
 
 ### Patch Changes

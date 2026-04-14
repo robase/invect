@@ -1,5 +1,15 @@
 # @invect/mcp
 
+## 0.0.8
+
+### Patch Changes
+
+- fix frontend api
+
+- Updated dependencies []:
+  - @invect/core@0.0.8
+  - @invect/user-auth@0.0.8
+
 ## 0.0.7
 
 ### Patch Changes
