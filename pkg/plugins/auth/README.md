@@ -33,7 +33,7 @@ import { authentication } from '@invect/user-auth';
 
 const invectRouter = await createInvectRouter({
   database: { type: 'sqlite', connectionString: 'file:./dev.db' },
-  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
   plugins: [
     authentication({
       globalAdmins: [
@@ -59,7 +59,7 @@ const auth = betterAuth({
 
 const invectRouter = await createInvectRouter({
   database: { type: 'sqlite', connectionString: 'file:./dev.db' },
-  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
   plugins: [authentication({ auth })],
 });
 

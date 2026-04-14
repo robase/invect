@@ -42,7 +42,7 @@ import { InvectModule } from '@invect/nestjs';
         type: 'sqlite',
         connectionString: 'file:./dev.db',
       },
-      encryptionKey: process.env.INVECT_ENCRYPTION_KEY!, // npx invect-cli secret
+      encryptionKey: process.env.INVECT_ENCRYPTION_KEY, // npx invect-cli secret
     }),
   ],
 })

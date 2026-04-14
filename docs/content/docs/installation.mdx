@@ -72,7 +72,7 @@ const router = await createInvectRouter({
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL!,
   },
-  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
 });
 
 app.use('/invect', router);
@@ -116,7 +116,7 @@ const router = await createInvectRouter({
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL!,
   },
-  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
   execution: {
     defaultTimeout: 60000,
     maxConcurrentExecutions: 10,
@@ -152,7 +152,7 @@ const router = await createInvectRouter({
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL!,
   },
-  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
   plugins: [
     authentication({
       auth, // Your Better Auth instance
@@ -221,7 +221,7 @@ import { InvectModule } from '@invect/nestjs';
         type: 'sqlite',
         connectionString: process.env.DATABASE_URL!,
       },
-      encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+      encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
     }),
   ],
 })
@@ -316,7 +316,7 @@ import { authentication } from '@invect/user-auth/backend';
         type: 'sqlite',
         connectionString: process.env.DATABASE_URL!,
       },
-      encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+      encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
       plugins: [authentication({ auth })],
     }),
   ],
@@ -365,7 +365,7 @@ const handler = createInvectHandler({
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL!,
   },
-  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
 });
 
 export const GET = handler.GET;
@@ -432,7 +432,7 @@ export const handler = createInvectHandler({
     type: 'postgresql',
     connectionString: process.env.DATABASE_URL!,
   },
-  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
   plugins: [authentication({ auth }), rbacPlugin()],
 });
 ```

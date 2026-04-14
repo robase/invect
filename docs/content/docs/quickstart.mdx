@@ -78,7 +78,7 @@ const router = await createInvectRouter({
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL!,
   },
-  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
 });
 
 app.use('/invect', router);

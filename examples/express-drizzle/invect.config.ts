@@ -14,7 +14,7 @@ import { defineConfig } from '@invect/core';
 const webhookBaseUrl = process.env.INVECT_WEBHOOK_BASE_URL || 'http://localhost:3000/invect';
 
 export const invectConfig = defineConfig({
-  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
   database: {
     type: 'sqlite',
 

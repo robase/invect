@@ -23,8 +23,6 @@ const corsOptions: cors.CorsOptions = {
 };
 
 app.use(cors(corsOptions));
-// Explicitly handle preflight requests for all routes
-app.options('*', cors(corsOptions));
 app.use(express.json());
 
 // Mount Invect routes under /invect (or a path of your choice)

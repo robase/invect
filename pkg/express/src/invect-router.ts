@@ -18,13 +18,10 @@ import { asyncHandler } from './async-handler';
 import { ZodError } from 'zod';
 
 // Extend Express Request type to include Invect identity
-declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
-  namespace Express {
-    interface Request {
-      /** Invect identity resolved from host app auth */
-      invectIdentity?: InvectIdentity | null;
-    }
+declare module 'express' {
+  interface Request {
+    /** Invect identity resolved from host app auth */
+    invectIdentity?: InvectIdentity | null;
   }
 }
 

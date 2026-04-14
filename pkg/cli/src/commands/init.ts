@@ -824,7 +824,7 @@ export function generateConfigFile(framework: Framework, database: Database): st
 import { defineConfig } from '@invect/core';
 ${adapterImport}
 export const config = defineConfig({
-  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
 ${dbConfig}
   frontendPath: '/invect',
   apiPath: '${apiPath}',

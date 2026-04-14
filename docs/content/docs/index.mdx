@@ -27,7 +27,7 @@ The CLI detects your framework, installs the right packages, creates your config
 const app = express();
 const router = await createInvectRouter({
 database: { type: 'sqlite', connectionString: 'file:./dev.db' },
-encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
 });
 app.use('/invect', router);
 app.listen(3000);
@@ -43,7 +43,7 @@ import { InvectModule } from '@invect/nestjs';
   imports: [
     InvectModule.forRoot({
       database: { type: 'sqlite', connectionString: 'file:./dev.db' },
-      encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+      encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
     }),
   ],
 })
@@ -57,7 +57,7 @@ export class AppModule {}
 
 const handler = createInvectHandler({
 database: { type: 'sqlite', connectionString: 'file:./dev.db' },
-encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
 });
 
 export const GET = handler.GET;

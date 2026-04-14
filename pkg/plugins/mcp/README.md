@@ -32,7 +32,7 @@ import { mcpPlugin } from '@invect/mcp';
 
 const invectRouter = await createInvectRouter({
   database: { type: 'sqlite', connectionString: 'file:./dev.db' },
-  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
   plugins: [mcpPlugin()],
 });
 

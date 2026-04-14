@@ -30,7 +30,7 @@ import { webhooksPlugin } from '@invect/webhooks';
 
 const invectRouter = await createInvectRouter({
   database: { type: 'sqlite', connectionString: 'file:./dev.db' },
-  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
   plugins: [webhooksPlugin()],
 });
 

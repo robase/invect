@@ -42,7 +42,7 @@ const invectRouter = await createInvectRouter({
     type: 'sqlite',
     connectionString: 'file:./dev.db',
   },
-  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!, // npx invect-cli secret
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY, // npx invect-cli secret
 });
 
 app.use('/invect', invectRouter);
@@ -59,7 +59,7 @@ import { rbacPlugin } from '@invect/rbac';
 
 const invectRouter = await createInvectRouter({
   database: { type: 'sqlite', connectionString: 'file:./dev.db' },
-  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!,
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
   plugins: [
     authentication({ globalAdmins: [{ email: 'admin@example.com', pw: 'secret' }] }),
     rbacPlugin(),

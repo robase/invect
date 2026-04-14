@@ -62,7 +62,7 @@
   },
   "dependencies": {
     "@invect/core": "workspace:*",
-    "kysely": "^0.28.0"
+    "kysely": "^0.28.14"
   },
   "devDependencies": {
     "@invect/ui": "workspace:*",
@@ -71,13 +71,13 @@
     "@types/node": "^20.11.20",
     "@types/react": "18.3.7",
     "@types/react-dom": "18.3.7",
-    "better-auth": "^1.5.4",
+    "better-auth": "^1.6.0",
     "lucide-react": "^0.475.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tsdown": "^0.21.1",
     "typescript": "^5.3.3",
-    "vitest": "^3.2.4"
+    "vitest": "^4.1.4"
   },
   "peerDependencies": {
     "@better-auth/api-key": ">=1.0.0",

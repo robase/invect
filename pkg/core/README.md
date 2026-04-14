@@ -41,7 +41,7 @@ const invect = await createInvect({
     type: 'sqlite',
     connectionString: 'file:./dev.db',
   },
-  encryptionKey: process.env.INVECT_ENCRYPTION_KEY!, // npx invect-cli secret
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY, // npx invect-cli secret
 });
 
 // Create and run flows programmatically

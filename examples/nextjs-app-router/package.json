@@ -18,7 +18,7 @@
     "@invect/ui": "workspace:*",
     "@tailwindcss/postcss": "^4.1.12",
     "autoprefixer": "^10.4.21",
-    "next": "^15.4.6",
+    "next": "^15.5.15",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tailwindcss": "^4.1.12"
