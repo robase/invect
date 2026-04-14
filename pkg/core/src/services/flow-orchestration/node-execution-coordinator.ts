@@ -457,7 +457,7 @@ export class NodeExecutionCoordinator {
       logger,
       nodeExecutionService,
       nodeRegistry,
-      nodeDataService,
+      nodeDataService: _nodeDataService,
       graphService,
       credentialsService,
     } = this.deps;
@@ -557,8 +557,15 @@ export class NodeExecutionCoordinator {
 
             graphService.markDownstreamNodesAsSkipped(nodeId, edges, skippedNodes, isFromIfElse);
           },
-          runTemplateReplacement: (template: string, variables: Record<string, unknown>) => {
-            return nodeDataService.runTemplateReplacement(template, variables);
+          runTemplateReplacement: async (template: string, variables: Record<string, unknown>) => {
+            const result = await this.templateService.render(template, variables);
+            if (result === null || result === undefined) {
+              return '';
+            }
+            if (typeof result === 'object') {
+              return JSON.stringify(result);
+            }
+            return String(result);
           },
           getCredential: async (credentialId: string) => {
             if (!credentialsService) {

@@ -11,7 +11,7 @@ import { defineConfig } from '@invect/core';
 // import { ... } from '@invect/nextjs';
 
 export const config = defineConfig({
-  encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY || 'change me',
   database: {
     type: 'sqlite',
     driver: 'libsql',

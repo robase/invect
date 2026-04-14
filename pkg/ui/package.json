@@ -117,7 +117,6 @@
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.4.21",
-    "json-logic-js": "^2.0.5",
     "postcss": "^8.5.6",
     "postcss-nested": "^7.0.2",
     "tailwindcss": "^4.1.0",

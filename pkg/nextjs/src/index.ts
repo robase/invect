@@ -469,11 +469,6 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
       // NODE DATA & TESTING ROUTES
       // =====================================
 
-      if (method === 'POST' && path === 'node-data/sql-query') {
-        const result = await initializedCore.testing.executeSqlQuery(body);
-        return Response.json(result);
-      }
-
       if (method === 'POST' && path === 'node-data/test-expression') {
         const result = await initializedCore.testing.testJsExpression(body);
         return Response.json(result);
@@ -510,10 +505,6 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
           );
         }
         return Response.json(await initializedCore.testing.getAvailableModels());
-      }
-
-      if (method === 'GET' && path === 'node-data/databases') {
-        return Response.json(initializedCore.testing.getAvailableDatabases());
       }
 
       if (method === 'POST' && path === 'node-config/update') {

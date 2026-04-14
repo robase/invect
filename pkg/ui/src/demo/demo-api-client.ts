@@ -181,9 +181,6 @@ export function createDemoApiClient(data: DemoData = {}): Record<string, unknown
     getModels: async () => [],
     getModelsForCredential: async () => [],
 
-    // Databases
-    getAvailableDatabases: async () => [],
-
     // Triggers (empty)
     listTriggersForFlow: async () => [],
     getTrigger: async () => null,
@@ -213,7 +210,6 @@ export function createDemoApiClient(data: DemoData = {}): Record<string, unknown
     testModelPrompt: async () => ({}),
     testJsExpression: async () => ({}),
     testMapper: async () => ({}),
-    executeSqlQuery: async () => ({}),
     createCredential: async () => ({}),
     updateCredential: async () => ({}),
     deleteCredential: async () => undefined,

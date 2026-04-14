@@ -17,11 +17,7 @@ import type {
   FlowRunResult,
   FlowInputs,
 } from '../services/flow-runs/flow-runs.service';
-import type {
-  SubmitPromptRequest,
-  SubmitSQLQueryRequest,
-  SQLQueryResult,
-} from '../services/node-data.service';
+import type { SubmitPromptRequest } from '../services/node-data.service';
 import type {
   Credential,
   CreateCredentialInput,
@@ -39,7 +35,7 @@ import type { FlowValidationResult } from '../types/validation';
 import type { ReactFlowData } from '../services/react-flow-renderer.service';
 import type { NodeDefinition } from '../types/node-definition.types';
 import type { BatchProvider, Model } from '../services/ai/base-client';
-import type { PaginatedResponse, QueryOptions, InvectDatabaseConfig } from '../schemas';
+import type { PaginatedResponse, QueryOptions } from '../schemas';
 import type { CreateFlowVersionRequest, FlowEdge } from '../services/flow-versions/schemas-fresh';
 import type { ExecutionStreamEvent } from '../services/execution-event-bus';
 import type { ActionDefinition, ProviderDef, LoadOptionsResult } from '../actions';
@@ -273,7 +269,6 @@ export interface TestingAPI {
     params: Record<string, unknown>,
     inputData?: Record<string, unknown>,
   ): Promise<{ success: boolean; output?: Record<string, unknown>; error?: string }>;
-  executeSqlQuery(request: SubmitSQLQueryRequest): Promise<SQLQueryResult>;
   testJsExpression(request: {
     expression: string;
     context: Record<string, unknown>;
@@ -297,7 +292,6 @@ export interface TestingAPI {
   getModelsForCredential(
     credentialId: string,
   ): Promise<{ provider: BatchProvider; models: Model[]; defaultModel: string }>;
-  getAvailableDatabases(): InvectDatabaseConfig[];
 }
 
 // =====================================

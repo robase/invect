@@ -44,12 +44,7 @@ export type {
   CreateAgentToolExecutionInput,
 } from './services/node-executions/node-executions.model';
 
-export type {
-  SubmitSQLQueryRequest,
-  SQLQueryResult,
-  SubmitPromptRequest,
-  DatabaseConnectionConfig,
-} from './services/node-data.service';
+export type { SubmitPromptRequest } from './services/node-data.service';
 
 export type { Model } from './services/ai/base-client';
 

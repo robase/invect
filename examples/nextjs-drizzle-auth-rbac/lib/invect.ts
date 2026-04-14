@@ -11,7 +11,7 @@ import { invectAuth } from './auth';
 import { defineConfig } from '@invect/core';
 
 export const invectConfig = defineConfig({
-  encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY || 'change-me-in-production',
   database: {
     connectionString:
       process.env.DATABASE_URL ?? 'postgresql://acme:acme@localhost:5432/acme_dashboard',

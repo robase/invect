@@ -42,7 +42,6 @@ export default defineConfig({
       'pg',
       '@neondatabase/serverless',
       'zod',
-      'json-logic-js',
       // Keep these external as they're large or have native bindings
       '@anthropic-ai/sdk',
       'openai',

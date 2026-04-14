@@ -113,7 +113,6 @@ export class ServiceFactory {
         this.logger,
         databaseService,
         baseAIClient,
-        this.templateServiceRef,
       );
       const graphService = new GraphService(this.logger, nodeExecutionsService);
       const reactFlowRendererService = new ReactFlowRendererService(

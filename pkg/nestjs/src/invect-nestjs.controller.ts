@@ -27,7 +27,6 @@ import type {
   QueryOptions,
   CreateFlowVersionRequest,
   ExecuteFlowOptions,
-  SubmitSQLQueryRequest,
   SubmitPromptRequest,
   Flow,
   FlowVersion,
@@ -450,15 +449,6 @@ export class InvectController {
   // =====================================
 
   /**
-   * POST /node-data/sql-query - Execute SQL query for testing
-   * Core method: ✅ executeSqlQuery(request: SubmitSQLQueryRequest)
-   */
-  @Post('node-data/sql-query')
-  async executeSqlQuery(@Body() body: SubmitSQLQueryRequest) {
-    return await this.invect.testing.executeSqlQuery(body);
-  }
-
-  /**
    * POST /node-data/test-expression - Test a JS expression in the QuickJS sandbox
    * Core method: ✅ testJsExpression({ expression, context })
    */
@@ -516,15 +506,6 @@ export class InvectController {
     }
 
     return await this.invect.testing.getAvailableModels();
-  }
-
-  /**
-   * GET /node-data/databases - Get available databases
-   * Core method: ✅ getAvailableDatabases()
-   */
-  @Get('node-data/databases')
-  async getAvailableDatabases() {
-    return this.invect.testing.getAvailableDatabases();
   }
 
   /**

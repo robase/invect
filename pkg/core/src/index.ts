@@ -129,12 +129,7 @@ export type {
 } from './services/node-executions/node-executions.model';
 
 // Re-export node data service types
-export type {
-  SubmitSQLQueryRequest,
-  SQLQueryResult,
-  SubmitPromptRequest,
-  DatabaseConnectionConfig,
-} from './services/node-data.service';
+export type { SubmitPromptRequest } from './services/node-data.service';
 
 // Re-export AI service types
 export type { Model } from './services/ai/base-client';

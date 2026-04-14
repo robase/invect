@@ -150,8 +150,22 @@ export function createTestingAPI(
               markDownstreamNodesAsSkipped: () => {
                 /* noop */
               },
-              runTemplateReplacement: (template: string, variables: Record<string, unknown>) =>
-                nodeDataService.runTemplateReplacement(template, variables),
+              runTemplateReplacement: async (
+                template: string,
+                variables: Record<string, unknown>,
+              ) => {
+                if (!templateService) {
+                  return template;
+                }
+                const result = await templateService.render(template, variables);
+                if (result === null || result === undefined) {
+                  return '';
+                }
+                if (typeof result === 'object') {
+                  return JSON.stringify(result);
+                }
+                return String(result);
+              },
               submitPrompt: async (request: SubmitPromptRequest) =>
                 baseAIClient.executePrompt(request),
               getCredential: async (credentialId: string) =>
@@ -206,12 +220,6 @@ export function createTestingAPI(
             markDownstreamNodesAsSkipped: () => {
               /* noop */
             },
-            testJsonLogic: (conditionLogic: Record<string, unknown>, evaluationData: object) =>
-              nodeDataService.testJsonLogic(conditionLogic, evaluationData),
-            runSqlQuery: (request: Parameters<typeof nodeDataService.runSqlQuery>[0]) =>
-              nodeDataService.runSqlQuery(request),
-            runTemplateReplacement: (template: string, variables: Record<string, unknown>) =>
-              nodeDataService.runTemplateReplacement(template, variables),
             submitPrompt: async (request: SubmitPromptRequest) =>
               baseAIClient.executePrompt(request),
             getCredential: async (credentialId: string) =>
@@ -252,10 +260,6 @@ export function createTestingAPI(
           error: error instanceof Error ? error.message : String(error),
         };
       }
-    },
-
-    executeSqlQuery(request) {
-      return nodeDataService.runSqlQuery(request);
     },
 
     testJsExpression(request) {
@@ -342,10 +346,6 @@ export function createTestingAPI(
       }
       const result = await nodeDataService.getModelsForProvider(provider);
       return { provider, ...result };
-    },
-
-    getAvailableDatabases() {
-      return nodeDataService.getAvailableDatabases();
     },
   };
 }

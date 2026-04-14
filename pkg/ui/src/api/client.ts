@@ -10,10 +10,7 @@ import type {
   FlowValidationResult,
   PaginatedResponse,
   SubmitPromptRequest,
-  SubmitSQLQueryRequest,
-  SQLQueryResult,
   QueryOptions,
-  InvectDatabaseConfig,
   InvectDefinition,
   Model,
   ReactFlowData,
@@ -402,19 +399,6 @@ class ApiClient {
     const url = `/flows/${flowId}/react-flow${queryString ? `?${queryString}` : ''}`;
 
     return this.request<ReactFlowData>(url);
-  }
-
-  // Database endpoints
-  async getAvailableDatabases(): Promise<InvectDatabaseConfig[]> {
-    return this.request<InvectDatabaseConfig[]>('/node-data/databases');
-  }
-
-  // Database query endpoint (for testing individual nodes)
-  async executeSqlQuery(request: SubmitSQLQueryRequest): Promise<SQLQueryResult> {
-    return this.request<SQLQueryResult>('/node-data/sql-query', {
-      method: 'POST',
-      body: JSON.stringify(request),
-    });
   }
 
   // JS expression test endpoint (for testing data mapper expressions)

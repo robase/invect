@@ -2,29 +2,8 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useApiClient } from '../contexts/ApiContext';
 import { queryKeys, getErrorMessage } from './query-keys';
-import { type SubmitSQLQueryRequest, type SubmitPromptRequest } from '@invect/core/types';
+import { type SubmitPromptRequest } from '@invect/core/types';
 import { BatchProvider } from '@invect/core/types';
-
-// Available Databases Query
-export function useListQueryDatabases() {
-  const apiClient = useApiClient();
-  return useQuery({
-    queryKey: ['databases', 'available'],
-    queryFn: () => apiClient.getAvailableDatabases(),
-    staleTime: 5 * 60 * 1000, // 5 minutes - databases don't change often
-  });
-}
-
-// Database Query Mutation
-export function useExecuteSqlQuery() {
-  const apiClient = useApiClient();
-  return useMutation({
-    mutationFn: (request: SubmitSQLQueryRequest) => apiClient.executeSqlQuery(request),
-    onError: (error) => {
-      console.error('Error executing query:', getErrorMessage(error));
-    },
-  });
-}
 
 // JS Expression Testing (for data mapper)
 export function useTestJsExpression() {

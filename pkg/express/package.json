@@ -37,11 +37,6 @@
       "types": "./dist/router/index.d.ts",
       "import": "./dist/router/index.js",
       "require": "./dist/router/index.cjs"
-    },
-    "./middleware": {
-      "types": "./dist/middleware/index.d.ts",
-      "import": "./dist/middleware/index.js",
-      "require": "./dist/middleware/index.cjs"
     }
   },
   "publishConfig": {
@@ -66,6 +61,7 @@
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.6",
     "@types/node": "^20.11.20",
     "@types/supertest": "^6.0.2",
     "supertest": "^6.3.4",

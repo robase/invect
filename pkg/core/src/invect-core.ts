@@ -18,11 +18,7 @@ import type {
   FlowRunResult,
   FlowInputs,
 } from './services/flow-runs/flow-runs.service';
-import type {
-  SubmitPromptRequest,
-  SubmitSQLQueryRequest,
-  SQLQueryResult,
-} from './services/node-data.service';
+import type { SubmitPromptRequest } from './services/node-data.service';
 import type {
   Credential,
   CreateCredentialInput,
@@ -1245,17 +1241,6 @@ export class Invect {
   // =====================================
 
   /**
-   * Execute a SQL query for node testing purposes
-   */
-  async executeSqlQuery(request: SubmitSQLQueryRequest): Promise<SQLQueryResult> {
-    this.config.logger.debug(
-      'executeSqlQuery called with arguments:',
-      JSON.stringify(request, null, 2),
-    );
-    return this.nodeDataService.runSqlQuery(request);
-  }
-
-  /**
    * Test a JS expression in the sandboxed QuickJS runtime.
    * Used by the frontend data mapper preview.
    */
@@ -1403,13 +1388,6 @@ export class Invect {
       provider,
       ...result,
     };
-  }
-
-  /**
-   * Get available databases
-   */
-  getAvailableDatabases(): Schemas.InvectDatabaseConfig[] {
-    return this.nodeDataService.getAvailableDatabases();
   }
 
   /**
@@ -1577,8 +1555,22 @@ export class Invect {
             markDownstreamNodesAsSkipped: () => {
               /* noop */
             },
-            runTemplateReplacement: (template: string, variables: Record<string, unknown>) =>
-              this.nodeDataService.runTemplateReplacement(template, variables),
+            runTemplateReplacement: async (
+              template: string,
+              variables: Record<string, unknown>,
+            ) => {
+              if (!this.templateService) {
+                return template;
+              }
+              const result = await this.templateService.render(template, variables);
+              if (result === null || result === undefined) {
+                return '';
+              }
+              if (typeof result === 'object') {
+                return JSON.stringify(result);
+              }
+              return String(result);
+            },
             submitPrompt: async (request: SubmitPromptRequest) =>
               this.baseAIClient.executePrompt(request),
             getCredential: async (credentialId: string) =>
@@ -1628,15 +1620,6 @@ export class Invect {
         functions: {
           markDownstreamNodesAsSkipped: () => {
             /* noop for test execution */
-          },
-          testJsonLogic: (conditionLogic: Record<string, unknown>, evaluationData: object) => {
-            return this.nodeDataService.testJsonLogic(conditionLogic, evaluationData);
-          },
-          runSqlQuery: (request: SubmitSQLQueryRequest) => {
-            return this.nodeDataService.runSqlQuery(request);
-          },
-          runTemplateReplacement: (template: string, variables: Record<string, unknown>) => {
-            return this.nodeDataService.runTemplateReplacement(template, variables);
           },
           submitPrompt: async (request: SubmitPromptRequest) => {
             this.config.logger.debug('Test node submitting prompt', { request });

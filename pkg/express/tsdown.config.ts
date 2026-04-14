@@ -4,7 +4,6 @@ export default defineConfig({
   entry: {
     index: 'src/index.ts',
     'router/index': 'src/invect-router.ts',
-    'middleware/index': 'src/async-handler.ts',
   },
   format: ['cjs', 'esm'],
   dts: true,
