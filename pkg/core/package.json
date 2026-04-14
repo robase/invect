@@ -85,7 +85,7 @@
     "@secure-exec/core": "^0.1.0",
     "@secure-exec/node": "^0.1.0",
     "croner": "^10.0.1",
-    "drizzle-orm": "^0.44.7",
+    "drizzle-orm": "^0.45.2",
     "json-logic-js": "^2.0.5",
     "kysely": "^0.28.11",
     "nanoid": "^5.0.9",
