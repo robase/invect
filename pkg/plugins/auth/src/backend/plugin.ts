@@ -215,7 +215,7 @@ async function resolveSession(
       };
     }
     return null;
-  } catch (err) {
+  } catch {
     return null;
   }
 }
