@@ -1,5 +1,15 @@
 # @invect/docs
 
+## 0.0.9
+
+### Patch Changes
+
+- audit packages
+
+- Updated dependencies []:
+  - @invect/core@0.0.9
+  - @invect/ui@0.0.9
+
 ## 0.0.8
 
 ### Patch Changes
