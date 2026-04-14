@@ -208,9 +208,9 @@ describe('authentication', () => {
       expect(result).toBeUndefined();
     });
 
-    it('returns 401 Response when no session and onSessionError is throw', async () => {
+    it('returns 401 Response when no session', async () => {
       const auth = createMockAuth(null);
-      const plugin = authentication({ auth, onSessionError: 'throw' });
+      const plugin = authentication({ auth });
 
       const request = new Request('http://localhost/flows');
       const result = await plugin.hooks!.onRequest!(request, {
@@ -225,20 +225,6 @@ describe('authentication', () => {
       expect(resp.status).toBe(401);
       const body = await resp.json();
       expect(body.error).toBe('Unauthorized');
-    });
-
-    it('returns undefined when no session and onSessionError is continue', async () => {
-      const auth = createMockAuth(null);
-      const plugin = authentication({ auth, onSessionError: 'continue' });
-
-      const request = new Request('http://localhost/flows');
-      const result = await plugin.hooks!.onRequest!(request, {
-        path: '/flows',
-        method: 'GET',
-        identity: null,
-      });
-
-      expect(result).toBeUndefined();
     });
   });
 
@@ -469,11 +455,19 @@ describe('session resolution via onRequest hook', () => {
     );
   });
 
-  it('returns null when no session', async () => {
+  it('returns 401 when no session', async () => {
     const auth = createMockAuth(null);
-    // Use onSessionError: 'continue' so the hook doesn't return a 401 Response
-    const identity = await resolveIdentity(auth, {}, { onSessionError: 'continue' });
-    expect(identity).toBeNull();
+    const plugin = authentication({ auth });
+    const request = new Request('http://localhost/flows');
+    const result = await plugin.hooks!.onRequest!(request, {
+      path: '/flows',
+      method: 'GET',
+      identity: null,
+    });
+
+    expect(result).toBeDefined();
+    const resp = (result as { response: Response }).response;
+    expect(resp.status).toBe(401);
   });
 
   it('handles array header values', async () => {
@@ -529,16 +523,19 @@ describe('session resolution via onRequest hook', () => {
     (auth.api.getSession as ReturnType<typeof vi.fn>).mockRejectedValue(
       new Error('Connection refused'),
     );
-    // Use onSessionError: 'continue' so the hook doesn't return 401
-    const identity = await resolveIdentity(
-      auth,
-      { cookie: 'session=tok' },
-      {
-        onSessionError: 'continue',
-      },
-    );
+    const plugin = authentication({ auth });
+    const request = new Request('http://localhost/flows', {
+      headers: { cookie: 'session=tok' },
+    });
+    const result = await plugin.hooks!.onRequest!(request, {
+      path: '/flows',
+      method: 'GET',
+      identity: null,
+    });
 
-    expect(identity).toBeNull();
+    expect(result).toBeDefined();
+    const resp = (result as { response: Response }).response;
+    expect(resp.status).toBe(401);
   });
 });
 

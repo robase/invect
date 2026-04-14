@@ -205,16 +205,9 @@ async function resolveSession(
   const h = toHeaders(headers);
 
   try {
-    // eslint-disable-next-line no-console
-    console.log('[auth-debug] resolveSession: cookie header =', h.get('cookie')?.slice(0, 80));
     const result = await auth.api.getSession({
       headers: h,
     });
-    // eslint-disable-next-line no-console
-    console.log(
-      '[auth-debug] resolveSession: result keys =',
-      result ? Object.keys(result) : 'null',
-    );
     if (result?.session && result?.user) {
       return {
         session: result.session,
@@ -223,8 +216,6 @@ async function resolveSession(
     }
     return null;
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('[auth-debug] resolveSession threw:', (err as Error)?.message ?? err);
     return null;
   }
 }
@@ -894,7 +885,6 @@ export function authentication(options: AuthenticationPluginOptions): InvectPlug
     mapUser: customMapUser,
     mapRole = defaultMapRole,
     publicPaths = [],
-    onSessionError = 'throw',
     globalAdmins = [],
   } = options;
 
@@ -1746,8 +1736,8 @@ export function authentication(options: AuthenticationPluginOptions): InvectPlug
        * onRequest: Intercept incoming requests to resolve auth sessions.
        *
        * - Auth proxy routes are passed through untouched.
-       * - For all other routes, we resolve the session. If no session exists
-       *   and `onSessionError === 'throw'`, we short-circuit with a 401.
+       * - For all other routes, we resolve the session. If no session exists,
+       *   we short-circuit with a 401.
        */
       onRequest: async (
         request: Request,
@@ -1785,7 +1775,7 @@ export function authentication(options: AuthenticationPluginOptions): InvectPlug
         // Write identity back so the framework adapter has it available.
         context.identity = identity;
 
-        if (!identity && onSessionError === 'throw') {
+        if (!identity) {
           return {
             response: new Response(
               JSON.stringify({
@@ -1799,9 +1789,6 @@ export function authentication(options: AuthenticationPluginOptions): InvectPlug
             ),
           };
         }
-
-        // Return void — identity is now on context.identity for the caller.
-        return;
       },
 
       /**

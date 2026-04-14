@@ -1,10 +1,8 @@
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Save, Settings, Share2, Loader2 } from 'lucide-react';
+import { Save, Loader2 } from 'lucide-react';
 import { InlineEdit } from './inline-edit';
 import { cn } from '../../lib/utils';
-import { usePluginRegistry } from '../../contexts/PluginRegistryContext';
-import { useParams } from 'react-router';
 
 interface FlowHeaderProps {
   flowName: string;
@@ -21,10 +19,6 @@ export function FlowHeader({
   onSave,
   isSaving = false,
 }: FlowHeaderProps) {
-  const { flowId } = useParams();
-  const registry = usePluginRegistry();
-  const flowHeaderActions = registry.headerActions['flowHeader'] ?? [];
-
   return (
     <header className="flex items-center justify-between px-6 border-b h-14 border-border bg-imp-background text-card-foreground">
       <div className="flex items-center gap-4">
@@ -50,21 +44,6 @@ export function FlowHeader({
         )}
       </div>
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon-sm" title="Settings" aria-label="Settings">
-          <Settings className="w-4 h-4" />
-        </Button>
-        {/* Plugin-contributed header actions (e.g. Share button from RBAC) */}
-        {flowHeaderActions
-          .filter((a) => !a.permission || registry.checkPermission(a.permission, { flowId }))
-          .map((action, i) => (
-            <action.component key={`plugin-action-${i}`} flowId={flowId} basePath="" />
-          ))}
-        {/* Fallback Share button when no plugin provides one */}
-        {flowHeaderActions.length === 0 && (
-          <Button variant="ghost" size="icon-sm" title="Share" aria-label="Share">
-            <Share2 className="w-4 h-4" />
-          </Button>
-        )}
         <Button
           variant="outline"
           size="sm"

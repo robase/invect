@@ -68,7 +68,11 @@ class ApiClient {
     return this.userId ? { 'X-User-ID': this.userId } : {};
   }
 
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  /**
+   * Raw fetch with standard credentials/headers. Returns the raw Response
+   * for streaming endpoints (SSE, chat) that need access to response.body.
+   */
+  async rawRequest(endpoint: string, options: RequestInit = {}): Promise<Response> {
     const url = `${this.baseURL}${endpoint}`;
 
     const { headers: optionsHeaders, ...restOptions } = options;
@@ -81,7 +85,11 @@ class ApiClient {
       },
     };
 
-    const response = await fetch(url, config);
+    return fetch(url, config);
+  }
+
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const response = await this.rawRequest(endpoint, options);
 
     if (!response.ok) {
       // Try to extract error message from response body
@@ -833,10 +841,8 @@ class ApiClient {
     },
     signal?: AbortSignal,
   ): Promise<Response> {
-    const url = `${this.baseURL}/chat`;
-    const response = await fetch(url, {
+    const response = await this.rawRequest('/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages, context }),
       signal,
     });

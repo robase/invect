@@ -357,18 +357,7 @@ export function ConfigurationPanel({
               )}
 
               {/* Run error */}
-              {runError && fieldErrors && Object.keys(fieldErrors).length > 0 ? (
-                <div className="flex items-start gap-2 p-2.5 rounded-md bg-destructive/5 border border-destructive/20">
-                  <AlertCircle className="w-3.5 h-3.5 text-destructive mt-0.5 shrink-0" />
-                  <div className="text-xs text-destructive">
-                    <strong>Validation failed:</strong> {Object.keys(fieldErrors).length} field
-                    {Object.keys(fieldErrors).length > 1 ? 's have' : ' has'} errors — see
-                    highlighted fields above
-                  </div>
-                </div>
-              ) : runError ? (
-                <ExecutionErrorDisplay error={runError} />
-              ) : null}
+              {runError ? <ExecutionErrorDisplay error={runError} /> : null}
 
               {/* Model status message */}
               {nodeType === GraphNodeType.MODEL && modelStatusMessage && (

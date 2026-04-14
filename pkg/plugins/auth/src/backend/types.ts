@@ -355,16 +355,6 @@ export interface AuthenticationPluginOptions {
   publicPaths?: string[];
 
   /**
-   * What to do when session resolution fails (network error, malformed token, etc.).
-   *
-   * - `'throw'`    — Return 401 Unauthorized.
-   * - `'continue'` — Set identity to null and proceed (useful for mixed auth).
-   *
-   * @default 'throw'
-   */
-  onSessionError?: 'throw' | 'continue';
-
-  /**
    * Explicit list of global admin accounts to seed and/or promote on startup.
    *
    * Each configured admin is ensured to exist with the `admin` role.

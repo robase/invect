@@ -57,7 +57,6 @@ export const invectConfig = defineConfig({
   plugins: [
     auth({
       auth: invectAuth,
-      onSessionError: 'continue',
       globalAdmins: [
         {
           email: process.env.INVECT_ADMIN_EMAIL,

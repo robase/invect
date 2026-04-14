@@ -450,31 +450,31 @@ export const initCommand = new Command('init')
         if (!shouldInstall) {
           installSucceeded = false;
         } else {
-        try {
-          if (depsToInstall.length > 0) {
-            const installCmd = getInstallCommand(pm, depsToInstall, false);
-            console.log(pc.dim(`  $ ${installCmd}`));
-            execSync(installCmd, { stdio: 'inherit', cwd: process.cwd() });
-          }
+          try {
+            if (depsToInstall.length > 0) {
+              const installCmd = getInstallCommand(pm, depsToInstall, false);
+              console.log(pc.dim(`  $ ${installCmd}`));
+              execSync(installCmd, { stdio: 'inherit', cwd: process.cwd() });
+            }
 
-          if (devDepsToInstall.length > 0) {
-            const devCmd = getInstallCommand(pm, devDepsToInstall, true);
-            console.log(pc.dim(`  $ ${devCmd}`));
-            execSync(devCmd, { stdio: 'inherit', cwd: process.cwd() });
-          }
+            if (devDepsToInstall.length > 0) {
+              const devCmd = getInstallCommand(pm, devDepsToInstall, true);
+              console.log(pc.dim(`  $ ${devCmd}`));
+              execSync(devCmd, { stdio: 'inherit', cwd: process.cwd() });
+            }
 
-          installSucceeded = true;
-        } catch (error) {
-          console.error(
-            pc.yellow('  ⚠ Package installation failed. You can install manually later:'),
-          );
-          console.log(pc.dim(`    ${getInstallCommand(pm, depsToInstall, false)}`));
-          if (devDepsToInstall.length > 0) {
-            console.log(pc.dim(`    ${getInstallCommand(pm, devDepsToInstall, true)}`));
+            installSucceeded = true;
+          } catch (error) {
+            console.error(
+              pc.yellow('  ⚠ Package installation failed. You can install manually later:'),
+            );
+            console.log(pc.dim(`    ${getInstallCommand(pm, depsToInstall, false)}`));
+            if (devDepsToInstall.length > 0) {
+              console.log(pc.dim(`    ${getInstallCommand(pm, devDepsToInstall, true)}`));
+            }
+            debugError('Package installation error', error);
           }
-          debugError('Package installation error', error);
         }
-      }
       }
 
       // 5. Create config file

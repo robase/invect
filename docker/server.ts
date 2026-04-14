@@ -44,7 +44,6 @@ const logLevel = (process.env.INVECT_LOG_LEVEL as 'debug' | 'info' | 'warn' | 'e
 // --- Plugins ---
 const plugins = [
   auth({
-    onSessionError: 'continue',
     trustedOrigins,
     betterAuthOptions: {
       secret: encryptionKey,

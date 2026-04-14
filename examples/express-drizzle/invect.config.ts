@@ -21,10 +21,7 @@ export const invectConfig = defineConfig({
     connectionString: process.env.DB_FILE_NAME || 'file:./dev.db',
   },
   logging: {
-    level: 'info',
-    scopes: {
-      credentials: 'debug',
-    },
+    level: 'error',
   },
   defaultCredentials: process.env.SEED_ANTHROPIC_API_KEY
     ? [
@@ -76,7 +73,6 @@ export const invectConfig = defineConfig({
     : [],
   plugins: [
     auth({
-      onSessionError: 'continue',
       trustedOrigins: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
       betterAuthOptions: {
         secret: process.env.BETTER_AUTH_SECRET || 'invect-dev-secret-do-not-use-in-production',

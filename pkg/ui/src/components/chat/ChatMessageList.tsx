@@ -119,11 +119,7 @@ export function ChatMessageList({
 
         {!isLoadingHistory && messages.length === 0 && !isStreaming && (
           <div className="flex flex-col items-center justify-center flex-1 text-center min-h-70">
-            {!hasConfiguredCredential ? (
-              <InlineCredentialSetup />
-            ) : (
-              <ChatSuggestionPrompts onSelect={onSendMessage} />
-            )}
+            {!hasConfiguredCredential ? <InlineCredentialSetup /> : <ChatSuggestionPrompts />}
           </div>
         )}
 
@@ -244,14 +240,7 @@ function SuggestionChips({
 // ChatSuggestionPrompts
 // =====================================
 
-const SUGGESTION_PROMPTS = [
-  { label: 'Add a node', text: 'Add a JQ transform node after my input that filters active items' },
-  { label: 'Debug flow', text: 'Analyze my current flow and suggest improvements' },
-  { label: 'Connect nodes', text: 'Connect the remaining unlinked nodes in my flow' },
-  { label: 'Explain flow', text: 'Walk me through what this flow does step by step' },
-];
-
-function ChatSuggestionPrompts({ onSelect }: { onSelect: (text: string) => void }) {
+function ChatSuggestionPrompts() {
   return (
     <div className="flex flex-col items-center gap-4 px-2">
       <div className="flex items-center justify-center rounded-full size-10 bg-primary/10">
@@ -260,19 +249,6 @@ function ChatSuggestionPrompts({ onSelect }: { onSelect: (text: string) => void 
       <div>
         <p className="text-sm font-medium text-foreground">What can I help with?</p>
         <p className="mt-0.5 text-xs text-muted-foreground">Build, edit, or debug your flows.</p>
-      </div>
-      <div className="flex flex-col w-full gap-1.5">
-        {SUGGESTION_PROMPTS.map((s) => (
-          <button
-            key={s.label}
-            type="button"
-            onClick={() => onSelect(s.text)}
-            className="flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors border rounded-lg text-foreground/80 border-border/50 bg-muted/20 hover:bg-accent/50 hover:border-border"
-          >
-            <ChevronRight className="size-3 text-muted-foreground/40 shrink-0" />
-            <span>{s.label}</span>
-          </button>
-        ))}
       </div>
     </div>
   );
@@ -361,7 +337,7 @@ function UserMessageBubble({
             value={editValue}
             onChange={(e) => setEditValue(e.target.value)}
             onKeyDown={handleEditKeyDown}
-            className="text-xs min-h-[40px] max-h-[120px] resize-none"
+            className="text-xs min-h-10 max-h-30 resize-none"
             rows={2}
           />
           <div className="flex justify-end gap-1 mt-1">

@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../ui/dialog';
-import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { CheckCircle2, XCircle, Loader2, Plus, Trash2 } from 'lucide-react';
 import type { CreateCredentialInput, CredentialAuthType, CredentialType } from '../../api/types';
 import { useTestCredentialRequest } from '../../api/credentials.api';
 
@@ -116,6 +116,13 @@ export const CreateCredentialModal: React.FC<CreateCredentialModalProps> = ({
       ) {
         const encoded = btoa(`${formData.config.username}:${formData.config.password}`);
         headers['Authorization'] = `Basic ${encoded}`;
+      } else if (formData.authType === 'custom' && formData.config.headers) {
+        const customHeaders = formData.config.headers as Record<string, string>;
+        for (const [key, value] of Object.entries(customHeaders)) {
+          if (key.trim()) {
+            headers[key] = value;
+          }
+        }
       }
 
       if (testBody && ['POST', 'PUT', 'PATCH'].includes(testMethod)) {
@@ -193,7 +200,7 @@ export const CreateCredentialModal: React.FC<CreateCredentialModalProps> = ({
               ref={firstFieldRef}
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="My Stripe Production"
+              placeholder="Acme API"
               required
               autoComplete="one-time-code"
               data-1p-ignore
@@ -497,6 +504,86 @@ export const CreateCredentialModal: React.FC<CreateCredentialModalProps> = ({
                 </div>
               </>
             )}
+
+            {formData.authType === 'custom' &&
+              (() => {
+                const headers = (formData.config.headers as Record<string, string>) || {};
+                const entries = Object.entries(headers);
+                const updateHeaders = (newHeaders: Record<string, string>) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    config: { ...prev.config, headers: newHeaders },
+                  }));
+                };
+                return (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs">Headers*</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => {
+                          updateHeaders({ ...headers, '': '' });
+                        }}
+                      >
+                        <Plus className="w-3 h-3 mr-1" />
+                        Add Header
+                      </Button>
+                    </div>
+                    {entries.length === 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        No headers added yet. Click "Add Header" to start.
+                      </p>
+                    )}
+                    {entries.map(([key, value], index) => (
+                      <div key={index} className="flex gap-2 items-start">
+                        <Input
+                          value={key}
+                          onChange={(e) => {
+                            const newEntries = [...entries];
+                            newEntries[index] = [e.target.value, value];
+                            updateHeaders(Object.fromEntries(newEntries));
+                          }}
+                          placeholder="Header name"
+                          autoComplete="one-time-code"
+                          data-1p-ignore
+                          data-lpignore="true"
+                          className="h-8 text-xs flex-1"
+                        />
+                        <Input
+                          value={value}
+                          onChange={(e) => {
+                            const newEntries = [...entries];
+                            newEntries[index] = [key, e.target.value];
+                            updateHeaders(Object.fromEntries(newEntries));
+                          }}
+                          type="text"
+                          style={{ WebkitTextSecurity: 'disc' }}
+                          placeholder="Header value"
+                          autoComplete="one-time-code"
+                          data-1p-ignore
+                          data-lpignore="true"
+                          className="h-8 text-xs flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                          onClick={() => {
+                            const newEntries = entries.filter((_, i) => i !== index);
+                            updateHeaders(Object.fromEntries(newEntries));
+                          }}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
           </div>
 
           {/* Test Section (Always visible for HTTP APIs and LLM providers) */}

@@ -773,9 +773,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
         if (isActive !== null) {
           filters.isActive = isActive === 'true';
         }
-        return Response.json(
-          await initializedCore.credentials.list(filters as CredentialFilters),
-        );
+        return Response.json(await initializedCore.credentials.list(filters as CredentialFilters));
       }
 
       // POST /credentials/:id/refresh

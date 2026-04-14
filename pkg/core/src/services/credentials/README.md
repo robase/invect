@@ -133,13 +133,13 @@ app.use('/api/credentials', createCredentialsRouter(credentialsService));
 
 ```typescript
 const credential = await credentialsService.create({
-  name: 'My Stripe Production',
-  provider: 'stripe',
+  name: 'Acme API',
+  provider: 'acme',
   authType: 'bearer',
   config: {
     token: 'sk_live_xxxxx',
   },
-  description: 'Production Stripe API key',
+  description: 'Production Acme API key',
   userId: 'user_123',
 });
 // Config is automatically encrypted
@@ -150,7 +150,7 @@ const credential = await credentialsService.create({
 ```typescript
 const credentials = await credentialsService.list({
   userId: 'user_123',
-  provider: 'stripe', // optional filter
+  provider: 'acme', // optional filter
   isActive: true, // optional filter
 });
 // Configs are NOT included for security

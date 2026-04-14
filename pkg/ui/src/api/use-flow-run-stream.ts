@@ -41,16 +41,12 @@ export function useFlowRunStream(flowId: string, flowRunId: string | null | unde
     const controller = new AbortController();
     abortRef.current = controller;
 
-    const baseURL = apiClient.getBaseURL();
-    const url = `${baseURL}/flow-runs/${flowRunId}/stream`;
-
     let cancelled = false;
 
     (async () => {
       try {
-        const response = await fetch(url, {
+        const response = await apiClient.rawRequest(`/flow-runs/${flowRunId}/stream`, {
           signal: controller.signal,
-          credentials: 'include',
           headers: {
             Accept: 'text/event-stream',
           },

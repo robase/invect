@@ -222,7 +222,7 @@ export function ChatToggleButton({ className }: { className?: string }) {
           variant="ghost"
           size="sm"
           onClick={togglePanel}
-          title={collapsed ? undefined : isOpen ? 'Close AI Chat' : 'Open AI Chat'}
+          title={collapsed ? undefined : isOpen ? 'Close Assistant' : 'Open Assistant'}
           className={cn(
             'gap-1.5 hover:bg-accent',
             isOpen
@@ -231,12 +231,12 @@ export function ChatToggleButton({ className }: { className?: string }) {
             className,
           )}
         >
-          <MessageSquare className="size-4" />
+          <MessageSquare className="size-4.5" />
           {!collapsed && <span className="text-xs font-medium">Chat</span>}
         </Button>
       </TooltipTrigger>
       {collapsed && (
-        <TooltipContent side="top">{isOpen ? 'Close AI Chat' : 'Open AI Chat'}</TooltipContent>
+        <TooltipContent side="top">{isOpen ? 'Close Assistant' : 'Open Assistant'}</TooltipContent>
       )}
     </Tooltip>
   );

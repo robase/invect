@@ -3,7 +3,7 @@ import { Input } from '../../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { Switch } from '../../ui/switch';
 import { Button } from '../../ui/button';
-import { Code2, Type, AlertCircle } from 'lucide-react';
+import { Code2, Type } from 'lucide-react';
 import type { NodeParamField } from '../../../types/node-definition.types';
 import { cn } from '../../../lib/utils';
 import { DroppableInput } from './DroppableInput';
@@ -68,7 +68,6 @@ export const ConfigFieldWithTemplate = ({
 
   const fieldError = error ? (
     <div className="flex items-center gap-1 text-[11px] text-destructive mt-0.5">
-      <AlertCircle className="w-3 h-3 shrink-0" />
       <span>{error}</span>
     </div>
   ) : null;

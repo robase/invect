@@ -114,6 +114,7 @@ export function useChat(options: UseChatOptions = {}) {
       const body = JSON.stringify({ messages: state.getSerializableMessages() });
       fetch(url, {
         method: 'PUT',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body,
         keepalive: true,

@@ -45,7 +45,7 @@ type LlmProvider = (typeof LLM_PROVIDERS)[number]['value'];
 
 function getDefaultName(provider: LlmProvider): string {
   const label = LLM_PROVIDERS.find((p) => p.value === provider)?.label ?? provider;
-  return `${label} (Chat)`;
+  return `${label}-assistant`;
 }
 
 function getBaseUrl(provider: LlmProvider): string | undefined {
@@ -228,24 +228,25 @@ function CreateCredentialForm({ onBack }: { onBack?: () => void }) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-3.5 rounded-xl border bg-muted/20 p-4 mx-2 w-full max-w-sm"
+      autoComplete="off"
+      className="flex flex-col gap-4 rounded-xl border border-border/60 bg-card p-5 mx-2 w-full max-w-sm shadow-sm"
     >
       {/* Header */}
-      <div className="flex flex-col items-center gap-2 pb-1">
-        <div className="flex size-9 items-center justify-center rounded-full bg-primary/10">
-          <KeyRound className="size-4 text-primary" />
+      <div className="flex flex-col gap-2.5 pb-0.5">
+        <div className="flex size-10 items-center justify-center rounded-full bg-primary/10">
+          <KeyRound className="size-5 text-primary" />
         </div>
         <div className="text-center">
           <p className="text-sm font-semibold text-foreground">Connect an LLM provider</p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground">
             Add an API key to start chatting with the assistant.
           </p>
         </div>
       </div>
 
       {/* Provider */}
-      <div className="space-y-1">
-        <label className="text-[11px] font-medium text-muted-foreground">Provider</label>
+      <div className="space-y-1.5 text-left">
+        <label className="text-xs font-medium text-muted-foreground">Provider</label>
         <Select
           value={provider}
           onValueChange={(v) => {
@@ -255,7 +256,7 @@ function CreateCredentialForm({ onBack }: { onBack?: () => void }) {
             }
           }}
         >
-          <SelectTrigger className="h-8 text-xs">
+          <SelectTrigger className="h-9 text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -269,33 +270,45 @@ function CreateCredentialForm({ onBack }: { onBack?: () => void }) {
       </div>
 
       {/* Name */}
-      <div className="space-y-1">
-        <label className="text-[11px] font-medium text-muted-foreground">Name</label>
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium text-muted-foreground">Name</label>
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder={getDefaultName(provider)}
-          className="h-8 text-xs"
+          className="h-9 text-xs"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          data-1p-ignore
+          data-lpignore="true"
+          data-form-type="other"
         />
       </div>
 
       {/* API Key */}
-      <div className="space-y-1">
-        <label className="text-[11px] font-medium text-muted-foreground">API Key</label>
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium text-muted-foreground">API Key</label>
         <div className="relative">
           <Input
             type={showKey ? 'text' : 'password'}
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
             placeholder={LLM_PROVIDERS.find((p) => p.value === provider)?.placeholder ?? 'sk-...'}
-            className="h-8 pr-8 text-xs font-mono"
-            autoComplete="off"
+            className="h-9 pr-8 text-xs font-mono"
+            autoComplete="new-password"
+            autoCorrect="off"
+            autoCapitalize="off"
             spellCheck={false}
+            data-1p-ignore
+            data-lpignore="true"
+            data-form-type="other"
           />
           <button
             type="button"
             onClick={() => setShowKey((s) => !s)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
             tabIndex={-1}
           >
             {showKey ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
@@ -312,7 +325,7 @@ function CreateCredentialForm({ onBack }: { onBack?: () => void }) {
       )}
 
       {/* Submit */}
-      <Button type="submit" size="sm" className="w-full gap-1.5 text-xs" disabled={!canSubmit}>
+      <Button type="submit" size="sm" className="mt-0.5 w-full gap-1.5" disabled={!canSubmit}>
         {formState === 'creating' ? (
           <>
             <Loader2 className="size-3.5 animate-spin" />
@@ -333,7 +346,7 @@ function CreateCredentialForm({ onBack }: { onBack?: () => void }) {
         <button
           type="button"
           onClick={onBack}
-          className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+          className="text-[11px] text-muted-foreground hover:text-foreground transition-colors text-center"
         >
           ← Back to existing providers
         </button>

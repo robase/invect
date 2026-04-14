@@ -233,7 +233,9 @@ export class DatabaseConnectionFactory {
    * Only used for the better-sqlite3 direct Drizzle path; the DatabaseDriver
    * abstraction handles pragmas internally.
    */
-  private static configureSQLitePragmas(client: InstanceType<typeof Database> | { pragma(sql: string): void }): void {
+  private static configureSQLitePragmas(
+    client: InstanceType<typeof Database> | { pragma(sql: string): void },
+  ): void {
     client.pragma('journal_mode = WAL');
     client.pragma('synchronous = NORMAL');
     client.pragma('foreign_keys = ON');

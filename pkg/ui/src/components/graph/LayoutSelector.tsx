@@ -28,9 +28,9 @@ export const LayoutSelector: React.FC<LayoutSelectorProps> = ({ onLayoutChange, 
               variant="ghost"
               size="sm"
               onClick={handleRealign}
-              className="h-8 gap-1.5 rounded-md px-2.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+              className="h-9 gap-1.5 rounded-md px-3 text-muted-foreground hover:bg-accent hover:text-foreground"
             >
-              <AlignHorizontalDistributeCenter className="w-3.5 h-3.5" />
+              <AlignHorizontalDistributeCenter className="w-4.5 h-4.5" />
               {!collapsed && 'Realign'}
             </Button>
           </TooltipTrigger>

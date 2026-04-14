@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, Plus, Trash2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -115,7 +115,7 @@ export const EditCredentialModal: React.FC<EditCredentialModalProps> = ({
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="My Stripe Production"
+                placeholder="Acme API"
                 required
               />
             </div>
@@ -369,6 +369,86 @@ export const EditCredentialModal: React.FC<EditCredentialModalProps> = ({
                   </div>
                 </>
               )}
+
+              {formData.authType === 'custom' &&
+                (() => {
+                  const headers = (formData.config?.headers as Record<string, string>) || {};
+                  const entries = Object.entries(headers);
+                  const updateHeaders = (newHeaders: Record<string, string>) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      config: { ...prev.config, headers: newHeaders },
+                    }));
+                  };
+                  return (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm">Headers</Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => {
+                            updateHeaders({ ...headers, '': '' });
+                          }}
+                        >
+                          <Plus className="w-3 h-3 mr-1" />
+                          Add Header
+                        </Button>
+                      </div>
+                      {entries.length === 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          No headers added yet. Click "Add Header" to start.
+                        </p>
+                      )}
+                      {entries.map(([key, value], index) => (
+                        <div key={index} className="flex gap-2 items-start">
+                          <Input
+                            value={key}
+                            onChange={(e) => {
+                              const newEntries = [...entries];
+                              newEntries[index] = [e.target.value, value];
+                              updateHeaders(Object.fromEntries(newEntries));
+                            }}
+                            placeholder="Header name"
+                            autoComplete="one-time-code"
+                            data-1p-ignore
+                            data-lpignore="true"
+                            className="flex-1"
+                          />
+                          <Input
+                            value={value}
+                            onChange={(e) => {
+                              const newEntries = [...entries];
+                              newEntries[index] = [key, e.target.value];
+                              updateHeaders(Object.fromEntries(newEntries));
+                            }}
+                            type="text"
+                            style={{ WebkitTextSecurity: 'disc' }}
+                            placeholder="Header value"
+                            autoComplete="one-time-code"
+                            data-1p-ignore
+                            data-lpignore="true"
+                            className="flex-1"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-10 w-10 p-0 text-muted-foreground hover:text-destructive"
+                            onClick={() => {
+                              const newEntries = entries.filter((_, i) => i !== index);
+                              updateHeaders(Object.fromEntries(newEntries));
+                            }}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
             </div>
 
             {/* Description */}

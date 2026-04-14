@@ -31,17 +31,17 @@ export function RunControls({
             onClick={onExecute}
             disabled={isExecuting || !onExecute}
             className={cn(
-              'flex items-center gap-1.5 py-1.5 text-xs font-medium rounded-md bg-foreground text-background hover:bg-foreground/85 transition-colors disabled:opacity-50 disabled:pointer-events-none',
-              collapsed ? 'px-4' : 'px-3',
+              'flex items-center gap-1.5 py-2 text-sm font-medium rounded-md bg-foreground text-background hover:bg-foreground/85 transition-colors disabled:opacity-50 disabled:pointer-events-none',
+              collapsed ? 'px-5' : 'px-4',
             )}
             title={collapsed ? undefined : 'Run flow'}
           >
             {isExecuting ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              <Play className="w-3.5 h-3.5" />
+              <Play className="w-4 h-4" />
             )}
-            {!collapsed && 'Run'}
+            Run
           </button>
         </TooltipTrigger>
         {collapsed && <TooltipContent side="top">Run flow</TooltipContent>}
@@ -49,7 +49,7 @@ export function RunControls({
 
       {/* Active / Inactive segmented toggle */}
       {isActive !== undefined && onToggleActive && (
-        <div className="inline-flex items-center rounded-md border border-border bg-muted/40 p-0.5">
+        <div className="inline-flex items-center rounded-md border border-border bg-muted/40 p-1">
           <Tooltip>
             <TooltipTrigger asChild>
               <button
@@ -60,16 +60,16 @@ export function RunControls({
                 }}
                 disabled={isTogglingActive}
                 className={cn(
-                  'flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-sm transition-colors disabled:opacity-50',
+                  'flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium rounded-sm transition-colors disabled:opacity-50',
                   isActive
                     ? 'bg-card text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground',
                 )}
               >
                 {isTogglingActive && !isActive ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <Loader2 className="w-4.5 h-4.5 animate-spin" />
                 ) : (
-                  <Power className="w-3 h-3" />
+                  <Power className={cn('w-4.5 h-4.5', isActive && 'text-emerald-500')} />
                 )}
                 {!collapsed && 'Active'}
               </button>
@@ -86,16 +86,16 @@ export function RunControls({
                 }}
                 disabled={isTogglingActive}
                 className={cn(
-                  'flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-sm transition-colors disabled:opacity-50',
+                  'flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium rounded-sm transition-colors disabled:opacity-50',
                   !isActive
                     ? 'bg-card text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground',
                 )}
               >
                 {isTogglingActive && isActive ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <Loader2 className="w-4.5 h-4.5 animate-spin" />
                 ) : (
-                  <PowerOff className="w-3 h-3" />
+                  <PowerOff className={cn('w-4.5 h-4.5', !isActive && 'text-red-400')} />
                 )}
                 {!collapsed && 'Inactive'}
               </button>
