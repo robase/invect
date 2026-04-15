@@ -1,7 +1,8 @@
 /**
- * Playwright test server — runs from examples/express-drizzle/ so that
- * all workspace dependencies (drizzle-orm, better-sqlite3, @invect/*) are
- * resolvable.  Used by playwright/tests/critical-paths/fixtures.ts.
+ * Playwright test server — Express + Invect with mock external APIs.
+ *
+ * Isolated test server spawned per Playwright worker with a disposable
+ * SQLite database. Used by e2e, critical-paths, and visual-audit tests.
  *
  * Reads from env:
  *   PORT           — port to listen on (0 = random free port)
@@ -16,9 +17,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
 import cors from 'cors';
-import { createInvectRouter } from '@invect/express';
-import { webhooks } from '@invect/webhooks';
-import { startExternalApiMocks, stopExternalApiMocks } from './mock-external-apis';
+import { createInvectRouter } from '../../pkg/express/dist/index.js';
+import { webhooks } from '../../pkg/plugins/webhooks/src/backend/index.ts';
+import { startExternalApiMocks, stopExternalApiMocks } from './mock-external-apis.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -78,17 +79,18 @@ app.get('/invect/plugins/auth/api/auth/get-session', (_req, res) => {
   });
 });
 
-const invectRouter = await createInvectRouter({
-  encryptionKey: 'dGVzdC1lbmNyeXB0aW9uLWtleS0xMjM0NTY3ODkw',
-  database: {
-    type: 'sqlite',
-    connectionString: `file:${dbPath}`,
-  },
-  logging: { level: 'warn' },
-  plugins: [webhooks()],
-});
-
-app.use('/invect', (req, res, next) => invectRouter(req, res, next));
+app.use(
+  '/invect',
+  await createInvectRouter({
+    encryptionKey: 'dGVzdC1lbmNyeXB0aW9uLWtleS0xMjM0NTY3ODkw',
+    database: {
+      type: 'sqlite',
+      connectionString: `file:${dbPath}`,
+    },
+    logging: { level: 'warn' },
+    plugins: [webhooks()],
+  }),
+);
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });

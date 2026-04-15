@@ -20,8 +20,8 @@ export { expect };
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '../..');
-const serverCwd = path.join(rootDir, 'examples/express-drizzle');
-const serverScript = path.join(serverCwd, 'playwright-test-server.ts');
+const serverCwd = path.join(rootDir, 'playwright');
+const serverScript = path.join(serverCwd, 'test-support/express-test-server.ts');
 const sharedOrigin = process.env.PLAYWRIGHT_VITE_URL ?? 'http://localhost:41731';
 const isolatedBrowserBase = createSqliteBrowserIsolationTest({
   apiPrefix: '/invect',

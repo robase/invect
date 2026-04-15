@@ -140,8 +140,8 @@ const test = createSqliteBrowserIsolationTest({
   apiRoutePrefix: '/api/invect',
   dbFilePrefix: 'invect-va',
   readyPath: '/health',
-  serverCwd: path.join(rootDir, 'examples/express-drizzle'),
-  serverScript: path.join(rootDir, 'examples/express-drizzle/playwright-test-server.ts'),
+  serverCwd: path.join(rootDir, 'playwright'),
+  serverScript: path.join(rootDir, 'playwright/test-support/express-test-server.ts'),
   sharedOrigin: VITE_BASE,
 });
 

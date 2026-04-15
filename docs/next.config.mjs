@@ -1,8 +1,9 @@
 import { createMDX } from 'fumadocs-mdx/next';
 import { fileURLToPath } from 'node:url';
-import { dirname } from 'node:path';
+import { dirname, resolve } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const monorepoRoot = resolve(__dirname, '..');
 
 const withMDX = createMDX();
 
@@ -14,7 +15,10 @@ const config = {
   images: {
     unoptimized: true,
   },
-  outputFileTracingRoot: __dirname,
+  outputFileTracingRoot: monorepoRoot,
+  turbopack: {
+    root: monorepoRoot,
+  },
   transpilePackages: ['@invect/ui', '@invect/core'],
 };
 

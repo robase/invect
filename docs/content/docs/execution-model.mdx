@@ -1,123 +1,186 @@
 ---
 title: Execution Model
-description: Deep dive into how flows execute — node ordering, data flow, and state management.
+description: How Invect flows run — edges, data passing, templates, iteration, and how it compares to tools like n8n.
 ---
 
-import { Mermaid } from '../../components/Mermaid';
+Invect takes a different approach to workflow execution than most automation tools. This page explains how data moves through a flow, how nodes talk to each other, and how iteration works.
 
-This page covers the internals of flow execution — node ordering, data flow, template resolution, and state management.
+## How a flow runs
 
-## Flow execution pipeline
+When you trigger a flow, Invect follows a simple sequence:
 
-<Mermaid
-  chart={`
-flowchart TD
-  A["core.startFlowRun(flowId, inputs)"] --> B["FlowsService.getFlowById()\nLoad flow + latest version definition"]
-  B --> C["FlowOrchestrationService.initiateFlowRun()"]
-  C --> D["FlowRunsService.createFlowRun()\nCreate execution record (status: PENDING)"]
-  D --> E["GraphService.topologicalSort()\nDetermine node execution order from edges"]
-  E --> F{"For each node\nin topological order"}
-  F --> G["buildIncomingDataObject()\nCollect upstream outputs, keyed by referenceId"]
-  G --> H["resolveTemplateParams()\nEvaluate expressions via QuickJS WASM"]
-  H --> I["executeNode()"]
-  I --> J["createNodeExecution() — trace"]
-  J --> K{"Dispatch"}
-  K -->|Action| L["actionRegistry.get(type)\nexecuteActionAsNode()"]
-  K -->|Agent| M["nodeRegistry.get(type)\nAgentNodeExecutor.execute()"]
-  L --> N["updateNodeExecutionStatus()"]
-  M --> N
-  N --> O["Store output for downstream nodes"]
-  O --> F
-  F -->|All done| P["Return FlowRunResult"]
-`}
-/>
+1. **Load the flow** — fetch the flow definition (nodes + edges) from the database
+2. **Sort the nodes** — use the edges to figure out which nodes depend on which, then line them up in order (topological sort)
+3. **Execute each node in order** — one at a time, top to bottom
+4. **Store the result** — save the full execution trace (every node's input, output, timing, and status)
 
-## Input data construction
+Execution is **strictly sequential**. Node B won't start until Node A finishes. This keeps things predictable and easy to debug — you can always trace exactly what happened and in what order.
 
-The `buildIncomingDataObject()` method creates the context for each node:
+## How edges work
 
-1. Find all upstream nodes (via edges)
-2. For each upstream node, get its output from the execution store
-3. Parse the output as JSON (if valid), otherwise use raw string
-4. Key each output by the upstream node's `referenceId`
+Edges are the connections between nodes on the canvas. They serve two purposes:
 
-```ts
-// Node Z has upstream nodes "Fetch User" (referenceId: fetch_user) and "Get Config" (referenceId: get_config)
-const incomingData = {
-  fetch_user: { id: 123, name: 'Alice' }, // JSON-parsed output
-  get_config: 'production', // Raw string output
-};
-```
+1. **Execution order** — edges determine which nodes run before others
+2. **Data availability** — a node can only reference data from nodes that are upstream of it (connected via edges)
 
-### Reference ID derivation
+Unlike some tools where data is automatically pushed forward, Invect uses a **pull-based** model. Each node explicitly chooses what upstream data to reference using template expressions. Just because Node A connects to Node B doesn't mean B automatically receives A's output — B's config params must reference A's data with a `{{ }}` expression.
 
-The `referenceId` is the node's label normalized to `snake_case`:
+### Direct parents vs. ancestors
+
+When a node runs, it has access to two categories of upstream data:
+
+- **Direct parents** — nodes with an edge directly into the current node. Their outputs appear as top-level keys.
+- **Indirect ancestors** — nodes further back in the chain (grandparent nodes, etc.). Their outputs are grouped under a `previous_nodes` key.
+
+For example, if your flow is `Fetch User → Transform → Send Email`, when "Send Email" runs:
+
+- `transform` is a direct parent (top-level key)
+- `fetch_user` is an indirect ancestor (available under `previous_nodes.fetch_user`)
+
+## How data passes between nodes
+
+Every node produces an output when it runs. That output is stored and made available to downstream nodes as part of their **incoming data object** — a JSON object where each key is the upstream node's reference ID.
+
+### Reference IDs
+
+Each node has a reference ID derived from its label, normalized to `snake_case`:
 
 - "Fetch User" → `fetch_user`
+- "Send Email" → `send_email`
 - "API Response" → `api_response`
 
-If two upstream nodes produce the same key, incrementing numbers are appended: `some_a`, `some_a1`.
+These reference IDs become the keys in the incoming data object. If two upstream nodes would produce the same key, Invect appends numbers to avoid collisions (`some_node`, `some_node1`).
 
-## Template resolution
+### Example
 
-After building the input data, all template parameters are resolved:
+Imagine a node called "Send Email" with two upstream nodes:
 
-1. Scan every config param for `{{ }}` patterns
-2. For each match, evaluate the JavaScript expression via QuickJS WASM
-3. The evaluation context includes all keys from the input data as local variables
-4. Replace the template block with the result
+```json
+{
+  "fetch_user": { "id": 123, "name": "Alice", "email": "alice@example.com" },
+  "generate_subject": "Welcome aboard, Alice!"
+}
+```
 
-Two evaluation modes:
+The "Send Email" node can now reference `{{ fetch_user.email }}` or `{{ generate_subject }}` in its config.
 
-| Mode            | When                         | Returns                              |
-| --------------- | ---------------------------- | ------------------------------------ |
-| Pure expression | Entire param is `{{ expr }}` | Raw JS value (object, array, number) |
-| Mixed template  | Text + `{{ expr }}` blocks   | String (expressions stringified)     |
+## Template expressions
 
-## Special node handling
+Node config fields support JavaScript expressions wrapped in double curly braces: `{{ expression }}`. These are evaluated against the incoming data object before the node runs.
 
-### If/Else branching
+**Simple references:**
 
-When an If/Else node executes:
+- `{{ fetch_user.name }}` → `"Alice"`
+- `{{ fetch_user.id }}` → `123`
 
-1. The condition expression is evaluated against the input data
-2. The result determines which downstream branch is active
-3. Nodes on the inactive branch are marked as `SKIPPED`
-4. The If/Else node's output equals its input (passthrough)
+**Full JavaScript:**
 
-### Agent execution
+- `{{ users.filter(u => u.active).length }}` → `3`
+- `{{ fetch_user.name.toUpperCase() }}` → `"ALICE"`
 
-The Agent node has a different execution model — it runs an iterative loop:
+**Two evaluation modes:**
 
-1. Build the initial prompt from task prompt + system prompt + context
-2. Send to LLM with available tool definitions
-3. If LLM returns tool calls → execute tools → feed results back → repeat
-4. If LLM returns text or stop tool → end loop
-5. Final output = agent's last response
+| Mode            | Example                                   | Returns                                |
+| --------------- | ----------------------------------------- | -------------------------------------- |
+| Pure expression | A field set to `{{ fetch_user }}`         | The raw value (object, array, number)  |
+| Mixed template  | `"Hello {{ fetch_user.name }}, welcome!"` | A string with expressions interpolated |
 
-This loop is handled by `AgentNodeExecutor`, the only remaining legacy executor.
+If the entire field is a single `{{ }}` block, you get back the raw JavaScript value (an object, array, or number). If the field mixes text with expressions, the result is always a string.
 
-### Batch processing
+Expressions run in a sandboxed JavaScript environment (QuickJS via WebAssembly), so they're safe and isolated. Built-in helpers like `json()`, `first()`, `last()`, `keys()`, `values()`, and `exists()` are available.
 
-When a Model node returns `state: "PENDING"`:
+## Iteration and the data mapper
 
-1. The node output includes a batch job ID
-2. The flow run transitions to `PAUSED_FOR_BATCH`
-3. The batch polling service periodically checks the provider
-4. On completion, the flow resumes from the paused node
+Most automation tools (like n8n) pass arrays of "items" through the entire workflow, processing each item individually at every node. Invect works differently.
 
-## State management
+In Invect, **nodes process single values by default**. If a node returns an array, the downstream node receives that array as one value. There's no automatic item-by-item processing.
 
-During execution, node outputs are stored in memory (per flow run). After the run completes, the full execution trace (all node inputs, outputs, errors, timing) is persisted to the database.
+When you **do** need iteration, you enable the **data mapper** on a specific node. The mapper is a per-node configuration that says: "take this array, and run this node once for each item."
 
-Each node execution record includes:
+### How the mapper works
 
-| Field                       | Description                             |
-| --------------------------- | --------------------------------------- |
-| `nodeId`                    | The node's ID within the flow           |
-| `status`                    | `COMPLETED`, `FAILED`, `SKIPPED`        |
-| `input`                     | The incoming data object                |
-| `resolvedParams`            | Config params after template resolution |
-| `output`                    | The node's result                       |
-| `error`                     | Error message (if failed)               |
-| `startedAt` / `completedAt` | Timing                                  |
+Any node can have a mapper configuration with:
+
+- **Expression** — a JavaScript expression that resolves to the array you want to iterate over (e.g., `{{ fetch_users }}`)
+- **Mode** — how to handle the result:
+  - `auto` (default) — if the expression returns an array, iterate; otherwise run once
+  - `iterate` — always iterate (fails if expression doesn't return an array)
+  - `reshape` — always run once, even if the expression returns an array
+- **Concurrency** — how many iterations to run in parallel (default: 1, sequential)
+- **Output mode** — how to package the results (`array`, `object`, `flatten`, `concat`)
+
+### Iteration context
+
+During each iteration, the node receives:
+
+- All upstream data (same as usual)
+- The current item's properties (spread into the context)
+- An `_item` metadata object with `index`, `total`, `first`, `last`, and the raw `value`
+
+So if you're iterating over a list of users, each iteration can reference `{{ name }}` and `{{ email }}` directly, plus `{{ _item.index }}` for the position.
+
+### Concurrency
+
+With `concurrency: 1` (default), items process one at a time. Set it higher to process items in parallel batches — `concurrency: 5` runs 5 items simultaneously before moving to the next batch.
+
+## How Invect differs from n8n
+
+If you're coming from n8n, the biggest conceptual difference is how data flows between nodes.
+
+### n8n: items flow through the whole pipeline
+
+In n8n, every node receives an array of **items**. Each item is a JSON object, and most nodes automatically process every item in the array. The items array is the central data structure that flows through the entire workflow.
+
+- If a node produces 10 items, the next node runs 10 times automatically
+- To stop automatic iteration, you need a specific "loop" or "batch" node
+- All nodes in the chain see and operate on the same items array
+
+### Invect: nodes produce values, downstream nodes reference them
+
+In Invect, each node produces a **single output value** (which can be an object, array, string, or number). Downstream nodes explicitly choose what to reference using template expressions.
+
+- A node that returns an array of 10 users passes that array as **one value**
+- The next node decides what to do with it — use the whole array, pick one field, or enable the mapper to iterate
+- Iteration is opt-in, per-node, not a workflow-wide behavior
+
+### Key differences at a glance
+
+|                        | n8n                                         | Invect                                               |
+| ---------------------- | ------------------------------------------- | ---------------------------------------------------- |
+| **Core data model**    | Array of items flows through every node     | Each node produces a single output value             |
+| **Iteration**          | Automatic — every node processes every item | Opt-in — enable the mapper on specific nodes         |
+| **Data referencing**   | Implicit — items array is always available  | Explicit — use `{{ node_name.field }}` templates     |
+| **Loop control**       | Dedicated loop node wraps a sub-workflow    | Mapper config on any node (expression + concurrency) |
+| **Parallelism**        | Mainly at workflow level                    | Per-node — mapper supports concurrent iteration      |
+| **Scope of iteration** | Affects the entire downstream chain         | Affects only the node with the mapper enabled        |
+
+The Invect approach gives you more control. You decide exactly which node iterates, how many items run in parallel, and how results are packaged. The tradeoff is that you need to be more explicit about data references — but this also makes flows easier to reason about since there's no hidden implicit data passing.
+
+## Branching
+
+### If/Else
+
+The If/Else node evaluates a condition and routes execution to one of two branches (true or false). Nodes on the inactive branch are automatically marked as **skipped**.
+
+The If/Else node is a **passthrough** — its output equals its input. It doesn't transform data, it just decides which path to take.
+
+### Switch
+
+The Switch node extends this to multiple branches. You define cases with JavaScript expressions, and execution routes to the first matching case (or all matching cases, depending on the match mode). A default branch catches anything that doesn't match.
+
+### How skipping works
+
+When a branching node runs, Invect looks at which output branches are active and which are inactive. Nodes connected to inactive branches are marked as skipped — but only if **all** of their incoming edges come from skipped or inactive branches. If a node has another active path leading into it, it still runs.
+
+## Agent nodes
+
+Agent nodes work differently from standard nodes. Instead of running once and producing an output, they run an iterative loop:
+
+1. Send a prompt to an LLM (OpenAI, Anthropic, etc.) along with available tool definitions
+2. If the LLM requests tool calls, execute those tools and feed the results back
+3. Repeat until the LLM responds with text, calls a stop tool, or hits the iteration limit
+4. The agent's final response becomes the node's output
+
+## State and execution traces
+
+Every flow run produces a complete execution trace. Each node's record includes its input data, resolved config params, output, status (completed/failed/skipped), any error messages, and timing. This trace is persisted to the database and visible in the UI, making it straightforward to debug issues or understand what happened during a run.
