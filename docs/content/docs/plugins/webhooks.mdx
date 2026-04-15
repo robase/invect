@@ -10,21 +10,45 @@ The webhooks plugin adds inbound webhook support — external services can trigg
 ## Installation
 
 <Tabs items={['pnpm', 'npm', 'yarn', 'bun']}>
-  <Tab value="pnpm">``` pnpm add @invect/webhooks ```</Tab>
-  <Tab value="npm">``` npm install @invect/webhooks ```</Tab>
-  <Tab value="yarn">``` yarn add @invect/webhooks ```</Tab>
-  <Tab value="bun">``` bun add @invect/webhooks ```</Tab>
+<Tab value="pnpm">
+
+```bash
+pnpm add @invect/webhooks
+```
+
+</Tab>
+<Tab value="npm">
+
+```bash
+npm install @invect/webhooks
+```
+
+</Tab>
+<Tab value="yarn">
+
+```bash
+yarn add @invect/webhooks
+```
+
+</Tab>
+<Tab value="bun">
+
+```bash
+bun add @invect/webhooks
+```
+
+</Tab>
 </Tabs>
 
 ## Setup
 
 ```ts title="invect.config.ts"
-import { webhooksPlugin } from '@invect/webhooks';
+import { webhooks } from '@invect/webhooks';
 
 export const invectConfig = defineConfig({
   // ...
   plugins: [
-    webhooksPlugin({
+    webhooks({
       webhookBaseUrl: 'https://api.myapp.com/invect',
     }),
   ],

@@ -79,11 +79,11 @@ Array of plugin instances, initialised in order:
 
 ```ts
 plugins: [
-  authentication({
+  auth({
     /* ... */
   }),
-  rbacPlugin(),
-  webhooksPlugin({ webhookBaseUrl: 'https://api.myapp.com/invect' }),
+  rbac(),
+  webhooks({ webhookBaseUrl: 'https://api.myapp.com/invect' }),
 ];
 ```
 
@@ -115,8 +115,8 @@ Custom logger instance. Must implement `info`, `debug`, `warn`, `error` methods.
 
 ```ts title="invect.config.ts"
 import { defineConfig } from '@invect/core';
-import { authentication } from '@invect/user-auth';
-import { rbacPlugin } from '@invect/rbac';
+import { auth } from '@invect/user-auth';
+import { rbac } from '@invect/rbac';
 
 export const invectConfig = defineConfig({
   database: {
@@ -137,13 +137,13 @@ export const invectConfig = defineConfig({
     cronEnabled: true,
   },
   plugins: [
-    authentication({
+    auth({
       betterAuthOptions: { secret: process.env.BETTER_AUTH_SECRET },
       globalAdmins: [
         { email: process.env.ADMIN_EMAIL, pw: process.env.ADMIN_PASSWORD, name: 'Admin' },
       ],
     }),
-    rbacPlugin(),
+    rbac(),
   ],
   defaultCredentials: [
     {

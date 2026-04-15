@@ -66,14 +66,14 @@ Downstream nodes access the scheduled time via `{{ cron_trigger.scheduledTime }}
 Trigger flows from external HTTP requests. Requires the [Webhooks Plugin](/docs/plugins/webhooks).
 
 ```ts title="config"
-import { webhooksPlugin } from '@invect/webhooks/backend';
+import { webhooks } from '@invect/webhooks';
 
 const config = {
   // ...
   triggers: {
     webhookBaseUrl: 'https://your-app.com/invect',
   },
-  plugins: [webhooksPlugin()],
+  plugins: [webhooks()],
 };
 ```
 

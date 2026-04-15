@@ -11,10 +11,34 @@ The MCP plugin exposes Invect as a [Model Context Protocol](https://modelcontext
 ## Installation
 
 <Tabs items={['pnpm', 'npm', 'yarn', 'bun']}>
-  <Tab value="pnpm">``` pnpm add @invect/mcp ```</Tab>
-  <Tab value="npm">``` npm install @invect/mcp ```</Tab>
-  <Tab value="yarn">``` yarn add @invect/mcp ```</Tab>
-  <Tab value="bun">``` bun add @invect/mcp ```</Tab>
+<Tab value="pnpm">
+
+```bash
+pnpm add @invect/mcp
+```
+
+</Tab>
+<Tab value="npm">
+
+```bash
+npm install @invect/mcp
+```
+
+</Tab>
+<Tab value="yarn">
+
+```bash
+yarn add @invect/mcp
+```
+
+</Tab>
+<Tab value="bun">
+
+```bash
+bun add @invect/mcp
+```
+
+</Tab>
 </Tabs>
 
 ## Setup
@@ -22,11 +46,11 @@ The MCP plugin exposes Invect as a [Model Context Protocol](https://modelcontext
 Register the plugin in your Invect config:
 
 ```ts title="invect.config.ts"
-import { mcpPlugin } from '@invect/mcp';
+import { mcp } from '@invect/mcp';
 
 export const invectConfig = defineConfig({
   // ...
-  plugins: [mcpPlugin()],
+  plugins: [mcp()],
 });
 ```
 
@@ -40,7 +64,7 @@ export const invectConfig = defineConfig({
 | `audit.logLevel` | `'debug' \| 'info' \| 'warn'` | `'info'`           | Minimum level for audit entries.       |
 
 ```ts title="invect.config.ts"
-mcpPlugin({
+mcp({
   sessionTtlMs: 60 * 60 * 1000, // 1 hour sessions
   audit: { enabled: true, persist: true, logLevel: 'debug' },
 });
