@@ -78,18 +78,17 @@ app.get('/invect/plugins/auth/api/auth/get-session', (_req, res) => {
   });
 });
 
-app.use(
-  '/invect',
-  await createInvectRouter({
-    encryptionKey: 'dGVzdC1lbmNyeXB0aW9uLWtleS0xMjM0NTY3ODkw',
-    database: {
-      type: 'sqlite',
-      connectionString: `file:${dbPath}`,
-    },
-    logging: { level: 'warn' },
-    plugins: [webhooks()],
-  }),
-);
+const invectRouter = await createInvectRouter({
+  encryptionKey: 'dGVzdC1lbmNyeXB0aW9uLWtleS0xMjM0NTY3ODkw',
+  database: {
+    type: 'sqlite',
+    connectionString: `file:${dbPath}`,
+  },
+  logging: { level: 'warn' },
+  plugins: [webhooks()],
+});
+
+app.use('/invect', (req, res, next) => invectRouter(req, res, next));
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });

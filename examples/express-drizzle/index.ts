@@ -27,7 +27,7 @@ app.use(express.json());
 
 // Mount Invect routes under /invect (or a path of your choice)
 const invectRouter = await createInvectRouter(invectConfig);
-app.use('/invect', invectRouter);
+app.use('/invect', (req, res, next) => invectRouter(req, res, next));
 
 // Health check endpoint
 app.get('/health', (req, res) => {

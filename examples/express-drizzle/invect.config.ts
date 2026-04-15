@@ -23,54 +23,68 @@ export const invectConfig = defineConfig({
   logging: {
     level: 'error',
   },
-  defaultCredentials: process.env.SEED_ANTHROPIC_API_KEY
-    ? [
-        {
-          name: 'Anthropic API Key',
-          type: 'llm' as const,
-          provider: 'anthropic',
-          authType: 'apiKey',
-          config: { apiKey: process.env.SEED_ANTHROPIC_API_KEY },
-          description: 'Anthropic Claude API credential for AI model nodes',
-          isShared: true,
-        },
-        {
-          name: 'OpenRouter API Key',
-          type: 'llm' as const,
-          provider: 'openrouter',
-          authType: 'apiKey',
-          config: { apiKey: process.env.SEED_OPENROUTER_API_KEY },
-          description: 'OpenRouter API credential for AI model nodes',
-          isShared: true,
-        },
-        {
-          name: 'Linear OAuth2',
-          type: 'http-api' as const,
-          provider: 'linear',
-          authType: 'oauth2',
-          config: {
-            clientId: process.env.SEED_LINEAR_CLIENT_ID,
-            clientSecret: process.env.SEED_LINEAR_CLIENT_SECRET,
-            oauth2Provider: 'linear',
+  defaultCredentials: [
+    ...(process.env.SEED_ANTHROPIC_API_KEY
+      ? [
+          {
+            name: 'Anthropic API Key',
+            type: 'llm' as const,
+            provider: 'anthropic',
+            authType: 'apiKey' as const,
+            config: { apiKey: process.env.SEED_ANTHROPIC_API_KEY },
+            description: 'Anthropic Claude API credential for AI model nodes',
+            isShared: true,
           },
-          description: 'Linear OAuth2 credential for issue tracking',
-          isShared: true,
-        },
-        {
-          name: 'Gmail OAuth2',
-          type: 'http-api' as const,
-          provider: 'google',
-          authType: 'oauth2',
-          config: {
-            clientId: process.env.SEED_GMAIL_CLIENT_ID,
-            clientSecret: process.env.SEED_GMAIL_CLIENT_SECRET,
-            oauth2Provider: 'google',
+        ]
+      : []),
+    ...(process.env.SEED_OPENROUTER_API_KEY
+      ? [
+          {
+            name: 'OpenRouter API Key',
+            type: 'llm' as const,
+            provider: 'openrouter',
+            authType: 'apiKey' as const,
+            config: { apiKey: process.env.SEED_OPENROUTER_API_KEY },
+            description: 'OpenRouter API credential for AI model nodes',
+            isShared: true,
           },
-          description: 'Gmail OAuth2 credential',
-          isShared: true,
-        },
-      ]
-    : [],
+        ]
+      : []),
+    ...(process.env.SEED_LINEAR_CLIENT_ID && process.env.SEED_LINEAR_CLIENT_SECRET
+      ? [
+          {
+            name: 'Linear OAuth2',
+            type: 'http-api' as const,
+            provider: 'linear',
+            authType: 'oauth2' as const,
+            config: {
+              clientId: process.env.SEED_LINEAR_CLIENT_ID,
+              clientSecret: process.env.SEED_LINEAR_CLIENT_SECRET,
+              oauth2Provider: 'linear',
+            },
+            description: 'Linear OAuth2 credential for issue tracking',
+            isShared: true,
+          },
+        ]
+      : []),
+    ...(process.env.SEED_GMAIL_CLIENT_ID && process.env.SEED_GMAIL_CLIENT_SECRET
+      ? [
+          {
+            name: 'Gmail OAuth2',
+            type: 'http-api' as const,
+            provider: 'google',
+            authType: 'oauth2' as const,
+            config: {
+              clientId: process.env.SEED_GMAIL_CLIENT_ID,
+              clientSecret: process.env.SEED_GMAIL_CLIENT_SECRET,
+              oauth2Provider: 'google',
+            },
+            description: 'Gmail OAuth2 credential',
+            isShared: true,
+          },
+        ]
+      : []),
+  ],
   plugins: [
     auth({
       trustedOrigins: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
@@ -78,13 +92,16 @@ export const invectConfig = defineConfig({
         secret: process.env.BETTER_AUTH_SECRET || 'invect-dev-secret-do-not-use-in-production',
       },
       apiKey: true,
-      globalAdmins: [
-        {
-          email: process.env.INVECT_ADMIN_EMAIL,
-          pw: process.env.INVECT_ADMIN_PASSWORD,
-          name: 'Admin',
-        },
-      ],
+      globalAdmins:
+        process.env.INVECT_ADMIN_EMAIL && process.env.INVECT_ADMIN_PASSWORD
+          ? [
+              {
+                email: process.env.INVECT_ADMIN_EMAIL,
+                pw: process.env.INVECT_ADMIN_PASSWORD,
+                name: 'Admin',
+              },
+            ]
+          : [],
     }),
     rbac(),
     webhooks({
