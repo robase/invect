@@ -54,11 +54,11 @@ The plugin contributes sidebar items, an access management page, a flow-level ac
 
 ## Exports
 
-| Entry Point          | Content                                                                                     |
-| -------------------- | ------------------------------------------------------------------------------------------- |
-| `@invect/rbac`       | Backend plugin (Node.js)                                                                    |
+| Entry Point          | Content                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------- |
+| `@invect/rbac`       | Backend plugin (Node.js)                                                              |
 | `@invect/rbac/ui`    | Frontend plugin — `rbacFrontend`, `RbacProvider`, `ShareFlowModal`, `FlowAccessPanel` |
-| `@invect/rbac/types` | Shared types — `FlowAccessRecord`, `FlowAccessPermission`, etc.                             |
+| `@invect/rbac/types` | Shared types — `FlowAccessRecord`, `FlowAccessPermission`, etc.                       |
 
 ## License
 

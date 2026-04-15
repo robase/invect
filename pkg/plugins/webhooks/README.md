@@ -68,11 +68,11 @@ The plugin adds a Webhooks page to the sidebar for managing webhook triggers.
 
 ## Exports
 
-| Entry Point              | Content                                                    |
-| ------------------------ | ---------------------------------------------------------- |
-| `@invect/webhooks`       | Backend plugin (Node.js)                                   |
+| Entry Point              | Content                                              |
+| ------------------------ | ---------------------------------------------------- |
+| `@invect/webhooks`       | Backend plugin (Node.js)                             |
 | `@invect/webhooks/ui`    | Frontend plugin — `webhooksFrontend`, `WebhooksPage` |
-| `@invect/webhooks/types` | Shared types                                               |
+| `@invect/webhooks/types` | Shared types                                         |
 
 ## License
 

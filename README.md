@@ -84,20 +84,20 @@ export default () => <Invect apiBaseUrl="http://localhost:3000/invect" />;
 
 ## Packages
 
-| Package                                                  | Description                                                     |
-| -------------------------------------------------------- | --------------------------------------------------------------- |
-| [`@invect/core`](pkg/core)                               | Framework-agnostic engine — flows, execution, actions, database |
-| [`@invect/express`](pkg/express)                         | Express router adapter                                          |
-| [`@invect/nestjs`](pkg/nestjs)                           | NestJS module adapter                                           |
-| [`@invect/nextjs`](pkg/nextjs)                           | Next.js App Router handler                                      |
-| [`@invect/ui`](pkg/ui)                                   | React flow editor and dashboard                                 |
-| [`@invect/cli`](pkg/cli)                                 | CLI for schema generation, migrations, and project setup        |
-| [`@invect/user-auth`](pkg/plugins/auth)                  | Authentication plugin (Better Auth)                             |
-| [`@invect/rbac`](pkg/plugins/rbac)                       | Role-based access control plugin                                |
-| [`@invect/webhooks`](pkg/plugins/webhooks)               | Webhook triggers with signature verification and rate limiting  |
-| [`@invect/version-control`](pkg/plugins/version-control) | Sync flows to GitHub/GitLab/Bitbucket as `.flow.ts` files       |
-| [`@invect/cloudflare-agents`](pkg/plugins/cloudflare-agents) | Compile flows to Cloudflare Workers & Workflows             |
-| [`@invect/mcp`](pkg/plugins/mcp)                         | Model Context Protocol server for AI coding agents              |
+| Package                                                      | Description                                                     |
+| ------------------------------------------------------------ | --------------------------------------------------------------- |
+| [`@invect/core`](pkg/core)                                   | Framework-agnostic engine — flows, execution, actions, database |
+| [`@invect/express`](pkg/express)                             | Express router adapter                                          |
+| [`@invect/nestjs`](pkg/nestjs)                               | NestJS module adapter                                           |
+| [`@invect/nextjs`](pkg/nextjs)                               | Next.js App Router handler                                      |
+| [`@invect/ui`](pkg/ui)                                       | React flow editor and dashboard                                 |
+| [`@invect/cli`](pkg/cli)                                     | CLI for schema generation, migrations, and project setup        |
+| [`@invect/user-auth`](pkg/plugins/auth)                      | Authentication plugin (Better Auth)                             |
+| [`@invect/rbac`](pkg/plugins/rbac)                           | Role-based access control plugin                                |
+| [`@invect/webhooks`](pkg/plugins/webhooks)                   | Webhook triggers with signature verification and rate limiting  |
+| [`@invect/version-control`](pkg/plugins/version-control)     | Sync flows to GitHub/GitLab/Bitbucket as `.flow.ts` files       |
+| [`@invect/cloudflare-agents`](pkg/plugins/cloudflare-agents) | Compile flows to Cloudflare Workers & Workflows                 |
+| [`@invect/mcp`](pkg/plugins/mcp)                             | Model Context Protocol server for AI coding agents              |
 
 ## Examples
 

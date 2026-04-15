@@ -211,6 +211,7 @@ export class AppModule {}
 ```
 
 This registers the `INVECT_CORE` provider (singleton), `InvectService` (injectable wrapper), and `InvectController` (REST endpoints under `/invect`).
+
 </Tab>
 <Tab value="Next.js">
 
@@ -292,10 +293,9 @@ Mount the frontend in a catch-all page route:
 import dynamic from 'next/dynamic';
 import '@invect/ui/styles';
 
-const Invect = dynamic(
-  () => import('@invect/ui').then((mod) => ({ default: mod.Invect })),
-  { ssr: false },
-);
+const Invect = dynamic(() => import('@invect/ui').then((mod) => ({ default: mod.Invect })), {
+  ssr: false,
+});
 
 export default function InvectPage() {
   return <Invect apiPath="/api/invect" frontendPath="/invect" />;
@@ -330,6 +330,7 @@ npx tsx index.ts
 ```
 
 The API is now live at `http://localhost:3000/invect`. Open your frontend app to access the visual flow editor.
+
 </Tab>
 <Tab value="NestJS">
 
@@ -338,6 +339,7 @@ npx nest start --watch
 ```
 
 The API is now live at `http://localhost:3000/invect`. Open your frontend app to access the visual flow editor.
+
 </Tab>
 <Tab value="Next.js">
 
@@ -346,6 +348,7 @@ npx next dev
 ```
 
 Open `http://localhost:3000/invect` — the visual flow editor is ready.
+
 </Tab>
 </Tabs>
 </Step>
@@ -503,7 +506,9 @@ app.use(
     },
     encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
     plugins: [
-      auth({ /* Better Auth options */ }),
+      auth({
+        /* Better Auth options */
+      }),
       rbac(),
     ],
   }),
@@ -527,7 +532,9 @@ import { rbac } from '@invect/rbac';
       },
       encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
       plugins: [
-        auth({ /* Better Auth options */ }),
+        auth({
+          /* Better Auth options */
+        }),
         rbac(),
       ],
     }),
@@ -550,7 +557,12 @@ const handler = createInvectHandler({
     connectionString: process.env.DATABASE_URL!,
   },
   encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
-  plugins: [auth({ /* Better Auth options */ }), rbac()],
+  plugins: [
+    auth({
+      /* Better Auth options */
+    }),
+    rbac(),
+  ],
 });
 
 export const GET = handler.GET;
@@ -583,6 +595,7 @@ export default function InvectPage() {
 ```
 
 See [Authentication Plugin](/docs/plugins/authentication) and [Access Control Plugin](/docs/plugins/access-control) for details.
+
 </Tab>
 </Tabs>
 

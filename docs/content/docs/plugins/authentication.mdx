@@ -10,22 +10,46 @@ The auth plugin wraps [Better Auth](https://better-auth.com) to provide user log
 ## Installation
 
 <Tabs items={['pnpm', 'npm', 'yarn', 'bun']}>
-  <Tab value="pnpm">``` pnpm add @invect/user-auth ```</Tab>
-  <Tab value="npm">``` npm install @invect/user-auth ```</Tab>
-  <Tab value="yarn">``` yarn add @invect/user-auth ```</Tab>
-  <Tab value="bun">``` bun add @invect/user-auth ```</Tab>
+<Tab value="pnpm">
+
+```bash
+pnpm add @invect/user-auth
+```
+
+</Tab>
+<Tab value="npm">
+
+```bash
+npm install @invect/user-auth
+```
+
+</Tab>
+<Tab value="yarn">
+
+```bash
+yarn add @invect/user-auth
+```
+
+</Tab>
+<Tab value="bun">
+
+```bash
+bun add @invect/user-auth
+```
+
+</Tab>
 </Tabs>
 
 ## Backend setup
 
 ```ts title="invect.config.ts"
 import { defineConfig } from '@invect/core';
-import { authentication } from '@invect/user-auth';
+import { auth } from '@invect/user-auth';
 
 export const invectConfig = defineConfig({
   database: { type: 'sqlite', connectionString: 'file:./dev.db' },
   plugins: [
-    authentication({
+    auth({
       betterAuthOptions: {
         secret: process.env.BETTER_AUTH_SECRET,
       },
