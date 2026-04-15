@@ -104,13 +104,9 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
 
   // Start batch polling for automatic batch completion handling
   await invect.startBatchPolling();
-  // eslint-disable-next-line no-console
-  console.log('✅ Invect batch polling started');
 
   // Start cron scheduler for automatic cron trigger execution
   await invect.startCronScheduler();
-  // eslint-disable-next-line no-console
-  console.log('✅ Invect cron scheduler started');
 
   const router = Router();
 
@@ -1536,7 +1532,7 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
   // PLUGIN ENDPOINTS
   // Mount API endpoints defined by plugins via invect.plugins.getEndpoints()
   // =====================================
-  router.all('/plugins/*', async (req: Request, res: Response) => {
+  router.all('/plugins/*path', async (req: Request, res: Response) => {
     const endpoints = invect.plugins.getEndpoints();
     // Strip the /plugins prefix — endpoint paths are defined relative to it
     // e.g. req.path="/plugins/auth/api/auth/sign-in/email" → "/auth/api/auth/sign-in/email"

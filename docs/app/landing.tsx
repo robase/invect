@@ -357,7 +357,6 @@ export default function LandingPage() {
                 </span>{' '}
                 app
               </h1>
-              <p>Build on a canvas. Ship as code. Same workflow, same engine.</p>
               <div
                 className="install-bar"
                 onClick={(e) => {
@@ -443,9 +442,7 @@ export default function LandingPage() {
         <section className="why-section" id="features">
           <div className="container">
             <p className="section-label">Why Invect</p>
-            <h2 className="section-title">
-              An open-source workflow engine that lives inside your app, not next to&nbsp;it
-            </h2>
+            <h2 className="section-title">An open-source workflow engine embedded in your app</h2>
             <div className="why-grid">
               <div className="why-item">
                 <div className="why-item-text">
@@ -453,13 +450,8 @@ export default function LandingPage() {
                   <p>
                     You <code>npm install</code> it into your Express, NestJS, or Next.js app. It
                     uses your database, your auth, your deployment pipeline. No separate server to
-                    maintain, no vendor lock-in, no &quot;outgrowing&quot; the&nbsp;tool.
+                    maintain, no vendor lock-in, no outgrowing the tool.
                   </p>
-                  <ul>
-                    <li>Mount alongside your existing routes — same server, same&nbsp;database</li>
-                    <li>Scale horizontally the same way you scale the rest of your&nbsp;app</li>
-                    <li>No per-execution pricing — it&apos;s a library, not a&nbsp;service</li>
-                  </ul>
                   <Link href="/docs/installation" className="why-link">
                     See integration guides →
                   </Link>
@@ -478,16 +470,10 @@ export default function LandingPage() {
 
 <span class="comment">// Mount alongside your existing routes</span>
 app.<span class="func">use</span>(<span class="string">'/api'</span>, yourRouter);
-app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <span class="keyword">await</span> <span class="func">createInvectRouter</span>({
-  <span class="type">encryptionKey</span>: process.env.<span class="type">INVECT_ENCRYPTION_KEY</span>,
-  <span class="type">database</span>: {
-    <span class="type">type</span>: <span class="string">'sqlite'</span>,
-    <span class="type">connectionString</span>: process.env.<span class="type">DATABASE_URL</span>,
-  },
-}));
+app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <span class="keyword">await</span> <span class="func">createInvectRouter</span>(...));
 
-<span class="comment">// That's it. Same server, same database,</span>
-<span class="comment">// same deployment.</span>`,
+<span class="comment">// that's it</span>
+`,
                     }}
                   />
                 </div>
@@ -496,12 +482,7 @@ app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <spa
               <div className="why-item">
                 <div className="why-item-text">
                   <h3>Not another LangChain wrapper</h3>
-                  <p>
-                    Invect has a custom-built execution engine from the ground up. Topological sort
-                    determines node order. If/else branches auto-prune unreachable subgraphs — no
-                    wasted API calls. It&apos;s an orchestration runtime, not a thin layer over
-                    library &nbsp;abstractions.
-                  </p>
+                  <p>Invect has a custom-built execution engine from the ground up.</p>
                   <ul>
                     <li>
                       Smart branching — inactive paths and their downstream nodes are&nbsp;skipped
@@ -549,13 +530,6 @@ app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <spa
                     results arrive. Batch APIs are 50% cheaper — and no other flow builder handles
                     this&nbsp;natively.
                   </p>
-                  <ul>
-                    <li>
-                      <code>PAUSED_FOR_BATCH</code> is a first-class execution&nbsp;state
-                    </li>
-                    <li>Background polling handles the full batch lifecycle&nbsp;automatically</li>
-                    <li>No custom polling infrastructure or webhooks&nbsp;required</li>
-                  </ul>
                   <Link href="/docs/execution-model" className="why-link">
                     Learn about batch processing →
                   </Link>
@@ -639,19 +613,23 @@ app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <spa
 
               <div className="why-item">
                 <div className="why-item-text">
-                  <h3>Version-pinned execution</h3>
+                  <h3>Flows as code, synced to GitHub</h3>
                   <p>
-                    Every flow save creates an immutable version. Pin production to version 5 while
-                    you iterate on version 6. Webhooks and crons bind to the version they were
-                    created with — editing the latest version can&apos;t break&nbsp;prod.
+                    Define workflows as readable <code>.flow.ts</code> files with the Builder SDK,
+                    then sync them to GitHub. Push changes directly, open a pull request on publish,
+                    or pull reviewed edits back into the visual editor.
                   </p>
                   <ul>
-                    <li>Run any historical version on&nbsp;demand</li>
-                    <li>Roll back instantly if something goes&nbsp;wrong</li>
-                    <li>Full audit trail of every flow&nbsp;change</li>
+                    <li>
+                      Write typed flows with <code>defineFlow(...)</code> and SDK node helpers
+                    </li>
+                    <li>
+                      Sync readable <code>.flow.ts</code> files to GitHub with push or pull
+                    </li>
+                    <li>Use PR-based publishing for reviewable, auditable workflow changes</li>
                   </ul>
                   <Link href="/docs/plugins/version-control" className="why-link">
-                    Learn about flow versioning →
+                    Learn about Git sync →
                   </Link>
                 </div>
                 <div className="why-code">
@@ -659,29 +637,31 @@ app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <spa
                     <span className="code-dot red" />
                     <span className="code-dot yellow" />
                     <span className="code-dot green" />
-                    <span>consumer.ts</span>
+                    <span>support-triage.flow.ts</span>
                   </div>
                   <pre
                     dangerouslySetInnerHTML={{
-                      __html: `<span class="keyword">import</span> { <span class="type">createInvect</span> } <span class="keyword">from</span> <span class="string">'@invect/core'</span>;
+                      __html: `<span class="keyword">import</span> { <span class="type">defineFlow</span>, <span class="type">input</span>, <span class="type">model</span>, <span class="type">output</span> } <span class="keyword">from</span> <span class="string">'@invect/core/sdk'</span>;
 
-<span class="keyword">const</span> invect = <span class="keyword">await</span> <span class="func">createInvect</span>({
-  <span class="type">encryptionKey</span>: process.env.<span class="type">INVECT_ENCRYPTION_KEY</span>,
-  <span class="type">database</span>: {
-    <span class="type">type</span>: <span class="string">'postgresql'</span>,
-    <span class="type">connectionString</span>: process.env.<span class="type">DATABASE_URL</span>,
-  },
+<span class="keyword">export</span> <span class="keyword">default</span> <span class="func">defineFlow</span>({
+  <span class="type">name</span>: <span class="string">'Support triage'</span>,
+  <span class="type">nodes</span>: [
+    <span class="func">input</span>(<span class="string">'ticket'</span>, {
+      <span class="type">variableName</span>: <span class="string">'ticket'</span>,
+    }),
+    <span class="func">model</span>(<span class="string">'classify'</span>, {
+      <span class="type">credentialId</span>: <span class="string">'{{env.OPENAI_CREDENTIAL}}'</span>,
+      <span class="type">model</span>: <span class="string">'gpt-5-mini'</span>,
+      <span class="type">prompt</span>: <span class="string">'Classify {{ ticket.title }} ...'</span>,
+    }),
+    <span class="func">output</span>(<span class="string">'result'</span>, {
+      <span class="type">outputName</span>: <span class="string">'classification'</span>,
+      <span class="type">outputValue</span>: <span class="string">'{{ classify }}'</span>,
+    }),
+  ],
+  <span class="type">edges</span>: [[<span class="string">'ticket'</span>, <span class="string">'classify'</span>], [<span class="string">'classify'</span>, <span class="string">'result'</span>]],
 });
-
-<span class="comment">// Run the tested, pinned version in prod</span>
-<span class="keyword">const</span> result = <span class="keyword">await</span> invect.runs.<span class="func">start</span>(
-  flowId,
-  { order },
-  { <span class="type">version</span>: <span class="string">5</span> }  <span class="comment">// immutable — always the same</span>
-);
-
-<span class="comment">// Meanwhile, iterate freely on version 6</span>
-<span class="comment">// in the visual editor. Prod is unaffected.</span>`,
+`,
                     }}
                   />
                 </div>
@@ -695,17 +675,6 @@ app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <spa
                     on-prem. Not vendor-locked — run in air-gapped networks with zero
                     external&nbsp;dependencies.
                   </p>
-                  <ul>
-                    <li>
-                      Extend without forking — plugins add DB tables, auth, RBAC, and
-                      API&nbsp;routes
-                    </li>
-                    <li>
-                      Call <code>core.startFlowRun()</code> from queue workers, cron jobs, or
-                      CLI&nbsp;scripts
-                    </li>
-                    <li>Test workflows in CI with in-memory SQLite — no Docker&nbsp;required</li>
-                  </ul>
                 </div>
                 <div className="why-visual">
                   <div className="compare-group">
@@ -738,16 +707,6 @@ app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <spa
                       <span className="compare-cost">dedicated server</span>
                     </div>
                   </div>
-                  <div className="compare-group is-invect">
-                    <div className="compare-label">Invect</div>
-                    <div className="compare-invect">
-                      <code>npm install @invect/core</code>
-                      <p>
-                        Runs in your app. Uses your database. Costs nothing beyond your
-                        existing&nbsp;infra.
-                      </p>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -762,34 +721,19 @@ app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <spa
             <div className="framework-logos">
               <Link href="/docs/installation#express" className="framework-item">
                 <div className="framework-icon">
-                  <svg width="24" height="24" viewBox="0 0 128 128" fill="none">
-                    <path
-                      d="M126.67 98.44c-4.56 1.16-7.38.05-9.91-3.75-5.68-8.51-11.95-16.63-18-24.9-.78-1.07-1.59-2.12-2.6-3.45C89 76 81.85 85.2 75.14 94.77c-2.4 3.42-4.92 4.91-9.22 3.71l26.5-37.1-24.8-33.41c4.14-.63 7.17-.2 9.65 3.54 5.87 8.86 12.16 17.43 18.59 26.5 6.56-9.15 12.8-17.73 18.7-26.55 2.38-3.56 5.05-4.36 9.19-3.56L98.36 61.2l27.04 37.23h1.27zM1.33 61.74c.72-3.61 1.2-7.29 2.2-10.83 6-21.43 30.6-30.34 47.5-17.06C60.93 41.64 63.39 52.62 62.9 65H7.1c-.84 22.21 15.15 35.62 35.53 28.78 7.15-2.4 11.36-8 13.47-15 1.07-3.51 2.84-4.06 6.14-3.06-1.69 8.76-5.52 16.08-13.52 20.66-12 6.86-29.13 5.04-38.28-4.1C3.32 85.36.63 77.15.07 67.97c-.04-.72-.05-1.45-.07-2.18 0-1.35 0-2.71 0-4.05h1.33zm5.77-3.91h50.49C56.98 40.18 43.87 30.05 30.2 32.3c-12.72 2.1-21.3 12.58-23.1 25.53z"
-                      fill="#a1a1aa"
-                    />
-                  </svg>
+                  <span className="framework-icon-mark framework-icon-express" aria-hidden="true" />
                 </div>
                 Express
               </Link>
               <Link href="/docs/installation#nestjs" className="framework-item">
                 <div className="framework-icon">
-                  <svg width="24" height="24" viewBox="0 0 128 128" fill="none">
-                    <path
-                      d="M64 0C28.65 0 0 28.65 0 64s28.65 64 64 64 64-28.65 64-64S99.35 0 64 0zm0 119c-7.85 0-14.85-3.69-19.34-9.43l19.34-46.01 19.34 46.01C78.85 115.31 71.85 119 64 119zm23.24-14.01L64 50.51l-23.24 54.48C30.28 97.75 23 82.2 23 64c0-22.63 18.37-41 41-41s41 18.37 41 41c0 18.2-7.28 33.75-17.76 40.99z"
-                      fill="#a1a1aa"
-                    />
-                  </svg>
+                  <span className="framework-icon-mark framework-icon-nest" aria-hidden="true" />
                 </div>
                 NestJS
               </Link>
               <Link href="/docs/installation#nextjs" className="framework-item">
                 <div className="framework-icon">
-                  <svg width="24" height="24" viewBox="0 0 128 128" fill="none">
-                    <path
-                      d="M64 0C28.7 0 0 28.7 0 64s28.7 64 64 64c11.2 0 21.7-2.9 30.8-7.9L48.4 55.3v36.6h-6.8V41.8h6.8l50.5 75.8C116.4 106.2 128 86.5 128 64c0-35.3-28.7-64-64-64zm22.1 84.6l-7.5-11.3V41.8h7.5v42.8z"
-                      fill="#a1a1aa"
-                    />
-                  </svg>
+                  <span className="framework-icon-mark framework-icon-nextjs" aria-hidden="true" />
                 </div>
                 Next.js
               </Link>
@@ -800,14 +744,15 @@ app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <spa
                     height="24"
                     viewBox="0 0 24 24"
                     fill="none"
-                    stroke="#a1a1aa"
-                    strokeWidth="2"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   >
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="2" y1="12" x2="22" y2="12" />
-                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                    <ellipse cx="12" cy="12" rx="9" ry="3.9" />
+                    <ellipse cx="12" cy="12" rx="9" ry="3.9" transform="rotate(60 12 12)" />
+                    <ellipse cx="12" cy="12" rx="9" ry="3.9" transform="rotate(120 12 12)" />
+                    <circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none" />
                   </svg>
                 </div>
                 React
@@ -819,8 +764,8 @@ app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <spa
                     height="24"
                     viewBox="0 0 24 24"
                     fill="none"
-                    stroke="#a1a1aa"
-                    strokeWidth="2"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   >
@@ -833,28 +778,21 @@ app.<span class="func">use</span>(<span class="string">'/workflows'</span>, <spa
               </Link>
               <div className="framework-item">
                 <div className="framework-icon">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M12 2L2 19.5h20L12 2z"
-                      fill="none"
-                      stroke="#a1a1aa"
-                      strokeWidth="1.5"
-                      strokeLinejoin="round"
-                    />
-                    <path d="M12 2v17.5" stroke="#a1a1aa" strokeWidth="1.5" />
-                    <path d="M12 19.5L2 19.5" stroke="#a1a1aa" strokeWidth="1.5" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M6.12 10.69c.42.24.56.77.33 1.18l-2.8 4.9c-.24.42-.78.56-1.2.33a.88.88 0 0 1-.33-1.18L4.95 11c.24-.42.78-.56 1.17-.31M12.22 6.92c.42.24.56.77.33 1.18l-2.8 4.9c-.24.42-.78.56-1.2.33a.88.88 0 0 1-.33-1.18l2.8-4.9c.24-.42.78-.56 1.2-.33M21.54 6.92c.42.24.56.77.33 1.18l-2.8 4.9c-.24.42-.78.56-1.2.33a.88.88 0 0 1-.33-1.18l2.8-4.9c.24-.42.78-.56 1.2-.33M15.5 10.69c.42.24.56.77.33 1.18l-2.8 4.9c-.24.42-.78.56-1.2.33a.88.88 0 0 1-.33-1.18L14.3 11c.24-.42.78-.56 1.2-.33" />
                   </svg>
                 </div>
                 Drizzle
               </div>
               <div className="framework-item">
                 <div className="framework-icon">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M21.8 13.1C21.93 12.42 22 11.72 22 11c0-5.52-4.48-10-10-10S2 5.48 2 11c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3l-.5 3H13v5.95c5.05-.5 9-4.76 9-9.85 0-.35-.02-.7-.05-1.05"
-                      fill="#a1a1aa"
-                    />
-                  </svg>
+                  <span className="framework-icon-mark framework-icon-prisma" aria-hidden="true" />
                 </div>
                 Prisma
               </div>
@@ -1098,8 +1036,38 @@ const landingStyles = `
   .landing .framework-logos { display: flex; justify-content: center; gap: 48px; margin-top: 32px; flex-wrap: wrap; }
   .landing .framework-item { display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 13px; color: var(--text-muted); text-decoration: none; transition: color 0.2s; }
   .landing .framework-item:hover { color: var(--text); }
-  .landing .framework-icon { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: var(--radius); transition: border-color 0.2s; }
+  .landing .framework-icon { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: var(--radius); color: #a1a1aa; transition: border-color 0.2s, color 0.2s, transform 0.2s; }
+  .landing .framework-icon svg { width: 26px; height: 26px; }
+  .landing .framework-icon-mark {
+    width: 26px;
+    height: 26px;
+    display: block;
+    background: currentColor;
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    -webkit-mask-size: contain;
+  }
+  .landing .framework-icon-express {
+    mask-image: url('/express-icon.svg');
+    -webkit-mask-image: url('/express-icon.svg');
+  }
+  .landing .framework-icon-nextjs {
+    mask-image: url('/nextjs-icon.svg');
+    -webkit-mask-image: url('/nextjs-icon.svg');
+  }
+  .landing .framework-icon-nest {
+    mask-image: url('/nestjs-icon.svg');
+    -webkit-mask-image: url('/nestjs-icon.svg');
+  }
+  .landing .framework-icon-prisma {
+    mask-image: url('/prisma-icon.svg');
+    -webkit-mask-image: url('/prisma-icon.svg');
+  }
   .landing .framework-item:hover .framework-icon { border-color: var(--accent); }
+  .landing .framework-item:hover .framework-icon { color: var(--text); transform: translateY(-1px); }
 
   /* CTA */
   .landing .cta { padding: 100px 0; }
