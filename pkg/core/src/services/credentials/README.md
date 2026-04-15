@@ -95,37 +95,17 @@ pnpm drizzle-kit migrate
 
 ### 3. Initialize Services
 
-```typescript
-import {
-  createEncryptionService,
-  createCredentialsService,
-} from '@invect/core/services/credentials';
-import { db } from './database';
+Credentials are managed automatically when using `createInvect()` or a framework adapter. For direct usage:
 
-// Create services
+```typescript
+import { EncryptionService, CredentialsService } from '@invect/core';
+
 const encryption = createEncryptionService();
-const credentialsService = createCredentialsService(db, encryption);
 ```
 
-### 4. Add API Routes (Express Example)
+### 4. API Routes
 
-```typescript
-import express from 'express';
-import { createCredentialsRouter } from '@invect/core/api/credentials.routes';
-
-const app = express();
-
-// Add authentication middleware (your implementation)
-app.use((req, res, next) => {
-  // Set req.userId from your auth system
-  // e.g., from JWT token, session, etc.
-  (req as any).userId = extractUserIdFromToken(req);
-  next();
-});
-
-// Mount credentials routes
-app.use('/api/credentials', createCredentialsRouter(credentialsService));
-```
+All credential endpoints are handled automatically by the framework adapters (`@invect/express`, `@invect/nestjs`, `@invect/nextjs`). No manual route setup is needed.
 
 ## Usage Examples
 
@@ -281,17 +261,15 @@ curl -X POST http://localhost:3000/api/credentials/cred_123/test \
 
 ```typescript
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createEncryptionService, createCredentialsService } from './services/credentials';
+import { EncryptionService, CredentialsService } from './services/credentials';
 
 describe('Credentials Service', () => {
   let encryption: EncryptionService;
-  let service: CredentialsService;
 
   beforeEach(() => {
     encryption = new EncryptionService({
       masterKey: 'test-key-at-least-32-characters-long!',
     });
-    service = new CredentialsService(db, encryption);
   });
 
   it('should create and encrypt credential', async () => {
@@ -323,17 +301,14 @@ describe('Credentials Service', () => {
 });
 ```
 
-## Next Steps
+## Status
 
-1. ✅ Encryption service implemented
-2. ✅ Credentials CRUD service implemented
-3. ✅ API endpoints implemented
-4. ⏭️ Add to Express example
-5. ⏭️ Create frontend credential selector component
-6. ⏭️ Update generic node execution to resolve credentials
-7. ⏭️ Add credential usage tracking
-8. ⏭️ Implement OAuth2 auto-refresh
-9. ⏭️ Add credential import/export
+- Encryption service
+- Credentials CRUD service
+- OAuth2 flow support (authorization, token exchange, auto-refresh)
+- API endpoints (via framework adapters)
+- Frontend credential management UI
+- Credential usage tracking
 
 ## Files
 

@@ -29,13 +29,13 @@ The simplest setup — the plugin manages Better Auth internally using Invect's 
 
 ```ts
 import { createInvectRouter } from '@invect/express';
-import { authentication } from '@invect/user-auth';
+import { auth } from '@invect/user-auth';
 
 const invectRouter = await createInvectRouter({
   database: { type: 'sqlite', connectionString: 'file:./dev.db' },
   encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
   plugins: [
-    authentication({
+    auth({
       globalAdmins: [
         { email: process.env.INVECT_ADMIN_EMAIL!, pw: process.env.INVECT_ADMIN_PASSWORD! },
       ],
@@ -50,9 +50,9 @@ For full control, provide your own Better Auth instance:
 
 ```ts
 import { betterAuth } from 'better-auth';
-import { authentication } from '@invect/user-auth';
+import { auth } from '@invect/user-auth';
 
-const auth = betterAuth({
+const betterAuthInstance = betterAuth({
   database: { url: 'file:./auth.db', type: 'sqlite' },
   emailAndPassword: { enabled: true },
 });
@@ -60,7 +60,7 @@ const auth = betterAuth({
 const invectRouter = await createInvectRouter({
   database: { type: 'sqlite', connectionString: 'file:./dev.db' },
   encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
-  plugins: [authentication({ auth })],
+  plugins: [auth({ auth: betterAuthInstance })],
 });
 
 app.use('/invect', invectRouter);

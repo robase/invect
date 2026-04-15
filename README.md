@@ -76,11 +76,10 @@ export default () => <Invect apiBaseUrl="http://localhost:3000/invect" />;
 
 - **Visual Flow Editor** — Drag-and-drop workflow builder with real-time execution monitoring.
 - **AI Agent Nodes** — Iterative tool-calling loops with OpenAI and Anthropic APIs.
-- **50+ Built-in Actions** — Gmail, Slack, GitHub, Google Drive, Linear, Postgres, and more.
+- **100+ Built-in Actions** — Gmail, Slack, GitHub, Google Drive, Linear, Postgres, and more.
 - **Batch Processing** — Cut AI costs 50% with native OpenAI and Anthropic batch APIs.
 - **AI-Assisted Builder** — Describe what you need in plain language and the assistant wires up nodes for you.
 - **Multi-Database** — SQLite, PostgreSQL, and MySQL. Works with Drizzle ORM, Prisma, or raw SQL migrations.
-- **OAuth2 Credentials** — AES-256-GCM encrypted credential storage with full OAuth2 support.
 - **Framework Agnostic** — One core, thin adapters for Express, NestJS, and Next.js.
 
 ## Packages
@@ -96,7 +95,8 @@ export default () => <Invect apiBaseUrl="http://localhost:3000/invect" />;
 | [`@invect/user-auth`](pkg/plugins/auth)                  | Authentication plugin (Better Auth)                             |
 | [`@invect/rbac`](pkg/plugins/rbac)                       | Role-based access control plugin                                |
 | [`@invect/webhooks`](pkg/plugins/webhooks)               | Webhook triggers with signature verification and rate limiting  |
-| [`@invect/version-control`](pkg/plugins/version-control) | Sync flows to GitHub as `.flow.ts` files                        |
+| [`@invect/version-control`](pkg/plugins/version-control) | Sync flows to GitHub/GitLab/Bitbucket as `.flow.ts` files       |
+| [`@invect/cloudflare-agents`](pkg/plugins/cloudflare-agents) | Compile flows to Cloudflare Workers & Workflows             |
 | [`@invect/mcp`](pkg/plugins/mcp)                         | Model Context Protocol server for AI coding agents              |
 
 ## Examples
@@ -105,6 +105,7 @@ export default () => <Invect apiBaseUrl="http://localhost:3000/invect" />;
 | --------------------------------------------------------------- | --------------------- | --------------------------------------- |
 | [`express-drizzle`](examples/express-drizzle)                   | Express + SQLite      | Primary backend dev server              |
 | [`vite-react-frontend`](examples/vite-react-frontend)           | Vite + React          | Standalone frontend for the flow editor |
+| [`nest-prisma`](examples/nest-prisma)                           | NestJS + Prisma       | NestJS adapter example                  |
 | [`nextjs-app-router`](examples/nextjs-app-router)               | Next.js 15            | Self-contained Next.js example          |
 | [`nextjs-drizzle-auth-rbac`](examples/nextjs-drizzle-auth-rbac) | Next.js + Auth + RBAC | Full-featured example with plugins      |
 

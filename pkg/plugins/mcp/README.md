@@ -28,12 +28,12 @@ pnpm add @invect/mcp
 Add the MCP plugin to enable the Streamable HTTP transport endpoint:
 
 ```ts
-import { mcpPlugin } from '@invect/mcp';
+import { mcp } from '@invect/mcp';
 
 const invectRouter = await createInvectRouter({
   database: { type: 'sqlite', connectionString: 'file:./dev.db' },
   encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
-  plugins: [mcpPlugin()],
+  plugins: [mcp()],
 });
 
 app.use('/invect', invectRouter);
@@ -42,7 +42,7 @@ app.use('/invect', invectRouter);
 ### Options
 
 ```ts
-mcpPlugin({
+mcp({
   sessionTtlMs: 30 * 60 * 1000, // Session TTL (default: 30 minutes)
   audit: {
     enabled: true, // Enable audit logging (default: true)

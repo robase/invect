@@ -26,12 +26,12 @@ pnpm add @invect/webhooks
 ## Backend
 
 ```ts
-import { webhooksPlugin } from '@invect/webhooks';
+import { webhooks } from '@invect/webhooks';
 
 const invectRouter = await createInvectRouter({
   database: { type: 'sqlite', connectionString: 'file:./dev.db' },
   encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
-  plugins: [webhooksPlugin()],
+  plugins: [webhooks()],
 });
 
 app.use('/invect', invectRouter);
@@ -40,7 +40,7 @@ app.use('/invect', invectRouter);
 ### Options
 
 ```ts
-webhooksPlugin({
+webhooks({
   webhookBaseUrl: 'https://example.com/api/invect', // Base URL for webhook endpoints
   rateLimitMaxRequests: 60, // Max requests per window (default: 60)
   rateLimitWindowMs: 60_000, // Rate limit window in ms (default: 60s)
@@ -52,9 +52,9 @@ webhooksPlugin({
 
 ```tsx
 import { Invect } from '@invect/ui';
-import { webhooksFrontendPlugin } from '@invect/webhooks/ui';
+import { webhooksFrontend } from '@invect/webhooks/ui';
 
-<Invect apiBaseUrl="/api/invect" plugins={[webhooksFrontendPlugin]} />;
+<Invect apiBaseUrl="/api/invect" plugins={[webhooksFrontend]} />;
 ```
 
 The plugin adds a Webhooks page to the sidebar for managing webhook triggers.
@@ -71,7 +71,7 @@ The plugin adds a Webhooks page to the sidebar for managing webhook triggers.
 | Entry Point              | Content                                                    |
 | ------------------------ | ---------------------------------------------------------- |
 | `@invect/webhooks`       | Backend plugin (Node.js)                                   |
-| `@invect/webhooks/ui`    | Frontend plugin — `webhooksFrontendPlugin`, `WebhooksPage` |
+| `@invect/webhooks/ui`    | Frontend plugin — `webhooksFrontend`, `WebhooksPage` |
 | `@invect/webhooks/types` | Shared types                                               |
 
 ## License

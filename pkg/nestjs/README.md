@@ -86,7 +86,7 @@ export class MyService {
   constructor(private readonly invect: InvectService) {}
 
   async runWorkflow(flowId: string, inputs: Record<string, unknown>) {
-    return this.invect.getCore().startFlowRun(flowId, inputs);
+    return this.invect.getCore().runs.start(flowId, inputs);
   }
 }
 ```

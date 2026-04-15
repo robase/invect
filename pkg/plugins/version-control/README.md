@@ -51,7 +51,7 @@ versionControl({
   repo: 'owner/repo', // Default repository (owner/name)
   defaultBranch: 'main', // Target branch
   path: 'flows/', // Directory in the repo for flow files
-  mode: 'pr-per-publish', // "pr-per-publish" | "auto-sync" | "manual-only"
+  mode: 'pr-per-publish', // "direct-commit" | "pr-per-save" | "pr-per-publish"
   syncDirection: 'push', // "push" | "pull" | "bidirectional"
   webhookSecret: '...', // Webhook secret for PR merge events
 });

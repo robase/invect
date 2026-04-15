@@ -45,8 +45,8 @@ const invect = await createInvect({
 });
 
 // Create and run flows programmatically
-const flow = await invect.createFlow({ name: 'My Workflow' });
-const result = await invect.startFlowRun(flow.id, { message: 'Hello' });
+const flow = await invect.flows.create({ name: 'My Workflow' });
+const result = await invect.runs.start(flow.id, { message: 'Hello' });
 ```
 
 ## What's Inside
