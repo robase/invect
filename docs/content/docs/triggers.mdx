@@ -29,7 +29,7 @@ curl -X POST http://localhost:3000/invect/flows/{flowId}/run \
 
 ```ts
 const core = invect.getCore();
-const result = await core.startFlowRun(flowId, {
+const result = await core.runs.start(flowId, {
   topic: 'Machine learning',
 });
 ```

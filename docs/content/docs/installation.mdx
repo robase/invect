@@ -28,76 +28,101 @@ It detects your framework, installs packages, generates database schemas, and ru
 <Tab value="Express">
 <Tabs items={['pnpm', 'npm', 'yarn', 'bun']}>
 <Tab value="pnpm">
+
 ```bash
 pnpm add @invect/core @invect/express
 ```
+
 </Tab>
 <Tab value="npm">
+
 ```bash
 npm install @invect/core @invect/express
 ```
+
 </Tab>
 <Tab value="yarn">
+
 ```bash
 yarn add @invect/core @invect/express
 ```
+
 </Tab>
 <Tab value="bun">
+
 ```bash
 bun add @invect/core @invect/express
 ```
+
 </Tab>
 </Tabs>
 </Tab>
 <Tab value="NestJS">
 <Tabs items={['pnpm', 'npm', 'yarn', 'bun']}>
 <Tab value="pnpm">
+
 ```bash
 pnpm add @invect/core @invect/nestjs
 ```
+
 </Tab>
 <Tab value="npm">
+
 ```bash
 npm install @invect/core @invect/nestjs
 ```
+
 </Tab>
 <Tab value="yarn">
+
 ```bash
 yarn add @invect/core @invect/nestjs
 ```
+
 </Tab>
 <Tab value="bun">
+
 ```bash
 bun add @invect/core @invect/nestjs
 ```
+
 </Tab>
 </Tabs>
 </Tab>
 <Tab value="Next.js">
 <Tabs items={['pnpm', 'npm', 'yarn', 'bun']}>
 <Tab value="pnpm">
+
 ```bash
 pnpm add @invect/core @invect/nextjs @invect/ui
 ```
+
 </Tab>
 <Tab value="npm">
+
 ```bash
 npm install @invect/core @invect/nextjs @invect/ui
 ```
+
 </Tab>
 <Tab value="yarn">
+
 ```bash
 yarn add @invect/core @invect/nextjs @invect/ui
 ```
+
 </Tab>
 <Tab value="bun">
+
 ```bash
 bun add @invect/core @invect/nextjs @invect/ui
 ```
+
 </Tab>
 </Tabs>
+
 <Callout type="info">
-Next.js is self-contained — the API handler and frontend run in the same app. `@invect/ui` is included for the visual editor.
+Next.js is self-contained — the API handler and frontend run in the same app.
 </Callout>
 </Tab>
 </Tabs>
@@ -108,31 +133,38 @@ Next.js is self-contained — the API handler and frontend run in the same app. 
 
 <Tabs groupId="framework" items={['Express', 'NestJS', 'Next.js']} persist>
 <Tab value="Express">
+
 ```bash title=".env"
 DATABASE_URL=file:./dev.db
 INVECT_ENCRYPTION_KEY=   # Generate with: npx invect-cli secret
 ```
+
 </Tab>
 <Tab value="NestJS">
+
 ```bash title=".env"
 DATABASE_URL=file:./dev.db
 INVECT_ENCRYPTION_KEY=   # Generate with: npx invect-cli secret
 ```
+
 </Tab>
 <Tab value="Next.js">
+
 ```bash title=".env.local"
 DATABASE_URL=file:./dev.db
 INVECT_ENCRYPTION_KEY=   # Generate with: npx invect-cli secret
 ```
+
 </Tab>
 </Tabs>
 </Step>
 
 <Step>
-### Set up Invect
+### Set up the backend
 
 <Tabs groupId="framework" items={['Express', 'NestJS', 'Next.js']} persist>
 <Tab value="Express">
+
 ```ts title="index.ts"
 import 'dotenv/config';
 import express from 'express';
@@ -141,21 +173,25 @@ import { createInvectRouter } from '@invect/express';
 const app = express();
 app.use(express.json());
 
-app.use('/invect', await createInvectRouter({
-database: {
-type: 'sqlite',
-connectionString: process.env.DATABASE_URL!,
-},
-encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
-}));
+app.use(
+  '/invect',
+  await createInvectRouter({
+    database: {
+      type: 'sqlite',
+      connectionString: process.env.DATABASE_URL!,
+    },
+    encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
+  }),
+);
 
 app.listen(3000, () => {
-console.log('Invect API at http://localhost:3000/invect');
+  console.log('Invect API at http://localhost:3000/invect');
 });
+```
 
-````
 </Tab>
 <Tab value="NestJS">
+
 ```ts title="app.module.ts"
 import { Module } from '@nestjs/common';
 import { InvectModule } from '@invect/nestjs';
@@ -172,12 +208,12 @@ import { InvectModule } from '@invect/nestjs';
   ],
 })
 export class AppModule {}
-````
+```
 
 This registers the `INVECT_CORE` provider (singleton), `InvectService` (injectable wrapper), and `InvectController` (REST endpoints under `/invect`).
-
 </Tab>
 <Tab value="Next.js">
+
 Create the catch-all API route handler:
 
 ```ts title="app/api/invect/[...invect]/route.ts"
@@ -198,7 +234,57 @@ export const PUT = handler.PUT;
 export const DELETE = handler.DELETE;
 ```
 
-Then mount the frontend:
+</Tab>
+</Tabs>
+</Step>
+
+<Step>
+### Add the frontend
+
+<Tabs groupId="framework" items={['Express', 'NestJS', 'Next.js']} persist>
+<Tab value="Express">
+
+The visual flow editor runs as a separate React app. Install `@invect/ui` in your frontend project:
+
+```bash
+pnpm add @invect/ui
+```
+
+Then mount the editor:
+
+```tsx title="App.tsx"
+import { Invect } from '@invect/ui';
+import '@invect/ui/styles';
+
+function App() {
+  return <Invect apiPath="http://localhost:3000/invect" />;
+}
+```
+
+</Tab>
+<Tab value="NestJS">
+
+The visual flow editor runs as a separate React app. Install `@invect/ui` in your frontend project:
+
+```bash
+pnpm add @invect/ui
+```
+
+Then mount the editor:
+
+```tsx title="App.tsx"
+import { Invect } from '@invect/ui';
+import '@invect/ui/styles';
+
+function App() {
+  return <Invect apiPath="http://localhost:3000/invect" />;
+}
+```
+
+</Tab>
+<Tab value="Next.js">
+
+Mount the frontend in a catch-all page route:
 
 ```tsx title="app/invect/[[...slug]]/page.tsx"
 'use client';
@@ -206,9 +292,10 @@ Then mount the frontend:
 import dynamic from 'next/dynamic';
 import '@invect/ui/styles';
 
-const Invect = dynamic(() => import('@invect/ui').then((mod) => ({ default: mod.Invect })), {
-  ssr: false,
-});
+const Invect = dynamic(
+  () => import('@invect/ui').then((mod) => ({ default: mod.Invect })),
+  { ssr: false },
+);
 
 export default function InvectPage() {
   return <Invect apiPath="/api/invect" frontendPath="/invect" />;
@@ -216,7 +303,7 @@ export default function InvectPage() {
 ```
 
 <Callout type="info">
-The `frontendPath` prop tells the Invect router where it's mounted so internal navigation works correctly. Dynamic import with `ssr: false` is required because the flow editor uses browser APIs.
+Dynamic import with `ssr: false` is required because the flow editor uses browser APIs. The `frontendPath` prop tells the router where it is mounted so internal navigation works correctly.
 </Callout>
 </Tab>
 </Tabs>
@@ -237,28 +324,28 @@ npx invect-cli migrate
 
 <Tabs groupId="framework" items={['Express', 'NestJS', 'Next.js']} persist>
 <Tab value="Express">
+
 ```bash
 npx tsx index.ts
 ```
 
-The API is now live at `http://localhost:3000/invect`. Add the [frontend](#frontend) to get the visual flow editor.
-
+The API is now live at `http://localhost:3000/invect`. Open your frontend app to access the visual flow editor.
 </Tab>
 <Tab value="NestJS">
+
 ```bash
 npx nest start --watch
 ```
 
-The API is now live at `http://localhost:3000/invect`. Add the [frontend](#frontend) to get the visual flow editor.
-
+The API is now live at `http://localhost:3000/invect`. Open your frontend app to access the visual flow editor.
 </Tab>
 <Tab value="Next.js">
+
 ```bash
 npx next dev
 ```
 
 Open `http://localhost:3000/invect` — the visual flow editor is ready.
-
 </Tab>
 </Tabs>
 </Step>
@@ -273,40 +360,45 @@ All frameworks accept the full [`InvectConfig`](/docs/reference/configuration) o
 
 <Tabs groupId="framework" items={['Express', 'NestJS', 'Next.js']} persist>
 <Tab value="Express">
+
 ```ts title="index.ts"
 import { createInvectRouter } from '@invect/express';
 
-app.use('/invect', await createInvectRouter({
-database: {
-type: 'sqlite',
-connectionString: process.env.DATABASE_URL!,
-},
-encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
-execution: {
-defaultTimeout: 60000,
-maxConcurrentExecutions: 10,
-},
-triggers: {
-cronEnabled: true,
-webhookBaseUrl: 'https://your-app.com/invect',
-},
-plugins: [
-// Add plugins here
-],
-defaultCredentials: [
-{
-name: 'OpenAI',
-type: 'llm',
-provider: 'openai',
-authType: 'apiKey',
-config: { apiKey: process.env.OPENAI_API_KEY! },
-},
-],
-}));
+app.use(
+  '/invect',
+  await createInvectRouter({
+    database: {
+      type: 'sqlite',
+      connectionString: process.env.DATABASE_URL!,
+    },
+    encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
+    execution: {
+      defaultTimeout: 60000,
+      maxConcurrentExecutions: 10,
+    },
+    triggers: {
+      cronEnabled: true,
+      webhookBaseUrl: 'https://your-app.com/invect',
+    },
+    plugins: [
+      // Add plugins here
+    ],
+    defaultCredentials: [
+      {
+        name: 'OpenAI',
+        type: 'llm',
+        provider: 'openai',
+        authType: 'apiKey',
+        config: { apiKey: process.env.OPENAI_API_KEY! },
+      },
+    ],
+  }),
+);
+```
 
-````
 </Tab>
 <Tab value="NestJS">
+
 ```ts title="app.module.ts"
 import { InvectModule } from '@invect/nestjs';
 
@@ -342,39 +434,40 @@ import { InvectModule } from '@invect/nestjs';
   ],
 })
 export class AppModule {}
-````
+```
 
 </Tab>
 <Tab value="Next.js">
+
 ```ts title="app/api/invect/[...invect]/route.ts"
 import { createInvectHandler } from '@invect/nextjs';
 
 const handler = createInvectHandler({
-database: {
-type: 'sqlite',
-connectionString: process.env.DATABASE_URL!,
-},
-encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
-execution: {
-defaultTimeout: 60000,
-maxConcurrentExecutions: 10,
-},
-triggers: {
-cronEnabled: true,
-webhookBaseUrl: 'https://your-app.com/api/invect',
-},
-plugins: [
-// Add plugins here
-],
-defaultCredentials: [
-{
-name: 'OpenAI',
-type: 'llm',
-provider: 'openai',
-authType: 'apiKey',
-config: { apiKey: process.env.OPENAI_API_KEY! },
-},
-],
+  database: {
+    type: 'sqlite',
+    connectionString: process.env.DATABASE_URL!,
+  },
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
+  execution: {
+    defaultTimeout: 60000,
+    maxConcurrentExecutions: 10,
+  },
+  triggers: {
+    cronEnabled: true,
+    webhookBaseUrl: 'https://your-app.com/api/invect',
+  },
+  plugins: [
+    // Add plugins here
+  ],
+  defaultCredentials: [
+    {
+      name: 'OpenAI',
+      type: 'llm',
+      provider: 'openai',
+      authType: 'apiKey',
+      config: { apiKey: process.env.OPENAI_API_KEY! },
+    },
+  ],
 });
 
 export const GET = handler.GET;
@@ -383,6 +476,7 @@ export const PATCH = handler.PATCH;
 export const PUT = handler.PUT;
 export const DELETE = handler.DELETE;
 ```
+
 </Tab>
 </Tabs>
 
@@ -394,30 +488,35 @@ After adding plugins with database tables, run `npx invect-cli generate` and `np
 
 <Tabs groupId="framework" items={['Express', 'NestJS', 'Next.js']} persist>
 <Tab value="Express">
+
 ```ts title="index.ts"
 import { createInvectRouter } from '@invect/express';
-import { authentication } from '@invect/user-auth/backend';
-import { rbacPlugin } from '@invect/rbac/backend';
+import { auth } from '@invect/user-auth';
+import { rbac } from '@invect/rbac';
 
-app.use('/invect', await createInvectRouter({
-database: {
-type: 'sqlite',
-connectionString: process.env.DATABASE_URL!,
-},
-encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
-plugins: [
-authentication({ auth }), // Your Better Auth instance
-rbacPlugin(),
-],
-}));
+app.use(
+  '/invect',
+  await createInvectRouter({
+    database: {
+      type: 'sqlite',
+      connectionString: process.env.DATABASE_URL!,
+    },
+    encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
+    plugins: [
+      auth({ /* Better Auth options */ }),
+      rbac(),
+    ],
+  }),
+);
+```
 
-````
 </Tab>
 <Tab value="NestJS">
+
 ```ts title="app.module.ts"
 import { InvectModule } from '@invect/nestjs';
-import { authentication } from '@invect/user-auth/backend';
-import { rbacPlugin } from '@invect/rbac/backend';
+import { auth } from '@invect/user-auth';
+import { rbac } from '@invect/rbac';
 
 @Module({
   imports: [
@@ -428,30 +527,30 @@ import { rbacPlugin } from '@invect/rbac/backend';
       },
       encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
       plugins: [
-        authentication({ auth }), // Your Better Auth instance
-        rbacPlugin(),
+        auth({ /* Better Auth options */ }),
+        rbac(),
       ],
     }),
   ],
 })
 export class AppModule {}
-````
+```
 
 </Tab>
 <Tab value="Next.js">
+
 ```ts title="app/api/invect/[...invect]/route.ts"
 import { createInvectHandler } from '@invect/nextjs';
-import { authentication } from '@invect/user-auth/backend';
-import { rbacPlugin } from '@invect/rbac/backend';
-import { auth } from '@/lib/auth'; // Your Better Auth instance
+import { auth } from '@invect/user-auth';
+import { rbac } from '@invect/rbac';
 
 const handler = createInvectHandler({
-database: {
-type: 'postgresql',
-connectionString: process.env.DATABASE_URL!,
-},
-encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
-plugins: [authentication({ auth }), rbacPlugin()],
+  database: {
+    type: 'postgresql',
+    connectionString: process.env.DATABASE_URL!,
+  },
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
+  plugins: [auth({ /* Better Auth options */ }), rbac()],
 });
 
 export const GET = handler.GET;
@@ -484,7 +583,6 @@ export default function InvectPage() {
 ```
 
 See [Authentication Plugin](/docs/plugins/authentication) and [Access Control Plugin](/docs/plugins/access-control) for details.
-
 </Tab>
 </Tabs>
 
@@ -537,26 +635,6 @@ export class MyService {
 ```
 
 ---
-
-## Frontend
-
-To add the visual flow editor to a separate React app (for Express or NestJS backends — not needed for Next.js):
-
-<Tabs items={['pnpm', 'npm', 'yarn', 'bun']}>
-  <Tab value="pnpm">```bash pnpm add @invect/ui ```</Tab>
-  <Tab value="npm">```bash npm install @invect/ui ```</Tab>
-  <Tab value="yarn">```bash yarn add @invect/ui ```</Tab>
-  <Tab value="bun">```bash bun add @invect/ui ```</Tab>
-</Tabs>
-
-```tsx title="App.tsx"
-import { Invect } from '@invect/ui';
-import '@invect/ui/styles';
-
-function App() {
-  return <Invect apiPath="http://localhost:3000/invect" />;
-}
-```
 
 ## PostgreSQL
 

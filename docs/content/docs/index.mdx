@@ -19,22 +19,24 @@ The CLI detects your framework, installs the right packages, creates your config
 ## Quick look
 
 <Tabs items={['Express', 'NestJS', 'Next.js']}>
-  <Tab value="Express">
-  ```ts title="index.ts"
-  import express from 'express';
-  import { createInvectRouter } from '@invect/express';
+<Tab value="Express">
+
+```ts title="index.ts"
+import express from 'express';
+import { createInvectRouter } from '@invect/express';
 
 const app = express();
 const router = await createInvectRouter({
-database: { type: 'sqlite', connectionString: 'file:./dev.db' },
-encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
+  database: { type: 'sqlite', connectionString: 'file:./dev.db' },
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
 });
 app.use('/invect', router);
 app.listen(3000);
+```
 
-````
 </Tab>
 <Tab value="NestJS">
+
 ```ts title="app.module.ts"
 import { Module } from '@nestjs/common';
 import { InvectModule } from '@invect/nestjs';
@@ -48,16 +50,17 @@ import { InvectModule } from '@invect/nestjs';
   ],
 })
 export class AppModule {}
-````
+```
 
-  </Tab>
-  <Tab value="Next.js">
-  ```ts title="app/api/invect/[...invect]/route.ts"
-  import { createInvectHandler } from '@invect/nextjs';
+</Tab>
+<Tab value="Next.js">
+
+```ts title="app/api/invect/[...invect]/route.ts"
+import { createInvectHandler } from '@invect/nextjs';
 
 const handler = createInvectHandler({
-database: { type: 'sqlite', connectionString: 'file:./dev.db' },
-encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
+  database: { type: 'sqlite', connectionString: 'file:./dev.db' },
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
 });
 
 export const GET = handler.GET;
@@ -65,8 +68,8 @@ export const POST = handler.POST;
 export const PATCH = handler.PATCH;
 export const PUT = handler.PUT;
 export const DELETE = handler.DELETE;
-
 ```
+
 </Tab>
 </Tabs>
 
