@@ -28,6 +28,7 @@
     "@types/node": "^20",
     "@types/react": "^18.3.7",
     "@types/react-dom": "^18.3.7",
+    "drizzle-kit": "^0.31.9",
     "ignore-loader": "^0.1.2",
     "typescript": "^5"
   }
