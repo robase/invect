@@ -1,6 +1,6 @@
 {
   "name": "@invect/ui",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "Complete React components and routes for Invect workflow management",
   "keywords": [
     "components",

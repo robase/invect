@@ -1,5 +1,14 @@
 # @invect/express
 
+## 0.0.10
+
+### Patch Changes
+
+- fix db tables
+
+- Updated dependencies []:
+  - @invect/core@0.0.10
+
 ## 0.0.9
 
 ### Patch Changes
