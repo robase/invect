@@ -42,6 +42,8 @@ bun add @invect/user-auth
 
 ## Backend setup
 
+The simplest setup lets the plugin manage Better Auth internally — no separate `auth.ts` file needed:
+
 ```ts title="invect.config.ts"
 import { defineConfig } from '@invect/core';
 import { auth } from '@invect/user-auth';
@@ -59,6 +61,22 @@ export const invectConfig = defineConfig({
 });
 ```
 
+For full control, create your own Better Auth instance and pass it in:
+
+```ts title="invect.config.ts"
+import { betterAuth } from 'better-auth';
+import { auth } from '@invect/user-auth';
+
+const myAuth = betterAuth({
+  /* full Better Auth config */
+});
+
+export const invectConfig = defineConfig({
+  // ...
+  plugins: [auth({ auth: myAuth })],
+});
+```
+
 The `globalAdmins` array seeds admin users on startup. These are the only users that can log in initially — sign-up is disabled in the UI. Subsequent users are created by admins through the user management interface.
 
 After adding the plugin, regenerate and apply the schema:
@@ -67,6 +85,22 @@ After adding the plugin, regenerate and apply the schema:
 npx invect-cli generate
 npx invect-cli migrate --push
 ```
+
+### Options
+
+| Option              | Type                                | Required | Default             | Description                                                                                                    |
+| ------------------- | ----------------------------------- | -------- | ------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `auth`              | `BetterAuthInstance`                | No       | —                   | Your own Better Auth instance. If omitted, one is created internally.                                          |
+| `betterAuthOptions` | `BetterAuthPassthroughOptions`      | No       | —                   | Options passed to the internal Better Auth instance (ignored when `auth` is provided).                         |
+| `globalAdmins`      | `BetterAuthGlobalAdmin[]`           | No       | `[]`                | Admin accounts to seed on startup.                                                                             |
+| `database`          | `unknown`                           | No       | —                   | Database for the internal Better Auth instance. Uses Invect's DB when omitted.                                 |
+| `baseURL`           | `string`                            | No       | auto-detected       | Base URL for auth server (cookies, CSRF). Falls back to `BETTER_AUTH_URL` env var.                             |
+| `trustedOrigins`    | `string[] \| (req) => string[]`     | No       | localhost + baseURL | Origins trusted for CORS / cookie sharing.                                                                     |
+| `publicPaths`       | `string[]`                          | No       | `[]`                | Paths accessible without a valid session (auth proxy routes are always public).                                |
+| `mapUser`           | `(user, session) => InvectIdentity` | No       | default mapping     | Custom function to map Better Auth users to Invect identities.                                                 |
+| `mapRole`           | `(role) => InvectRole`              | No       | default mapping     | Custom function to map Better Auth role strings to Invect roles.                                               |
+| `apiKey`            | `boolean \| ApiKeyPluginOptions`    | No       | `false`             | Enable the [Better Auth API Key plugin](https://better-auth.com/docs/plugins/api-key) for programmatic access. |
+| `frontend`          | `unknown`                           | No       | —                   | Frontend plugin. Import `authFrontend` from `@invect/user-auth/ui`.                                            |
 
 ## What it does
 
@@ -84,14 +118,20 @@ npx invect-cli migrate --push
 - `SignInPage` — pre-built sign-in form
 - `UserButton` — avatar with sign-out menu
 - `UserManagement` — admin panel for creating/managing users
+- `ProfilePage` — user profile page
+- `ApiKeysDialog` — API key management (requires `apiKey` option enabled)
+- `SidebarUserMenu` — user menu component for the sidebar
+- `authFrontend` — frontend plugin definition (sidebar items, routes, providers)
 
 ## Frontend integration
 
-The recommended approach uses `AuthenticatedInvect`, which composes the auth layer around the editor:
+The recommended approach uses `AuthenticatedInvect`, which composes the auth layer around the editor.
+
+Pass the `authFrontend` plugin to enable frontend contributions (sidebar items, routes):
 
 ```tsx
 import { Invect, InvectShell } from '@invect/ui';
-import { AuthenticatedInvect } from '@invect/user-auth/ui';
+import { AuthenticatedInvect, authFrontend } from '@invect/user-auth/ui';
 import '@invect/ui/styles';
 
 <AuthenticatedInvect
@@ -101,6 +141,18 @@ import '@invect/ui/styles';
   ShellComponent={InvectShell}
   theme="light"
 />;
+```
+
+On the backend, wire the frontend plugin to the auth config:
+
+```ts
+import { auth } from '@invect/user-auth';
+import { authFrontend } from '@invect/user-auth/ui';
+
+auth({
+  // ...
+  frontend: authFrontend,
+});
 ```
 
 When `ShellComponent` is provided, the sign-in page renders inside the Invect CSS scope — so it uses the same theme tokens and looks consistent with the editor.

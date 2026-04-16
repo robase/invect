@@ -7,6 +7,7 @@
 import { LogOut, Mail, Shield, User as UserIcon } from 'lucide-react';
 import { PageLayout } from '@invect/ui';
 import { useAuth } from '../providers/AuthProvider';
+import { TwoFactorSetup } from './TwoFactorSetup';
 import { formatAuthRoleLabel } from '../../shared/roles';
 
 export interface ProfilePageProps {
@@ -90,6 +91,11 @@ export function ProfilePage({ basePath }: ProfilePageProps) {
             </div>
             <p className="break-all text-sm text-imp-muted-foreground">{user.id}</p>
           </div>
+        </div>
+
+        {/* Two-Factor Authentication */}
+        <div className="mt-4">
+          <TwoFactorSetup />
         </div>
 
         <div className="mt-6 flex justify-end border-t border-imp-border pt-4">

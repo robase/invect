@@ -962,11 +962,14 @@ importers:
   pkg/plugins/auth:
     dependencies:
       '@better-auth/api-key':
-        specifier: '>=1.0.0'
+        specifier: ^1.6.0
         version: 1.6.0(4d8e5845d82fb76b79bf3cde2e6a0f07)
       '@invect/core':
         specifier: workspace:*
         version: link:../../core
+      better-auth:
+        specifier: ^1.6.0
+        version: 1.6.3(@opentelemetry/api@1.9.1)(@prisma/client@6.19.2(prisma@6.19.2(magicast@0.3.5)(typescript@5.9.3))(typescript@5.9.3))(better-sqlite3@12.8.0)(drizzle-kit@0.31.9)(drizzle-orm@0.45.2(@libsql/client@0.17.2(encoding@0.1.13))(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.1)(@prisma/client@6.19.2(prisma@6.19.2(magicast@0.3.5)(typescript@5.9.3))(typescript@5.9.3))(@types/better-sqlite3@7.6.13)(@types/pg@8.18.0)(better-sqlite3@12.8.0)(kysely@0.28.16)(mysql2@3.19.1(@types/node@20.19.37))(pg@8.20.0)(postgres@3.4.8)(prisma@6.19.2(magicast@0.3.5)(typescript@5.9.3))(sqlite3@5.1.7))(mongodb@7.1.0(socks@2.8.7))(mysql2@3.19.1(@types/node@20.19.37))(next@16.2.3(@opentelemetry/api@1.9.1)(@playwright/test@1.58.2)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(pg@8.20.0)(prisma@6.19.2(magicast@0.3.5)(typescript@5.9.3))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(vitest@4.1.4)
       better-sqlite3:
         specifier: '>=9.0.0'
         version: 12.8.0
@@ -995,9 +998,6 @@ importers:
       '@types/react-dom':
         specifier: 18.3.7
         version: 18.3.7(@types/react@18.3.7)
-      better-auth:
-        specifier: ^1.6.0
-        version: 1.6.3(@opentelemetry/api@1.9.1)(@prisma/client@6.19.2(prisma@6.19.2(magicast@0.3.5)(typescript@5.9.3))(typescript@5.9.3))(better-sqlite3@12.8.0)(drizzle-kit@0.31.9)(drizzle-orm@0.45.2(@libsql/client@0.17.2(encoding@0.1.13))(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.1)(@prisma/client@6.19.2(prisma@6.19.2(magicast@0.3.5)(typescript@5.9.3))(typescript@5.9.3))(@types/better-sqlite3@7.6.13)(@types/pg@8.18.0)(better-sqlite3@12.8.0)(kysely@0.28.16)(mysql2@3.19.1(@types/node@20.19.37))(pg@8.20.0)(postgres@3.4.8)(prisma@6.19.2(magicast@0.3.5)(typescript@5.9.3))(sqlite3@5.1.7))(mongodb@7.1.0(socks@2.8.7))(mysql2@3.19.1(@types/node@20.19.37))(next@16.2.3(@opentelemetry/api@1.9.1)(@playwright/test@1.58.2)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(pg@8.20.0)(prisma@6.19.2(magicast@0.3.5)(typescript@5.9.3))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(vitest@4.1.4)
       lucide-react:
         specifier: ^0.475.0
         version: 0.475.0(react@18.3.1)
@@ -15621,7 +15621,7 @@ snapshots:
       obug: 2.1.1
       std-env: 4.0.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@22.19.15)(@vitest/coverage-v8@4.1.4)(@vitest/ui@4.1.4)(msw@2.12.10(@types/node@22.19.15)(typescript@5.9.3))(vite@8.0.8(@types/node@22.19.15)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.3))
+      vitest: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@20.19.37)(@vitest/coverage-v8@4.1.4)(@vitest/ui@4.1.4)(msw@2.12.10(@types/node@20.19.37)(typescript@5.9.3))(vite@8.0.8(@types/node@20.19.37)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.3))
 
   '@vitest/expect@4.1.4':
     dependencies:
@@ -15686,7 +15686,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.1.0
-      vitest: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@22.19.15)(@vitest/coverage-v8@4.1.4)(@vitest/ui@4.1.4)(msw@2.12.10(@types/node@22.19.15)(typescript@5.9.3))(vite@8.0.8(@types/node@22.19.15)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.3))
+      vitest: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@20.19.37)(@vitest/coverage-v8@4.1.4)(@vitest/ui@4.1.4)(msw@2.12.10(@types/node@20.19.37)(typescript@5.9.3))(vite@8.0.8(@types/node@20.19.37)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.3))
 
   '@vitest/utils@4.1.4':
     dependencies:

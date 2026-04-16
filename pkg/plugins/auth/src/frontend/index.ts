@@ -33,6 +33,12 @@ export type { UserManagementProps } from './components/UserManagement';
 export { ApiKeysDialog } from './components/ApiKeysDialog';
 export type { ApiKeysDialogProps } from './components/ApiKeysDialog';
 
+// Two-Factor Authentication components
+export { TwoFactorVerifyForm } from './components/TwoFactorVerifyForm';
+export type { TwoFactorVerifyFormProps } from './components/TwoFactorVerifyForm';
+export { TwoFactorSetup } from './components/TwoFactorSetup';
+export type { TwoFactorSetupProps } from './components/TwoFactorSetup';
+
 // Authenticated Invect wrapper
 export { AuthenticatedInvect } from './components/AuthenticatedInvect';
 export type { AuthenticatedInvectProps } from './components/AuthenticatedInvect';
@@ -56,4 +62,9 @@ export type {
   CreateUserInput,
   UpdateUserRoleInput,
   AuthError,
+  TwoFactorRedirect,
+  TwoFactorEnableResponse,
+  TwoFactorVerifyInput,
+  TwoFactorEnableInput,
+  TwoFactorDisableInput,
 } from '../shared/types';

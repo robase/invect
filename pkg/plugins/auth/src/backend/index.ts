@@ -35,6 +35,7 @@ export { authentication, USER_AUTH_SCHEMA } from './plugin';
 export type {
   AuthenticationPluginOptions,
   ApiKeyPluginOptions,
+  TwoFactorPluginOptions,
   BetterAuthPassthroughOptions,
   BetterAuthInstance,
   BetterAuthUser,

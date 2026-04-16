@@ -153,8 +153,8 @@ export function myPlugin(): InvectPlugin {
       {
         method: 'GET',
         path: '/stats',
-        handler: async (req, res) => {
-          res.json({ requests: 42 });
+        handler: async (ctx) => {
+          return { body: { requests: 42 } };
         },
       },
     ],
@@ -163,7 +163,25 @@ export function myPlugin(): InvectPlugin {
 // Accessible at: GET /plugins/my-plugin/stats
 ```
 
-Auth hooks still apply unless the endpoint declares `skipAuth: true`.
+The handler receives a `PluginEndpointContext` with `body`, `params`, `query`, `headers`, `identity`, `database`, and `core`. Return `{ body }` for JSON responses or `{ stream }` for streaming.
+
+```ts
+endpoints: [
+  {
+    method: 'POST',
+    path: '/items/:id',
+    handler: async (ctx) => {
+      const { id } = ctx.params;
+      const { name } = ctx.body;
+      const invect = ctx.getInvect();
+      // Access flows, runs, etc. via the Invect instance
+      return { status: 201, body: { id, name } };
+    },
+  },
+];
+```
+
+Auth hooks still apply unless the endpoint declares `isPublic: true`.
 
 ## Init and shutdown
 

@@ -33,9 +33,10 @@
 
 import { type ReactNode, type ComponentType, type MemoExoticComponent } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AuthProvider } from '../providers/AuthProvider';
+import { AuthProvider, useAuth } from '../providers/AuthProvider';
 import { AuthGate } from './AuthGate';
 import { SignInPage } from './SignInPage';
+import { TwoFactorVerifyForm } from './TwoFactorVerifyForm';
 
 /**
  * Accepts both a plain component and a React.memo-wrapped component.
@@ -198,10 +199,34 @@ export function AuthenticatedInvect<TPlugin = unknown>({
 }
 
 // ─────────────────────────────────────────────────────────────
-// Internal: Sign-in only view (no sign-up)
+// Internal: Sign-in only view (no sign-up) — with 2FA support
 // ─────────────────────────────────────────────────────────────
 
 function SignInOnly() {
+  return <SignInWithTwoFactor />;
+}
+
+/**
+ * Handles the sign-in → 2FA verification flow.
+ * Shows sign-in form by default; switches to 2FA form when required.
+ */
+function SignInWithTwoFactor() {
+  const { twoFactorRequired } = useAuth();
+
+  if (twoFactorRequired) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-imp-background p-4">
+        <div className="w-full max-w-sm">
+          <TwoFactorVerifyForm
+            onSuccess={() => {
+              // Auth state change will cause AuthGate to re-render with children
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <SignInPage
       onSuccess={() => {

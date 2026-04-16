@@ -57,6 +57,15 @@ export const invectConfig = defineConfig({
 
 The `webhookBaseUrl` is the public URL prefix used to generate webhook URLs displayed in the editor. Set this to your production URL so webhook URLs are correct.
 
+### Options
+
+| Option                 | Type     | Default          | Description                                          |
+| ---------------------- | -------- | ---------------- | ---------------------------------------------------- |
+| `webhookBaseUrl`       | `string` | —                | Public URL prefix for generated webhook URLs.        |
+| `rateLimitMaxRequests` | `number` | `60`             | Maximum requests per rate limit window.              |
+| `rateLimitWindowMs`    | `number` | `60000` (1 min)  | Rate limit window duration in milliseconds.          |
+| `dedupTtlMs`           | `number` | `86400000` (24h) | Time-to-live for deduplication of repeated requests. |
+
 Regenerate the schema to add the webhook tables:
 
 ```bash
@@ -79,3 +88,11 @@ Webhooks are managed through the trigger system:
 - `DELETE /triggers/:triggerId` — delete a webhook trigger
 
 Each webhook has a unique ID and optional secret for signature verification.
+
+## Security features
+
+The plugin includes built-in protection for webhook endpoints:
+
+- **Signature verification** — validate HMAC signatures from webhook providers (GitHub, Slack, etc.) to ensure requests are authentic
+- **Rate limiting** — configurable per-endpoint rate limits to prevent abuse
+- **Deduplication** — repeated requests with the same payload are deduplicated within the TTL window

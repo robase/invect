@@ -209,8 +209,8 @@ function CreateCredentialForm({ onBack }: { onBack?: () => void }) {
   // (because hasConfiguredCredential becomes true via the store update)
   if (formState === 'success') {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-xl border bg-muted/20 p-5 mx-2 w-full max-w-sm">
-        <div className="flex size-10 items-center justify-center rounded-full bg-success/10">
+      <div className="mx-2 flex w-full max-w-88 flex-col items-center gap-2.5 rounded-xl border bg-muted/20 p-4">
+        <div className="flex size-9 items-center justify-center rounded-full bg-success/10">
           <CheckCircle2 className="size-5 text-success" />
         </div>
         <div className="text-center">
@@ -229,16 +229,16 @@ function CreateCredentialForm({ onBack }: { onBack?: () => void }) {
     <form
       onSubmit={handleSubmit}
       autoComplete="off"
-      className="flex flex-col gap-4 rounded-xl border border-border/60 bg-card p-5 mx-2 w-full max-w-sm shadow-sm"
+      className="mx-2 flex w-full max-w-88 flex-col gap-3 rounded-xl border border-border/60 bg-card p-4 shadow-sm"
     >
       {/* Header */}
-      <div className="flex flex-col gap-2.5 pb-0.5">
-        <div className="flex size-10 items-center justify-center rounded-full bg-primary/10">
-          <KeyRound className="size-5 text-primary" />
+      <div className="flex flex-col gap-2 pb-0.5">
+        <div className="flex size-9 items-center justify-center rounded-full bg-primary/10">
+          <KeyRound className="size-4.5 text-primary" />
         </div>
         <div className="text-center">
           <p className="text-sm font-semibold text-foreground">Connect an LLM provider</p>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             Add an API key to start chatting with the assistant.
           </p>
         </div>
@@ -270,7 +270,7 @@ function CreateCredentialForm({ onBack }: { onBack?: () => void }) {
       </div>
 
       {/* Name */}
-      <div className="space-y-1.5">
+      <div className="space-y-1.5 text-left">
         <label className="text-xs font-medium text-muted-foreground">Name</label>
         <Input
           value={name}
@@ -288,7 +288,7 @@ function CreateCredentialForm({ onBack }: { onBack?: () => void }) {
       </div>
 
       {/* API Key */}
-      <div className="space-y-1.5">
+      <div className="space-y-1.5 text-left">
         <label className="text-xs font-medium text-muted-foreground">API Key</label>
         <div className="relative">
           <Input
@@ -325,7 +325,7 @@ function CreateCredentialForm({ onBack }: { onBack?: () => void }) {
       )}
 
       {/* Submit */}
-      <Button type="submit" size="sm" className="mt-0.5 w-full gap-1.5" disabled={!canSubmit}>
+      <Button type="submit" size="sm" className="w-full gap-1.5" disabled={!canSubmit}>
         {formState === 'creating' ? (
           <>
             <Loader2 className="size-3.5 animate-spin" />

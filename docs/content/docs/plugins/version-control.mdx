@@ -1,17 +1,13 @@
 ---
 title: Version Control
-description: Flow versioning and export/import with @invect/version-control.
+description: Sync flows to Git repositories with @invect/version-control.
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
 
-The version control plugin adds enhanced flow version management — export, import, comparison, and restore capabilities beyond the built-in version history.
-
-<Callout type="info">
-  This plugin is under active development. Refer to the package README for the latest API.
-</Callout>
+The version control plugin syncs flows to Git repositories (GitHub, GitLab, Bitbucket). Push flow definitions as `.flow.ts` files, pull changes back, create PRs on publish, and keep flows in sync via webhooks.
 
 ## Installation
 
@@ -48,20 +44,64 @@ bun add @invect/version-control
 
 ## Setup
 
+The plugin requires a Git provider and a target repository:
+
 ```ts title="invect.config.ts"
 import { versionControl } from '@invect/version-control';
+import { githubProvider } from '@invect/version-control/providers/github';
 
 export const invectConfig = defineConfig({
   // ...
-  plugins: [versionControl()],
+  plugins: [
+    versionControl({
+      provider: githubProvider({ token: process.env.GITHUB_TOKEN }),
+      repo: 'my-org/my-flows',
+    }),
+  ],
 });
 ```
 
-## Capabilities
+After adding the plugin, regenerate and apply the schema:
 
-The plugin extends Invect's built-in versioning with:
+```bash
+npx invect-cli generate
+npx invect-cli migrate --push
+```
 
-- **Export** — download a flow and all its versions as a portable JSON bundle
-- **Import** — restore a flow from an exported bundle, creating it as a new flow
-- **Compare** — view diffs between flow versions
-- **Metadata** — attach tags, descriptions, and annotations to versions
+### Options
+
+| Option          | Type              | Required | Default            | Description                                                                   |
+| --------------- | ----------------- | -------- | ------------------ | ----------------------------------------------------------------------------- |
+| `provider`      | `GitProvider`     | Yes      | —                  | Git hosting provider (e.g. `githubProvider()`)                                |
+| `repo`          | `string`          | Yes      | —                  | Target repository in `owner/name` format                                      |
+| `defaultBranch` | `string`          | No       | `'main'`           | Default branch for push/pull operations                                       |
+| `path`          | `string`          | No       | `'/'`              | Directory in the repository for flow files                                    |
+| `mode`          | `VcSyncMode`      | No       | `'pr-per-publish'` | `'pr-per-publish'` creates a PR per publish, `'direct-push'` commits directly |
+| `syncDirection` | `VcSyncDirection` | No       | `'push'`           | `'push'`, `'pull'`, or `'bidirectional'`                                      |
+| `webhookSecret` | `string`          | No       | —                  | Secret for verifying Git webhook signatures                                   |
+
+## How it works
+
+Once configured, you can sync individual flows or all flows at once:
+
+- **Push** — export a flow from Invect to the Git repository
+- **Pull** — import a flow from the Git repository into Invect
+- **Publish** — in `pr-per-publish` mode, creates a pull request for review
+- **Force push/pull** — resolve conflicts by choosing one side as the source of truth
+- **Webhook** — automatically sync when the repository is updated
+
+## API endpoints
+
+| Endpoint                                               | Method | Description                                      |
+| ------------------------------------------------------ | ------ | ------------------------------------------------ |
+| `/plugins/version-control/vc/flows`                    | GET    | List all synced flows                            |
+| `/plugins/version-control/vc/flows/:flowId/configure`  | POST   | Configure sync for a flow                        |
+| `/plugins/version-control/vc/flows/:flowId/status`     | GET    | Get sync status for a flow                       |
+| `/plugins/version-control/vc/flows/:flowId/disconnect` | DELETE | Disconnect a flow from sync                      |
+| `/plugins/version-control/vc/flows/:flowId/push`       | POST   | Push flow to remote                              |
+| `/plugins/version-control/vc/flows/:flowId/pull`       | POST   | Pull flow from remote                            |
+| `/plugins/version-control/vc/flows/:flowId/publish`    | POST   | Publish flow (creates PR in pr-per-publish mode) |
+| `/plugins/version-control/vc/flows/:flowId/history`    | GET    | Get sync history for a flow                      |
+| `/plugins/version-control/vc/push-all`                 | POST   | Push all synced flows                            |
+| `/plugins/version-control/vc/pull-all`                 | POST   | Pull all synced flows                            |
+| `/plugins/version-control/vc/webhook`                  | POST   | Webhook receiver for Git events (public)         |

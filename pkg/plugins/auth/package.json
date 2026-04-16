@@ -61,7 +61,9 @@
     "test:watch": "vitest --watch"
   },
   "dependencies": {
+    "@better-auth/api-key": "^1.6.0",
     "@invect/core": "workspace:*",
+    "better-auth": "^1.6.0",
     "kysely": "^0.28.14"
   },
   "devDependencies": {
@@ -71,7 +73,6 @@
     "@types/node": "^20.11.20",
     "@types/react": "18.3.7",
     "@types/react-dom": "18.3.7",
-    "better-auth": "^1.6.0",
     "lucide-react": "^0.475.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -80,22 +81,14 @@
     "vitest": "^4.1.4"
   },
   "peerDependencies": {
-    "@better-auth/api-key": ">=1.0.0",
     "@invect/ui": ">=0.0.9",
     "@tanstack/react-query": ">=5.0.0",
-    "better-auth": ">=1.0.0",
     "better-sqlite3": ">=9.0.0",
     "react": ">=18.0.0",
     "react-dom": ">=18.0.0",
     "react-router": ">=7.0.0"
   },
   "peerDependenciesMeta": {
-    "@better-auth/api-key": {
-      "optional": true
-    },
-    "better-auth": {
-      "optional": false
-    },
     "better-sqlite3": {
       "optional": true
     },

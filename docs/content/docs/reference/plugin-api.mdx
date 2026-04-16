@@ -75,12 +75,38 @@ interface InvectPluginHooks {
 interface InvectPluginEndpoint {
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   path: string;
-  handler: (req: any, res: any) => Promise<void>;
-  skipAuth?: boolean;
+  handler: (context: PluginEndpointContext) => Promise<PluginEndpointResponse>;
+  permission?: InvectPermission;
+  isPublic?: boolean;
 }
 ```
 
 Endpoints are mounted at `/plugins/{pluginId}{path}`.
+
+## PluginEndpointContext
+
+```ts
+interface PluginEndpointContext {
+  body: Record<string, unknown>;
+  params: Record<string, string>;
+  query: Record<string, string | undefined>;
+  headers: Record<string, string | undefined>;
+  identity: InvectIdentity | null;
+  database: PluginDatabaseApi;
+  request: Request;
+  core: PluginEndpointCoreApi;
+  getInvect: () => InvectInstance;
+}
+```
+
+## PluginEndpointResponse
+
+```ts
+type PluginEndpointResponse =
+  | { status?: number; body: unknown } // JSON response
+  | { status?: number; stream: ReadableStream } // Streaming response
+  | Response; // Raw Web API Response
+```
 
 ## InvectPluginSchema
 

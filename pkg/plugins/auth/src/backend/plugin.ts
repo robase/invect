@@ -171,7 +171,13 @@ class RateLimiter {
 }
 
 /** Auth-sensitive path segments that should be rate-limited. */
-const RATE_LIMITED_AUTH_PATHS = ['/sign-in/', '/sign-up/', '/forgot-password', '/reset-password'];
+const RATE_LIMITED_AUTH_PATHS = [
+  '/sign-in/',
+  '/sign-up/',
+  '/forgot-password',
+  '/reset-password',
+  '/two-factor/',
+];
 
 /**
  * Convert a Node.js-style `IncomingHttpHeaders` record or a `Headers` instance
@@ -440,6 +446,7 @@ export const USER_AUTH_SCHEMA: InvectPluginSchema = {
       banned: { type: 'boolean', required: false, defaultValue: false },
       banReason: { type: 'string', required: false },
       banExpires: { type: 'date', required: false },
+      twoFactorEnabled: { type: 'boolean', required: false, defaultValue: false },
       createdAt: { type: 'date', required: true, defaultValue: 'now()' },
       updatedAt: { type: 'date', required: true, defaultValue: 'now()' },
     },
@@ -523,6 +530,23 @@ export const USER_AUTH_SCHEMA: InvectPluginSchema = {
       grantedBy: { type: 'string', required: false },
       grantedAt: { type: 'date', required: true, defaultValue: 'now()' },
       expiresAt: { type: 'date', required: false },
+    },
+  },
+
+  // ----- Two-Factor Authentication table (Better Auth 2FA plugin) -----
+  twoFactor: {
+    tableName: 'two_factor',
+    order: 3,
+    fields: {
+      id: { type: 'string', primaryKey: true },
+      userId: {
+        type: 'string',
+        required: true,
+        references: { table: 'user', field: 'id', onDelete: 'cascade' },
+      },
+      secret: { type: 'string', required: true },
+      backupCodes: { type: 'string', required: true },
+      verified: { type: 'boolean', required: false, defaultValue: false },
     },
   },
 };
@@ -708,6 +732,29 @@ async function createInternalBetterAuth(
   const betterAuthPlugins: unknown[] = [
     adminPlugin({ defaultRole: AUTH_DEFAULT_ROLE, adminRoles: [AUTH_ADMIN_ROLE] }),
   ];
+
+  // 7a. Optionally load the Better Auth Two-Factor plugin
+  const twoFactorOpt = options.twoFactor;
+  if (twoFactorOpt) {
+    let twoFactorPlugin: (config?: Record<string, unknown>) => unknown;
+    try {
+      const pluginsModule = await import('better-auth/plugins');
+      twoFactorPlugin = pluginsModule.twoFactor;
+    } catch {
+      throw new Error(
+        'Could not import twoFactor from "better-auth/plugins". Ensure better-auth is properly installed.',
+      );
+    }
+
+    const twoFactorConfig: Record<string, unknown> =
+      typeof twoFactorOpt === 'object' ? { ...twoFactorOpt } : {};
+    // Default issuer to "Invect" if not provided
+    if (twoFactorConfig.issuer === undefined) {
+      twoFactorConfig.issuer = 'Invect';
+    }
+    betterAuthPlugins.push(twoFactorPlugin(twoFactorConfig));
+    logger.info?.('Better Auth Two-Factor plugin enabled');
+  }
 
   if (apiKeyOpt) {
     let apiKeyPluginFn: (config?: Record<string, unknown>) => unknown;
@@ -1052,14 +1099,28 @@ export function authentication(options: AuthenticationPluginOptions): InvectPlug
   // ----- Resolve API key opt from top-level or passthrough -----
   const apiKeyEnabled = !!(options.apiKey ?? options.betterAuthOptions?.apiKey);
 
-  // ----- Build schema (conditionally includes apikey table) -----
-  const schema: InvectPluginSchema = apiKeyEnabled
-    ? { ...USER_AUTH_SCHEMA, ...API_KEY_SCHEMA }
-    : USER_AUTH_SCHEMA;
+  // ----- Resolve 2FA opt -----
+  const twoFactorEnabled = !!options.twoFactor;
+
+  // ----- Build schema (conditionally includes apikey / twoFactor tables) -----
+  let schema: InvectPluginSchema = twoFactorEnabled
+    ? USER_AUTH_SCHEMA
+    : (() => {
+        // Exclude twoFactor table and twoFactorEnabled user field when 2FA is not enabled
+        const { twoFactor: _tf, ...rest } = USER_AUTH_SCHEMA;
+        return rest;
+      })();
+
+  if (apiKeyEnabled) {
+    schema = { ...schema, ...API_KEY_SCHEMA };
+  }
 
   const requiredTables = ['user', 'session', 'account', 'verification', 'flow_access'];
   if (apiKeyEnabled) {
     requiredTables.push('apikey');
+  }
+  if (twoFactorEnabled) {
+    requiredTables.push('two_factor');
   }
 
   // ----- Build the plugin -----
@@ -1167,6 +1228,7 @@ export function authentication(options: AuthenticationPluginOptions): InvectPlug
             status: 200,
             body: {
               apiKeysEnabled: apiKeyEnabled,
+              twoFactorEnabled: twoFactorEnabled,
             },
           };
         },

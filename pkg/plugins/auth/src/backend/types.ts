@@ -254,6 +254,39 @@ export interface ApiKeyPluginOptions {
 // ---------------------------------------------------------------------------
 
 /**
+ * Options forwarded to the `twoFactor()` Better Auth plugin.
+ *
+ * @see https://better-auth.com/docs/plugins/2fa
+ */
+export interface TwoFactorPluginOptions {
+  /**
+   * The issuer name displayed in authenticator apps (e.g. Google Authenticator).
+   * Defaults to `'Invect'` if not set.
+   */
+  issuer?: string;
+  /** Skip the TOTP verification step when enabling 2FA. @default false */
+  skipVerificationOnEnable?: boolean;
+  /** Allow enabling/managing 2FA without a password for passwordless users. @default false */
+  allowPasswordless?: boolean;
+  /** TOTP-specific options. */
+  totpOptions?: {
+    /** Number of digits in the TOTP code. @default 6 */
+    digits?: number;
+    /** TOTP time period in seconds. @default 30 */
+    period?: number;
+  };
+  /** Backup code options. */
+  backupCodeOptions?: {
+    /** Number of backup codes to generate. @default 10 */
+    amount?: number;
+    /** Length of each backup code. @default 10 */
+    length?: number;
+    /** Custom backup code generator function. */
+    customBackupCodesGenerate?: () => string[];
+  };
+}
+
+/**
  * Configuration for the User Auth Invect plugin.
  *
  * A light wrapper around [Better Auth](https://better-auth.com).
@@ -400,6 +433,24 @@ export interface AuthenticationPluginOptions {
    * @see https://better-auth.com/docs/plugins/api-key
    */
   apiKey?: boolean | ApiKeyPluginOptions;
+
+  /**
+   * Enable the Better Auth Two-Factor Authentication plugin.
+   *
+   * Set to `true` to enable with defaults, or pass an options object
+   * to customise TOTP digits, period, issuer name, backup code settings, etc.
+   *
+   * When enabled, users can set up TOTP-based 2FA via their authenticator app.
+   * The `two_factor` database table and `twoFactorEnabled` user field will be
+   * required.
+   *
+   * All Better Auth 2FA endpoints (enable, disable, verify-totp, backup codes,
+   * etc.) are automatically proxied through the auth plugin's catch-all route.
+   *
+   * @default false
+   * @see https://better-auth.com/docs/plugins/2fa
+   */
+  twoFactor?: boolean | TwoFactorPluginOptions;
 
   /**
    * Frontend plugin (sidebar, routes, providers) for the auth UI.

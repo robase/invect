@@ -6,13 +6,17 @@
  * sign-out actions to child components.
  */
 
-import { createContext, useContext, useCallback, useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useCallback, useMemo, useState, type ReactNode } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type {
   AuthSession,
   AuthUser,
   SignInCredentials,
   SignUpCredentials,
+  TwoFactorVerifyInput,
+  TwoFactorEnableResponse,
+  TwoFactorEnableInput,
+  TwoFactorDisableInput,
 } from '../../shared/types';
 
 // ─────────────────────────────────────────────────────────────
@@ -38,6 +42,24 @@ export interface AuthContextValue {
   isSigningUp: boolean;
   /** Last auth error, if any */
   error: string | null;
+  /** Whether 2FA verification is required (after sign-in) */
+  twoFactorRequired: boolean;
+  /** Cancel the pending 2FA verification and return to sign-in */
+  cancelTwoFactor: () => void;
+  /** Verify a TOTP code during sign-in */
+  verifyTotp: (input: TwoFactorVerifyInput) => Promise<void>;
+  /** Verify a backup code during sign-in */
+  verifyBackupCode: (code: string) => Promise<void>;
+  /** Whether a 2FA verification is in progress */
+  isVerifyingTwoFactor: boolean;
+  /** Enable 2FA for the current user — returns TOTP URI and backup codes */
+  enableTwoFactor: (input: TwoFactorEnableInput) => Promise<TwoFactorEnableResponse>;
+  /** Disable 2FA for the current user */
+  disableTwoFactor: (input: TwoFactorDisableInput) => Promise<void>;
+  /** Get the TOTP URI for the current user (requires password) */
+  getTotpUri: (password: string) => Promise<string>;
+  /** Generate new backup codes for the current user */
+  generateBackupCodes: (password: string) => Promise<string[]>;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -61,6 +83,7 @@ export interface AuthProviderProps {
 
 export function AuthProvider({ children, baseUrl }: AuthProviderProps) {
   const queryClient = useQueryClient();
+  const [twoFactorRequired, setTwoFactorRequired] = useState(false);
 
   // Construct auth API base URL
   const authApiBase = `${baseUrl}/plugins/auth/api/auth`;
@@ -87,6 +110,7 @@ export function AuthProvider({ children, baseUrl }: AuthProviderProps) {
           email: data.user.email ?? undefined,
           image: data.user.image ?? undefined,
           role: data.user.role ?? undefined,
+          twoFactorEnabled: data.user.twoFactorEnabled ?? undefined,
         },
         isAuthenticated: true,
       };
@@ -111,7 +135,12 @@ export function AuthProvider({ children, baseUrl }: AuthProviderProps) {
       }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (data && data.twoFactorRedirect) {
+        setTwoFactorRequired(true);
+        return;
+      }
+      setTwoFactorRequired(false);
       queryClient.invalidateQueries({ queryKey: ['auth', 'session'] });
     },
   });
@@ -155,6 +184,51 @@ export function AuthProvider({ children, baseUrl }: AuthProviderProps) {
       }
     },
     onSuccess: () => {
+      setTwoFactorRequired(false);
+      queryClient.invalidateQueries({ queryKey: ['auth', 'session'] });
+    },
+  });
+
+  // ── 2FA: Verify TOTP ──────────────────────────────────────
+
+  const verifyTotpMutation = useMutation({
+    mutationFn: async (input: TwoFactorVerifyInput) => {
+      const response = await fetch(`${authApiBase}/two-factor/verify-totp`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(input),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ message: 'Invalid verification code' }));
+        throw new Error(err.message || `Verification failed (${response.status})`);
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      setTwoFactorRequired(false);
+      queryClient.invalidateQueries({ queryKey: ['auth', 'session'] });
+    },
+  });
+
+  // ── 2FA: Verify Backup Code ────────────────────────────────
+
+  const verifyBackupCodeMutation = useMutation({
+    mutationFn: async (code: string) => {
+      const response = await fetch(`${authApiBase}/two-factor/verify-backup-code`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ code }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ message: 'Invalid backup code' }));
+        throw new Error(err.message || `Verification failed (${response.status})`);
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      setTwoFactorRequired(false);
       queryClient.invalidateQueries({ queryKey: ['auth', 'session'] });
     },
   });
@@ -179,12 +253,106 @@ export function AuthProvider({ children, baseUrl }: AuthProviderProps) {
     await signOutMutation.mutateAsync();
   }, [signOutMutation]);
 
+  const cancelTwoFactor = useCallback(() => {
+    setTwoFactorRequired(false);
+  }, []);
+
+  const verifyTotp = useCallback(
+    async (input: TwoFactorVerifyInput) => {
+      await verifyTotpMutation.mutateAsync(input);
+    },
+    [verifyTotpMutation],
+  );
+
+  const verifyBackupCode = useCallback(
+    async (code: string) => {
+      await verifyBackupCodeMutation.mutateAsync(code);
+    },
+    [verifyBackupCodeMutation],
+  );
+
+  const enableTwoFactor = useCallback(
+    async (input: TwoFactorEnableInput): Promise<TwoFactorEnableResponse> => {
+      const response = await fetch(`${authApiBase}/two-factor/enable`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(input),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ message: 'Failed to enable 2FA' }));
+        throw new Error(err.message || `Failed to enable 2FA (${response.status})`);
+      }
+      const data = await response.json();
+      queryClient.invalidateQueries({ queryKey: ['auth', 'session'] });
+      return data;
+    },
+    [authApiBase, queryClient],
+  );
+
+  const disableTwoFactor = useCallback(
+    async (input: TwoFactorDisableInput): Promise<void> => {
+      const response = await fetch(`${authApiBase}/two-factor/disable`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(input),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ message: 'Failed to disable 2FA' }));
+        throw new Error(err.message || `Failed to disable 2FA (${response.status})`);
+      }
+      queryClient.invalidateQueries({ queryKey: ['auth', 'session'] });
+    },
+    [authApiBase, queryClient],
+  );
+
+  const getTotpUri = useCallback(
+    async (password: string): Promise<string> => {
+      const response = await fetch(`${authApiBase}/two-factor/get-totp-uri`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ password }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ message: 'Failed to get TOTP URI' }));
+        throw new Error(err.message || `Failed to get TOTP URI (${response.status})`);
+      }
+      const data = await response.json();
+      return data.totpURI;
+    },
+    [authApiBase],
+  );
+
+  const generateBackupCodes = useCallback(
+    async (password: string): Promise<string[]> => {
+      const response = await fetch(`${authApiBase}/two-factor/generate-backup-codes`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ password }),
+      });
+      if (!response.ok) {
+        const err = await response
+          .json()
+          .catch(() => ({ message: 'Failed to generate backup codes' }));
+        throw new Error(err.message || `Failed to generate backup codes (${response.status})`);
+      }
+      const data = await response.json();
+      return data.backupCodes;
+    },
+    [authApiBase],
+  );
+
   // ── Error ──────────────────────────────────────────────────
 
   const error =
     signInMutation.error?.message ??
     signUpMutation.error?.message ??
     signOutMutation.error?.message ??
+    verifyTotpMutation.error?.message ??
+    verifyBackupCodeMutation.error?.message ??
     null;
 
   // ── Context Value ──────────────────────────────────────────
@@ -200,6 +368,15 @@ export function AuthProvider({ children, baseUrl }: AuthProviderProps) {
       isSigningIn: signInMutation.isPending,
       isSigningUp: signUpMutation.isPending,
       error,
+      twoFactorRequired,
+      cancelTwoFactor,
+      verifyTotp,
+      verifyBackupCode,
+      isVerifyingTwoFactor: verifyTotpMutation.isPending || verifyBackupCodeMutation.isPending,
+      enableTwoFactor,
+      disableTwoFactor,
+      getTotpUri,
+      generateBackupCodes,
     }),
     [
       session,
@@ -210,6 +387,16 @@ export function AuthProvider({ children, baseUrl }: AuthProviderProps) {
       signInMutation.isPending,
       signUpMutation.isPending,
       error,
+      twoFactorRequired,
+      cancelTwoFactor,
+      verifyTotp,
+      verifyBackupCode,
+      verifyTotpMutation.isPending,
+      verifyBackupCodeMutation.isPending,
+      enableTwoFactor,
+      disableTwoFactor,
+      getTotpUri,
+      generateBackupCodes,
     ],
   );
 
@@ -247,6 +434,27 @@ export function useAuth(): AuthContextValue {
       isSigningIn: false,
       isSigningUp: false,
       error: null,
+      twoFactorRequired: false,
+      cancelTwoFactor: () => {},
+      verifyTotp: async () => {
+        throw new Error('AuthProvider not found');
+      },
+      verifyBackupCode: async () => {
+        throw new Error('AuthProvider not found');
+      },
+      isVerifyingTwoFactor: false,
+      enableTwoFactor: async () => {
+        throw new Error('AuthProvider not found');
+      },
+      disableTwoFactor: async () => {
+        throw new Error('AuthProvider not found');
+      },
+      getTotpUri: async () => {
+        throw new Error('AuthProvider not found');
+      },
+      generateBackupCodes: async () => {
+        throw new Error('AuthProvider not found');
+      },
     };
   }
 
