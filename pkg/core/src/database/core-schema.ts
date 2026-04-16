@@ -53,7 +53,7 @@ export const CORE_ENUMS = {
 export const CORE_SCHEMA: InvectPluginSchema = {
   // ----- Flow definition table -----
   flows: {
-    tableName: 'flows',
+    tableName: 'invect_flows',
     order: 10,
     fields: {
       id: { type: 'string', primaryKey: true },
@@ -69,14 +69,14 @@ export const CORE_SCHEMA: InvectPluginSchema = {
 
   // ----- Flow version table -----
   flowVersions: {
-    tableName: 'flow_versions',
+    tableName: 'invect_flow_versions',
     order: 20,
     compositePrimaryKey: ['version', 'flowId'],
     fields: {
       flowId: {
         type: 'string',
         required: true,
-        references: { table: 'flows', field: 'id', onDelete: 'cascade' },
+        references: { table: 'invect_flows', field: 'id', onDelete: 'cascade' },
       },
       version: { type: 'number', required: true },
       invectDefinition: {
@@ -91,14 +91,14 @@ export const CORE_SCHEMA: InvectPluginSchema = {
 
   // ----- Flow execution (runs) table -----
   flowRuns: {
-    tableName: 'flow_executions',
+    tableName: 'invect_flow_executions',
     order: 30,
     fields: {
       id: { type: 'uuid', primaryKey: true, defaultValue: 'uuid()' },
       flowId: {
         type: 'string',
         required: true,
-        references: { table: 'flows', field: 'id', onDelete: 'cascade' },
+        references: { table: 'invect_flows', field: 'id', onDelete: 'cascade' },
       },
       flowVersion: { type: 'number', required: true },
       status: {
@@ -125,19 +125,19 @@ export const CORE_SCHEMA: InvectPluginSchema = {
 
   // ----- Action traces (node executions + agent tool executions, unified) -----
   actionTraces: {
-    tableName: 'action_traces',
+    tableName: 'invect_action_traces',
     order: 40,
     fields: {
       id: { type: 'uuid', primaryKey: true, defaultValue: 'uuid()' },
       flowRunId: {
         type: 'uuid',
         required: true,
-        references: { table: 'flow_executions', field: 'id', onDelete: 'cascade' },
+        references: { table: 'invect_flow_executions', field: 'id', onDelete: 'cascade' },
       },
       parentNodeExecutionId: {
         type: 'uuid',
         required: false,
-        references: { table: 'action_traces', field: 'id', onDelete: 'cascade' },
+        references: { table: 'invect_action_traces', field: 'id', onDelete: 'cascade' },
       },
       // Node execution fields (null for tool traces)
       nodeId: { type: 'string', required: false },
@@ -165,14 +165,14 @@ export const CORE_SCHEMA: InvectPluginSchema = {
 
   // ----- Batch jobs table -----
   batchJobs: {
-    tableName: 'batch_jobs',
+    tableName: 'invect_batch_jobs',
     order: 50,
     fields: {
       id: { type: 'uuid', primaryKey: true, defaultValue: 'uuid()' },
       flowRunId: {
         type: 'uuid',
         required: true,
-        references: { table: 'flow_executions', field: 'id', onDelete: 'cascade' },
+        references: { table: 'invect_flow_executions', field: 'id', onDelete: 'cascade' },
       },
       nodeId: { type: 'string', required: true },
       provider: {
@@ -199,7 +199,7 @@ export const CORE_SCHEMA: InvectPluginSchema = {
 
   // ----- Credentials table -----
   credentials: {
-    tableName: 'credentials',
+    tableName: 'invect_credentials',
     order: 10,
     fields: {
       id: { type: 'uuid', primaryKey: true, defaultValue: 'uuid()' },
@@ -221,14 +221,14 @@ export const CORE_SCHEMA: InvectPluginSchema = {
 
   // ----- Flow triggers table -----
   flowTriggers: {
-    tableName: 'flow_triggers',
+    tableName: 'invect_flow_triggers',
     order: 20,
     fields: {
       id: { type: 'uuid', primaryKey: true, defaultValue: 'uuid()' },
       flowId: {
         type: 'string',
         required: true,
-        references: { table: 'flows', field: 'id', onDelete: 'cascade' },
+        references: { table: 'invect_flows', field: 'id', onDelete: 'cascade' },
       },
       nodeId: { type: 'string', required: true },
       type: { type: 'string', required: true, typeAnnotation: 'TriggerType' },
@@ -245,14 +245,14 @@ export const CORE_SCHEMA: InvectPluginSchema = {
 
   // ----- Chat messages table -----
   chatMessages: {
-    tableName: 'chat_messages',
+    tableName: 'invect_chat_messages',
     order: 30,
     fields: {
       id: { type: 'uuid', primaryKey: true, defaultValue: 'uuid()' },
       flowId: {
         type: 'string',
         required: true,
-        references: { table: 'flows', field: 'id', onDelete: 'cascade' },
+        references: { table: 'invect_flows', field: 'id', onDelete: 'cascade' },
       },
       role: {
         type: 'string',

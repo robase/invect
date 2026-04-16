@@ -47,7 +47,7 @@ const MIGRATIONS_FOLDER = resolve(__dirname, '../../../drizzle/sqlite');
 // ─────────────────────────────────────────────────────────────
 
 const EXTRA_TABLES_SQL = `
-CREATE TABLE IF NOT EXISTS user (
+CREATE TABLE IF NOT EXISTS invect_user (
   id TEXT PRIMARY KEY NOT NULL,
   name TEXT NOT NULL DEFAULT '',
   email TEXT NOT NULL DEFAULT '' UNIQUE,
@@ -57,51 +57,51 @@ CREATE TABLE IF NOT EXISTS user (
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE TABLE IF NOT EXISTS session (
+CREATE TABLE IF NOT EXISTS invect_session (
   id TEXT PRIMARY KEY NOT NULL,
   expires_at TEXT NOT NULL DEFAULT (datetime('now', '+1 day')),
   token TEXT NOT NULL DEFAULT '' UNIQUE,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-  user_id TEXT NOT NULL REFERENCES user(id)
+  user_id TEXT NOT NULL REFERENCES invect_user(id)
 );
 
-CREATE TABLE IF NOT EXISTS account (
+CREATE TABLE IF NOT EXISTS invect_account (
   id TEXT PRIMARY KEY NOT NULL,
   account_id TEXT NOT NULL DEFAULT '',
   provider_id TEXT NOT NULL DEFAULT '',
-  user_id TEXT NOT NULL REFERENCES user(id),
+  user_id TEXT NOT NULL REFERENCES invect_user(id),
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE TABLE IF NOT EXISTS verification (
+CREATE TABLE IF NOT EXISTS invect_verification (
   id TEXT PRIMARY KEY NOT NULL,
   identifier TEXT NOT NULL DEFAULT '',
   value TEXT NOT NULL DEFAULT '',
   expires_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE TABLE IF NOT EXISTS rbac_teams (
+CREATE TABLE IF NOT EXISTS invect_rbac_teams (
   id TEXT PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,
   description TEXT,
-  parent_id TEXT REFERENCES rbac_teams(id) ON DELETE SET NULL,
+  parent_id TEXT REFERENCES invect_rbac_teams(id) ON DELETE SET NULL,
   created_by TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT
 );
 
-CREATE TABLE IF NOT EXISTS rbac_team_members (
+CREATE TABLE IF NOT EXISTS invect_rbac_team_members (
   id TEXT PRIMARY KEY NOT NULL,
-  team_id TEXT NOT NULL REFERENCES rbac_teams(id) ON DELETE CASCADE,
+  team_id TEXT NOT NULL REFERENCES invect_rbac_teams(id) ON DELETE CASCADE,
   user_id TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE TABLE IF NOT EXISTS rbac_scope_access (
+CREATE TABLE IF NOT EXISTS invect_rbac_scope_access (
   id TEXT PRIMARY KEY NOT NULL,
-  scope_id TEXT NOT NULL REFERENCES rbac_teams(id) ON DELETE CASCADE,
+  scope_id TEXT NOT NULL REFERENCES invect_rbac_teams(id) ON DELETE CASCADE,
   user_id TEXT,
   team_id TEXT,
   permission TEXT NOT NULL DEFAULT 'viewer',
@@ -281,7 +281,7 @@ describe('RBAC Plugin — Security Red Team', () => {
 
     // 3. Add scope_id to flows (RBAC schema extension)
     try {
-      sqlite.exec('ALTER TABLE flows ADD COLUMN scope_id TEXT');
+      sqlite.exec('ALTER TABLE invect_flows ADD COLUMN scope_id TEXT');
     } catch {
       // Column may already exist
     }
@@ -298,7 +298,7 @@ describe('RBAC Plugin — Security Red Team', () => {
     // 5. Seed team hierarchy: team-a → team-b (child), team-c (sibling)
     const now = new Date().toISOString();
     const insertTeam = sqlite.prepare(
-      'INSERT INTO rbac_teams (id, name, parent_id, created_at) VALUES (?, ?, ?, ?)',
+      'INSERT INTO invect_rbac_teams (id, name, parent_id, created_at) VALUES (?, ?, ?, ?)',
     );
     insertTeam.run('team-a', 'Team Alpha', null, now);
     insertTeam.run('team-b', 'Team Beta', 'team-a', now);
@@ -306,7 +306,7 @@ describe('RBAC Plugin — Security Red Team', () => {
 
     // 6. Seed team memberships
     const insertMembership = sqlite.prepare(
-      'INSERT INTO rbac_team_members (id, team_id, user_id, created_at) VALUES (?, ?, ?, ?)',
+      'INSERT INTO invect_rbac_team_members (id, team_id, user_id, created_at) VALUES (?, ?, ?, ?)',
     );
     insertMembership.run(randomUUID(), 'team-a', TEAM_MEMBER.id, now);
     insertMembership.run(randomUUID(), 'team-c', EDITOR.id, now);
@@ -347,20 +347,20 @@ describe('RBAC Plugin — Security Red Team', () => {
     flowId3 = f3.id;
 
     // 10. Assign scopes to flows
-    rawDb.prepare('UPDATE flows SET scope_id = ? WHERE id = ?').run('team-a', flowId2);
-    rawDb.prepare('UPDATE flows SET scope_id = ? WHERE id = ?').run('team-b', flowId3);
+    rawDb.prepare('UPDATE invect_flows SET scope_id = ? WHERE id = ?').run('team-a', flowId2);
+    rawDb.prepare('UPDATE invect_flows SET scope_id = ? WHERE id = ?').run('team-b', flowId3);
 
     // 11. Seed direct flow access records
     //     OWNER has 'owner' on flow-1
     //     VIEWER has 'viewer' on flow-1
     rawDb
       .prepare(
-        'INSERT INTO flow_access (id, flow_id, user_id, permission, granted_by, granted_at) VALUES (?, ?, ?, ?, ?, ?)',
+        'INSERT INTO invect_flow_access (id, flow_id, user_id, permission, granted_by, granted_at) VALUES (?, ?, ?, ?, ?, ?)',
       )
       .run(randomUUID(), flowId1, OWNER.id, 'owner', ADMIN.id, now);
     rawDb
       .prepare(
-        'INSERT INTO flow_access (id, flow_id, user_id, permission, granted_by, granted_at) VALUES (?, ?, ?, ?, ?, ?)',
+        'INSERT INTO invect_flow_access (id, flow_id, user_id, permission, granted_by, granted_at) VALUES (?, ?, ?, ?, ?, ?)',
       )
       .run(randomUUID(), flowId1, VIEWER.id, 'viewer', ADMIN.id, now);
 
@@ -368,7 +368,7 @@ describe('RBAC Plugin — Security Red Team', () => {
     //     → Should inherit to flowId2 (in team-a) and flowId3 (in team-b child)
     rawDb
       .prepare(
-        'INSERT INTO rbac_scope_access (id, scope_id, user_id, permission, granted_by, granted_at) VALUES (?, ?, ?, ?, ?, ?)',
+        'INSERT INTO invect_rbac_scope_access (id, scope_id, user_id, permission, granted_by, granted_at) VALUES (?, ?, ?, ?, ?, ?)',
       )
       .run(randomUUID(), 'team-a', VIEWER.id, 'editor', ADMIN.id, now);
 
@@ -376,7 +376,7 @@ describe('RBAC Plugin — Security Red Team', () => {
     //     → All members of team-a get operator access to flows in team-a + children
     rawDb
       .prepare(
-        'INSERT INTO rbac_scope_access (id, scope_id, team_id, permission, granted_by, granted_at) VALUES (?, ?, ?, ?, ?, ?)',
+        'INSERT INTO invect_rbac_scope_access (id, scope_id, team_id, permission, granted_by, granted_at) VALUES (?, ?, ?, ?, ?, ?)',
       )
       .run(randomUUID(), 'team-a', 'team-a', 'operator', ADMIN.id, now);
 
@@ -664,7 +664,7 @@ describe('RBAC Plugin — Security Red Team', () => {
       const now = new Date().toISOString();
       rawDb
         .prepare(
-          'INSERT INTO rbac_scope_access (id, scope_id, user_id, permission, granted_by, granted_at) VALUES (?, ?, ?, ?, ?, ?)',
+          'INSERT INTO invect_rbac_scope_access (id, scope_id, user_id, permission, granted_by, granted_at) VALUES (?, ?, ?, ?, ?, ?)',
         )
         .run(grantId, 'team-b', OUTSIDER.id, 'editor', ADMIN.id, now);
 
@@ -677,7 +677,7 @@ describe('RBAC Plugin — Security Red Team', () => {
       expect(r2.status).toBe(403);
 
       // Clean up
-      rawDb.prepare('DELETE FROM rbac_scope_access WHERE id = ?').run(grantId);
+      rawDb.prepare('DELETE FROM invect_rbac_scope_access WHERE id = ?').run(grantId);
     });
 
     it('sibling scope access does not cross over', async () => {
@@ -686,7 +686,7 @@ describe('RBAC Plugin — Security Red Team', () => {
       const now = new Date().toISOString();
       rawDb
         .prepare(
-          'INSERT INTO rbac_scope_access (id, scope_id, user_id, permission, granted_by, granted_at) VALUES (?, ?, ?, ?, ?, ?)',
+          'INSERT INTO invect_rbac_scope_access (id, scope_id, user_id, permission, granted_by, granted_at) VALUES (?, ?, ?, ?, ?, ?)',
         )
         .run(grantId, 'team-c', OUTSIDER.id, 'editor', ADMIN.id, now);
 
@@ -695,7 +695,7 @@ describe('RBAC Plugin — Security Red Team', () => {
       expect(r.status).toBe(403);
 
       // Clean up
-      rawDb.prepare('DELETE FROM rbac_scope_access WHERE id = ?').run(grantId);
+      rawDb.prepare('DELETE FROM invect_rbac_scope_access WHERE id = ?').run(grantId);
     });
 
     it('direct access + inherited access: highest permission wins', async () => {
@@ -705,7 +705,7 @@ describe('RBAC Plugin — Security Red Team', () => {
       // Give VIEWER direct 'viewer' on flowId2 too
       rawDb
         .prepare(
-          'INSERT INTO flow_access (id, flow_id, user_id, permission, granted_by, granted_at) VALUES (?, ?, ?, ?, ?, ?)',
+          'INSERT INTO invect_flow_access (id, flow_id, user_id, permission, granted_by, granted_at) VALUES (?, ?, ?, ?, ?, ?)',
         )
         .run(randomUUID(), flowId2, VIEWER.id, 'viewer', ADMIN.id, new Date().toISOString());
 
@@ -725,7 +725,7 @@ describe('RBAC Plugin — Security Red Team', () => {
       for (const rec of directRecords) {
         if ((rec as Record<string, unknown>).permission === 'viewer') {
           rawDb
-            .prepare('DELETE FROM flow_access WHERE id = ?')
+            .prepare('DELETE FROM invect_flow_access WHERE id = ?')
             .run((rec as Record<string, unknown>).id as string);
         }
       }
@@ -742,7 +742,7 @@ describe('RBAC Plugin — Security Red Team', () => {
       const expiredId = randomUUID();
       rawDb
         .prepare(
-          'INSERT INTO flow_access (id, flow_id, user_id, permission, granted_by, granted_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          'INSERT INTO invect_flow_access (id, flow_id, user_id, permission, granted_by, granted_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
         )
         .run(
           expiredId,
@@ -759,7 +759,7 @@ describe('RBAC Plugin — Security Red Team', () => {
       expect(r.status).toBe(403);
 
       // Clean up
-      rawDb.prepare('DELETE FROM flow_access WHERE id = ?').run(expiredId);
+      rawDb.prepare('DELETE FROM invect_flow_access WHERE id = ?').run(expiredId);
     });
 
     it('non-expired access record is counted', async () => {
@@ -767,7 +767,7 @@ describe('RBAC Plugin — Security Red Team', () => {
       const futureId = randomUUID();
       rawDb
         .prepare(
-          'INSERT INTO flow_access (id, flow_id, user_id, permission, granted_by, granted_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          'INSERT INTO invect_flow_access (id, flow_id, user_id, permission, granted_by, granted_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
         )
         .run(
           futureId,
@@ -784,7 +784,7 @@ describe('RBAC Plugin — Security Red Team', () => {
       expect(r.status).toBe(200);
 
       // Clean up
-      rawDb.prepare('DELETE FROM flow_access WHERE id = ?').run(futureId);
+      rawDb.prepare('DELETE FROM invect_flow_access WHERE id = ?').run(futureId);
     });
   });
 
@@ -1072,7 +1072,7 @@ describe('RBAC Plugin — Security Red Team', () => {
       const teamAccessId = randomUUID();
       rawDb
         .prepare(
-          'INSERT INTO flow_access (id, flow_id, team_id, permission, granted_by, granted_at) VALUES (?, ?, ?, ?, ?, ?)',
+          'INSERT INTO invect_flow_access (id, flow_id, team_id, permission, granted_by, granted_at) VALUES (?, ?, ?, ?, ?, ?)',
         )
         .run(teamAccessId, flowId1, 'team-a', 'operator', ADMIN.id, new Date().toISOString());
 
@@ -1087,7 +1087,7 @@ describe('RBAC Plugin — Security Red Team', () => {
       expect(teamRecords.length).toBeGreaterThan(0);
 
       // Clean up
-      rawDb.prepare('DELETE FROM flow_access WHERE id = ?').run(teamAccessId);
+      rawDb.prepare('DELETE FROM invect_flow_access WHERE id = ?').run(teamAccessId);
     });
 
     it('user record + team record: highest permission wins', async () => {
@@ -1095,14 +1095,14 @@ describe('RBAC Plugin — Security Red Team', () => {
       const userAccessId = randomUUID();
       rawDb
         .prepare(
-          'INSERT INTO flow_access (id, flow_id, user_id, permission, granted_by, granted_at) VALUES (?, ?, ?, ?, ?, ?)',
+          'INSERT INTO invect_flow_access (id, flow_id, user_id, permission, granted_by, granted_at) VALUES (?, ?, ?, ?, ?, ?)',
         )
         .run(userAccessId, flowId1, TEAM_MEMBER.id, 'viewer', ADMIN.id, new Date().toISOString());
       // Give team-a 'editor' on flowId1
       const teamAccessId = randomUUID();
       rawDb
         .prepare(
-          'INSERT INTO flow_access (id, flow_id, team_id, permission, granted_by, granted_at) VALUES (?, ?, ?, ?, ?, ?)',
+          'INSERT INTO invect_flow_access (id, flow_id, team_id, permission, granted_by, granted_at) VALUES (?, ?, ?, ?, ?, ?)',
         )
         .run(teamAccessId, flowId1, 'team-a', 'editor', ADMIN.id, new Date().toISOString());
 
@@ -1116,8 +1116,8 @@ describe('RBAC Plugin — Security Red Team', () => {
       expect(authResult.allowed).toBe(true);
 
       // Clean up
-      rawDb.prepare('DELETE FROM flow_access WHERE id = ?').run(teamAccessId);
-      rawDb.prepare('DELETE FROM flow_access WHERE id = ?').run(userAccessId);
+      rawDb.prepare('DELETE FROM invect_flow_access WHERE id = ?').run(teamAccessId);
+      rawDb.prepare('DELETE FROM invect_flow_access WHERE id = ?').run(userAccessId);
     });
 
     it('scope access query correctly combines user + team records', async () => {
@@ -1186,7 +1186,7 @@ describe('RBAC Plugin — Security Red Team', () => {
 
       // Create a flow scoped to it
       const flow = await invect.flows.create({ name: 'Temp Flow' });
-      rawDb.prepare('UPDATE flows SET scope_id = ? WHERE id = ?').run(tempTeamId, flow.id);
+      rawDb.prepare('UPDATE invect_flows SET scope_id = ? WHERE id = ?').run(tempTeamId, flow.id);
 
       // Delete the temp team
       const delRes = await call('DELETE', `/rbac/teams/${tempTeamId}`, { identity: ADMIN });
@@ -1199,7 +1199,7 @@ describe('RBAC Plugin — Security Red Team', () => {
       expect(rows[0]?.scope_id).toBe('team-a');
 
       // Clean up
-      rawDb.prepare('DELETE FROM flows WHERE id = ?').run(flow.id);
+      rawDb.prepare('DELETE FROM invect_flows WHERE id = ?').run(flow.id);
     });
 
     it('non-admin cannot enumerate all teams', async () => {

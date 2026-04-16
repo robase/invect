@@ -43,6 +43,8 @@ model Credentials {
   expiresAt   DateTime? @map("expires_at") @db.Timestamptz(3)
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("invect_credentials")
 }
 
 model Flows {
@@ -58,6 +60,8 @@ model Flows {
   flowVersions      FlowVersions[]
   chatMessages      ChatMessages[]
   flowRuns          FlowRuns[]
+
+  @@map("invect_flows")
 }
 
 model FlowTriggers {
@@ -76,7 +80,7 @@ model FlowTriggers {
   flow            Flows     @relation(fields: [flowId], references: [id], onDelete: Cascade)
 
   @@unique([webhookPath])
-  @@map("flow_triggers")
+  @@map("invect_flow_triggers")
 }
 
 model FlowVersions {
@@ -88,7 +92,7 @@ model FlowVersions {
   flow             Flows    @relation(fields: [flowId], references: [id], onDelete: Cascade)
 
   @@id([version, flowId])
-  @@map("flow_versions")
+  @@map("invect_flow_versions")
 }
 
 model ChatMessages {
@@ -100,7 +104,7 @@ model ChatMessages {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   flow      Flows    @relation(fields: [flowId], references: [id], onDelete: Cascade)
 
-  @@map("chat_messages")
+  @@map("invect_chat_messages")
 }
 
 model FlowRuns {
@@ -124,7 +128,7 @@ model FlowRuns {
   actionTraces    ActionTraces[]
   batchJobs       BatchJobs[]
 
-  @@map("flow_executions")
+  @@map("invect_flow_executions")
 }
 
 model ActionTraces {
@@ -147,7 +151,7 @@ model ActionTraces {
   flowRun               FlowRuns      @relation(fields: [flowRunId], references: [id], onDelete: Cascade)
   parentNodeExecution   ActionTraces? @relation(fields: [parentNodeExecutionId], references: [id], onDelete: Cascade)
 
-  @@map("action_traces")
+  @@map("invect_action_traces")
 }
 
 model BatchJobs {
@@ -166,7 +170,7 @@ model BatchJobs {
   updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   flowRun      FlowRuns  @relation(fields: [flowRunId], references: [id], onDelete: Cascade)
 
-  @@map("batch_jobs")
+  @@map("invect_batch_jobs")
 }
 
 model AuditLogs {

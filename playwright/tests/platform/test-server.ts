@@ -43,7 +43,7 @@ const db = drizzle(sqlite);
 const migrationsFolder = path.resolve(__dirname, '../../../pkg/core/drizzle/sqlite');
 await migrate(db, { migrationsFolder });
 sqlite.exec(`
-  CREATE TABLE IF NOT EXISTS webhook_triggers (
+  CREATE TABLE IF NOT EXISTS invect_webhook_triggers (
     id TEXT PRIMARY KEY NOT NULL,
     name TEXT NOT NULL,
     description TEXT,
@@ -62,7 +62,7 @@ sqlite.exec(`
     trigger_count INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (flow_id) REFERENCES flows(id) ON DELETE NO ACTION
+    FOREIGN KEY (flow_id) REFERENCES invect_flows(id) ON DELETE NO ACTION
   );
 `);
 sqlite.close();

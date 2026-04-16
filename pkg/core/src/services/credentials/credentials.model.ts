@@ -73,7 +73,7 @@ interface _CredentialQuery {
   pagination?: PaginationQuery;
 }
 
-const TABLE = 'credentials';
+const TABLE = 'invect_credentials';
 
 /**
  * Credentials CRUD operations class — uses InvectAdapter.

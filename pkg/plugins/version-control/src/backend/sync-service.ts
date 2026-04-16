@@ -53,7 +53,9 @@ export class VcSyncService {
     input: ConfigureSyncInput,
   ): Promise<VcSyncConfig> {
     // Check if flow exists
-    const flows = await db.query<FlowRow>('SELECT id, name FROM flows WHERE id = ?', [flowId]);
+    const flows = await db.query<FlowRow>('SELECT id, name FROM invect_flows WHERE id = ?', [
+      flowId,
+    ]);
     if (flows.length === 0) {
       throw new Error(`Flow not found: ${flowId}`);
     }
@@ -69,10 +71,10 @@ export class VcSyncService {
     const filePath = input.filePath ?? this.buildFilePath(flow.name);
 
     // Upsert — delete existing config for this flow first
-    await db.execute('DELETE FROM vc_sync_config WHERE flow_id = ?', [flowId]);
+    await db.execute('DELETE FROM invect_vc_sync_config WHERE flow_id = ?', [flowId]);
 
     await db.execute(
-      `INSERT INTO vc_sync_config (id, flow_id, provider, repo, branch, file_path, mode, sync_direction, enabled, created_at, updated_at)
+      `INSERT INTO invect_vc_sync_config (id, flow_id, provider, repo, branch, file_path, mode, sync_direction, enabled, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, flowId, this.provider.id, repo, branch, filePath, mode, syncDirection, true, now, now],
     );
@@ -81,9 +83,10 @@ export class VcSyncService {
   }
 
   async getSyncConfig(db: PluginDatabaseApi, flowId: string): Promise<VcSyncConfig | null> {
-    const rows = await db.query<VcSyncConfigRow>('SELECT * FROM vc_sync_config WHERE flow_id = ?', [
-      flowId,
-    ]);
+    const rows = await db.query<VcSyncConfigRow>(
+      'SELECT * FROM invect_vc_sync_config WHERE flow_id = ?',
+      [flowId],
+    );
     if (rows.length === 0) {
       return null;
     }
@@ -118,7 +121,7 @@ export class VcSyncService {
       }
     }
 
-    await db.execute('DELETE FROM vc_sync_config WHERE flow_id = ?', [flowId]);
+    await db.execute('DELETE FROM invect_vc_sync_config WHERE flow_id = ?', [flowId]);
   }
 
   // =========================================================================
@@ -306,7 +309,7 @@ export class VcSyncService {
     });
 
     await db.execute(
-      'UPDATE vc_sync_config SET active_pr_number = ?, active_pr_url = ?, updated_at = ? WHERE flow_id = ?',
+      'UPDATE invect_vc_sync_config SET active_pr_number = ?, active_pr_url = ?, updated_at = ? WHERE flow_id = ?',
       [pr.number, pr.url, new Date().toISOString(), flowId],
     );
 
@@ -337,7 +340,7 @@ export class VcSyncService {
     }
 
     const history = await db.query<VcSyncHistoryRow>(
-      'SELECT * FROM vc_sync_history WHERE flow_id = ? ORDER BY created_at DESC LIMIT 1',
+      'SELECT * FROM invect_vc_sync_history WHERE flow_id = ? ORDER BY created_at DESC LIMIT 1',
       [flowId],
     );
 
@@ -353,7 +356,7 @@ export class VcSyncService {
     } else {
       // Check if there are newer versions than what was synced
       const versions = await db.query<{ version: number }>(
-        'SELECT MAX(version) as version FROM flow_versions WHERE flow_id = ?',
+        'SELECT MAX(version) as version FROM invect_flow_versions WHERE flow_id = ?',
         [flowId],
       );
       const latestVersion = versions[0]?.version;
@@ -371,7 +374,7 @@ export class VcSyncService {
     limit = 20,
   ): Promise<VcSyncHistoryRecord[]> {
     const rows = await db.query<VcSyncHistoryRow>(
-      'SELECT * FROM vc_sync_history WHERE flow_id = ? ORDER BY created_at DESC LIMIT ?',
+      'SELECT * FROM invect_vc_sync_history WHERE flow_id = ? ORDER BY created_at DESC LIMIT ?',
       [flowId, limit],
     );
     return rows.map(mapHistoryRow);
@@ -381,10 +384,10 @@ export class VcSyncService {
     db: PluginDatabaseApi,
   ): Promise<Array<VcSyncConfig & { flowName: string }>> {
     const rows = await db.query<VcSyncConfigRow & { flow_name: string }>(
-      `SELECT vc_sync_config.*, flows.name as flow_name
-       FROM vc_sync_config
-       JOIN flows ON flows.id = vc_sync_config.flow_id
-       ORDER BY vc_sync_config.updated_at DESC`,
+      `SELECT invect_vc_sync_config.*, invect_flows.name as flow_name
+       FROM invect_vc_sync_config
+       JOIN invect_flows ON invect_flows.id = invect_vc_sync_config.flow_id
+       ORDER BY invect_vc_sync_config.updated_at DESC`,
     );
     return rows.map((r) => ({ ...mapSyncConfigRow(r), flowName: r.flow_name }));
   }
@@ -519,7 +522,7 @@ export class VcSyncService {
 
     // Save draft branch reference
     await db.execute(
-      'UPDATE vc_sync_config SET draft_branch = ?, updated_at = ? WHERE flow_id = ?',
+      'UPDATE invect_vc_sync_config SET draft_branch = ?, updated_at = ? WHERE flow_id = ?',
       [branchName, new Date().toISOString(), config.flowId],
     );
 
@@ -538,7 +541,7 @@ export class VcSyncService {
       prUrl = pr.url;
 
       await db.execute(
-        'UPDATE vc_sync_config SET active_pr_number = ?, active_pr_url = ?, updated_at = ? WHERE flow_id = ?',
+        'UPDATE invect_vc_sync_config SET active_pr_number = ?, active_pr_url = ?, updated_at = ? WHERE flow_id = ?',
         [prNumber, prUrl, new Date().toISOString(), config.flowId],
       );
 
@@ -589,7 +592,7 @@ export class VcSyncService {
     flowId: string,
   ): Promise<{ content: string; version: number }> {
     const flows = await db.query<FlowRow>(
-      'SELECT id, name, description, tags FROM flows WHERE id = ?',
+      'SELECT id, name, description, tags FROM invect_flows WHERE id = ?',
       [flowId],
     );
     if (flows.length === 0) {
@@ -598,7 +601,7 @@ export class VcSyncService {
     const flow = flows[0];
 
     const versions = await db.query<FlowVersionRow>(
-      'SELECT flow_id, version, invect_definition FROM flow_versions WHERE flow_id = ? ORDER BY version DESC LIMIT 1',
+      'SELECT flow_id, version, invect_definition FROM invect_flow_versions WHERE flow_id = ? ORDER BY version DESC LIMIT 1',
       [flowId],
     );
     if (versions.length === 0) {
@@ -653,7 +656,7 @@ export class VcSyncService {
 
     // Get current latest version number
     const versions = await db.query<{ version: number }>(
-      'SELECT MAX(version) as version FROM flow_versions WHERE flow_id = ?',
+      'SELECT MAX(version) as version FROM invect_flow_versions WHERE flow_id = ?',
       [flowId],
     );
     const nextVersion = (versions[0]?.version ?? 0) + 1;
@@ -662,17 +665,16 @@ export class VcSyncService {
     const defJson = JSON.stringify(definition);
 
     await db.execute(
-      `INSERT INTO flow_versions (flow_id, version, invect_definition, created_at, created_by)
+      `INSERT INTO invect_flow_versions (flow_id, version, invect_definition, created_at, created_by)
        VALUES (?, ?, ?, ?, ?)`,
       [flowId, nextVersion, defJson, new Date().toISOString(), identity ?? null],
     );
 
     // Update flow's live version
-    await db.execute('UPDATE flows SET live_version_number = ?, updated_at = ? WHERE id = ?', [
-      nextVersion,
-      new Date().toISOString(),
-      flowId,
-    ]);
+    await db.execute(
+      'UPDATE invect_flows SET live_version_number = ?, updated_at = ? WHERE id = ?',
+      [nextVersion, new Date().toISOString(), flowId],
+    );
 
     this.logger.info('Flow imported from remote', {
       flowId,
@@ -722,12 +724,12 @@ export class VcSyncService {
     const now = new Date().toISOString();
     if (version !== null) {
       await db.execute(
-        'UPDATE vc_sync_config SET last_synced_at = ?, last_commit_sha = ?, last_synced_version = ?, updated_at = ? WHERE flow_id = ?',
+        'UPDATE invect_vc_sync_config SET last_synced_at = ?, last_commit_sha = ?, last_synced_version = ?, updated_at = ? WHERE flow_id = ?',
         [now, commitSha, version, now, flowId],
       );
     } else {
       await db.execute(
-        'UPDATE vc_sync_config SET last_synced_at = ?, last_commit_sha = ?, updated_at = ? WHERE flow_id = ?',
+        'UPDATE invect_vc_sync_config SET last_synced_at = ?, last_commit_sha = ?, updated_at = ? WHERE flow_id = ?',
         [now, commitSha, now, flowId],
       );
     }
@@ -746,7 +748,7 @@ export class VcSyncService {
     },
   ): Promise<void> {
     await db.execute(
-      `INSERT INTO vc_sync_history (id, flow_id, action, commit_sha, pr_number, version, message, created_at, created_by)
+      `INSERT INTO invect_vc_sync_history (id, flow_id, action, commit_sha, pr_number, version, message, created_at, created_by)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         randomUUID(),

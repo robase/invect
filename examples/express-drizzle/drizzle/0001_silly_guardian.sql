@@ -1,4 +1,4 @@
-CREATE TABLE `apikey` (
+CREATE TABLE `invect_apikey` (
 	`id` text PRIMARY KEY NOT NULL,
 	`config_id` text DEFAULT 'default' NOT NULL,
 	`name` text,
@@ -24,5 +24,5 @@ CREATE TABLE `apikey` (
 );
 --> statement-breakpoint
 DROP INDEX `credentials_webhook_path_unique`;--> statement-breakpoint
-ALTER TABLE `credentials` DROP COLUMN `webhook_path`;--> statement-breakpoint
-ALTER TABLE `credentials` DROP COLUMN `webhook_secret`;
+ALTER TABLE `invect_credentials` DROP COLUMN `webhook_path`;--> statement-breakpoint
+ALTER TABLE `invect_credentials` DROP COLUMN `webhook_secret`;

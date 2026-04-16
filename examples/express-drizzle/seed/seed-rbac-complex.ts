@@ -442,21 +442,20 @@ async function main() {
   const placeholders = teamNames.map(() => '?').join(', ');
   const existingRows = db
     .prepare<string[], { id: string; name: string }>(
-      `SELECT id, name FROM rbac_teams WHERE name IN (${placeholders})`,
+      `SELECT id, name FROM invect_rbac_teams WHERE name IN (${placeholders})`,
     )
     .all(...teamNames);
 
   if (existingRows.length > 0) {
     const ids = existingRows.map((r) => r.id);
     const ph = ids.map(() => '?').join(', ');
-    db.prepare(`UPDATE flows SET scope_id = NULL WHERE scope_id IN (${ph})`).run(...ids);
-    db.prepare(`DELETE FROM flow_access WHERE team_id IN (${ph})`).run(...ids);
-    db.prepare(`DELETE FROM rbac_scope_access WHERE scope_id IN (${ph}) OR team_id IN (${ph})`).run(
-      ...ids,
-      ...ids,
-    );
-    db.prepare(`DELETE FROM rbac_team_members WHERE team_id IN (${ph})`).run(...ids);
-    db.prepare(`DELETE FROM rbac_teams WHERE id IN (${ph})`).run(...ids);
+    db.prepare(`UPDATE invect_flows SET scope_id = NULL WHERE scope_id IN (${ph})`).run(...ids);
+    db.prepare(`DELETE FROM invect_flow_access WHERE team_id IN (${ph})`).run(...ids);
+    db.prepare(
+      `DELETE FROM invect_rbac_scope_access WHERE scope_id IN (${ph}) OR team_id IN (${ph})`,
+    ).run(...ids, ...ids);
+    db.prepare(`DELETE FROM invect_rbac_team_members WHERE team_id IN (${ph})`).run(...ids);
+    db.prepare(`DELETE FROM invect_rbac_teams WHERE id IN (${ph})`).run(...ids);
     console.log(`  ↺ Removed ${ids.length} stale team rows`);
   }
 
@@ -469,11 +468,11 @@ async function main() {
   }
 
   const insertTeam = db.prepare(`
-    INSERT OR REPLACE INTO rbac_teams (id, name, description, parent_id, created_by, created_at, updated_at)
+    INSERT OR REPLACE INTO invect_rbac_teams (id, name, description, parent_id, created_by, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
   const insertMember = db.prepare(`
-    INSERT OR IGNORE INTO rbac_team_members (id, team_id, user_id, created_at)
+    INSERT OR IGNORE INTO invect_rbac_team_members (id, team_id, user_id, created_at)
     VALUES (?, ?, ?, ?)
   `);
 
@@ -538,13 +537,13 @@ async function main() {
   console.log('\n🔒 Seeding access grants…');
 
   const db2 = new Database(sqlitePath);
-  const updateScope = db2.prepare('UPDATE flows SET scope_id = ? WHERE id = ?');
+  const updateScope = db2.prepare('UPDATE invect_flows SET scope_id = ? WHERE id = ?');
   const insertAccess = db2.prepare(`
-    INSERT OR IGNORE INTO flow_access (id, flow_id, user_id, team_id, permission, granted_by, granted_at)
+    INSERT OR IGNORE INTO invect_flow_access (id, flow_id, user_id, team_id, permission, granted_by, granted_at)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
   const insertScopeAccess = db2.prepare(`
-    INSERT OR IGNORE INTO rbac_scope_access (id, scope_id, user_id, team_id, permission, granted_by, granted_at)
+    INSERT OR IGNORE INTO invect_rbac_scope_access (id, scope_id, user_id, team_id, permission, granted_by, granted_at)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
 

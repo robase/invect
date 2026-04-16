@@ -54,7 +54,7 @@ export const batchProviderEnum = pgEnum('batch_provider', ['OPENAI', 'ANTHROPIC'
 // =============================================================================
 
 // Flow definition table
-export const flows = pgTable('flows', {
+export const flows = pgTable('invect_flows', {
   id: text('id').primaryKey(), // Will be generated using IdGenerator.generateFlowId()
   name: text('name').notNull(),
   description: text('description'),
@@ -67,7 +67,7 @@ export const flows = pgTable('flows', {
 
 // Flow version table to support version history
 export const flowVersions = pgTable(
-  'flow_versions',
+  'invect_flow_versions',
   {
     flowId: text('flow_id')
       .notNull()
@@ -81,7 +81,7 @@ export const flowVersions = pgTable(
 );
 
 // Flow execution table to track execution instances
-export const flowRuns = pgTable('flow_executions', {
+export const flowRuns = pgTable('invect_flow_executions', {
   id: uuid('id')
     .primaryKey()
     .$default(() => randomUUID()),
@@ -108,7 +108,7 @@ export const flowRuns = pgTable('flow_executions', {
 // Action traces table — unified node executions + agent tool executions
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 
-export const actionTraces = pgTable('action_traces', {
+export const actionTraces = pgTable('invect_action_traces', {
   id: uuid('id')
     .primaryKey()
     .$default(() => randomUUID()),
@@ -139,7 +139,7 @@ export const actionTraces = pgTable('action_traces', {
 });
 
 // Batch job table to track batch processing jobs
-export const batchJobs = pgTable('batch_jobs', {
+export const batchJobs = pgTable('invect_batch_jobs', {
   id: uuid('id')
     .primaryKey()
     .$default(() => randomUUID()),
@@ -207,7 +207,7 @@ export interface CredentialConfig {
   [key: string]: unknown;
 }
 
-export const credentials = pgTable('credentials', {
+export const credentials = pgTable('invect_credentials', {
   id: uuid('id')
     .primaryKey()
     .$default(() => randomUUID()),
@@ -233,7 +233,7 @@ export const credentials = pgTable('credentials', {
 /** Trigger type discriminant */
 export type TriggerType = 'manual' | 'webhook' | 'cron';
 
-export const flowTriggers = pgTable('flow_triggers', {
+export const flowTriggers = pgTable('invect_flow_triggers', {
   id: uuid('id')
     .primaryKey()
     .$default(() => randomUUID()),
@@ -262,7 +262,7 @@ export const flowTriggers = pgTable('flow_triggers', {
 // Chat Messages — persisted chat history scoped to flows
 // =============================================================================
 
-export const chatMessages = pgTable('chat_messages', {
+export const chatMessages = pgTable('invect_chat_messages', {
   id: uuid('id')
     .primaryKey()
     .$default(() => randomUUID()),

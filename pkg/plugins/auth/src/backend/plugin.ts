@@ -434,7 +434,7 @@ function getErrorLogDetails(error: unknown): Record<string, unknown> {
  */
 export const USER_AUTH_SCHEMA: InvectPluginSchema = {
   user: {
-    tableName: 'user',
+    tableName: 'invect_user',
     order: 1,
     fields: {
       id: { type: 'string', primaryKey: true },
@@ -453,7 +453,7 @@ export const USER_AUTH_SCHEMA: InvectPluginSchema = {
   },
 
   session: {
-    tableName: 'session',
+    tableName: 'invect_session',
     order: 2,
     fields: {
       id: { type: 'string', primaryKey: true },
@@ -467,13 +467,13 @@ export const USER_AUTH_SCHEMA: InvectPluginSchema = {
       userId: {
         type: 'string',
         required: true,
-        references: { table: 'user', field: 'id', onDelete: 'cascade' },
+        references: { table: 'invect_user', field: 'id', onDelete: 'cascade' },
       },
     },
   },
 
   account: {
-    tableName: 'account',
+    tableName: 'invect_account',
     order: 2,
     fields: {
       id: { type: 'string', primaryKey: true },
@@ -482,7 +482,7 @@ export const USER_AUTH_SCHEMA: InvectPluginSchema = {
       userId: {
         type: 'string',
         required: true,
-        references: { table: 'user', field: 'id', onDelete: 'cascade' },
+        references: { table: 'invect_user', field: 'id', onDelete: 'cascade' },
       },
       accessToken: { type: 'string', required: false },
       refreshToken: { type: 'string', required: false },
@@ -497,7 +497,7 @@ export const USER_AUTH_SCHEMA: InvectPluginSchema = {
   },
 
   verification: {
-    tableName: 'verification',
+    tableName: 'invect_verification',
     order: 2,
     fields: {
       id: { type: 'string', primaryKey: true },
@@ -511,14 +511,14 @@ export const USER_AUTH_SCHEMA: InvectPluginSchema = {
 
   // ----- Flow access control table (moved from core) -----
   flowAccess: {
-    tableName: 'flow_access',
+    tableName: 'invect_flow_access',
     order: 3,
     fields: {
       id: { type: 'uuid', primaryKey: true, defaultValue: 'uuid()' },
       flowId: {
         type: 'string',
         required: true,
-        references: { table: 'flows', field: 'id', onDelete: 'cascade' },
+        references: { table: 'invect_flows', field: 'id', onDelete: 'cascade' },
       },
       userId: { type: 'string', required: false },
       teamId: { type: 'string', required: false },
@@ -535,14 +535,14 @@ export const USER_AUTH_SCHEMA: InvectPluginSchema = {
 
   // ----- Two-Factor Authentication table (Better Auth 2FA plugin) -----
   twoFactor: {
-    tableName: 'two_factor',
+    tableName: 'invect_two_factor',
     order: 3,
     fields: {
       id: { type: 'string', primaryKey: true },
       userId: {
         type: 'string',
         required: true,
-        references: { table: 'user', field: 'id', onDelete: 'cascade' },
+        references: { table: 'invect_user', field: 'id', onDelete: 'cascade' },
       },
       secret: { type: 'string', required: true },
       backupCodes: { type: 'string', required: true },
@@ -560,7 +560,7 @@ export const USER_AUTH_SCHEMA: InvectPluginSchema = {
  */
 const API_KEY_SCHEMA: InvectPluginSchema = {
   apikey: {
-    tableName: 'apikey',
+    tableName: 'invect_apikey',
     order: 3,
     fields: {
       id: { type: 'string', primaryKey: true },
@@ -696,6 +696,7 @@ async function createInternalBetterAuth(
   };
 
   const session = {
+    modelName: 'invect_session',
     cookieCache: { enabled: true, maxAge: 5 * 60 },
     ...passthrough.session,
     // Merge cookieCache if both exist
@@ -733,9 +734,8 @@ async function createInternalBetterAuth(
     adminPlugin({ defaultRole: AUTH_DEFAULT_ROLE, adminRoles: [AUTH_ADMIN_ROLE] }),
   ];
 
-  // 7a. Optionally load the Better Auth Two-Factor plugin
-  const twoFactorOpt = options.twoFactor;
-  if (twoFactorOpt) {
+  // 7a. Load the Better Auth Two-Factor plugin (always bundled)
+  {
     let twoFactorPlugin: (config?: Record<string, unknown>) => unknown;
     try {
       const pluginsModule = await import('better-auth/plugins');
@@ -746,11 +746,16 @@ async function createInternalBetterAuth(
       );
     }
 
+    const twoFactorOpt = options.twoFactor;
     const twoFactorConfig: Record<string, unknown> =
       typeof twoFactorOpt === 'object' ? { ...twoFactorOpt } : {};
     // Default issuer to "Invect" if not provided
     if (twoFactorConfig.issuer === undefined) {
       twoFactorConfig.issuer = 'Invect';
+    }
+    // Use invect-prefixed table name for the two-factor table
+    if (twoFactorConfig.twoFactorTable === undefined) {
+      twoFactorConfig.twoFactorTable = 'invect_two_factor';
     }
     betterAuthPlugins.push(twoFactorPlugin(twoFactorConfig));
     logger.info?.('Better Auth Two-Factor plugin enabled');
@@ -782,6 +787,10 @@ async function createInternalBetterAuth(
     if (apiKeyConfig.enableSessionForAPIKeys === undefined) {
       apiKeyConfig.enableSessionForAPIKeys = true;
     }
+    // Use invect-prefixed table name for the api-key table
+    if (apiKeyConfig.schema === undefined) {
+      apiKeyConfig.schema = { apikey: { modelName: 'invect_apikey' } };
+    }
     betterAuthPlugins.push(apiKeyPluginFn(apiKeyConfig));
     logger.info?.('Better Auth API Key plugin enabled');
   }
@@ -796,9 +805,12 @@ async function createInternalBetterAuth(
     plugins: betterAuthPlugins,
     session,
     trustedOrigins,
+    // Map Better Auth model names to invect-prefixed table names.
+    user: { modelName: 'invect_user' },
+    account: { modelName: 'invect_account', ...passthrough.account },
+    verification: { modelName: 'invect_verification' },
     // Spread optional passthrough fields
     ...(passthrough.socialProviders ? { socialProviders: passthrough.socialProviders } : {}),
-    ...(passthrough.account ? { account: passthrough.account } : {}),
     ...(passthrough.rateLimit ? { rateLimit: passthrough.rateLimit } : {}),
     // Default cookie prefix to "invect" (cookies become invect.session_token).
     // Users can override via betterAuthOptions.advanced.cookiePrefix.
@@ -1099,28 +1111,23 @@ export function authentication(options: AuthenticationPluginOptions): InvectPlug
   // ----- Resolve API key opt from top-level or passthrough -----
   const apiKeyEnabled = !!(options.apiKey ?? options.betterAuthOptions?.apiKey);
 
-  // ----- Resolve 2FA opt -----
-  const twoFactorEnabled = !!options.twoFactor;
-
-  // ----- Build schema (conditionally includes apikey / twoFactor tables) -----
-  let schema: InvectPluginSchema = twoFactorEnabled
-    ? USER_AUTH_SCHEMA
-    : (() => {
-        // Exclude twoFactor table and twoFactorEnabled user field when 2FA is not enabled
-        const { twoFactor: _tf, ...rest } = USER_AUTH_SCHEMA;
-        return rest;
-      })();
+  // ----- Build schema (always includes twoFactor, conditionally includes apikey) -----
+  let schema: InvectPluginSchema = { ...USER_AUTH_SCHEMA };
 
   if (apiKeyEnabled) {
     schema = { ...schema, ...API_KEY_SCHEMA };
   }
 
-  const requiredTables = ['user', 'session', 'account', 'verification', 'flow_access'];
+  const requiredTables = [
+    'invect_user',
+    'invect_session',
+    'invect_account',
+    'invect_verification',
+    'invect_flow_access',
+    'invect_two_factor',
+  ];
   if (apiKeyEnabled) {
-    requiredTables.push('apikey');
-  }
-  if (twoFactorEnabled) {
-    requiredTables.push('two_factor');
+    requiredTables.push('invect_apikey');
   }
 
   // ----- Build the plugin -----
@@ -1228,7 +1235,7 @@ export function authentication(options: AuthenticationPluginOptions): InvectPlug
             status: 200,
             body: {
               apiKeysEnabled: apiKeyEnabled,
-              twoFactorEnabled: twoFactorEnabled,
+              twoFactorEnabled: true,
             },
           };
         },

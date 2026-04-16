@@ -30,7 +30,7 @@ interface _FlowVersionQuery {
   offset?: number;
 }
 
-const TABLE = 'flow_versions';
+const TABLE = 'invect_flow_versions';
 
 /**
  * Flow Versions CRUD operations class — uses InvectAdapter.

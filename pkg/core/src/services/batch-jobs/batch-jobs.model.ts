@@ -47,7 +47,7 @@ interface _BatchJobQuery {
   offset?: number;
 }
 
-const TABLE = 'batch_jobs';
+const TABLE = 'invect_batch_jobs';
 
 /**
  * Batch Jobs CRUD operations class — uses InvectAdapter.

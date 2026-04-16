@@ -9,8 +9,8 @@ const SYNC_DIRECTIONS = ['push', 'pull', 'bidirectional'] as const;
 const SYNC_ACTIONS = ['push', 'pull', 'pr-created', 'pr-merged', 'conflict'] as const;
 
 export const VC_SCHEMA: InvectPluginSchema = {
-  vcSyncConfig: {
-    tableName: 'vc_sync_config',
+  vc_sync_config: {
+    tableName: 'invect_vc_sync_config',
     order: 10,
     fields: {
       id: { type: 'string', primaryKey: true },
@@ -18,7 +18,7 @@ export const VC_SCHEMA: InvectPluginSchema = {
         type: 'string',
         required: true,
         unique: true,
-        references: { table: 'flows', field: 'id', onDelete: 'cascade' },
+        references: { table: 'invect_flows', field: 'id', onDelete: 'cascade' },
         index: true,
       },
       provider: { type: 'string', required: true },
@@ -39,15 +39,15 @@ export const VC_SCHEMA: InvectPluginSchema = {
     },
   },
 
-  vcSyncHistory: {
-    tableName: 'vc_sync_history',
+  vc_sync_history: {
+    tableName: 'invect_vc_sync_history',
     order: 20,
     fields: {
       id: { type: 'uuid', primaryKey: true, defaultValue: 'uuid()' },
       flowId: {
         type: 'string',
         required: true,
-        references: { table: 'flows', field: 'id', onDelete: 'cascade' },
+        references: { table: 'invect_flows', field: 'id', onDelete: 'cascade' },
         index: true,
       },
       action: { type: [...SYNC_ACTIONS], required: true },

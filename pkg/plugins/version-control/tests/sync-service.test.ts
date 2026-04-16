@@ -32,16 +32,16 @@ function createMockDb(tables: Record<string, unknown[]> = {}): PluginDatabaseApi
     type: 'sqlite',
     query: vi.fn(async (sql: string) => {
       // Simple SQL pattern matching for tests
-      if (sql.includes('FROM flows WHERE')) {
+      if (sql.includes('FROM invect_flows WHERE')) {
         return tables.flows ?? [];
       }
-      if (sql.includes('FROM flow_versions WHERE')) {
+      if (sql.includes('FROM invect_flow_versions WHERE')) {
         return tables.flow_versions ?? [];
       }
-      if (sql.includes('FROM vc_sync_config')) {
+      if (sql.includes('FROM invect_vc_sync_config')) {
         return tables.vc_sync_config ?? [];
       }
-      if (sql.includes('FROM vc_sync_history')) {
+      if (sql.includes('FROM invect_vc_sync_history')) {
         return tables.vc_sync_history ?? [];
       }
       return [];
@@ -84,10 +84,10 @@ describe('VcSyncService', () => {
 
       // After insert, the getSyncConfig query should return the new config
       (db.query as ReturnType<typeof vi.fn>).mockImplementation(async (sql: string) => {
-        if (sql.includes('FROM flows WHERE')) {
+        if (sql.includes('FROM invect_flows WHERE')) {
           return [{ id: 'flow-1', name: 'Test Flow' }];
         }
-        if (sql.includes('FROM vc_sync_config')) {
+        if (sql.includes('FROM invect_vc_sync_config')) {
           return [
             {
               id: 'cfg-1',
@@ -121,11 +121,11 @@ describe('VcSyncService', () => {
 
       // Should have called execute with INSERT
       expect(db.execute).toHaveBeenCalledWith(
-        expect.stringContaining('DELETE FROM vc_sync_config'),
+        expect.stringContaining('DELETE FROM invect_vc_sync_config'),
         expect.any(Array),
       );
       expect(db.execute).toHaveBeenCalledWith(
-        expect.stringContaining('INSERT INTO vc_sync_config'),
+        expect.stringContaining('INSERT INTO invect_vc_sync_config'),
         expect.any(Array),
       );
     });
@@ -305,7 +305,7 @@ describe('VcSyncService', () => {
 
       // Override query to respond to both queries within getFlowSyncStatus
       (db.query as ReturnType<typeof vi.fn>).mockImplementation(async (sql: string) => {
-        if (sql.includes('FROM vc_sync_config')) {
+        if (sql.includes('FROM invect_vc_sync_config')) {
           return [
             {
               id: 'cfg-1',
@@ -328,7 +328,7 @@ describe('VcSyncService', () => {
             },
           ];
         }
-        if (sql.includes('FROM vc_sync_history')) {
+        if (sql.includes('FROM invect_vc_sync_history')) {
           return [];
         }
         if (sql.includes('FROM flow_versions')) {
@@ -371,9 +371,10 @@ describe('VcSyncService', () => {
 
       await service.disconnectFlow(db, 'flow-1');
 
-      expect(db.execute).toHaveBeenCalledWith('DELETE FROM vc_sync_config WHERE flow_id = ?', [
-        'flow-1',
-      ]);
+      expect(db.execute).toHaveBeenCalledWith(
+        'DELETE FROM invect_vc_sync_config WHERE flow_id = ?',
+        ['flow-1'],
+      );
     });
 
     it('handles no-op when not connected', async () => {

@@ -52,7 +52,7 @@ interface _FlowQuery {
   offset?: number;
 }
 
-const TABLE = 'flows';
+const TABLE = 'invect_flows';
 
 /**
  * Flows CRUD operations class — uses InvectAdapter for all database operations,
@@ -188,7 +188,7 @@ export class FlowsModel {
       }
 
       const version = await this.adapter.findOne<Record<string, unknown>>({
-        model: 'flow_versions',
+        model: 'invect_flow_versions',
         where: [
           { field: 'flow_id', value: id },
           { field: 'version', value: flow.liveVersionNumber },

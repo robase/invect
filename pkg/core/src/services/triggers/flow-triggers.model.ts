@@ -14,7 +14,7 @@ import type {
   UpdateTriggerInput,
 } from './trigger.types';
 
-const TABLE = 'flow_triggers';
+const TABLE = 'invect_flow_triggers';
 
 /**
  * Model for flow_triggers table CRUD operations.

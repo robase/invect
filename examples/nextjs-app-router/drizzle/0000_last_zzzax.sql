@@ -1,4 +1,4 @@
-CREATE TABLE `action_traces` (
+CREATE TABLE `invect_action_traces` (
 	`id` text PRIMARY KEY NOT NULL,
 	`flow_run_id` text NOT NULL,
 	`parent_node_execution_id` text,
@@ -15,11 +15,11 @@ CREATE TABLE `action_traces` (
 	`completed_at` text,
 	`duration` integer,
 	`retry_count` integer DEFAULT 0 NOT NULL,
-	FOREIGN KEY (`flow_run_id`) REFERENCES `flow_executions`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`parent_node_execution_id`) REFERENCES `action_traces`(`id`) ON UPDATE no action ON DELETE cascade
+	FOREIGN KEY (`flow_run_id`) REFERENCES `invect_flow_executions`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`parent_node_execution_id`) REFERENCES `invect_action_traces`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE TABLE `batch_jobs` (
+CREATE TABLE `invect_batch_jobs` (
 	`id` text PRIMARY KEY NOT NULL,
 	`flow_run_id` text NOT NULL,
 	`node_id` text NOT NULL,
@@ -33,20 +33,20 @@ CREATE TABLE `batch_jobs` (
 	`completed_at` text,
 	`created_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	`updated_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
-	FOREIGN KEY (`flow_run_id`) REFERENCES `flow_executions`(`id`) ON UPDATE no action ON DELETE cascade
+	FOREIGN KEY (`flow_run_id`) REFERENCES `invect_flow_executions`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE TABLE `chat_messages` (
+CREATE TABLE `invect_chat_messages` (
 	`id` text PRIMARY KEY NOT NULL,
 	`flow_id` text NOT NULL,
 	`role` text NOT NULL,
 	`content` text DEFAULT '' NOT NULL,
 	`tool_meta` text,
 	`created_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
-	FOREIGN KEY (`flow_id`) REFERENCES `flows`(`id`) ON UPDATE no action ON DELETE cascade
+	FOREIGN KEY (`flow_id`) REFERENCES `invect_flows`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE TABLE `credentials` (
+CREATE TABLE `invect_credentials` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
 	`type` text NOT NULL,
@@ -63,7 +63,7 @@ CREATE TABLE `credentials` (
 	`updated_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE `flow_executions` (
+CREATE TABLE `invect_flow_executions` (
 	`id` text PRIMARY KEY NOT NULL,
 	`flow_id` text NOT NULL,
 	`flow_version` integer NOT NULL,
@@ -80,10 +80,10 @@ CREATE TABLE `flow_executions` (
 	`trigger_node_id` text,
 	`trigger_data` text,
 	`last_heartbeat_at` text,
-	FOREIGN KEY (`flow_id`) REFERENCES `flows`(`id`) ON UPDATE no action ON DELETE cascade
+	FOREIGN KEY (`flow_id`) REFERENCES `invect_flows`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE TABLE `flow_triggers` (
+CREATE TABLE `invect_flow_triggers` (
 	`id` text PRIMARY KEY NOT NULL,
 	`flow_id` text NOT NULL,
 	`node_id` text NOT NULL,
@@ -96,21 +96,21 @@ CREATE TABLE `flow_triggers` (
 	`last_triggered_at` text,
 	`created_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	`updated_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
-	FOREIGN KEY (`flow_id`) REFERENCES `flows`(`id`) ON UPDATE no action ON DELETE cascade
+	FOREIGN KEY (`flow_id`) REFERENCES `invect_flows`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `flow_triggers_webhook_path_unique` ON `flow_triggers` (`webhook_path`);--> statement-breakpoint
-CREATE TABLE `flow_versions` (
+CREATE UNIQUE INDEX `flow_triggers_webhook_path_unique` ON `invect_flow_triggers` (`webhook_path`);--> statement-breakpoint
+CREATE TABLE `invect_flow_versions` (
 	`flow_id` text NOT NULL,
 	`version` integer NOT NULL,
 	`invect_definition` text NOT NULL,
 	`created_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	`created_by` text,
 	PRIMARY KEY(`version`, `flow_id`),
-	FOREIGN KEY (`flow_id`) REFERENCES `flows`(`id`) ON UPDATE no action ON DELETE cascade
+	FOREIGN KEY (`flow_id`) REFERENCES `invect_flows`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE TABLE `flows` (
+CREATE TABLE `invect_flows` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
 	`description` text,

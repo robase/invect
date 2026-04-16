@@ -25,7 +25,7 @@ import type {
 
 type FlowAccessPermission = string;
 
-export const user = sqliteTable('user', {
+export const user = sqliteTable('invect_user', {
   id: text('id').primaryKey().notNull(),
   name: text('name').notNull(),
   email: text('email').notNull().unique(),
@@ -43,7 +43,7 @@ export const user = sqliteTable('user', {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const account = sqliteTable('account', {
+export const account = sqliteTable('invect_account', {
   id: text('id').primaryKey().notNull(),
   accountId: text('account_id').notNull(),
   providerId: text('provider_id').notNull(),
@@ -65,7 +65,7 @@ export const account = sqliteTable('account', {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const session = sqliteTable('session', {
+export const session = sqliteTable('invect_session', {
   id: text('id').primaryKey().notNull(),
   expiresAt: text('expires_at').notNull(),
   token: text('token').notNull().unique(),
@@ -83,7 +83,7 @@ export const session = sqliteTable('session', {
     .references(() => user.id, { onDelete: 'cascade' }),
 });
 
-export const verification = sqliteTable('verification', {
+export const verification = sqliteTable('invect_verification', {
   id: text('id').primaryKey().notNull(),
   identifier: text('identifier').notNull(),
   value: text('value').notNull(),
@@ -92,7 +92,7 @@ export const verification = sqliteTable('verification', {
   updatedAt: text('updated_at'),
 });
 
-export const apikey = sqliteTable('apikey', {
+export const apikey = sqliteTable('invect_apikey', {
   id: text('id').primaryKey().notNull(),
   configId: text('config_id').notNull().default('default'),
   name: text('name'),
@@ -121,7 +121,7 @@ export const apikey = sqliteTable('apikey', {
   metadata: text('metadata'),
 });
 
-export const flowAccess = sqliteTable('flow_access', {
+export const flowAccess = sqliteTable('invect_flow_access', {
   id: text('id')
     .primaryKey()
     .notNull()
@@ -139,7 +139,7 @@ export const flowAccess = sqliteTable('flow_access', {
   expiresAt: text('expires_at'),
 });
 
-export const credentials = sqliteTable('credentials', {
+export const credentials = sqliteTable('invect_credentials', {
   id: text('id')
     .primaryKey()
     .notNull()
@@ -163,7 +163,7 @@ export const credentials = sqliteTable('credentials', {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const flows = sqliteTable('flows', {
+export const flows = sqliteTable('invect_flows', {
   id: text('id').primaryKey().notNull(),
   name: text('name').notNull(),
   description: text('description'),
@@ -179,7 +179,7 @@ export const flows = sqliteTable('flows', {
   scope_id: text('scope_id').references(() => rbac_teams.id, { onDelete: 'set null' }),
 });
 
-export const flowTriggers = sqliteTable('flow_triggers', {
+export const flowTriggers = sqliteTable('invect_flow_triggers', {
   id: text('id')
     .primaryKey()
     .notNull()
@@ -204,7 +204,7 @@ export const flowTriggers = sqliteTable('flow_triggers', {
 });
 
 export const flowVersions = sqliteTable(
-  'flow_versions',
+  'invect_flow_versions',
   {
     flowId: text('flow_id')
       .notNull()
@@ -221,7 +221,7 @@ export const flowVersions = sqliteTable(
   (table) => [primaryKey({ columns: [table.version, table.flowId] })],
 );
 
-export const chatMessages = sqliteTable('chat_messages', {
+export const chatMessages = sqliteTable('invect_chat_messages', {
   id: text('id')
     .primaryKey()
     .notNull()
@@ -229,7 +229,7 @@ export const chatMessages = sqliteTable('chat_messages', {
   flowId: text('flow_id')
     .notNull()
     .references(() => flows.id, { onDelete: 'cascade' }),
-  role: text('role').$type<'user' | 'assistant' | 'system' | 'tool'>().notNull(),
+  role: text('role').$type<'invect_user' | 'assistant' | 'system' | 'tool'>().notNull(),
   content: text('content').notNull().default(''),
   toolMeta: text('tool_meta', { mode: 'json' }).$type<Record<string, unknown>>(),
   createdAt: text('created_at')
@@ -237,7 +237,7 @@ export const chatMessages = sqliteTable('chat_messages', {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const flowRuns = sqliteTable('flow_executions', {
+export const flowRuns = sqliteTable('invect_flow_executions', {
   id: text('id')
     .primaryKey()
     .notNull()
@@ -263,7 +263,7 @@ export const flowRuns = sqliteTable('flow_executions', {
   lastHeartbeatAt: text('last_heartbeat_at'),
 });
 
-export const actionTraces = sqliteTable('action_traces', {
+export const actionTraces = sqliteTable('invect_action_traces', {
   id: text('id')
     .primaryKey()
     .notNull()
@@ -295,7 +295,7 @@ export const actionTraces = sqliteTable('action_traces', {
   retryCount: integer('retry_count').notNull().default(0),
 });
 
-export const batchJobs = sqliteTable('batch_jobs', {
+export const batchJobs = sqliteTable('invect_batch_jobs', {
   id: text('id')
     .primaryKey()
     .notNull()
@@ -322,7 +322,7 @@ export const batchJobs = sqliteTable('batch_jobs', {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const rbac_scope_access = sqliteTable('rbac_scope_access', {
+export const rbac_scope_access = sqliteTable('invect_rbac_scope_access', {
   id: text('id').primaryKey().notNull(),
   scope_id: text('scope_id')
     .notNull()
@@ -336,7 +336,7 @@ export const rbac_scope_access = sqliteTable('rbac_scope_access', {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const rbac_team_members = sqliteTable('rbac_team_members', {
+export const rbac_team_members = sqliteTable('invect_rbac_team_members', {
   id: text('id').primaryKey().notNull(),
   team_id: text('team_id')
     .notNull()
@@ -349,7 +349,7 @@ export const rbac_team_members = sqliteTable('rbac_team_members', {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const rbac_teams = sqliteTable('rbac_teams', {
+export const rbac_teams = sqliteTable('invect_rbac_teams', {
   id: text('id').primaryKey().notNull(),
   name: text('name').notNull(),
   description: text('description'),
@@ -363,7 +363,7 @@ export const rbac_teams = sqliteTable('rbac_teams', {
   updated_at: text('updated_at'),
 });
 
-export const webhook_triggers = sqliteTable('webhook_triggers', {
+export const webhook_triggers = sqliteTable('invect_webhook_triggers', {
   id: text('id')
     .primaryKey()
     .notNull()

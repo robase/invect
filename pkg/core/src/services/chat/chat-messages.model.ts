@@ -32,7 +32,7 @@ export interface CreateChatMessageInput {
 // Model
 // =====================================
 
-const TABLE = 'chat_messages';
+const TABLE = 'invect_chat_messages';
 
 export class ChatMessagesModel {
   constructor(

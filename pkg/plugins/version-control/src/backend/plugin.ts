@@ -51,7 +51,7 @@ function _vcBackendPlugin(options: Omit<VersionControlPluginOptions, 'frontend'>
     schema: VC_SCHEMA,
 
     setupInstructions:
-      'Run `npx invect-cli generate` then `npx invect-cli migrate` to create the vc_sync_config and vc_sync_history tables.',
+      'Run `npx invect-cli generate` then `npx invect-cli migrate` to create the invect_vc_sync_config and invect_vc_sync_history tables.',
 
     // =======================================================================
     // Initialization
@@ -305,7 +305,7 @@ function _vcBackendPlugin(options: Omit<VersionControlPluginOptions, 'frontend'>
       flow_id: string;
       draft_branch: string | null;
       repo: string;
-    }>('SELECT flow_id, draft_branch, repo FROM vc_sync_config WHERE active_pr_number = ?', [
+    }>('SELECT flow_id, draft_branch, repo FROM invect_vc_sync_config WHERE active_pr_number = ?', [
       prNumber,
     ]);
 
@@ -321,7 +321,7 @@ function _vcBackendPlugin(options: Omit<VersionControlPluginOptions, 'frontend'>
 
       // Clear PR state, update sync status
       await db.execute(
-        `UPDATE vc_sync_config
+        `UPDATE invect_vc_sync_config
          SET active_pr_number = NULL, active_pr_url = NULL, draft_branch = NULL, updated_at = ?
          WHERE flow_id = ?`,
         [new Date().toISOString(), row.flow_id],
@@ -329,7 +329,7 @@ function _vcBackendPlugin(options: Omit<VersionControlPluginOptions, 'frontend'>
 
       // Record history
       await db.execute(
-        `INSERT INTO vc_sync_history (id, flow_id, action, pr_number, message, created_at)
+        `INSERT INTO invect_vc_sync_history (id, flow_id, action, pr_number, message, created_at)
          VALUES (?, ?, ?, ?, ?, ?)`,
         [
           randomUUID(),

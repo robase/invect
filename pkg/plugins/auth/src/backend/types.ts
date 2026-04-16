@@ -435,22 +435,19 @@ export interface AuthenticationPluginOptions {
   apiKey?: boolean | ApiKeyPluginOptions;
 
   /**
-   * Enable the Better Auth Two-Factor Authentication plugin.
+   * Configuration for the Two-Factor Authentication plugin.
    *
-   * Set to `true` to enable with defaults, or pass an options object
-   * to customise TOTP digits, period, issuer name, backup code settings, etc.
+   * 2FA (TOTP + backup codes) is always bundled and available.
+   * Pass an options object to customise the issuer name, TOTP digits/period,
+   * or backup code settings.
    *
-   * When enabled, users can set up TOTP-based 2FA via their authenticator app.
-   * The `two_factor` database table and `twoFactorEnabled` user field will be
-   * required.
-   *
+   * Users enable 2FA on their own account from the profile page.
    * All Better Auth 2FA endpoints (enable, disable, verify-totp, backup codes,
    * etc.) are automatically proxied through the auth plugin's catch-all route.
    *
-   * @default false
    * @see https://better-auth.com/docs/plugins/2fa
    */
-  twoFactor?: boolean | TwoFactorPluginOptions;
+  twoFactor?: TwoFactorPluginOptions;
 
   /**
    * Frontend plugin (sidebar, routes, providers) for the auth UI.

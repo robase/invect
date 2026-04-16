@@ -123,10 +123,10 @@ describe('authentication', () => {
       const plugin = authentication({ auth });
 
       expect(plugin.requiredTables).toBeDefined();
-      expect(plugin.requiredTables).toContain('user');
-      expect(plugin.requiredTables).toContain('session');
-      expect(plugin.requiredTables).toContain('account');
-      expect(plugin.requiredTables).toContain('verification');
+      expect(plugin.requiredTables).toContain('invect_user');
+      expect(plugin.requiredTables).toContain('invect_session');
+      expect(plugin.requiredTables).toContain('invect_account');
+      expect(plugin.requiredTables).toContain('invect_verification');
     });
 
     it('provides setup instructions referencing the CLI', () => {
@@ -148,7 +148,7 @@ describe('authentication', () => {
       expect(plugin.schema!.verification).toBeDefined();
 
       // Each table should have fields and a tableName
-      expect(plugin.schema!.user.tableName).toBe('user');
+      expect(plugin.schema!.user.tableName).toBe('invect_user');
       expect(plugin.schema!.user.fields.id).toBeDefined();
       expect(plugin.schema!.user.fields.email).toBeDefined();
       expect(plugin.schema!.session.fields.userId).toBeDefined();
@@ -162,14 +162,14 @@ describe('authentication', () => {
 
       // session.userId should reference user.id
       expect(plugin.schema!.session.fields.userId.references).toEqual({
-        table: 'user',
+        table: 'invect_user',
         field: 'id',
         onDelete: 'cascade',
       });
 
       // account.userId should reference user.id
       expect(plugin.schema!.account.fields.userId.references).toEqual({
-        table: 'user',
+        table: 'invect_user',
         field: 'id',
         onDelete: 'cascade',
       });
@@ -560,7 +560,7 @@ describe('schema and apiKey option', () => {
     expect(plugin.schema!.apikey).toBeDefined();
     expect(plugin.schema!.apikey.fields.key).toBeDefined();
     expect(plugin.schema!.apikey.fields.referenceId).toBeDefined();
-    expect(plugin.requiredTables).toContain('apikey');
+    expect(plugin.requiredTables).toContain('invect_apikey');
   });
 
   it('includes apikey table when apiKey is an options object', () => {
@@ -568,7 +568,7 @@ describe('schema and apiKey option', () => {
     const plugin = authentication({ auth, apiKey: { defaultPrefix: 'inv_' } });
 
     expect(plugin.schema!.apikey).toBeDefined();
-    expect(plugin.requiredTables).toContain('apikey');
+    expect(plugin.requiredTables).toContain('invect_apikey');
   });
 
   it('includes apikey table via betterAuthOptions.apiKey', () => {
@@ -576,7 +576,7 @@ describe('schema and apiKey option', () => {
     const plugin = authentication({ auth, betterAuthOptions: { apiKey: true } });
 
     expect(plugin.schema!.apikey).toBeDefined();
-    expect(plugin.requiredTables).toContain('apikey');
+    expect(plugin.requiredTables).toContain('invect_apikey');
   });
 
   it('always includes core auth tables regardless of apiKey', () => {
@@ -588,7 +588,13 @@ describe('schema and apiKey option', () => {
     expect(plugin.schema!.account).toBeDefined();
     expect(plugin.schema!.verification).toBeDefined();
     expect(plugin.requiredTables).toEqual(
-      expect.arrayContaining(['user', 'session', 'account', 'verification', 'flow_access']),
+      expect.arrayContaining([
+        'invect_user',
+        'invect_session',
+        'invect_account',
+        'invect_verification',
+        'invect_flow_access',
+      ]),
     );
   });
 });

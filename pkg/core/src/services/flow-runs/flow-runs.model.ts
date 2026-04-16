@@ -67,7 +67,7 @@ interface _FlowRunQuery {
   sort?: SortingQuery<FlowRun>;
 }
 
-const TABLE = 'flow_executions';
+const TABLE = 'invect_flow_executions';
 
 /**
  * Flow Runs CRUD operations class — uses InvectAdapter.

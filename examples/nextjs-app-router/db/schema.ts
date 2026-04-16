@@ -23,7 +23,7 @@ import type {
 // Do not edit below this line. Run `npx invect-cli generate` to regenerate.
 // =============================================================================
 
-export const credentials = sqliteTable('credentials', {
+export const credentials = sqliteTable('invect_credentials', {
   id: text('id')
     .primaryKey()
     .notNull()
@@ -47,7 +47,7 @@ export const credentials = sqliteTable('credentials', {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const flows = sqliteTable('flows', {
+export const flows = sqliteTable('invect_flows', {
   id: text('id').primaryKey().notNull(),
   name: text('name').notNull(),
   description: text('description'),
@@ -62,7 +62,7 @@ export const flows = sqliteTable('flows', {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const flowTriggers = sqliteTable('flow_triggers', {
+export const flowTriggers = sqliteTable('invect_flow_triggers', {
   id: text('id')
     .primaryKey()
     .notNull()
@@ -87,7 +87,7 @@ export const flowTriggers = sqliteTable('flow_triggers', {
 });
 
 export const flowVersions = sqliteTable(
-  'flow_versions',
+  'invect_flow_versions',
   {
     flowId: text('flow_id')
       .notNull()
@@ -104,7 +104,7 @@ export const flowVersions = sqliteTable(
   (table) => [primaryKey({ columns: [table.version, table.flowId] })],
 );
 
-export const chatMessages = sqliteTable('chat_messages', {
+export const chatMessages = sqliteTable('invect_chat_messages', {
   id: text('id')
     .primaryKey()
     .notNull()
@@ -112,7 +112,7 @@ export const chatMessages = sqliteTable('chat_messages', {
   flowId: text('flow_id')
     .notNull()
     .references(() => flows.id, { onDelete: 'cascade' }),
-  role: text('role').$type<'user' | 'assistant' | 'system' | 'tool'>().notNull(),
+  role: text('role').$type<'invect_user' | 'assistant' | 'system' | 'tool'>().notNull(),
   content: text('content').notNull().default(''),
   toolMeta: text('tool_meta', { mode: 'json' }).$type<Record<string, unknown>>(),
   createdAt: text('created_at')
@@ -120,7 +120,7 @@ export const chatMessages = sqliteTable('chat_messages', {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const flowRuns = sqliteTable('flow_executions', {
+export const flowRuns = sqliteTable('invect_flow_executions', {
   id: text('id')
     .primaryKey()
     .notNull()
@@ -146,7 +146,7 @@ export const flowRuns = sqliteTable('flow_executions', {
   lastHeartbeatAt: text('last_heartbeat_at'),
 });
 
-export const actionTraces = sqliteTable('action_traces', {
+export const actionTraces = sqliteTable('invect_action_traces', {
   id: text('id')
     .primaryKey()
     .notNull()
@@ -178,7 +178,7 @@ export const actionTraces = sqliteTable('action_traces', {
   retryCount: integer('retry_count').notNull().default(0),
 });
 
-export const batchJobs = sqliteTable('batch_jobs', {
+export const batchJobs = sqliteTable('invect_batch_jobs', {
   id: text('id')
     .primaryKey()
     .notNull()

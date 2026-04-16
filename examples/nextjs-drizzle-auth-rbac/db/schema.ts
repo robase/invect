@@ -52,7 +52,7 @@ type BatchProvider = 'openai' | 'anthropic';
 type BatchStatus = 'SUBMITTED' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED' | 'CANCELLED' | 'EXPIRED';
 
 // ─────────────────────────────────────────────────────────────
-// Team Members (used by better-auth as the "user" table)
+// Team Members (used by better-auth as the "invect_user" table)
 // ─────────────────────────────────────────────────────────────
 
 export const teamMembers = pgTable('team_members', {
@@ -162,7 +162,7 @@ export const batchJobsStatusEnum = pgEnum('batch_jobs_status', [
   'CANCELLED',
 ]);
 
-export const user = pgTable('user', {
+export const user = pgTable('invect_user', {
   id: text('id').primaryKey().notNull(),
   name: text('name').notNull(),
   email: text('email').notNull().unique(),
@@ -176,7 +176,7 @@ export const user = pgTable('user', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
-export const account = pgTable('account', {
+export const account = pgTable('invect_account', {
   id: text('id').primaryKey().notNull(),
   accountId: text('account_id').notNull(),
   providerId: text('provider_id').notNull(),
@@ -194,7 +194,7 @@ export const account = pgTable('account', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
-export const session = pgTable('session', {
+export const session = pgTable('invect_session', {
   id: text('id').primaryKey().notNull(),
   expiresAt: timestamp('expires_at').notNull(),
   token: text('token').notNull().unique(),
@@ -208,7 +208,7 @@ export const session = pgTable('session', {
     .references(() => user.id, { onDelete: 'cascade' }),
 });
 
-export const verification = pgTable('verification', {
+export const verification = pgTable('invect_verification', {
   id: text('id').primaryKey().notNull(),
   identifier: text('identifier').notNull(),
   value: text('value').notNull(),
@@ -217,7 +217,7 @@ export const verification = pgTable('verification', {
   updatedAt: timestamp('updated_at'),
 });
 
-export const credentials = pgTable('credentials', {
+export const credentials = pgTable('invect_credentials', {
   id: uuid('id')
     .primaryKey()
     .notNull()
@@ -237,7 +237,7 @@ export const credentials = pgTable('credentials', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
-export const flows = pgTable('flows', {
+export const flows = pgTable('invect_flows', {
   id: text('id').primaryKey().notNull(),
   name: text('name').notNull(),
   description: text('description'),
@@ -249,7 +249,7 @@ export const flows = pgTable('flows', {
   scope_id: text('scope_id').references(() => rbac_teams.id, { onDelete: 'set null' }),
 });
 
-export const flowAccess = pgTable('flow_access', {
+export const flowAccess = pgTable('invect_flow_access', {
   id: uuid('id')
     .primaryKey()
     .notNull()
@@ -265,7 +265,7 @@ export const flowAccess = pgTable('flow_access', {
   expiresAt: timestamp('expires_at'),
 });
 
-export const flowTriggers = pgTable('flow_triggers', {
+export const flowTriggers = pgTable('invect_flow_triggers', {
   id: uuid('id')
     .primaryKey()
     .notNull()
@@ -286,7 +286,7 @@ export const flowTriggers = pgTable('flow_triggers', {
 });
 
 export const flowVersions = pgTable(
-  'flow_versions',
+  'invect_flow_versions',
   {
     flowId: text('flow_id')
       .notNull()
@@ -299,7 +299,7 @@ export const flowVersions = pgTable(
   (table) => [primaryKey({ columns: [table.version, table.flowId] })],
 );
 
-export const chatMessages = pgTable('chat_messages', {
+export const chatMessages = pgTable('invect_chat_messages', {
   id: uuid('id')
     .primaryKey()
     .notNull()
@@ -307,13 +307,13 @@ export const chatMessages = pgTable('chat_messages', {
   flowId: text('flow_id')
     .notNull()
     .references(() => flows.id, { onDelete: 'cascade' }),
-  role: text('role').$type<'user' | 'assistant' | 'system' | 'tool'>().notNull(),
+  role: text('role').$type<'invect_user' | 'assistant' | 'system' | 'tool'>().notNull(),
   content: text('content').notNull().default(''),
   toolMeta: json('tool_meta').$type<Record<string, unknown>>(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
-export const flowRuns = pgTable('flow_executions', {
+export const flowRuns = pgTable('invect_flow_executions', {
   id: uuid('id')
     .primaryKey()
     .notNull()
@@ -360,7 +360,7 @@ export const nodeExecutions = pgTable('execution_traces', {
   retryCount: integer('retry_count').notNull().default(0),
 });
 
-export const batchJobs = pgTable('batch_jobs', {
+export const batchJobs = pgTable('invect_batch_jobs', {
   id: uuid('id')
     .primaryKey()
     .notNull()
@@ -404,7 +404,7 @@ export const agentToolExecutions = pgTable('agent_tool_executions', {
   duration: integer('duration'),
 });
 
-export const rbac_scope_access = pgTable('rbac_scope_access', {
+export const rbac_scope_access = pgTable('invect_rbac_scope_access', {
   id: text('id').primaryKey().notNull(),
   scope_id: text('scope_id')
     .notNull()
@@ -416,7 +416,7 @@ export const rbac_scope_access = pgTable('rbac_scope_access', {
   granted_at: timestamp('granted_at').notNull().defaultNow(),
 });
 
-export const rbac_team_members = pgTable('rbac_team_members', {
+export const rbac_team_members = pgTable('invect_rbac_team_members', {
   id: text('id').primaryKey().notNull(),
   team_id: text('team_id')
     .notNull()
@@ -427,7 +427,7 @@ export const rbac_team_members = pgTable('rbac_team_members', {
   created_at: timestamp('created_at').notNull().defaultNow(),
 });
 
-export const rbac_teams = pgTable('rbac_teams', {
+export const rbac_teams = pgTable('invect_rbac_teams', {
   id: text('id').primaryKey().notNull(),
   name: text('name').notNull(),
   description: text('description'),

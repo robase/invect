@@ -20,7 +20,7 @@ import { randomUUID } from 'crypto';
 // =============================================================================
 
 // Flow definition table
-export const flows = mysqlTable('flows', {
+export const flows = mysqlTable('invect_flows', {
   id: varchar('id', { length: 36 }).primaryKey(), // Will be generated using IdGenerator.generateFlowId()
   name: varchar('name', { length: 255 }).notNull(),
   description: text('description'),
@@ -37,7 +37,7 @@ export const flows = mysqlTable('flows', {
 
 // Flow version table to support version history
 export const flowVersions = mysqlTable(
-  'flow_versions',
+  'invect_flow_versions',
   {
     flowId: varchar('flow_id', { length: 36 })
       .notNull()
@@ -53,7 +53,7 @@ export const flowVersions = mysqlTable(
 );
 
 // Flow execution table to track execution instances
-export const flowRuns = mysqlTable('flow_executions', {
+export const flowRuns = mysqlTable('invect_flow_executions', {
   id: varchar('id', { length: 36 })
     .primaryKey()
     .$defaultFn(() => randomUUID()),
@@ -94,7 +94,7 @@ export const flowRuns = mysqlTable('flow_executions', {
 // Action traces table — unified node executions + agent tool executions
 import type { AnyMySqlColumn } from 'drizzle-orm/mysql-core';
 
-export const actionTraces = mysqlTable('action_traces', {
+export const actionTraces = mysqlTable('invect_action_traces', {
   id: varchar('id', { length: 36 })
     .primaryKey()
     .$defaultFn(() => randomUUID()),
@@ -137,7 +137,7 @@ export const actionTraces = mysqlTable('action_traces', {
 });
 
 // Batch job table to track batch processing jobs
-export const batchJobs = mysqlTable('batch_jobs', {
+export const batchJobs = mysqlTable('invect_batch_jobs', {
   id: varchar('id', { length: 36 })
     .primaryKey()
     .$defaultFn(() => randomUUID()),
@@ -200,7 +200,7 @@ export interface CredentialConfig {
   [key: string]: unknown;
 }
 
-export const credentials = mysqlTable('credentials', {
+export const credentials = mysqlTable('invect_credentials', {
   id: varchar('id', { length: 36 })
     .primaryKey()
     .$defaultFn(() => randomUUID()),
@@ -239,7 +239,7 @@ export const credentials = mysqlTable('credentials', {
 /** Trigger type discriminant */
 export type TriggerType = 'manual' | 'webhook' | 'cron';
 
-export const flowTriggers = mysqlTable('flow_triggers', {
+export const flowTriggers = mysqlTable('invect_flow_triggers', {
   id: varchar('id', { length: 36 })
     .primaryKey()
     .$defaultFn(() => randomUUID()),
@@ -272,7 +272,7 @@ export const flowTriggers = mysqlTable('flow_triggers', {
 // Chat Messages — persisted chat history scoped to flows
 // =============================================================================
 
-export const chatMessages = mysqlTable('chat_messages', {
+export const chatMessages = mysqlTable('invect_chat_messages', {
   id: varchar('id', { length: 36 })
     .primaryKey()
     .$defaultFn(() => randomUUID()),

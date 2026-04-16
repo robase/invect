@@ -47,6 +47,7 @@ export interface WebhooksPluginOptions {
 
 const WEBHOOK_TRIGGERS_SCHEMA: InvectPluginSchema = {
   webhook_triggers: {
+    tableName: 'invect_webhook_triggers',
     fields: {
       id: { type: 'uuid', primaryKey: true, defaultValue: 'uuid()' },
       name: { type: 'string', required: true },
@@ -59,7 +60,11 @@ const WEBHOOK_TRIGGERS_SCHEMA: InvectPluginSchema = {
       hmacHeaderName: { type: 'string', required: false },
       hmacSecret: { type: 'string', required: false },
       allowedIps: { type: 'text', required: false },
-      flowId: { type: 'string', required: false, references: { table: 'flows', field: 'id' } },
+      flowId: {
+        type: 'string',
+        required: false,
+        references: { table: 'invect_flows', field: 'id' },
+      },
       nodeId: { type: 'string', required: false },
       lastTriggeredAt: { type: 'date', required: false },
       lastPayload: { type: 'json', required: false },
@@ -431,6 +436,6 @@ function _webhooksBackendPlugin(options?: Omit<WebhooksPluginOptions, 'frontend'
     },
 
     setupInstructions:
-      'Run `npx invect-cli generate` to generate the webhook_triggers table schema, then `npx invect-cli migrate` to apply it.',
+      'Run `npx invect-cli generate` to generate the invect_webhook_triggers table schema, then `npx invect-cli migrate` to apply it.',
   };
 }

@@ -99,7 +99,7 @@ interface _NodeExecutionQuery {
   offset?: number;
 }
 
-const TABLE = 'action_traces';
+const TABLE = 'invect_action_traces';
 
 /** Filter clause to select only node-level traces (not tool traces) */
 const NODE_TRACE_FILTER: WhereClause = {
