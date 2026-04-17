@@ -1,5 +1,11 @@
 # @invect/layouts
 
+## 0.0.11
+
+### Patch Changes
+
+- debug nextjs
+
 ## 0.0.10
 
 ### Patch Changes

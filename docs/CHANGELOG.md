@@ -1,5 +1,15 @@
 # @invect/docs
 
+## 0.0.11
+
+### Patch Changes
+
+- debug nextjs
+
+- Updated dependencies []:
+  - @invect/core@0.0.11
+  - @invect/ui@0.0.11
+
 ## 0.0.10
 
 ### Patch Changes

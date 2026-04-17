@@ -1,6 +1,6 @@
 {
   "name": "@invect/nextjs",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "description": "Next.js integration for Invect",
   "keywords": [
     "api",
