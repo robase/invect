@@ -67,6 +67,17 @@ const parseParamsFromSearch = (value: string | null): Record<string, unknown> =>
 export function createInvectHandler(config: InvectConfig): InvectHandler {
   let core: InvectInstance | null = null;
   let initializationPromise: Promise<void> | null = null;
+  let initError: Error | null = null;
+
+  // eslint-disable-next-line no-console
+  console.log('[invect-nextjs] createInvectHandler called', {
+    NODE_ENV: process.env.NODE_ENV,
+    NEXT_PHASE: process.env.NEXT_PHASE,
+    VERCEL_ENV: process.env.VERCEL_ENV,
+    VERCEL_REGION: process.env.VERCEL_REGION,
+    hasDatabaseConfig: !!config.database,
+    databaseType: config.database?.type,
+  });
 
   // Lazy initialization - only initialize when first request comes in
   const ensureInitialized = async (): Promise<InvectInstance> => {
@@ -74,8 +85,16 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
       return core;
     }
 
+    if (initError) {
+      // eslint-disable-next-line no-console
+      console.error('[invect-nextjs] Previous initialization failed, retrying...', initError.message);
+      initializationPromise = null;
+      initError = null;
+    }
+
     if (!initializationPromise) {
       initializationPromise = (async () => {
+        const startTime = Date.now();
         try {
           // Skip initialization during build time
           if (
@@ -85,15 +104,35 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
             throw new Error('Skipping database initialization during build');
           }
 
+          // eslint-disable-next-line no-console
+          console.log('[invect-nextjs] Loading @invect/core module...');
           const { createInvect } = await loadCoreModule();
+          // eslint-disable-next-line no-console
+          console.log(`[invect-nextjs] Core module loaded in ${Date.now() - startTime}ms`);
+
+          // eslint-disable-next-line no-console
+          console.log('[invect-nextjs] Calling createInvect()...');
           core = await createInvect(config);
+          // eslint-disable-next-line no-console
+          console.log(`[invect-nextjs] createInvect() completed in ${Date.now() - startTime}ms`);
+
+          // eslint-disable-next-line no-console
+          console.log('[invect-nextjs] Starting batch polling...');
           await core.startBatchPolling();
           // eslint-disable-next-line no-console
-          console.log('✅ Invect initialized and batch polling started');
+          console.log(`[invect-nextjs] ✅ Invect fully initialized in ${Date.now() - startTime}ms`);
         } catch (error) {
+          const elapsed = Date.now() - startTime;
           // eslint-disable-next-line no-console
-          console.error('Failed to initialize Invect Core:', error);
+          console.error(`[invect-nextjs] ❌ Initialization failed after ${elapsed}ms:`, error);
+          // eslint-disable-next-line no-console
+          console.error('[invect-nextjs] Error details:', {
+            name: error instanceof Error ? error.name : 'unknown',
+            message: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+          });
           core = null;
+          initError = error instanceof Error ? error : new Error(String(error));
           initializationPromise = null;
           throw error;
         }
@@ -224,17 +263,24 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
     request: Request,
     context: { params: Promise<{ invect: string[] }> },
   ): Promise<Response> => {
+    const requestStart = Date.now();
     try {
+      const params = await context.params;
+      const path = params.invect.join('/');
+      const method = request.method;
+      // eslint-disable-next-line no-console
+      console.log(`[invect-nextjs] ${method} /${path} (core initialized: ${!!core})`);
+
       // Get initialized core
       const coreOrResponse = await getInitializedCore();
       if (coreOrResponse instanceof Response) {
+        // eslint-disable-next-line no-console
+        console.error(`[invect-nextjs] ${method} /${path} → 503 (init failed, ${Date.now() - requestStart}ms)`);
         return coreOrResponse;
       }
       const initializedCore = coreOrResponse;
-
-      const method = request.method;
-      const params = await context.params;
-      const path = params.invect.join('/');
+      // eslint-disable-next-line no-console
+      console.log(`[invect-nextjs] ${method} /${path} core ready in ${Date.now() - requestStart}ms`);
 
       // Clone the request before consuming the body so plugin handlers
       // (e.g. user-auth) can read the raw body stream themselves.
@@ -1060,6 +1106,8 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
       }
 
       // Route not found
+      // eslint-disable-next-line no-console
+      console.warn(`[invect-nextjs] ${method} /${path} → 404 (no matching route, ${Date.now() - requestStart}ms)`);
       return Response.json(
         {
           error: 'Not Found',
@@ -1068,6 +1116,8 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
         { status: 404 },
       );
     } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(`[invect-nextjs] Request error (${Date.now() - requestStart}ms):`, error);
       return handleError(error);
     }
   };

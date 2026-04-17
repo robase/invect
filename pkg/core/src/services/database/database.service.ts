@@ -118,13 +118,26 @@ export class DatabaseService {
       return;
     }
 
+    const dbInitStart = Date.now();
+    this.logger.info('Starting database initialization...', {
+      dbType: this.hostDbConfig?.type,
+      hasConnectionString: !!this.hostDbConfig?.connectionString,
+      connectionStringPrefix: this.hostDbConfig?.connectionString?.substring(0, 30) + '...',
+    });
+
     // --- Step 1: Establish the database connection ---
     try {
+      this.logger.debug('Step 1: Creating database connection...');
+      const connStart = Date.now();
       this.connection = await DatabaseConnectionFactory.createHostDBConnection(
         this.hostDbConfig,
         this.logger,
       );
+      this.logger.info(`Step 1: Database connection created in ${Date.now() - connStart}ms`);
     } catch (error) {
+      this.logger.error(`Step 1: Database connection FAILED after ${Date.now() - dbInitStart}ms`, {
+        error: error instanceof Error ? error.message : error,
+      });
       this.logConnectionError(error);
       throw new DatabaseError(
         `Failed to connect to the database: ${error instanceof Error ? error.message : error}`,
@@ -134,8 +147,14 @@ export class DatabaseService {
 
     // --- Step 2: Verify connectivity with a simple query ---
     try {
+      this.logger.debug('Step 2: Running connectivity check...');
+      const checkStart = Date.now();
       await this.runConnectivityCheck(this.connection);
+      this.logger.info(`Step 2: Connectivity check passed in ${Date.now() - checkStart}ms`);
     } catch (error) {
+      this.logger.error(`Step 2: Connectivity check FAILED after ${Date.now() - dbInitStart}ms`, {
+        error: error instanceof Error ? error.message : error,
+      });
       this.logConnectivityError(error);
       throw new DatabaseError(
         `Database connectivity check failed: ${error instanceof Error ? error.message : error}`,
@@ -144,26 +163,28 @@ export class DatabaseService {
     }
 
     // --- Step 3: Check that core Invect tables exist ---
-    // This always runs (regardless of schemaVerification config) to catch
-    // the common case of a fresh database that hasn't had migrations applied.
+    this.logger.debug('Step 3: Checking core tables...');
+    const tableCheckStart = Date.now();
     await this.runCoreTableCheck(this.connection);
+    this.logger.info(`Step 3: Core table check passed in ${Date.now() - tableCheckStart}ms`);
 
     // --- Step 3b: Check that plugin-required tables exist ---
-    // Each plugin can declare requiredTables to get a clear error at startup
-    // instead of a cryptic runtime crash when a table is missing.
+    this.logger.debug('Step 3b: Checking plugin tables...');
     await this.runPluginTableChecks(this.connection);
+    this.logger.debug('Step 3b: Plugin table checks passed');
 
     // --- Step 4: Initialize the database models ---
+    this.logger.debug('Step 4: Initializing database models...');
     this._adapter = createAdapterFromConnection(this.connection);
     this._database = new Database(this.connection, this.logger, this._adapter);
 
     // --- Step 5: Run detailed schema verification ---
-    // Always checks columns exist, not just tables.
     if (this.schemaVerificationOptions) {
+      this.logger.debug('Step 5: Running schema verification...');
       await verifySchema(this.connection, this.logger, this.schemaVerificationOptions);
     }
 
-    this.logger.info('Database service initialized successfully');
+    this.logger.info(`Database service initialized successfully in ${Date.now() - dbInitStart}ms`);
   }
 
   /**

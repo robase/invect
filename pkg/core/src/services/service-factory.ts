@@ -85,6 +85,8 @@ export class ServiceFactory {
     try {
       // 1. Create database service first (no dependencies)
       // Schema verification always runs on startup to catch missing tables/columns.
+      this.logger.debug('Creating DatabaseService...');
+      const dbStart = Date.now();
       const verificationOpts = {
         strict: false,
         plugins: (this.config.plugins || []) as import('src/types/plugin.types').InvectPlugin[],
@@ -96,6 +98,7 @@ export class ServiceFactory {
         (this.config.plugins || []) as import('src/types/plugin.types').InvectPlugin[],
       );
       await databaseService.initialize();
+      this.logger.info(`DatabaseService initialized in ${Date.now() - dbStart}ms`);
 
       // 3. Create BatchJobsService (database only, no AI client)
       const batchJobsService = new BatchJobsService(this.logger, databaseService);

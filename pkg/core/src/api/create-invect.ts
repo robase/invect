@@ -187,6 +187,7 @@ async function seedDefaultCredentials(sf: ServiceFactory, config: InvectConfig):
  * ```
  */
 export async function createInvect(config: InvectConfig): Promise<InvectInstance> {
+  const initStart = Date.now();
   // Parse and validate config
   const parsedConfig = InvectConfigSchema.parse(config);
 
@@ -207,7 +208,14 @@ export async function createInvect(config: InvectConfig): Promise<InvectInstance
   parsedConfig.logger = loggerManager.getBasicLogger();
   const logger = parsedConfig.logger;
 
-  logger.info('Initializing Invect Core...');
+  logger.info('Initializing Invect Core...', {
+    databaseType: parsedConfig.database?.type,
+    hasConnectionString: !!parsedConfig.database?.connectionString,
+    pluginCount: parsedConfig.plugins?.length ?? 0,
+    NODE_ENV: process.env.NODE_ENV,
+    VERCEL_ENV: process.env.VERCEL_ENV,
+    VERCEL_REGION: process.env.VERCEL_REGION,
+  });
 
   try {
     // Initialize authorization service
@@ -291,8 +299,11 @@ export async function createInvect(config: InvectConfig): Promise<InvectInstance
 
     // Register action-based tools
     registerActionsAsTools(actionRegistry);
+    logger.debug(`Actions registered as tools in ${Date.now() - initStart}ms`);
 
     // Initialize service factory
+    logger.info('Initializing ServiceFactory (database connection)...');
+    const sfStart = Date.now();
     const sf = new ServiceFactory(
       parsedConfig,
       nodeRegistry,
@@ -302,8 +313,10 @@ export async function createInvect(config: InvectConfig): Promise<InvectInstance
       templateService ?? undefined,
     );
     await sf.initialize();
+    logger.info(`ServiceFactory initialized in ${Date.now() - sfStart}ms (DB connected)`);
 
     // Build sub-APIs
+    logger.debug('Building sub-APIs...');
     const flows = createFlowsAPI(sf, logger);
     const versions = createFlowVersionsAPI(sf, logger);
     const runs = createFlowRunsAPI(sf, logger);
@@ -431,12 +444,14 @@ export async function createInvect(config: InvectConfig): Promise<InvectInstance
     // Make instance available to plugins via the lazy getInvect() accessor
     _invectInstance = instance;
 
+    logger.info(`Invect Core fully initialized in ${Date.now() - initStart}ms`);
+
     return instance;
   } catch (error) {
     if (error instanceof DatabaseError) {
       throw error;
     }
-    logger.error('Failed to initialize Invect Core', error);
+    logger.error(`Failed to initialize Invect Core after ${Date.now() - initStart}ms`, error);
     throw new DatabaseError('Invect Core initialization failed', { error });
   }
 }
