@@ -107,12 +107,16 @@ export class BaseLogger implements Logger {
     const color = LOG_COLORS[level];
     const levelStr = `${color}${level.toUpperCase().padEnd(6)}${RESET_COLOR}`;
     const metaStr = meta
-      ? ` ${JSON.stringify(meta, (_key, value: unknown) => {
-          if (value instanceof Error) {
-            return { message: value.message, name: value.name, stack: value.stack };
-          }
-          return value;
-        }, 2)}`
+      ? ` ${JSON.stringify(
+          meta,
+          (_key, value: unknown) => {
+            if (value instanceof Error) {
+              return { message: value.message, name: value.name, stack: value.stack };
+            }
+            return value;
+          },
+          2,
+        )}`
       : '';
 
     return `${timestamp} | ${levelStr}|${contextStr} ${message}${metaStr}`;
@@ -188,12 +192,16 @@ export class ScopedLogger implements Logger {
     const color = LOG_COLORS[level];
     const levelStr = `${color}${level.toUpperCase().padEnd(6)}${RESET_COLOR}`;
     const metaStr = meta
-      ? ` ${JSON.stringify(meta, (_key, value: unknown) => {
-          if (value instanceof Error) {
-            return { message: value.message, name: value.name, stack: value.stack };
-          }
-          return value;
-        }, 2)}`
+      ? ` ${JSON.stringify(
+          meta,
+          (_key, value: unknown) => {
+            if (value instanceof Error) {
+              return { message: value.message, name: value.name, stack: value.stack };
+            }
+            return value;
+          },
+          2,
+        )}`
       : '';
 
     return `${timestamp} | ${levelStr}| ${scopeStr}${contextStr} ${message}${metaStr}`;
