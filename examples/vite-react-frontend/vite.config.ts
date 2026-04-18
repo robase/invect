@@ -1,9 +1,33 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tsconfigPaths from 'vite-tsconfig-paths';
+import path from 'path';
+
+const pkg = (p: string) => path.resolve(__dirname, '../../pkg', p);
 
 export default defineConfig({
   plugins: [react(), tsconfigPaths()],
+  resolve: {
+    dedupe: ['react', 'react-dom'],
+    alias: [
+      // Subpath aliases must come before their package root alias.
+      // Use exact regex so @invect/ui/styles etc. are not caught.
+      {
+        find: /^@invect\/version-control\/providers\/github$/,
+        replacement: pkg('plugins/version-control/src/providers/github.browser.ts'),
+      },
+      {
+        find: /^@invect\/version-control$/,
+        replacement: pkg('plugins/version-control/src/browser.ts'),
+      },
+      { find: /^@invect\/user-auth$/, replacement: pkg('plugins/auth/src/browser.ts') },
+      { find: /^@invect\/rbac$/, replacement: pkg('plugins/rbac/src/browser.ts') },
+      { find: /^@invect\/webhooks$/, replacement: pkg('plugins/webhooks/src/browser.ts') },
+      { find: /^@invect\/mcp$/, replacement: pkg('plugins/mcp/src/browser.ts') },
+      { find: /^@invect\/layouts$/, replacement: pkg('layouts/src/index.ts') },
+      { find: /^@invect\/ui$/, replacement: pkg('ui/src/index.ts') },
+    ],
+  },
   optimizeDeps: {
     include: [
       'react',
@@ -13,36 +37,20 @@ export default defineConfig({
       'use-sync-external-store',
       'use-sync-external-store/shim',
     ],
-    // Exclude workspace packages from pre-bundling so they resolve from pnpm workspaces
-    exclude: [
-      '@invect/ui',
-      '@invect/core',
-      '@invect/user-auth',
-      '@invect/rbac',
-      '@invect/webhooks',
-      'perf_hooks',
-      'crypto',
-      'stream',
-      'path',
-      'util',
-      'fs',
-      'os',
-    ],
-  },
-  resolve: {
-    // Use dedupe to ensure workspace packages are resolved from pnpm workspaces correctly
-    dedupe: ['react', 'react-dom'],
   },
   build: {
     rollupOptions: {
-      // Externalize @invect/core to prevent bundling Node.js runtime code
-      // The types from @invect/core/types are already re-exported by @invect/ui
       external: [/^@invect\/core/],
     },
   },
   server: {
     hmr: {
       overlay: false,
+    },
+    watch: {
+      // pnpm symlinks workspace packages into node_modules — un-ignore them so
+      // Vite picks up dist rebuilds from pkg/* without a manual restart.
+      ignored: (p: string) => p.includes('node_modules') && !p.includes('node_modules/@invect'),
     },
     proxy: {
       '/api/invect': {

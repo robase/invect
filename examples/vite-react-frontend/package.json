@@ -13,6 +13,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@invect/mcp": "workspace:*",
     "@invect/rbac": "workspace:*",
     "@invect/ui": "workspace:*",
     "@invect/user-auth": "workspace:*",

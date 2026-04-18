@@ -15,6 +15,9 @@ import {
   History,
   RotateCcw,
   Send,
+  ChevronLeft,
+  ChevronRight,
+  FolderOpen,
 } from 'lucide-react';
 import {
   Dialog,
@@ -44,13 +47,16 @@ export function VcHeaderButton({ flowId, basePath }: HeaderActionProps) {
   return <VcHeaderButtonInner flowId={flowId} basePath={basePath} />;
 }
 
+const PAGE_SIZE = 8;
+
 function VcHeaderButtonInner({ flowId, basePath }: { flowId: string; basePath: string }) {
   const [open, setOpen] = useState(false);
+  const [versionsPage, setVersionsPage] = useState(1);
   const { data, isLoading } = useFlowSyncStatus(flowId);
   const { data: syncHistoryData } = useFlowSyncHistory(flowId);
   const { data: versionsData, isLoading: versionsLoading } = useFlowVersions(flowId, {
     sort: { sortBy: 'version', sortOrder: 'desc' },
-    pagination: { page: 1, limit: 20 },
+    pagination: { page: 1, limit: 100 },
   });
   const createVersionMutation = useCreateFlowVersion();
   const pushMutation = usePushFlow(flowId);
@@ -76,6 +82,8 @@ function VcHeaderButtonInner({ flowId, basePath }: { flowId: string; basePath: s
   const canPublish = config?.mode === 'pr-per-publish' && config.syncDirection !== 'pull';
   const currentViewedVersion = getCurrentViewedVersion();
   const latestVersion = versions[0]?.version ?? null;
+  const pageCount = Math.max(1, Math.ceil(versions.length / PAGE_SIZE));
+  const pagedVersions = versions.slice((versionsPage - 1) * PAGE_SIZE, versionsPage * PAGE_SIZE);
 
   const statusColor =
     status === 'synced'
@@ -100,16 +108,25 @@ function VcHeaderButtonInner({ flowId, basePath }: { flowId: string; basePath: s
           <span>Version Control</span>
         </button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl p-0 overflow-hidden">
-        <DialogHeader className="border-b px-6 py-5">
+      <DialogContent
+        className="flex flex-col p-0 overflow-hidden sm:max-w-4xl"
+        style={{ height: '80vh', width: '900px', maxWidth: '95vw' }}
+      >
+        <DialogHeader
+          style={{ paddingTop: '1em', paddingBottom: '1em' }}
+          className="shrink-0 border-b px-6 py-5"
+        >
           <DialogTitle>Version Control</DialogTitle>
           <DialogDescription>
             Review Git sync status and work with previous flow versions.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid max-h-[75vh] gap-0 overflow-hidden md:grid-cols-[1.1fr_1.4fr]">
-          <div className="border-b px-6 py-5 md:border-r md:border-b-0">
+        <div
+          className="grid flex-1 min-h-0 overflow-hidden"
+          style={{ gridTemplateColumns: '1.1fr 1.4fr' }}
+        >
+          <div className="border-r overflow-y-auto px-6 py-5">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-sm font-semibold">Git Sync</h3>
               <span className={`text-xs font-medium capitalize ${statusColor}`}>
@@ -175,7 +192,7 @@ function VcHeaderButtonInner({ flowId, basePath }: { flowId: string; basePath: s
             ) : (
               <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
                 This flow is not connected to a Git remote yet. Local version history is still
-                available below.
+                available.
               </div>
             )}
 
@@ -208,99 +225,133 @@ function VcHeaderButtonInner({ flowId, basePath }: { flowId: string; basePath: s
             </div>
           </div>
 
-          <div className="min-h-0 px-6 py-5">
-            <div className="mb-4 flex items-center justify-between gap-4">
-              <div>
-                <h3 className="text-sm font-semibold">Flow Versions</h3>
-                <p className="text-sm text-muted-foreground">
-                  Open any previous version or restore it as the latest version.
-                </p>
-              </div>
-              <span className="text-xs text-muted-foreground">
-                Showing {versions.length} versions
-              </span>
-            </div>
-
-            <div className="max-h-[52vh] space-y-3 overflow-y-auto pr-1">
-              {versionsLoading ? (
-                <div className="flex items-center gap-2 rounded-lg border px-4 py-3 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Loading versions...
-                </div>
-              ) : versions.length > 0 ? (
-                versions.map((version) => {
-                  const isLatest = latestVersion === version.version;
-                  const isCurrentView = currentViewedVersion
-                    ? currentViewedVersion === version.version
-                    : isLatest;
-
-                  return (
-                    <div
-                      key={`${version.flowId}-${version.version}`}
-                      className="rounded-xl border p-4"
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-sm font-semibold">v{version.version}</span>
-                            {isCurrentView ? (
-                              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                                Open now
-                              </span>
-                            ) : null}
-                            {isLatest ? (
-                              <span className="rounded-full bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-700">
-                                Latest
-                              </span>
-                            ) : null}
-                          </div>
-                          <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-                            <p>Created {formatTimestamp(version.createdAt)}</p>
-                            <p>Author {version.createdBy ?? 'Unknown'}</p>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            disabled={isCurrentView}
-                            onClick={() => openVersion(basePath, flowId, version.version)}
-                            className="inline-flex h-8 items-center rounded-md border px-3 text-sm font-medium hover:bg-accent disabled:opacity-50"
-                          >
-                            Open
-                          </button>
-                          <button
-                            type="button"
-                            disabled={createVersionMutation.isPending}
-                            onClick={() =>
-                              restoreVersion({
-                                basePath,
-                                flowId,
-                                version,
-                                onDone: () => setOpen(false),
-                                restore: createVersionMutation.mutateAsync,
-                              })
-                            }
-                            className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-                          >
-                            {createVersionMutation.isPending ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <RotateCcw className="h-3.5 w-3.5" />
-                            )}
-                            Restore
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="rounded-lg border border-dashed px-4 py-6 text-sm text-muted-foreground">
-                  No saved versions found for this flow yet.
-                </div>
+          <div className="flex flex-col overflow-y-auto px-6 py-5">
+            <div className="mb-3 flex items-center justify-between gap-4">
+              <h3 className="text-sm font-semibold">Flow Versions</h3>
+              {versions.length > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  {versions.length} version{versions.length !== 1 ? 's' : ''}
+                </span>
               )}
             </div>
+
+            {versionsLoading ? (
+              <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading versions…
+              </div>
+            ) : versions.length === 0 ? (
+              <div className="rounded-lg border border-dashed px-4 py-6 text-sm text-muted-foreground">
+                No saved versions found for this flow yet.
+              </div>
+            ) : (
+              <>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-xs text-muted-foreground">
+                      <th className="pb-2 text-left font-medium">Version</th>
+                      <th className="pb-2 text-left font-medium">Created</th>
+                      <th className="pb-2 text-left font-medium">Author</th>
+                      <th className="pb-2 text-right font-medium"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {pagedVersions.map((version) => {
+                      const isLatest = latestVersion === version.version;
+                      const isCurrentView = currentViewedVersion
+                        ? currentViewedVersion === version.version
+                        : isLatest;
+
+                      return (
+                        <tr key={`${version.flowId}-${version.version}`} className="group">
+                          <td className="py-2 pr-4">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-medium tabular-nums">v{version.version}</span>
+                              {isCurrentView && (
+                                <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
+                                  open
+                                </span>
+                              )}
+                              {isLatest && (
+                                <span className="rounded-full bg-green-500/10 px-1.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">
+                                  latest
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-2 pr-4 text-xs text-muted-foreground tabular-nums">
+                            {formatTimestamp(version.createdAt)}
+                          </td>
+                          <td className="py-2 pr-4 text-xs text-muted-foreground">
+                            {version.createdBy ?? 'Unknown'}
+                          </td>
+                          <td className="py-2">
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                type="button"
+                                disabled={isCurrentView}
+                                title="Open this version"
+                                onClick={() => openVersion(basePath, flowId, version.version)}
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-md border text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30"
+                              >
+                                <FolderOpen className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={createVersionMutation.isPending}
+                                title="Restore as latest"
+                                onClick={() =>
+                                  restoreVersion({
+                                    basePath,
+                                    flowId,
+                                    version,
+                                    onDone: () => setOpen(false),
+                                    restore: createVersionMutation.mutateAsync,
+                                  })
+                                }
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-md border text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30"
+                              >
+                                {createVersionMutation.isPending ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <RotateCcw className="h-3.5 w-3.5" />
+                                )}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+
+                {pageCount > 1 && (
+                  <div className="mt-3 flex items-center justify-between border-t pt-3">
+                    <span className="text-xs text-muted-foreground">
+                      Page {versionsPage} of {pageCount}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        disabled={versionsPage === 1}
+                        onClick={() => setVersionsPage((p) => p - 1)}
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-md border text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30"
+                      >
+                        <ChevronLeft className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={versionsPage === pageCount}
+                        onClick={() => setVersionsPage((p) => p + 1)}
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-md border text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30"
+                      >
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       </DialogContent>

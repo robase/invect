@@ -32,6 +32,10 @@
       "require": "./dist/shared/types.cjs"
     },
     "./providers/github": {
+      "browser": {
+        "types": "./dist/providers/github-browser.d.mts",
+        "import": "./dist/providers/github-browser.mjs"
+      },
       "types": "./dist/providers/github.d.mts",
       "import": "./dist/providers/github.mjs",
       "require": "./dist/providers/github.cjs"

@@ -1,0 +1,7 @@
+{
+  "watch": [".", "../../pkg"],
+  "ext": "js,cjs,mjs",
+  "ignore": ["node_modules"],
+  "exec": "tsx index.ts",
+  "delay": 300
+}

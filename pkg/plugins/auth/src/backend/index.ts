@@ -60,7 +60,7 @@ import { authentication } from './plugin';
  * auth({ adminEmail: '...', frontend: authFrontend })
  * ```
  */
-export function auth(options: AuthenticationPluginOptions): InvectPluginDefinition {
+export function auth(options: AuthenticationPluginOptions = {}): InvectPluginDefinition {
   return {
     id: 'user-auth',
     name: 'User Authentication',

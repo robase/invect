@@ -3,6 +3,7 @@ import { defineConfig } from 'tsdown';
 export default defineConfig({
   entry: {
     'backend/index': 'src/backend/index.ts',
+    'browser/index': 'src/browser.ts',
     'shared/types': 'src/shared/types.ts',
     'cli/index': 'src/cli/index.ts',
   },

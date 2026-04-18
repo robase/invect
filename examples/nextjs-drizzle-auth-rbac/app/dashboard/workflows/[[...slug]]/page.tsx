@@ -2,11 +2,9 @@
 
 import dynamic from 'next/dynamic';
 import '@invect/ui/styles';
-import invectConfig from '../../../../invect.config';
+import { auth } from '@invect/user-auth';
+import { rbac } from '@invect/rbac';
 
-// Only <Invect> needs dynamic — it uses browser-only APIs (React Flow, CodeMirror).
-// <Invect> reads apiPath/frontendPath/theme/plugins from the config;
-// plugins are InvectPluginDefinitions so it extracts .frontend from each automatically.
 const Invect = dynamic(() => import('@invect/ui').then((m) => ({ default: m.Invect })), {
   ssr: false,
   loading: () => <WorkflowsLoading />,
@@ -26,7 +24,14 @@ function WorkflowsLoading() {
 export default function WorkflowsPage() {
   return (
     <div className="-m-6 h-screen">
-      <Invect config={invectConfig} />
+      <Invect
+        config={{
+          apiPath: '/api/invect',
+          frontendPath: '/dashboard/workflows',
+          theme: 'light',
+          plugins: [auth(), rbac()],
+        }}
+      />
     </div>
   );
 }

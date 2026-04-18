@@ -3,17 +3,15 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { Invect } from '@invect/ui';
 import '@invect/ui/styles';
-import { invectConfig } from '../../express-drizzle/invect.config';
+import { auth } from '@invect/user-auth';
+import { rbac } from '@invect/rbac';
+import { webhooks } from '@invect/webhooks';
+import { versionControl } from '@invect/version-control';
+import { mcp } from '@invect/mcp';
 
 import './app.css';
 
 export const App = () => {
-  // Override apiPath so the Vite dev server reaches the Express backend on port 3000.
-  const config = {
-    ...invectConfig,
-    apiPath: import.meta.env.VITE_INVECT_API_BASE_URL ?? 'http://localhost:3000/invect',
-  };
-
   return (
     <BrowserRouter>
       <Routes>
@@ -22,7 +20,14 @@ export const App = () => {
           path="/*"
           element={
             <div className="h-screen">
-              <Invect config={config} />
+              <Invect
+                config={{
+                  apiPath: 'http://localhost:3000/invect',
+                  frontendPath: '/invect',
+                  theme: 'dark',
+                  plugins: [auth(), rbac(), webhooks(), versionControl(), mcp()],
+                }}
+              />
             </div>
           }
         />

@@ -7,6 +7,7 @@ export default defineConfig({
     'frontend/index': 'src/frontend/index.ts',
     'shared/types': 'src/shared/types.ts',
     'providers/github': 'src/providers/github.ts',
+    'providers/github-browser': 'src/providers/github.browser.ts',
   },
   format: ['esm', 'cjs'],
   dts: true,

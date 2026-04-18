@@ -2,7 +2,6 @@
 
 import dynamic from 'next/dynamic';
 import '@invect/ui/styles';
-import { config } from '../../invect.config';
 
 const Invect = dynamic(() => import('@invect/ui').then((mod) => ({ default: mod.Invect })), {
   ssr: false,
@@ -11,7 +10,12 @@ const Invect = dynamic(() => import('@invect/ui').then((mod) => ({ default: mod.
 export default function InvectPage() {
   return (
     <div className="w-full h-full">
-      <Invect config={config} />
+      <Invect
+        config={{
+          apiPath: '/api/invect',
+          frontendPath: '/invect',
+        }}
+      />
     </div>
   );
 }
