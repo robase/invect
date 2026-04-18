@@ -53,6 +53,12 @@ import type {
 
 type _BulkBatchPollResult = Record<string, BatchResult>;
 
+export interface BatchPollingRunResult {
+  providersChecked: number;
+  providersWithPendingJobs: number;
+  jobsPolled: number;
+}
+
 /**
  * Base AI Client - Central orchestration layer.
  *
@@ -428,10 +434,20 @@ export class BaseAIClient {
   /**
    * Poll batch jobs for all providers
    */
-  async pollBatchJobsForAllProviders(): Promise<void> {
+  async pollBatchJobsForAllProviders(): Promise<BatchPollingRunResult> {
     if (!this.batchJobsService) {
-      return;
+      return {
+        providersChecked: 0,
+        providersWithPendingJobs: 0,
+        jobsPolled: 0,
+      };
     }
+
+    const report: BatchPollingRunResult = {
+      providersChecked: this.batchAdapters.size,
+      providersWithPendingJobs: 0,
+      jobsPolled: 0,
+    };
 
     // Only poll batch-capable providers
     const pollPromises = Array.from(this.batchAdapters.keys()).map(async (provider) => {
@@ -442,6 +458,9 @@ export class BaseAIClient {
           this.logger.debug(`No pending batch jobs to poll for ${provider}`);
           return;
         }
+
+        report.providersWithPendingJobs += 1;
+        report.jobsPolled += pendingJobs.length;
 
         this.logger.debug(`Polling ${pendingJobs.length} pending batch jobs for ${provider}`);
 
@@ -455,6 +474,8 @@ export class BaseAIClient {
     });
 
     await Promise.allSettled(pollPromises);
+
+    return report;
   }
 
   /**

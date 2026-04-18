@@ -30,11 +30,12 @@ import type {
   FlowTriggerRegistration,
   CreateTriggerInput,
   UpdateTriggerInput,
+  ExecuteDueCronTriggersResult,
 } from '../services/triggers';
 import type { FlowValidationResult } from '../types/validation';
 import type { ReactFlowData } from '../services/react-flow-renderer.service';
 import type { NodeDefinition } from '../types/node-definition.types';
-import type { BatchProvider, Model } from '../services/ai/base-client';
+import type { BatchProvider, Model, BatchPollingRunResult } from '../services/ai/base-client';
 import type { PaginatedResponse, QueryOptions } from '../schemas';
 import type { CreateFlowVersionRequest, FlowEdge } from '../services/flow-versions/schemas-fresh';
 import type { ExecutionStreamEvent } from '../services/execution-event-bus';
@@ -61,6 +62,30 @@ import type { DashboardStats } from '../invect-core';
 import type { ChatMessageRecord } from '../services/chat/chat-messages.model';
 
 import type { ChatMessage, ChatContext, ChatStreamEvent } from '../services/chat/chat-types';
+
+export interface InvectMaintenanceOptions {
+  now?: Date | string;
+  pollBatchJobs?: boolean;
+  resumePausedFlows?: boolean;
+  failStaleRuns?: boolean;
+  executeCronTriggers?: boolean;
+}
+
+export interface InvectMaintenanceResult {
+  timestamp: string;
+  batchPolling?: BatchPollingRunResult;
+  flowResumption?: {
+    readyCount: number;
+    resumedCount: number;
+    failedCount: number;
+  };
+  staleRuns?: {
+    failedCount: number;
+  };
+  cronTriggers?: ExecuteDueCronTriggersResult & {
+    disabled?: boolean;
+  };
+}
 
 // =====================================
 // FLOWS
@@ -192,6 +217,7 @@ export interface TriggersAPI {
   ): Promise<FlowTriggerRegistration[]>;
   getEnabledCron(): Promise<FlowTriggerRegistration[]>;
   executeCron(triggerId: string): Promise<{ flowRunId: string; flowId: string }>;
+  executeDueCron(options?: { now?: Date | string }): Promise<ExecuteDueCronTriggersResult>;
 }
 
 // =====================================
@@ -352,8 +378,11 @@ export interface InvectInstance {
   shutdown(): Promise<void>;
   startBatchPolling(): Promise<void>;
   stopBatchPolling(): Promise<void>;
+  startMaintenancePolling(): Promise<void>;
+  stopMaintenancePolling(): Promise<void>;
   startCronScheduler(): Promise<void>;
   stopCronScheduler(): void;
   refreshCronScheduler(): Promise<void>;
+  runMaintenance(options?: InvectMaintenanceOptions): Promise<InvectMaintenanceResult>;
   healthCheck(): Promise<Record<string, boolean>>;
 }

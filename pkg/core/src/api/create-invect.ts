@@ -34,7 +34,7 @@ import { AgentNodeExecutor } from '../nodes/agent-executor';
 import type { GraphNodeType } from '../types.internal';
 import type { CredentialAuthType } from '../database/schema-sqlite';
 
-import type { InvectInstance } from './types';
+import type { InvectInstance, InvectMaintenanceOptions, InvectMaintenanceResult } from './types';
 import { createFlowsAPI } from './flows';
 import { createFlowVersionsAPI } from './flow-versions';
 import { createFlowRunsAPI } from './flow-runs';
@@ -407,6 +407,14 @@ export async function createInvect(config: InvectConfig): Promise<InvectInstance
         await sf.getBaseAIClient().stopBatchPolling();
       },
 
+      async startMaintenancePolling() {
+        await sf.getOrchestrationService().startMaintenancePolling();
+      },
+
+      async stopMaintenancePolling() {
+        await sf.getOrchestrationService().stopMaintenancePolling();
+      },
+
       async startCronScheduler() {
         const cronEnabled = parsedConfig.triggers?.cronEnabled ?? true;
         if (!cronEnabled) {
@@ -424,6 +432,54 @@ export async function createInvect(config: InvectConfig): Promise<InvectInstance
 
       async refreshCronScheduler() {
         await sf.getCronScheduler().refresh();
+      },
+
+      async runMaintenance(
+        options: InvectMaintenanceOptions = {},
+      ): Promise<InvectMaintenanceResult> {
+        const timestamp =
+          options.now instanceof Date
+            ? options.now.toISOString()
+            : typeof options.now === 'string'
+              ? options.now
+              : new Date().toISOString();
+        const result: InvectMaintenanceResult = {
+          timestamp,
+        };
+
+        if (options.pollBatchJobs !== false) {
+          result.batchPolling = await sf.getBaseAIClient().pollBatchJobsForAllProviders();
+        }
+
+        if (options.resumePausedFlows !== false) {
+          result.flowResumption = await sf.getOrchestrationService().runBatchResumptionSweep();
+        }
+
+        if (options.failStaleRuns !== false) {
+          result.staleRuns = await sf.getOrchestrationService().runStaleRunSweep();
+        }
+
+        if (options.executeCronTriggers !== false) {
+          const cronEnabled = parsedConfig.triggers?.cronEnabled ?? true;
+          if (cronEnabled) {
+            result.cronTriggers = await sf.getTriggersService().executeDueCronTriggers({
+              now: options.now,
+            });
+          } else {
+            result.cronTriggers = {
+              timestamp,
+              checkedCount: 0,
+              dueCount: 0,
+              claimedCount: 0,
+              executedCount: 0,
+              skippedCount: 0,
+              failedCount: 0,
+              disabled: true,
+            };
+          }
+        }
+
+        return result;
       },
 
       async healthCheck() {

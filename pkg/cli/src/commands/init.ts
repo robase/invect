@@ -656,6 +656,29 @@ export const initCommand = new Command('init')
           .join('\n');
 
         nextSteps.push(`  ${n++}. Create ${pc.cyan(routeFile)}:\n\n${routeSnippet}\n`);
+
+        // Cron maintenance route for Vercel / serverless deployments
+        const cronRouteFile = 'app/api/invect/cron/route.ts';
+        const cronRouteSnippet = [
+          `import { createInvectCronHandler } from '@invect/nextjs';`,
+          `import { config } from '${routeImportPath}';`,
+          ``,
+          `export const GET = createInvectCronHandler(config);`,
+        ]
+          .map((l) => `  ${pc.cyan(l)}`)
+          .join('\n');
+
+        const vercelJsonSnippet = [
+          `{`,
+          `  "crons": [{ "path": "/api/invect/cron", "schedule": "* * * * *" }]`,
+          `}`,
+        ]
+          .map((l) => `  ${pc.cyan(l)}`)
+          .join('\n');
+
+        nextSteps.push(
+          `  ${n++}. Create ${pc.cyan(cronRouteFile)} for background maintenance (batch polling, cron triggers, stale-run cleanup):\n\n${cronRouteSnippet}\n\n     Then add a Vercel cron in ${pc.cyan('vercel.json')}:\n\n${vercelJsonSnippet}\n`,
+        );
       } else if (framework.id === 'nestjs') {
         nextSteps.push(
           `  ${n++}. Import ${pc.cyan('InvectModule.forRoot(config)')} in your AppModule`,

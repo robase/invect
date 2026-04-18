@@ -12,6 +12,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
+import { Cron } from 'croner';
 import type { Logger } from 'src/schemas';
 import { DatabaseError, ValidationError } from 'src/types/common/errors.types';
 import type { DatabaseService } from '../database/database.service';
@@ -24,6 +25,8 @@ import type {
   CreateTriggerInput,
   UpdateTriggerInput,
   TriggerExecutionOptions,
+  ExecuteDueCronTriggersOptions,
+  ExecuteDueCronTriggersResult,
 } from './trigger.types';
 
 // ─── Helpers ────────────────────────────────────────────────────────
@@ -281,6 +284,86 @@ export class FlowTriggersService {
     return result;
   }
 
+  /**
+   * Execute all enabled cron triggers that are due for the provided time.
+   * Used by serverless runtimes where an in-process scheduler is not available.
+   */
+  async executeDueCronTriggers(
+    options: ExecuteDueCronTriggersOptions = {},
+  ): Promise<ExecuteDueCronTriggersResult> {
+    const now = this.normalizeNow(options.now);
+    const claimedAt = now.toISOString();
+    const triggers = await this.getEnabledCronTriggers();
+    const result: ExecuteDueCronTriggersResult = {
+      timestamp: claimedAt,
+      checkedCount: triggers.length,
+      dueCount: 0,
+      claimedCount: 0,
+      executedCount: 0,
+      skippedCount: 0,
+      failedCount: 0,
+    };
+
+    for (const trigger of triggers) {
+      if (!trigger.cronExpression) {
+        result.skippedCount += 1;
+        continue;
+      }
+
+      let isDue = false;
+      try {
+        isDue = this.isCronTriggerDue(trigger, now);
+      } catch (error) {
+        this.logger.error('Failed to evaluate cron trigger schedule', {
+          triggerId: trigger.id,
+          expression: trigger.cronExpression,
+          timezone: trigger.cronTimezone,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        result.failedCount += 1;
+        continue;
+      }
+
+      if (!isDue) {
+        continue;
+      }
+
+      result.dueCount += 1;
+
+      const claimed = await this.databaseService.flowTriggers.claimDueCronExecution(
+        trigger.id,
+        trigger.lastTriggeredAt,
+        claimedAt,
+      );
+
+      if (!claimed) {
+        result.skippedCount += 1;
+        this.logger.debug(
+          'Skipping cron trigger execution because another worker already claimed it',
+          {
+            triggerId: trigger.id,
+          },
+        );
+        continue;
+      }
+
+      result.claimedCount += 1;
+
+      try {
+        await this.executeCronTrigger(trigger.id);
+        result.executedCount += 1;
+      } catch (error) {
+        result.failedCount += 1;
+        this.logger.error('Failed to execute due cron trigger', {
+          triggerId: trigger.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    return result;
+  }
+
   // =====================================
   // PRIVATE
   // =====================================
@@ -327,5 +410,52 @@ export class FlowTriggersService {
       });
       throw new DatabaseError('Failed to execute trigger', { error });
     }
+  }
+
+  private normalizeNow(now?: Date | string): Date {
+    if (!now) {
+      return new Date();
+    }
+
+    if (now instanceof Date) {
+      return now;
+    }
+
+    const parsed = new Date(now);
+    if (Number.isNaN(parsed.getTime())) {
+      throw new ValidationError('Invalid maintenance timestamp', 'now', now);
+    }
+
+    return parsed;
+  }
+
+  private isCronTriggerDue(trigger: FlowTriggerRegistration, now: Date): boolean {
+    if (!trigger.cronExpression) {
+      return false;
+    }
+
+    const cron = new Cron(trigger.cronExpression, {
+      timezone: trigger.cronTimezone ?? 'UTC',
+      paused: true,
+    });
+
+    if (!cron.match(now)) {
+      return false;
+    }
+
+    if (!trigger.lastTriggeredAt) {
+      return true;
+    }
+
+    const lastTriggeredAt = new Date(trigger.lastTriggeredAt);
+    if (Number.isNaN(lastTriggeredAt.getTime())) {
+      return true;
+    }
+
+    return this.toMinuteBucket(lastTriggeredAt) !== this.toMinuteBucket(now);
+  }
+
+  private toMinuteBucket(value: Date): number {
+    return Math.floor(value.getTime() / 60_000);
   }
 }

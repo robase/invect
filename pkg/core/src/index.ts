@@ -177,6 +177,8 @@ export type {
   CreateTriggerInput,
   UpdateTriggerInput,
   TriggerExecutionOptions,
+  ExecuteDueCronTriggersOptions,
+  ExecuteDueCronTriggersResult,
 } from './services/triggers';
 
 export { FlowTriggersService, CronSchedulerService } from './services/triggers';
@@ -276,7 +278,11 @@ export type {
 
 // Re-export AI related types and enums
 export { BatchProvider, BatchStatus, AIProvider } from './services/ai/base-client';
-export type { ProviderAdapter, ProviderCapabilities } from './services/ai/base-client';
+export type {
+  ProviderAdapter,
+  ProviderCapabilities,
+  BatchPollingRunResult,
+} from './services/ai/base-client';
 
 // Re-export Chat Assistant types and service
 export { ChatStreamService, ChatToolkit, ChatConfigSchema } from './services/chat';
@@ -376,6 +382,8 @@ export type { LayoutNode, LayoutEdge, DagreLayoutOptions } from '@invect/layouts
 export { createInvect } from './api';
 export type {
   InvectInstance,
+  InvectMaintenanceOptions,
+  InvectMaintenanceResult,
   FlowsAPI,
   FlowVersionsAPI,
   FlowRunsAPI,

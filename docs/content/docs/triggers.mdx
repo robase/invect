@@ -61,6 +61,12 @@ Downstream nodes access the scheduled time via `{{ cron_trigger.scheduledTime }}
   false` in your [config](/docs/reference/configuration).
 </Callout>
 
+<Callout type="info">
+  Next.js deployments on Vercel need one dedicated Invect cron route, configured in `vercel.json`,
+  to drive scheduled work. Use a single Invect cron endpoint such as `/api/invect/cron`; it will
+  execute due Invect cron triggers and other background maintenance for the app.
+</Callout>
+
 ## Webhook trigger
 
 Trigger flows from external HTTP requests. Requires the [Webhooks Plugin](/docs/plugins/webhooks).

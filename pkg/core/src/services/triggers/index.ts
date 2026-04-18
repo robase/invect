@@ -11,4 +11,6 @@ export type {
   CreateTriggerInput,
   UpdateTriggerInput,
   TriggerExecutionOptions,
+  ExecuteDueCronTriggersOptions,
+  ExecuteDueCronTriggersResult,
 } from './trigger.types';

@@ -45,6 +45,12 @@ import { useCopyPaste } from './use-copy-paste';
 import { useKeyboardShortcuts } from './use-keyboard-shortcuts';
 import { FlowCommandPalette } from './FlowCommandPalette';
 import { ShortcutsHelpDialog } from './ShortcutsHelpDialog';
+import {
+  findVisiblePlacementPosition,
+  NODE_HEIGHT,
+  NODE_WIDTH,
+  PLACEMENT_OFFSET,
+} from './node-placement';
 
 // Stable references for React Flow - defined at module scope to avoid re-renders
 const EDGE_TYPES: EdgeTypes = {
@@ -58,38 +64,6 @@ const FIT_VIEW_OPTIONS = {
 
 // Stable empty array to avoid re-render cascades when no tool panel node is selected
 const EMPTY_TOOLS: AddedToolInstance[] = [];
-
-// Node dimensions (must match max-w/h in UniversalNode / AgentNode)
-const NODE_WIDTH = 240;
-const NODE_HEIGHT = 60;
-const PLACEMENT_OFFSET = 140; // Larger than max possible node height (128px for 5-output switch)
-
-/**
- * Finds a position that doesn't overlap any existing node, stepping down-right
- * by PLACEMENT_OFFSET until a clear spot is found.
- */
-function findNonOverlappingPosition(
-  startX: number,
-  startY: number,
-  existingNodes: Node[],
-): { x: number; y: number } {
-  let x = Math.round(startX);
-  let y = Math.round(startY);
-
-  const overlaps = (cx: number, cy: number) =>
-    existingNodes.some(
-      (n) =>
-        Math.abs(n.position.x - cx) < NODE_WIDTH &&
-        Math.abs(n.position.y - cy) < (n.height ?? NODE_HEIGHT),
-    );
-
-  while (overlaps(x, y)) {
-    x += PLACEMENT_OFFSET;
-    y += PLACEMENT_OFFSET;
-  }
-
-  return { x, y };
-}
 
 export interface FlowEditorProps {
   flowId: string;
@@ -823,7 +797,7 @@ export function FlowWorkbenchView({
         startY = lastNode.position.y + PLACEMENT_OFFSET;
       }
 
-      const position = findNonOverlappingPosition(startX, startY, currentNodes);
+      const position = findVisiblePlacementPosition(startX, startY, currentNodes);
 
       const newNode: Node = {
         id,

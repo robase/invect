@@ -143,6 +143,48 @@ export class FlowTriggersModel {
   }
 
   /**
+   * Attempt to claim a due cron trigger execution by updating last_triggered_at.
+   * Returns true only if the row still has the expected lastTriggeredAt value.
+   */
+  async claimDueCronExecution(
+    id: string,
+    expectedLastTriggeredAt: Date | string | null | undefined,
+    claimedAt: Date | string,
+  ): Promise<boolean> {
+    try {
+      const where = [{ field: 'id', value: id }] as Array<{
+        field: string;
+        value: unknown;
+        operator?: 'eq' | 'is_null';
+      }>;
+
+      if (expectedLastTriggeredAt === null) {
+        where.push({ field: 'last_triggered_at', operator: 'is_null', value: null });
+      } else {
+        where.push({ field: 'last_triggered_at', value: expectedLastTriggeredAt });
+      }
+
+      const result = await this.adapter.update<Record<string, unknown>>({
+        model: TABLE,
+        where,
+        update: {
+          last_triggered_at: claimedAt,
+          updated_at: claimedAt,
+        },
+      });
+
+      return !!result;
+    } catch (error) {
+      this.logger.error('Failed to claim due cron trigger execution', {
+        id,
+        expectedLastTriggeredAt,
+        error,
+      });
+      throw new DatabaseError('Failed to claim due cron trigger execution', { error });
+    }
+  }
+
+  /**
    * Update a trigger registration.
    */
   async update(id: string, input: UpdateTriggerInput): Promise<FlowTriggerRegistration | null> {

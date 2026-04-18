@@ -72,3 +72,17 @@ export interface TriggerExecutionOptions {
   triggerId?: string;
   triggerData: Record<string, unknown>;
 }
+
+export interface ExecuteDueCronTriggersOptions {
+  now?: Date | string;
+}
+
+export interface ExecuteDueCronTriggersResult {
+  timestamp: string;
+  checkedCount: number;
+  dueCount: number;
+  claimedCount: number;
+  executedCount: number;
+  skippedCount: number;
+  failedCount: number;
+}

@@ -64,6 +64,28 @@ const parseParamsFromSearch = (value: string | null): Record<string, unknown> =>
   }
 };
 
+const parseBooleanSearchParam = (value: string | null): boolean | undefined => {
+  if (value === null) {
+    return undefined;
+  }
+
+  if (value === 'true') {
+    return true;
+  }
+
+  if (value === 'false') {
+    return false;
+  }
+
+  return undefined;
+};
+
+const disableBackgroundWorkers = async (core: InvectInstance): Promise<void> => {
+  await core.stopBatchPolling();
+  await core.stopMaintenancePolling();
+  core.stopCronScheduler();
+};
+
 export function createInvectHandler(config: InvectConfig): InvectHandler {
   let core: InvectInstance | null = null;
   let initializationPromise: Promise<void> | null = null;
@@ -87,7 +109,10 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
 
     if (initError) {
       // eslint-disable-next-line no-console
-      console.error('[invect-nextjs] Previous initialization failed, retrying...', initError.message);
+      console.error(
+        '[invect-nextjs] Previous initialization failed, retrying...',
+        initError.message,
+      );
       initializationPromise = null;
       initError = null;
     }
@@ -116,11 +141,11 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
           // eslint-disable-next-line no-console
           console.log(`[invect-nextjs] createInvect() completed in ${Date.now() - startTime}ms`);
 
+          await disableBackgroundWorkers(core);
           // eslint-disable-next-line no-console
-          console.log('[invect-nextjs] Starting batch polling...');
-          await core.startBatchPolling();
-          // eslint-disable-next-line no-console
-          console.log(`[invect-nextjs] ✅ Invect fully initialized in ${Date.now() - startTime}ms`);
+          console.log(
+            `[invect-nextjs] ✅ Invect fully initialized for serverless routing in ${Date.now() - startTime}ms`,
+          );
         } catch (error) {
           const elapsed = Date.now() - startTime;
           // eslint-disable-next-line no-console
@@ -275,12 +300,16 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
       const coreOrResponse = await getInitializedCore();
       if (coreOrResponse instanceof Response) {
         // eslint-disable-next-line no-console
-        console.error(`[invect-nextjs] ${method} /${path} → 503 (init failed, ${Date.now() - requestStart}ms)`);
+        console.error(
+          `[invect-nextjs] ${method} /${path} → 503 (init failed, ${Date.now() - requestStart}ms)`,
+        );
         return coreOrResponse;
       }
       const initializedCore = coreOrResponse;
       // eslint-disable-next-line no-console
-      console.log(`[invect-nextjs] ${method} /${path} core ready in ${Date.now() - requestStart}ms`);
+      console.log(
+        `[invect-nextjs] ${method} /${path} core ready in ${Date.now() - requestStart}ms`,
+      );
 
       // Clone the request before consuming the body so plugin handlers
       // (e.g. user-auth) can read the raw body stream themselves.
@@ -1107,7 +1136,9 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
 
       // Route not found
       // eslint-disable-next-line no-console
-      console.warn(`[invect-nextjs] ${method} /${path} → 404 (no matching route, ${Date.now() - requestStart}ms)`);
+      console.warn(
+        `[invect-nextjs] ${method} /${path} → 404 (no matching route, ${Date.now() - requestStart}ms)`,
+      );
       return Response.json(
         {
           error: 'Not Found',
@@ -1149,9 +1180,9 @@ export function createInvectEndpoint(config: InvectConfig) {
         try {
           const { createInvect } = await loadCoreModule();
           core = await createInvect(config);
-          await core.startBatchPolling();
+          await disableBackgroundWorkers(core);
           // eslint-disable-next-line no-console
-          console.log('✅ Invect batch polling started');
+          console.log('✅ Invect initialized with background workers disabled');
         } catch (error) {
           // eslint-disable-next-line no-console
           console.error('Failed to initialize Invect Core:', error);
@@ -1208,6 +1239,97 @@ export function createInvectEndpoint(config: InvectConfig) {
         }
       };
     },
+  };
+}
+
+/**
+ * Create a dedicated maintenance handler for serverless cron invocations.
+ *
+ * Intended for routes like /api/invect/cron that are triggered by Vercel Cron.
+ * The handler performs one maintenance pass that:
+ * - polls pending batch jobs
+ * - resumes flows paused for batch completion
+ * - fails stale runs
+ * - executes due Invect cron triggers
+ */
+export function createInvectCronHandler(config: InvectConfig) {
+  let core: InvectInstance | null = null;
+  let initializationPromise: Promise<void> | null = null;
+
+  const ensureInitialized = async (): Promise<InvectInstance> => {
+    if (core) {
+      return core;
+    }
+
+    if (!initializationPromise) {
+      initializationPromise = (async () => {
+        try {
+          const { createInvect } = await loadCoreModule();
+          core = await createInvect(config);
+          await disableBackgroundWorkers(core);
+        } catch (error) {
+          core = null;
+          initializationPromise = null;
+          throw error;
+        }
+      })();
+    }
+
+    await initializationPromise;
+
+    if (!core) {
+      throw new Error('Invect Core failed to initialize');
+    }
+
+    return core;
+  };
+
+  return async function handleCron(request: Request): Promise<Response> {
+    if (request.method !== 'GET') {
+      return new Response(null, {
+        status: 405,
+        headers: { Allow: 'GET' },
+      });
+    }
+
+    try {
+      const initializedCore = await ensureInitialized();
+      const searchParams = new URL(request.url).searchParams;
+      const result = await initializedCore.runMaintenance({
+        now: searchParams.get('now') ?? undefined,
+        pollBatchJobs: parseBooleanSearchParam(searchParams.get('pollBatchJobs')),
+        resumePausedFlows: parseBooleanSearchParam(searchParams.get('resumePausedFlows')),
+        failStaleRuns: parseBooleanSearchParam(searchParams.get('failStaleRuns')),
+        executeCronTriggers: parseBooleanSearchParam(searchParams.get('executeCronTriggers')),
+      });
+
+      return Response.json({ ok: true, ...result });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return Response.json(
+          {
+            error: 'Validation Error',
+            message: 'Invalid request data',
+            details: error.errors.map((err) => ({
+              path: err.path.join('.'),
+              message: err.message,
+              code: err.code,
+            })),
+          },
+          { status: 400 },
+        );
+      }
+
+      // eslint-disable-next-line no-console
+      console.error('Invect Cron Handler Error:', error);
+      return Response.json(
+        {
+          error: 'Internal Server Error',
+          message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        },
+        { status: 500 },
+      );
+    }
   };
 }
 

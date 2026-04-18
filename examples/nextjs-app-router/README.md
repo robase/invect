@@ -23,3 +23,14 @@ pnpm dev
 ```
 
 Open [http://localhost:3002](http://localhost:3002) to see the app. The Invect UI is mounted at `/invect`.
+
+## Vercel Cron
+
+For production Vercel deployments, this example includes a dedicated Invect maintenance route at `/api/invect/cron` plus a `vercel.json` cron entry.
+
+That single Invect cron is used to:
+
+- poll pending batch jobs
+- resume flows paused for batch completion
+- fail stale flow runs
+- execute due Invect cron triggers

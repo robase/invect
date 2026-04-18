@@ -7,6 +7,8 @@ export { createInvect } from './create-invect';
 // Sub-API types
 export type {
   InvectInstance,
+  InvectMaintenanceOptions,
+  InvectMaintenanceResult,
   FlowsAPI,
   FlowVersionsAPI,
   FlowRunsAPI,

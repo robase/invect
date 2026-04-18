@@ -3,6 +3,8 @@ import { Badge } from '../ui/badge';
 import { Save, Loader2 } from 'lucide-react';
 import { InlineEdit } from './inline-edit';
 import { cn } from '../../lib/utils';
+import { usePluginRegistry } from '../../contexts/PluginRegistryContext';
+import { useParams } from 'react-router';
 
 interface FlowHeaderProps {
   flowName: string;
@@ -10,6 +12,7 @@ interface FlowHeaderProps {
   isDirty?: boolean;
   onSave?: () => Promise<boolean | void>;
   isSaving?: boolean;
+  basePath?: string;
 }
 
 export function FlowHeader({
@@ -18,7 +21,12 @@ export function FlowHeader({
   isDirty = false,
   onSave,
   isSaving = false,
+  basePath = '',
 }: FlowHeaderProps) {
+  const { flowId } = useParams();
+  const registry = usePluginRegistry();
+  const flowHeaderActions = registry.headerActions.flowHeader ?? [];
+
   return (
     <header className="flex items-center justify-between px-6 border-b h-14 border-border bg-imp-background text-card-foreground">
       <div className="flex items-center gap-4">
@@ -44,6 +52,18 @@ export function FlowHeader({
         )}
       </div>
       <div className="flex items-center gap-2">
+        {flowHeaderActions
+          .filter(
+            (action) =>
+              !action.permission || registry.checkPermission(action.permission, { flowId }),
+          )
+          .map((action, index) => (
+            <action.component
+              key={`flow-header-action-${index}`}
+              flowId={flowId}
+              basePath={basePath}
+            />
+          ))}
         <Button
           variant="outline"
           size="sm"

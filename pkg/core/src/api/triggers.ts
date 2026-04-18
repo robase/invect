@@ -45,5 +45,9 @@ export function createTriggersAPI(sf: ServiceFactory, logger: Logger): TriggersA
     executeCron(triggerId) {
       return svc.executeCronTrigger(triggerId);
     },
+
+    executeDueCron(options) {
+      return svc.executeDueCronTriggers(options);
+    },
   };
 }

@@ -113,10 +113,7 @@ export class FlowOrchestrationService {
       await this.recoverStaleRuns();
 
       // Start flow resumption polling for completed batches
-      await this.startFlowResumptionPolling();
-
-      // Start periodic stale-run detector
-      this.startStaleRunDetector();
+      await this.startMaintenancePolling();
 
       this.initialized = true;
       this.logger.info('Flow orchestration service initialized successfully');
@@ -636,6 +633,14 @@ export class FlowOrchestrationService {
   }
 
   /**
+   * Start all recurring maintenance loops owned by flow orchestration.
+   */
+  async startMaintenancePolling(): Promise<void> {
+    await this.startFlowResumptionPolling();
+    this.startStaleRunDetector();
+  }
+
+  /**
    * Stop polling for completed batch jobs
    */
   async stopFlowResumptionPolling(): Promise<void> {
@@ -654,45 +659,89 @@ export class FlowOrchestrationService {
   }
 
   /**
+   * Stop all recurring maintenance loops owned by flow orchestration.
+   */
+  async stopMaintenancePolling(): Promise<void> {
+    await this.stopFlowResumptionPolling();
+    this.stopStaleRunDetector();
+  }
+
+  /**
+   * Run a single pass that resumes flows paused for batch processing.
+   */
+  async runBatchResumptionSweep(): Promise<{
+    readyCount: number;
+    resumedCount: number;
+    failedCount: number;
+  }> {
+    const flowsToResume = await this.findFlowsReadyForResumption();
+
+    if (flowsToResume.length === 0) {
+      this.logger.debug('No flows found ready for resumption');
+      return {
+        readyCount: 0,
+        resumedCount: 0,
+        failedCount: 0,
+      };
+    }
+
+    this.logger.info('Found flows ready for resumption', {
+      count: flowsToResume.length,
+      flowRunIds: flowsToResume.map((f) => f.flowRunId),
+    });
+
+    let resumedCount = 0;
+    let failedCount = 0;
+
+    for (const flowResumption of flowsToResume) {
+      try {
+        await this.resumeFromBatchCompletion(
+          flowResumption.flowRunId,
+          flowResumption.nodeId,
+          flowResumption.batchResult,
+          flowResumption.batchError,
+        );
+
+        resumedCount += 1;
+        this.logger.info('Flow resumed successfully', {
+          flowRunId: flowResumption.flowRunId,
+          nodeId: flowResumption.nodeId,
+        });
+      } catch (error) {
+        failedCount += 1;
+        this.logger.error('Failed to resume flow', {
+          flowRunId: flowResumption.flowRunId,
+          nodeId: flowResumption.nodeId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    return {
+      readyCount: flowsToResume.length,
+      resumedCount,
+      failedCount,
+    };
+  }
+
+  /**
+   * Run a single stale-run failure sweep.
+   */
+  async runStaleRunSweep(): Promise<{ failedCount: number }> {
+    const failedCount = await this.flowRunsService.failStaleRuns(this.flowTimeoutMs);
+    if (failedCount > 0) {
+      this.logger.warn(`Stale run sweep: marked ${failedCount} run(s) as FAILED`);
+    }
+
+    return { failedCount };
+  }
+
+  /**
    * Poll for completed batch jobs and resume corresponding flows
    */
   private async pollForCompletedBatches(): Promise<void> {
     try {
-      // Find flows that are paused for batch processing with completed batch jobs
-      const flowsToResume = await this.findFlowsReadyForResumption();
-
-      if (flowsToResume.length === 0) {
-        this.logger.debug('No flows found ready for resumption');
-        return;
-      }
-
-      this.logger.info('Found flows ready for resumption', {
-        count: flowsToResume.length,
-        flowRunIds: flowsToResume.map((f) => f.flowRunId),
-      });
-
-      // Resume each flow
-      for (const flowResumption of flowsToResume) {
-        try {
-          await this.resumeFromBatchCompletion(
-            flowResumption.flowRunId,
-            flowResumption.nodeId,
-            flowResumption.batchResult,
-            flowResumption.batchError,
-          );
-
-          this.logger.info('Flow resumed successfully', {
-            flowRunId: flowResumption.flowRunId,
-            nodeId: flowResumption.nodeId,
-          });
-        } catch (error) {
-          this.logger.error('Failed to resume flow', {
-            flowRunId: flowResumption.flowRunId,
-            nodeId: flowResumption.nodeId,
-            error: error instanceof Error ? error.message : String(error),
-          });
-        }
-      }
+      await this.runBatchResumptionSweep();
     } catch (error) {
       this.logger.error('Error polling for completed batches', { error });
     }
@@ -768,10 +817,7 @@ export class FlowOrchestrationService {
     this.flowRunCoordinator.stopAllHeartbeats();
 
     // Stop batch polling if it's running
-    await this.stopFlowResumptionPolling();
-
-    // Stop stale run detector
-    this.stopStaleRunDetector();
+    await this.stopMaintenancePolling();
 
     this.initialized = false;
     // Service lifecycle is managed externally

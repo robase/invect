@@ -153,7 +153,9 @@ const InvectRoutes = React.memo(
             {/* Flow-scoped layout with header */}
             <Route path="flow/:flowId" element={<FlowRouteLayout basePath={basePath} />}>
               <Route index element={<Flow basePath={basePath} />} />
+              <Route path="version/:version" element={<Flow basePath={basePath} />} />
               <Route path="runs" element={<FlowRuns basePath={basePath} />} />
+              <Route path="runs/version/:version" element={<FlowRuns basePath={basePath} />} />
               {/* Plugin flow-scoped routes */}
               {flowScopedPluginRoutes.map((route) => (
                 <Route

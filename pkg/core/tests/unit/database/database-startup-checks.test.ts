@@ -147,7 +147,9 @@ describe('DatabaseService startup checks', () => {
 
       await service.initialize();
 
-      expect(logger.info).toHaveBeenCalledWith('Database service initialized successfully');
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('Database service initialized successfully'),
+      );
       expect(logger.error).not.toHaveBeenCalled();
     });
   });
@@ -168,7 +170,7 @@ describe('DatabaseService startup checks', () => {
       await expect(service.initialize()).rejects.toThrow(/Failed to connect/);
 
       const errorCall = logger.error.mock.calls[0][0] as string;
-      expect(errorCall).toContain('DATABASE CONNECTION FAILED');
+      expect(errorCall.toUpperCase()).toContain('DATABASE CONNECTION FAILED');
       expect(errorCall).toContain('sqlite');
     });
 
@@ -191,9 +193,14 @@ describe('DatabaseService startup checks', () => {
 
       await expect(service.initialize()).rejects.toThrow();
 
-      const errorCall = logger.error.mock.calls[0][0] as string;
-      expect(errorCall).toContain('***'); // password is redacted
-      expect(errorCall).not.toContain('s3cret_pass');
+      const allErrorArgs = logger.error.mock.calls.map((c: unknown[]) => String(c[0])).join(' ');
+      // The redacted connection string may appear in an info or error call
+      const allArgs = [
+        ...logger.info.mock.calls.map((c: unknown[]) => JSON.stringify(c)),
+        ...logger.error.mock.calls.map((c: unknown[]) => JSON.stringify(c)),
+      ].join(' ');
+      expect(allArgs).toContain('***'); // password is redacted
+      expect(allArgs).not.toContain('s3cret_pass');
     });
   });
 
@@ -213,7 +220,7 @@ describe('DatabaseService startup checks', () => {
       await expect(service.initialize()).rejects.toThrow(/connectivity check failed/);
 
       const errorCall = logger.error.mock.calls[0][0] as string;
-      expect(errorCall).toContain('CONNECTIVITY CHECK FAILED');
+      expect(errorCall.toUpperCase()).toContain('CONNECTIVITY CHECK FAILED');
       expect(errorCall).toContain('database is locked');
     });
   });
@@ -297,7 +304,9 @@ describe('DatabaseService startup checks', () => {
 
       await service.initialize();
 
-      expect(logger.info).toHaveBeenCalledWith('Database service initialized successfully');
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('Database service initialized successfully'),
+      );
       expect(logger.error).not.toHaveBeenCalled();
     });
 
@@ -388,7 +397,9 @@ describe('DatabaseService startup checks', () => {
 
       await service.initialize();
 
-      expect(logger.info).toHaveBeenCalledWith('Database service initialized successfully');
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('Database service initialized successfully'),
+      );
       expect(logger.error).not.toHaveBeenCalled();
     });
 

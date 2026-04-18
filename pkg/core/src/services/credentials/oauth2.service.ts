@@ -89,7 +89,8 @@ function cleanupExpiredStates() {
 }
 
 // Run cleanup every 5 minutes
-setInterval(cleanupExpiredStates, 5 * 60 * 1000);
+const expiredStateCleanupInterval = setInterval(cleanupExpiredStates, 5 * 60 * 1000);
+expiredStateCleanupInterval.unref?.();
 
 /**
  * OAuth2 Service for handling authorization flows

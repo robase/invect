@@ -17,6 +17,8 @@
 
 Add Invect to any Next.js app with a single catch-all API route. Handles all endpoints — flows, executions, credentials, agent tools, and OAuth2.
 
+For production deployments on Vercel, add one dedicated Invect cron route as well. That single route runs Invect maintenance work for the app: batch polling, paused-flow resumption, stale-run cleanup, and Invect cron triggers.
+
 ## Install
 
 ```bash
@@ -53,6 +55,39 @@ export const DELETE = handler.DELETE;
 ```
 
 All Invect API endpoints are now available under `/api/invect/`.
+
+## Vercel Cron
+
+Create a dedicated maintenance route for production cron jobs:
+
+```ts
+// app/api/invect/cron/route.ts
+import { createInvectCronHandler } from '@invect/nextjs';
+
+const handleCron = createInvectCronHandler({
+  database: {
+    type: 'sqlite',
+    connectionString: process.env.DATABASE_URL || 'file:./dev.db',
+  },
+  encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
+  triggers: {
+    cronEnabled: true,
+    webhookBaseUrl: 'https://your-app.com/api/invect',
+  },
+});
+
+export const GET = handleCron;
+```
+
+Then configure one Vercel cron in `vercel.json`:
+
+```json
+{
+  "crons": [{ "path": "/api/invect/cron", "schedule": "* * * * *" }]
+}
+```
+
+This single Invect cron is the fan-out point for background work in the app.
 
 ## Frontend
 

@@ -1039,7 +1039,7 @@ importers:
         specifier: workspace:*
         version: link:../../core
       '@invect/user-auth':
-        specifier: '>=0.0.9'
+        specifier: '>=0.0.11'
         version: 0.1.3(8fd445b5adc2a3a40a4a6eda43b73ed7)
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0

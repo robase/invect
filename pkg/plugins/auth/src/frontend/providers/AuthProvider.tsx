@@ -435,7 +435,9 @@ export function useAuth(): AuthContextValue {
       isSigningUp: false,
       error: null,
       twoFactorRequired: false,
-      cancelTwoFactor: () => {},
+      cancelTwoFactor: () => {
+        return null;
+      },
       verifyTotp: async () => {
         throw new Error('AuthProvider not found');
       },
