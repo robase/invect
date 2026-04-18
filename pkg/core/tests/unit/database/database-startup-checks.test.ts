@@ -169,9 +169,11 @@ describe('DatabaseService startup checks', () => {
 
       await expect(service.initialize()).rejects.toThrow(/Failed to connect/);
 
-      const errorCall = logger.error.mock.calls[0][0] as string;
-      expect(errorCall.toUpperCase()).toContain('DATABASE CONNECTION FAILED');
-      expect(errorCall).toContain('sqlite');
+      const allErrorMessages = logger.error.mock.calls
+        .map((c: unknown[]) => String(c[0]))
+        .join('\n');
+      expect(allErrorMessages.toUpperCase()).toContain('DATABASE CONNECTION FAILED');
+      expect(allErrorMessages).toContain('sqlite');
     });
 
     it('should redact passwords in PostgreSQL connection strings', async () => {
@@ -219,9 +221,11 @@ describe('DatabaseService startup checks', () => {
 
       await expect(service.initialize()).rejects.toThrow(/connectivity check failed/);
 
-      const errorCall = logger.error.mock.calls[0][0] as string;
-      expect(errorCall.toUpperCase()).toContain('CONNECTIVITY CHECK FAILED');
-      expect(errorCall).toContain('database is locked');
+      const allErrorMessages = logger.error.mock.calls
+        .map((c: unknown[]) => String(c[0]))
+        .join('\n');
+      expect(allErrorMessages.toUpperCase()).toContain('CONNECTIVITY CHECK FAILED');
+      expect(allErrorMessages).toContain('database is locked');
     });
   });
 

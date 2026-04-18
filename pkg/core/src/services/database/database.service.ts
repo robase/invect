@@ -122,7 +122,9 @@ export class DatabaseService {
     this.logger.info('Starting database initialization...', {
       dbType: this.hostDbConfig?.type,
       hasConnectionString: !!this.hostDbConfig?.connectionString,
-      connectionStringPrefix: this.hostDbConfig?.connectionString?.substring(0, 30) + '...',
+      connectionStringPrefix: this.hostDbConfig?.connectionString
+        ? this.redactConnectionString(this.hostDbConfig.connectionString).substring(0, 30) + '...'
+        : undefined,
     });
 
     // --- Step 1: Establish the database connection ---
