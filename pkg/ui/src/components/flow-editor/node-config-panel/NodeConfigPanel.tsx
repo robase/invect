@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useState, useEffect, useRef } from 'react';
+import { useMemo, useCallback } from 'react';
 import { GraphNodeType, type ReactFlowNodeData } from '@invect/core/types';
 import {
   Dialog,
@@ -8,33 +8,29 @@ import {
   DialogTitle,
 } from '../../ui/dialog';
 import { X } from 'lucide-react';
-import { nanoid } from 'nanoid';
 import { ResizablePanelGroup, ResizableHandle } from '../../ui/resizable';
 import { cn } from '../../../lib/utils';
 import { useNodeRegistry } from '../../../contexts/NodeRegistryContext';
-import {
-  useCredentials,
-  useCreateCredential,
-  useUpdateCredential,
-  useTestCredential,
-  useStartOAuth2Flow,
-  useHandleOAuth2Callback,
-} from '../../../api/credentials.api';
 import { useExecuteFlowToNode, useTestNode } from '../../../api/executions.api';
 import { useTestMapper } from '../../../api/node-data.api';
 import { CreateCredentialModal } from '../../credentials/CreateCredentialModal';
 import { EditCredentialModal } from '../../credentials/EditCredentialModal';
-import type { Credential } from '../../../api/types';
 
 import { formatNodeTypeLabel, getIconComponent } from './utils';
 import { useNodeConfigState } from './use-node-config-state';
 import { updateReferenceIdForDisplayName } from '../../../utils/nodeReferenceUtils';
 import { useFlowActions } from '../../../routes/flow-route-layout';
-import { usePreviewState, useNodeExecution } from './hooks';
+import {
+  usePreviewState,
+  useNodeExecution,
+  useOAuth2Refresh,
+  useNodeCredentials,
+  useAgentToolManagement,
+} from './hooks';
 import { useUpstreamSlots } from './hooks/use-upstream-slots';
 import { InputPanel, OutputPanel, ConfigurationPanel } from './panels';
 import { useFlowEditorStore } from '../flow-editor.store';
-import type { ToolDefinition, AddedToolInstance } from '../../nodes/ToolSelectorModal';
+import type { ToolDefinition } from '../../nodes/ToolSelectorModal';
 
 interface NodeConfigPanelProps {
   nodeId: string | null;
@@ -59,11 +55,9 @@ export function NodeConfigPanel({
 }: NodeConfigPanelProps) {
   const { getNodeDefinition } = useNodeRegistry();
 
-  // Use Zustand store for all node state (single source of truth)
   const updateNodeDataInStore = useFlowEditorStore((s) => s.updateNodeData);
   const storeNodes = useFlowEditorStore((s) => s.nodes);
 
-  // Find the current node from our Zustand store
   const node = useMemo(() => {
     if (!nodeId) {
       return null;
@@ -71,14 +65,11 @@ export function NodeConfigPanel({
     return storeNodes.find((n) => n.id === nodeId) ?? null;
   }, [nodeId, storeNodes]);
 
-  // Access node data - cast to ReactFlowNodeData for proper typing
-  // At runtime, nodes from the server always have this shape
   const nodeData = node?.data as ReactFlowNodeData | undefined;
   const nodeType = nodeData?.type ?? GraphNodeType.TEMPLATE_STRING;
   const nodeParams = nodeData?.params ?? {};
   const definition = node ? getNodeDefinition(nodeType) : undefined;
 
-  // Callback for backend resolution to write params back to Zustand
   const handleResolvedParams = useCallback(
     (nid: string, params: Record<string, unknown>) => {
       updateNodeDataInStore(nid, { params } as Partial<ReactFlowNodeData>);
@@ -86,8 +77,6 @@ export function NodeConfigPanel({
     [updateNodeDataInStore],
   );
 
-  // Node configuration state (validation, dynamic fields)
-  // values are derived from node.data.params (Zustand) — single source of truth
   const {
     definition: activeDefinition,
     values: formValues,
@@ -107,77 +96,46 @@ export function NodeConfigPanel({
   const testNodeMutation = useTestNode();
   const testMapperMutation = useTestMapper();
 
-  // Upstream slots — replaces computeInputFromEdges + handleRunUpstreamNode
   const upstream = useUpstreamSlots({ nodeId, flowId });
-
-  // Preview state (input/output)
   const previewState = usePreviewState({ nodeId, updateNodeData: updateNodeDataInStore });
 
-  // Credential modal state
-  const [isCreateCredentialOpen, setIsCreateCredentialOpen] = useState(false);
-  const [activeCredentialField, setActiveCredentialField] = useState<string | null>(null);
-
-  // Edit credential state
-  const [editingCredential, setEditingCredential] = useState<Credential | null>(null);
-  const updateCredentialMutation = useUpdateCredential();
-
-  // OAuth refresh state
-  const testCredentialMutation = useTestCredential();
-  const startOAuth2Flow = useStartOAuth2Flow();
-  const handleOAuth2Callback = useHandleOAuth2Callback();
-  const [refreshingCredentialId, setRefreshingCredentialId] = useState<string | null>(null);
-  const [oauthPopupWindow, setOAuthPopupWindow] = useState<Window | null>(null);
-  const oauthCallbackParamsRef = useRef<{ credentialId: string } | null>(null);
-
-  // Listen for OAuth callback message from popup (for credential refresh)
-  useEffect(() => {
-    const handleMessage = async (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) {
+  // --- Extracted hooks ---
+  const handleFieldChange = useCallback(
+    (fieldName: string, value: unknown) => {
+      if (!nodeId) {
         return;
       }
-      const { type, code, state, error } = event.data;
-      if (type !== 'oauth2_callback') {
-        return;
-      }
+      const currentNode = storeNodes.find((n) => n.id === nodeId);
+      const currentParams = (currentNode?.data as ReactFlowNodeData | undefined)?.params ?? {};
+      const newParams = { ...currentParams, [fieldName]: value } as ReactFlowNodeData['params'];
+      updateNodeDataInStore(nodeId, { params: newParams });
+      updateField(fieldName, value);
+    },
+    [nodeId, updateNodeDataInStore, updateField, storeNodes],
+  );
 
-      if (oauthPopupWindow && !oauthPopupWindow.closed) {
-        oauthPopupWindow.close();
-      }
-      setOAuthPopupWindow(null);
+  const credentialHooks = useNodeCredentials({ enabled: open, onFieldChange: handleFieldChange });
 
-      if (error || !code || !state) {
-        setRefreshingCredentialId(null);
-        return;
-      }
+  const currentNodeRequiredScopes = useMemo(() => {
+    const credField = (activeDefinition?.paramFields ?? []).find(
+      (f) => f.type === 'credential' && f.requiredScopes?.length,
+    );
+    return credField?.requiredScopes;
+  }, [activeDefinition]);
 
-      try {
-        await handleOAuth2Callback.mutateAsync({ code, state });
-      } catch {
-        // Credential cache is invalidated by the mutation hook on success
-      }
-      setRefreshingCredentialId(null);
-    };
+  const oauthHooks = useOAuth2Refresh({ requiredScopes: currentNodeRequiredScopes });
 
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [oauthPopupWindow, handleOAuth2Callback]);
+  const agentToolsProps = useAgentToolManagement({
+    nodeId,
+    nodeType,
+    nodeParams: nodeParams as Record<string, unknown>,
+    storeNodes,
+    updateNodeData: updateNodeDataInStore,
+    availableTools,
+    initialToolInstanceId,
+  });
 
-  // Check if popup was closed without completing
-  useEffect(() => {
-    if (!oauthPopupWindow) {
-      return;
-    }
-    const check = setInterval(() => {
-      if (oauthPopupWindow.closed) {
-        clearInterval(check);
-        setOAuthPopupWindow(null);
-        setRefreshingCredentialId(null);
-      }
-    }, 500);
-    return () => clearInterval(check);
-  }, [oauthPopupWindow]);
-
-  // Mapper config state — stored in node data as `mapper`
+  // Mapper config
   const mapperConfig = (nodeData as Record<string, unknown> | undefined)?.mapper as
     | {
         enabled: boolean;
@@ -200,7 +158,6 @@ export function NodeConfigPanel({
     [nodeId, updateNodeDataInStore],
   );
 
-  // Parse current input for mapper testing
   const parsedInputData = useMemo(() => {
     const raw = upstream.slots.length > 0 ? upstream.inputPreviewJson : previewState.inputPreview;
     try {
@@ -242,24 +199,6 @@ export function NodeConfigPanel({
     ),
   });
 
-  // Credentials
-  const {
-    data: credentials = [],
-    isLoading: credentialsLoading,
-    isError: credentialsError,
-    refetch: refetchCredentials,
-  } = useCredentials({ includeShared: true }, { enabled: open });
-
-  const createCredentialMutation = useCreateCredential();
-
-  // Compute required OAuth scopes from the current node's credential field definition
-  const currentNodeRequiredScopes = useMemo(() => {
-    const credField = (activeDefinition?.paramFields ?? []).find(
-      (f) => f.type === 'credential' && f.requiredScopes?.length,
-    );
-    return credField?.requiredScopes;
-  }, [activeDefinition]);
-
   // Derived display values
   const displayName = (nodeData?.display_name as string) || definition?.label || 'Untitled Node';
   const Icon = useMemo(
@@ -269,18 +208,15 @@ export function NodeConfigPanel({
   const categoryColor = 'bg-primary text-primary-foreground';
   const nodeTypeLabel = useMemo(() => formatNodeTypeLabel(nodeType), [nodeType]);
 
-  // Model-specific status message
   const modelStatusMessage = useMemo(() => {
     if (nodeType !== GraphNodeType.MODEL) {
       return '';
     }
-
     const selectedCredentialId = (formValues.credentialId as string) || '';
     const providerLabel =
       typeof formValues.provider === 'string' ? (formValues.provider as string) : '';
     const visibleFields = (activeDefinition?.paramFields || []).filter((f) => !f.hidden);
     const modelField = visibleFields.find((f) => f.name === 'model');
-
     if (!selectedCredentialId) {
       return 'Select a credential to load provider-specific models.';
     }
@@ -311,225 +247,6 @@ export function NodeConfigPanel({
     },
     [nodeId, updateNodeDataInStore, storeNodes],
   );
-
-  const handleFieldChange = useCallback(
-    (fieldName: string, value: unknown) => {
-      if (!nodeId) {
-        return;
-      }
-      // Write to Zustand (single source of truth)
-      const currentNode = storeNodes.find((n) => n.id === nodeId);
-      const currentParams = (currentNode?.data as ReactFlowNodeData | undefined)?.params ?? {};
-      const newParams = { ...currentParams, [fieldName]: value } as ReactFlowNodeData['params'];
-      updateNodeDataInStore(nodeId, { params: newParams });
-
-      // Trigger backend resolution for credential/provider changes
-      updateField(fieldName, value);
-    },
-    [nodeId, updateNodeDataInStore, updateField, storeNodes],
-  );
-
-  const handleAddNewCredential = useCallback((fieldName: string) => {
-    setActiveCredentialField(fieldName);
-    setIsCreateCredentialOpen(true);
-  }, []);
-
-  const handleCloseCredentialModal = useCallback(() => {
-    setIsCreateCredentialOpen(false);
-    setActiveCredentialField(null);
-  }, []);
-
-  const handleCreateCredential = useCallback(
-    (input: Parameters<typeof createCredentialMutation.mutate>[0]) => {
-      createCredentialMutation.mutate(input, {
-        onSuccess: (createdCredential) => {
-          if (activeCredentialField) {
-            handleFieldChange(activeCredentialField, createdCredential.id);
-          }
-          handleCloseCredentialModal();
-        },
-      });
-    },
-    [
-      createCredentialMutation,
-      activeCredentialField,
-      handleFieldChange,
-      handleCloseCredentialModal,
-    ],
-  );
-
-  // Edit credential handler
-  const handleEditCredential = useCallback((credential: Credential) => {
-    setEditingCredential(credential);
-  }, []);
-
-  const handleCloseEditCredential = useCallback(() => {
-    setEditingCredential(null);
-  }, []);
-
-  const handleUpdateCredential = useCallback(
-    (data: Parameters<typeof updateCredentialMutation.mutate>[0]['data']) => {
-      if (!editingCredential) {
-        return;
-      }
-      updateCredentialMutation.mutate(
-        { id: editingCredential.id, data },
-        { onSuccess: () => setEditingCredential(null) },
-      );
-    },
-    [editingCredential, updateCredentialMutation],
-  );
-
-  // OAuth refresh handler: test credential → if fails → start re-auth flow
-  const handleRefreshOAuthCredential = useCallback(
-    async (credential: Credential) => {
-      setRefreshingCredentialId(credential.id);
-      oauthCallbackParamsRef.current = { credentialId: credential.id };
-
-      try {
-        // First test the credential
-        const testResult = await testCredentialMutation.mutateAsync(credential.id);
-        if (testResult.success) {
-          // Credential is valid, just refresh credentials list
-          setRefreshingCredentialId(null);
-          refetchCredentials();
-          return;
-        }
-      } catch {
-        // Test failed — proceed to re-authorize
-      }
-
-      // Start OAuth re-auth flow
-      try {
-        const result = await startOAuth2Flow.mutateAsync({
-          existingCredentialId: credential.id,
-          redirectUri: `${window.location.origin}/oauth/callback`,
-          returnUrl: window.location.href,
-          scopes: currentNodeRequiredScopes,
-        });
-
-        const width = 600;
-        const height = 700;
-        const left = window.screenX + (window.outerWidth - width) / 2;
-        const top = window.screenY + (window.outerHeight - height) / 2;
-
-        const popup = window.open(
-          result.authorizationUrl,
-          `oauth2_refresh_${credential.id}`,
-          `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`,
-        );
-
-        if (!popup) {
-          setRefreshingCredentialId(null);
-          return;
-        }
-
-        setOAuthPopupWindow(popup);
-      } catch {
-        setRefreshingCredentialId(null);
-      }
-    },
-    [testCredentialMutation, startOAuth2Flow, refetchCredentials, currentNodeRequiredScopes],
-  );
-
-  // ── Agent Tool Handlers (only used when nodeType is AGENT) ──────
-
-  const addedTools = useMemo<AddedToolInstance[]>(() => {
-    return (nodeParams.addedTools as AddedToolInstance[]) ?? [];
-  }, [nodeParams]);
-
-  const handleAddTool = useCallback(
-    (toolId: string): string => {
-      if (!nodeId) {
-        return '';
-      }
-      const toolDef = availableTools.find((t) => t.id === toolId);
-      if (!toolDef) {
-        return '';
-      }
-
-      const instanceId = nanoid();
-      const newInstance: AddedToolInstance = {
-        instanceId,
-        toolId,
-        name: toolDef.name,
-        description: toolDef.description,
-        params: {},
-      };
-
-      const currentNode = storeNodes.find((n) => n.id === nodeId);
-      const currentParams = (currentNode?.data as ReactFlowNodeData | undefined)?.params ?? {};
-      const currentTools =
-        ((currentParams as Record<string, unknown>).addedTools as AddedToolInstance[]) ?? [];
-      updateNodeDataInStore(nodeId, {
-        params: { ...currentParams, addedTools: [...currentTools, newInstance] },
-      });
-      return instanceId;
-    },
-    [nodeId, availableTools, storeNodes, updateNodeDataInStore],
-  );
-
-  const handleRemoveTool = useCallback(
-    (instanceId: string) => {
-      if (!nodeId) {
-        return;
-      }
-      const currentNode = storeNodes.find((n) => n.id === nodeId);
-      const currentParams = (currentNode?.data as ReactFlowNodeData | undefined)?.params ?? {};
-      const currentTools =
-        ((currentParams as Record<string, unknown>).addedTools as AddedToolInstance[]) ?? [];
-      updateNodeDataInStore(nodeId, {
-        params: {
-          ...currentParams,
-          addedTools: currentTools.filter((t) => t.instanceId !== instanceId),
-        },
-      });
-    },
-    [nodeId, storeNodes, updateNodeDataInStore],
-  );
-
-  const handleUpdateTool = useCallback(
-    (instanceId: string, updates: Partial<Omit<AddedToolInstance, 'instanceId' | 'toolId'>>) => {
-      if (!nodeId) {
-        return;
-      }
-      const currentNode = storeNodes.find((n) => n.id === nodeId);
-      const currentParams = (currentNode?.data as ReactFlowNodeData | undefined)?.params ?? {};
-      const currentTools =
-        ((currentParams as Record<string, unknown>).addedTools as AddedToolInstance[]) ?? [];
-      updateNodeDataInStore(nodeId, {
-        params: {
-          ...currentParams,
-          addedTools: currentTools.map((t) =>
-            t.instanceId === instanceId ? { ...t, ...updates } : t,
-          ),
-        },
-      });
-    },
-    [nodeId, storeNodes, updateNodeDataInStore],
-  );
-
-  const agentToolsProps = useMemo(() => {
-    if (nodeType !== GraphNodeType.AGENT) {
-      return undefined;
-    }
-    return {
-      availableTools,
-      addedTools,
-      onAddTool: handleAddTool,
-      onRemoveTool: handleRemoveTool,
-      onUpdateTool: handleUpdateTool,
-      initialToolInstanceId: initialToolInstanceId ?? null,
-    };
-  }, [
-    nodeType,
-    availableTools,
-    addedTools,
-    handleAddTool,
-    handleRemoveTool,
-    handleUpdateTool,
-    initialToolInstanceId,
-  ]);
 
   return (
     <>
@@ -582,14 +299,14 @@ export function NodeConfigPanel({
                   definition={activeDefinition}
                   formValues={formValues}
                   onFieldChange={handleFieldChange}
-                  credentials={credentials}
-                  credentialsLoading={credentialsLoading}
-                  credentialsError={credentialsError}
-                  onRefreshCredentials={() => refetchCredentials()}
-                  onAddNewCredential={handleAddNewCredential}
-                  onEditCredential={handleEditCredential}
-                  onRefreshOAuthCredential={handleRefreshOAuthCredential}
-                  refreshingCredentialId={refreshingCredentialId}
+                  credentials={credentialHooks.credentials}
+                  credentialsLoading={credentialHooks.credentialsLoading}
+                  credentialsError={credentialHooks.credentialsError}
+                  onRefreshCredentials={() => credentialHooks.refetchCredentials()}
+                  onAddNewCredential={credentialHooks.handleAddNewCredential}
+                  onEditCredential={credentialHooks.handleEditCredential}
+                  onRefreshOAuthCredential={oauthHooks.handleRefreshOAuthCredential}
+                  refreshingCredentialId={oauthHooks.refreshingCredentialId}
                   configWarnings={configWarnings}
                   configErrors={configErrors}
                   runError={execution.runError}
@@ -629,20 +346,20 @@ export function NodeConfigPanel({
       </Dialog>
 
       <CreateCredentialModal
-        open={isCreateCredentialOpen}
-        onClose={handleCloseCredentialModal}
-        onSubmit={handleCreateCredential}
-        isLoading={createCredentialMutation.isPending}
+        open={credentialHooks.isCreateCredentialOpen}
+        onClose={credentialHooks.handleCloseCredentialModal}
+        onSubmit={credentialHooks.handleCreateCredential}
+        isLoading={credentialHooks.isCreating}
         portalContainer={portalContainer}
       />
 
-      {editingCredential && (
+      {credentialHooks.editingCredential && (
         <EditCredentialModal
-          credential={editingCredential}
+          credential={credentialHooks.editingCredential}
           open={true}
-          onClose={handleCloseEditCredential}
-          onSubmit={handleUpdateCredential}
-          isLoading={updateCredentialMutation.isPending}
+          onClose={credentialHooks.handleCloseEditCredential}
+          onSubmit={credentialHooks.handleUpdateCredential}
+          isLoading={credentialHooks.isUpdating}
         />
       )}
     </>

@@ -39,6 +39,7 @@ import {
   useOAuth2Providers,
   useCredential,
 } from '../../api/credentials.api';
+import { buildOAuthCallbackUri, useFrontendPath } from '../../contexts/FrontendPathContext';
 
 type DetailSection = 'details' | 'edit';
 
@@ -728,6 +729,7 @@ function OAuth2ConnectSection({
   const startOAuth2Flow = useStartOAuth2Flow();
   const handleOAuth2Callback = useHandleOAuth2Callback();
   const { data: providers } = useOAuth2Providers();
+  const frontendPath = useFrontendPath();
   const [status, setStatus] = useState<'idle' | 'connecting' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [popupWindow, setPopupWindow] = useState<Window | null>(null);
@@ -765,7 +767,7 @@ function OAuth2ConnectSection({
           code,
           state,
           // No secrets — backend resolves them from pending state
-          redirectUri: `${window.location.origin}/oauth/callback`,
+          redirectUri: buildOAuthCallbackUri(window.location.origin, frontendPath),
         });
         setStatus('success');
         setTimeout(() => setStatus('idle'), 2000);
@@ -803,7 +805,7 @@ function OAuth2ConnectSection({
     try {
       const result = await startOAuth2Flow.mutateAsync({
         existingCredentialId: credential.id,
-        redirectUri: `${window.location.origin}/oauth/callback`,
+        redirectUri: buildOAuthCallbackUri(window.location.origin, frontendPath),
         returnUrl: window.location.href,
       });
 
@@ -827,7 +829,7 @@ function OAuth2ConnectSection({
       setStatus('error');
       setErrorMessage(err instanceof Error ? err.message : 'Failed to start OAuth flow');
     }
-  }, [credential, startOAuth2Flow]);
+  }, [credential, frontendPath, startOAuth2Flow]);
 
   const providerName =
     providers?.find((p) => p.id === credential.config?.oauth2Provider)?.name ??

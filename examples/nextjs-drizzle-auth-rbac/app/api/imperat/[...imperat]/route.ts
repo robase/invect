@@ -1,5 +1,5 @@
 import { createInvectHandler } from '@invect/nextjs';
-import { invectConfig } from '@/lib/invect';
+import { invectConfig } from '@/invect.config';
 
 const handler = createInvectHandler(invectConfig);
 

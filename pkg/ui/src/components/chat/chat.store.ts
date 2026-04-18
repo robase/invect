@@ -11,7 +11,7 @@
 
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import { devtools } from 'zustand/middleware';
+import { devtools, persist } from 'zustand/middleware';
 
 // =====================================
 // Types
@@ -176,19 +176,6 @@ function genId(): string {
   return `msg_${Date.now()}_${++messageIdCounter}`;
 }
 
-function loadPersistedSettings(): ChatSettings {
-  try {
-    const raw = localStorage.getItem('invect-chat-settings');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return { ...DEFAULT_CHAT_SETTINGS, ...parsed };
-    }
-  } catch {
-    // ignore
-  }
-  return DEFAULT_CHAT_SETTINGS;
-}
-
 const initialState: ChatState = {
   isOpen: false,
   activeFlowId: null,
@@ -201,7 +188,7 @@ const initialState: ChatState = {
   pendingPrompt: null,
   _dirty: false,
   isSettingsPanelOpen: false,
-  settings: loadPersistedSettings(),
+  settings: DEFAULT_CHAT_SETTINGS,
   currentPlan: null,
   suggestions: [],
 };
@@ -212,268 +199,267 @@ const initialState: ChatState = {
 
 export const useChatStore = create<ChatStore>()(
   devtools(
-    immer((set, get) => ({
-      ...initialState,
+    persist(
+      immer((set, get) => ({
+        ...initialState,
 
-      togglePanel: () =>
-        set((s) => {
-          s.isOpen = !s.isOpen;
-        }),
-
-      setOpen: (open) =>
-        set((s) => {
-          s.isOpen = open;
-        }),
-
-      setActiveFlow: (flowId) =>
-        set((s) => {
-          if (s.activeFlowId === flowId) {
-            return;
-          }
-          s.activeFlowId = flowId;
-          s.messages = [];
-          s.streamingText = '';
-          s.error = null;
-          s._dirty = false;
-          s.isLoadingHistory = false;
-          s.currentPlan = null;
-        }),
-
-      loadMessages: (messages) =>
-        set((s) => {
-          s.messages = messages;
-          s._dirty = false;
-          s.isLoadingHistory = false;
-        }),
-
-      setLoadingHistory: (loading) =>
-        set((s) => {
-          s.isLoadingHistory = loading;
-        }),
-
-      addUserMessage: (content) => {
-        const id = genId();
-        set((s) => {
-          s.messages.push({
-            id,
-            role: 'user',
-            content,
-            createdAt: Date.now(),
-          });
-          s.error = null;
-          s._dirty = true;
-          s.suggestions = [];
-        });
-        return id;
-      },
-
-      startStreaming: (controller) =>
-        set((s) => {
-          s.isStreaming = true;
-          s.abortController = controller as unknown as AbortController; // immer doesn't proxy AbortController
-          s.streamingText = '';
-        }),
-
-      appendStreamingText: (text) =>
-        set((s) => {
-          s.streamingText += text;
-        }),
-
-      addToolCallMessage: (toolName, toolCallId, args) =>
-        set((s) => {
-          // Commit any accumulated streaming text as a separate message BEFORE
-          // the tool call so that text and tool calls interleave chronologically.
-          if (s.streamingText.trim()) {
-            s.messages.push({
-              id: genId(),
-              role: 'assistant',
-              content: s.streamingText,
-              createdAt: Date.now(),
-            });
-            s.streamingText = '';
-            s._dirty = true;
-          }
-          s.messages.push({
-            id: genId(),
-            role: 'assistant',
-            content: '',
-            toolMeta: { toolName, args, status: 'pending', startedAt: Date.now() },
-            createdAt: Date.now(),
-          });
-          s._dirty = true;
-        }),
-
-      updateToolCallResult: (toolCallId, result) =>
-        set((s) => {
-          // Find the last tool call message with matching pending status
-          for (let i = s.messages.length - 1; i >= 0; i--) {
-            const msg = s.messages[i];
-            if (msg?.toolMeta && msg.toolMeta.status === 'pending') {
-              msg.toolMeta.result = result;
-              msg.toolMeta.status = result.success ? 'done' : 'error';
-              if (msg.toolMeta.startedAt) {
-                msg.toolMeta.durationMs = Date.now() - msg.toolMeta.startedAt;
-              }
-              s._dirty = true;
-              break;
-            }
-          }
-        }),
-
-      finalizeAssistantMessage: () =>
-        set((s) => {
-          if (s.streamingText.trim()) {
-            s.messages.push({
-              id: genId(),
-              role: 'assistant',
-              content: s.streamingText,
-              createdAt: Date.now(),
-            });
-            s._dirty = true;
-          }
-          s.streamingText = '';
-          s.isStreaming = false;
-          s.abortController = null;
-        }),
-
-      stopStreaming: () => {
-        const controller = get().abortController;
-        if (controller) {
-          try {
-            controller.abort();
-          } catch {
-            // ignore
-          }
-        }
-        set((s) => {
-          // Finalize any partial text
-          if (s.streamingText.trim()) {
-            s.messages.push({
-              id: genId(),
-              role: 'assistant',
-              content: s.streamingText,
-              createdAt: Date.now(),
-            });
-            s._dirty = true;
-          }
-          s.streamingText = '';
-          s.isStreaming = false;
-          s.abortController = null;
-        });
-      },
-
-      setError: (error) =>
-        set((s) => {
-          s.error = error;
-          s.isStreaming = false;
-          s.abortController = null;
-        }),
-
-      finalizePendingToolCalls: () =>
-        set((s) => {
-          for (const msg of s.messages) {
-            if (msg.toolMeta && msg.toolMeta.status === 'pending') {
-              msg.toolMeta.status = 'error';
-              msg.toolMeta.result = {
-                success: false,
-                error: 'Stream ended before tool completed',
-              };
-              s._dirty = true;
-            }
-          }
-        }),
-
-      setPendingPrompt: (prompt) =>
-        set((s) => {
-          s.pendingPrompt = prompt;
-          s.isOpen = true;
-        }),
-
-      consumePendingPrompt: () => {
-        const prompt = get().pendingPrompt;
-        if (prompt) {
+        togglePanel: () =>
           set((s) => {
-            s.pendingPrompt = null;
-          });
-        }
-        return prompt;
-      },
+            s.isOpen = !s.isOpen;
+          }),
 
-      clearMessages: () =>
-        set((s) => {
-          s.messages = [];
-          s.streamingText = '';
-          s.error = null;
-          s._dirty = true;
-        }),
+        setOpen: (open) =>
+          set((s) => {
+            s.isOpen = open;
+          }),
 
-      markClean: () =>
-        set((s) => {
-          s._dirty = false;
-        }),
+        setActiveFlow: (flowId) =>
+          set((s) => {
+            if (s.activeFlowId === flowId) {
+              return;
+            }
+            s.activeFlowId = flowId;
+            s.messages = [];
+            s.streamingText = '';
+            s.error = null;
+            s._dirty = false;
+            s.isLoadingHistory = false;
+            s.currentPlan = null;
+          }),
 
-      isDirty: () => get()._dirty,
+        loadMessages: (messages) =>
+          set((s) => {
+            s.messages = messages;
+            s._dirty = false;
+            s.isLoadingHistory = false;
+          }),
 
-      getSerializableMessages: () => {
-        return get().messages.map((m) => ({
-          role: m.role,
-          content: m.content,
-          toolMeta: m.toolMeta ? (m.toolMeta as unknown as Record<string, unknown>) : null,
-        }));
-      },
+        setLoadingHistory: (loading) =>
+          set((s) => {
+            s.isLoadingHistory = loading;
+          }),
 
-      toggleSettingsPanel: () =>
-        set((s) => {
-          s.isSettingsPanelOpen = !s.isSettingsPanelOpen;
-        }),
-
-      updateSettings: (patch) =>
-        set((s) => {
-          // Reset model when credential changes (different provider = different models)
-          if ('credentialId' in patch && patch.credentialId !== s.settings.credentialId) {
-            patch = { ...patch, model: null };
-          }
-          const next = { ...s.settings, ...patch };
-          s.settings = next;
-          // Persist to localStorage
-          try {
-            localStorage.setItem('invect-chat-settings', JSON.stringify(next));
-          } catch {
-            // ignore
-          }
-        }),
-
-      truncateFrom: (messageId) =>
-        set((s) => {
-          const idx = s.messages.findIndex((m) => m.id === messageId);
-          if (idx !== -1) {
-            s.messages = s.messages.slice(0, idx);
+        addUserMessage: (content) => {
+          const id = genId();
+          set((s) => {
+            s.messages.push({
+              id,
+              role: 'user',
+              content,
+              createdAt: Date.now(),
+            });
+            s.error = null;
             s._dirty = true;
+            s.suggestions = [];
+          });
+          return id;
+        },
+
+        startStreaming: (controller) =>
+          set((s) => {
+            s.isStreaming = true;
+            s.abortController = controller as unknown as AbortController; // immer doesn't proxy AbortController
+            s.streamingText = '';
+          }),
+
+        appendStreamingText: (text) =>
+          set((s) => {
+            s.streamingText += text;
+          }),
+
+        addToolCallMessage: (toolName, toolCallId, args) =>
+          set((s) => {
+            // Commit any accumulated streaming text as a separate message BEFORE
+            // the tool call so that text and tool calls interleave chronologically.
+            if (s.streamingText.trim()) {
+              s.messages.push({
+                id: genId(),
+                role: 'assistant',
+                content: s.streamingText,
+                createdAt: Date.now(),
+              });
+              s.streamingText = '';
+              s._dirty = true;
+            }
+            s.messages.push({
+              id: genId(),
+              role: 'assistant',
+              content: '',
+              toolMeta: { toolName, args, status: 'pending', startedAt: Date.now() },
+              createdAt: Date.now(),
+            });
+            s._dirty = true;
+          }),
+
+        updateToolCallResult: (toolCallId, result) =>
+          set((s) => {
+            // Find the last tool call message with matching pending status
+            for (let i = s.messages.length - 1; i >= 0; i--) {
+              const msg = s.messages[i];
+              if (msg?.toolMeta && msg.toolMeta.status === 'pending') {
+                msg.toolMeta.result = result;
+                msg.toolMeta.status = result.success ? 'done' : 'error';
+                if (msg.toolMeta.startedAt) {
+                  msg.toolMeta.durationMs = Date.now() - msg.toolMeta.startedAt;
+                }
+                s._dirty = true;
+                break;
+              }
+            }
+          }),
+
+        finalizeAssistantMessage: () =>
+          set((s) => {
+            if (s.streamingText.trim()) {
+              s.messages.push({
+                id: genId(),
+                role: 'assistant',
+                content: s.streamingText,
+                createdAt: Date.now(),
+              });
+              s._dirty = true;
+            }
+            s.streamingText = '';
+            s.isStreaming = false;
+            s.abortController = null;
+          }),
+
+        stopStreaming: () => {
+          const controller = get().abortController;
+          if (controller) {
+            try {
+              controller.abort();
+            } catch {
+              // ignore
+            }
           }
-        }),
+          set((s) => {
+            // Finalize any partial text
+            if (s.streamingText.trim()) {
+              s.messages.push({
+                id: genId(),
+                role: 'assistant',
+                content: s.streamingText,
+                createdAt: Date.now(),
+              });
+              s._dirty = true;
+            }
+            s.streamingText = '';
+            s.isStreaming = false;
+            s.abortController = null;
+          });
+        },
 
-      setPlan: (plan) =>
-        set((s) => {
-          s.currentPlan = plan;
-        }),
+        setError: (error) =>
+          set((s) => {
+            s.error = error;
+            s.isStreaming = false;
+            s.abortController = null;
+          }),
 
-      setSuggestions: (suggestions) =>
-        set((s) => {
-          s.suggestions = suggestions;
-        }),
-    })),
+        finalizePendingToolCalls: () =>
+          set((s) => {
+            for (const msg of s.messages) {
+              if (msg.toolMeta && msg.toolMeta.status === 'pending') {
+                msg.toolMeta.status = 'error';
+                msg.toolMeta.result = {
+                  success: false,
+                  error: 'Stream ended before tool completed',
+                };
+                s._dirty = true;
+              }
+            }
+          }),
+
+        setPendingPrompt: (prompt) =>
+          set((s) => {
+            s.pendingPrompt = prompt;
+            s.isOpen = true;
+          }),
+
+        consumePendingPrompt: () => {
+          const prompt = get().pendingPrompt;
+          if (prompt) {
+            set((s) => {
+              s.pendingPrompt = null;
+            });
+          }
+          return prompt;
+        },
+
+        clearMessages: () =>
+          set((s) => {
+            s.messages = [];
+            s.streamingText = '';
+            s.error = null;
+            s._dirty = true;
+          }),
+
+        markClean: () =>
+          set((s) => {
+            s._dirty = false;
+          }),
+
+        isDirty: () => get()._dirty,
+
+        getSerializableMessages: () => {
+          return get().messages.map((m) => ({
+            role: m.role,
+            content: m.content,
+            toolMeta: m.toolMeta ? (m.toolMeta as unknown as Record<string, unknown>) : null,
+          }));
+        },
+
+        toggleSettingsPanel: () =>
+          set((s) => {
+            s.isSettingsPanelOpen = !s.isSettingsPanelOpen;
+          }),
+
+        updateSettings: (patch) =>
+          set((s) => {
+            // Reset model when credential changes (different provider = different models)
+            if ('credentialId' in patch && patch.credentialId !== s.settings.credentialId) {
+              patch = { ...patch, model: null };
+            }
+            s.settings = { ...s.settings, ...patch };
+          }),
+
+        truncateFrom: (messageId) =>
+          set((s) => {
+            const idx = s.messages.findIndex((m) => m.id === messageId);
+            if (idx !== -1) {
+              s.messages = s.messages.slice(0, idx);
+              s._dirty = true;
+            }
+          }),
+
+        setPlan: (plan) =>
+          set((s) => {
+            s.currentPlan = plan;
+          }),
+
+        setSuggestions: (suggestions) =>
+          set((s) => {
+            s.suggestions = suggestions;
+          }),
+      })),
+      {
+        name: 'invect-chat-settings',
+        partialize: (state) => ({ settings: state.settings }),
+      },
+    ),
     { name: 'chat' },
   ),
 );
 
 // Selector hooks
 export const useChatOpen = () => useChatStore((s) => s.isOpen);
-const _useChatMessages = () => useChatStore((s) => s.messages);
-const _useChatStreaming = () => useChatStore((s) => s.isStreaming);
-const _useChatStreamingText = () => useChatStore((s) => s.streamingText);
-const _useChatError = () => useChatStore((s) => s.error);
-const _useChatPendingPrompt = () => useChatStore((s) => s.pendingPrompt);
-const _useChatSettingsPanelOpen = () => useChatStore((s) => s.isSettingsPanelOpen);
-const _useChatPlan = () => useChatStore((s) => s.currentPlan);
-const _useChatSuggestions = () => useChatStore((s) => s.suggestions);
-const _useChatSettings = () => useChatStore((s) => s.settings);
+export const useChatMessages = () => useChatStore((s) => s.messages);
+export const useChatStreaming = () => useChatStore((s) => s.isStreaming);
+export const useChatStreamingText = () => useChatStore((s) => s.streamingText);
+export const useChatError = () => useChatStore((s) => s.error);
+export const useChatLoadingHistory = () => useChatStore((s) => s.isLoadingHistory);
+export const useChatSettingsPanelOpen = () => useChatStore((s) => s.isSettingsPanelOpen);
+export const useChatPlan = () => useChatStore((s) => s.currentPlan);
+export const useChatSuggestions = () => useChatStore((s) => s.suggestions);
+export const useChatSettings = () => useChatStore((s) => s.settings);

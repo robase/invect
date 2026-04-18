@@ -58,6 +58,11 @@
       "types": "./dist/sdk/index.d.ts",
       "import": "./dist/sdk/index.js",
       "require": "./dist/sdk/index.cjs"
+    },
+    "./config": {
+      "types": "./dist/config.d.ts",
+      "import": "./dist/config.js",
+      "require": "./dist/config.cjs"
     }
   },
   "publishConfig": {

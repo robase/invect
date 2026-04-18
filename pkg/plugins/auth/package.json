@@ -30,6 +30,10 @@
   "types": "dist/backend/index.d.mts",
   "exports": {
     ".": {
+      "browser": {
+        "types": "./dist/browser/index.d.mts",
+        "import": "./dist/browser/index.mjs"
+      },
       "types": "./dist/backend/index.d.mts",
       "import": "./dist/backend/index.mjs",
       "require": "./dist/backend/index.cjs"

@@ -25,6 +25,8 @@ pnpm dev         # Starts Express on http://localhost:3000
 
 `pnpm dev` auto-runs `db:prepare` when `dev.db` doesn't exist, so a fresh clone boots without manual setup.
 
+This example now includes the version control plugin. It uses a placeholder GitHub token by default, so Git sync actions will fail until you set `GITHUB_TOKEN` and, if needed, `INVECT_VC_REPO`.
+
 ## Test the API
 
 ```bash

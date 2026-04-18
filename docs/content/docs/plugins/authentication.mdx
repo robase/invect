@@ -143,6 +143,8 @@ import '@invect/ui/styles';
 />;
 ```
 
+When you use `Invect` or `AuthenticatedInvect` with the built-in router, the OAuth callback route is already handled internally at `<basePath>/oauth/callback`. You do not need to mount `OAuth2CallbackHandler` separately in the host app unless you are building a custom routing layer.
+
 On the backend, wire the frontend plugin to the auth config:
 
 ```ts

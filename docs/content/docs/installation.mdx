@@ -672,6 +672,8 @@ export default function InvectPage() {
 }
 ```
 
+`Invect` now handles the OAuth callback route internally at `<basePath>/oauth/callback`, so you do not need to add a separate top-level `OAuth2CallbackHandler` route in your app when using the built-in router.
+
 See [Authentication Plugin](/docs/plugins/authentication) and [Access Control Plugin](/docs/plugins/access-control) for details.
 
 </Tab>

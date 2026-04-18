@@ -309,6 +309,9 @@ importers:
       '@invect/user-auth':
         specifier: workspace:*
         version: link:../../pkg/plugins/auth
+      '@invect/version-control':
+        specifier: workspace:*
+        version: link:../../pkg/plugins/version-control
       '@invect/webhooks':
         specifier: workspace:*
         version: link:../../pkg/plugins/webhooks
@@ -595,6 +598,9 @@ importers:
       '@invect/user-auth':
         specifier: workspace:*
         version: link:../../pkg/plugins/auth
+      '@invect/version-control':
+        specifier: workspace:*
+        version: link:../../pkg/plugins/version-control
       '@invect/webhooks':
         specifier: workspace:*
         version: link:../../pkg/plugins/webhooks

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { cn } from '../../lib/utils';
 
 export type NodeStatusIndicatorStatus = 'initial' | 'loading' | 'success' | 'error';
@@ -27,7 +27,7 @@ interface NodeStatusIndicatorProps {
  * The animated border uses CSS @property for the conic gradient angle animation.
  * This is supported in Chrome/Chromium browsers. Firefox will show a static gradient.
  */
-export function NodeStatusIndicator({
+export const NodeStatusIndicator = memo(function NodeStatusIndicator({
   status,
   loadingVariant = 'border',
   children,
@@ -69,6 +69,4 @@ export function NodeStatusIndicator({
       )}
     </div>
   );
-}
-
-NodeStatusIndicator.displayName = 'NodeStatusIndicator';
+});

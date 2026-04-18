@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { useApiClient } from '../contexts/ApiContext';
 import { queryKeys, getErrorMessage } from './query-keys';
-import { ValidationError } from './types';
 import { type FlowRun, type FlowInputs } from '@invect/core/types';
 
 // Execution Queries
@@ -118,26 +117,6 @@ export function useExecuteFlow() {
     },
     onError: (error) => {
       console.error('Error executing flow:', getErrorMessage(error));
-
-      if (error instanceof ValidationError) {
-        console.log('🔍 Flow Execution Validation Error Details:');
-        console.log('🔍 - isValid:', error.validationResult.isValid);
-        console.log('🔍 - warnings:', error.validationResult.warnings);
-
-        if (!error.validationResult.isValid) {
-          console.log('🔍 - errors:', error.validationResult.errors);
-
-          error.validationResult.errors.forEach((validationError, index) => {
-            console.log(`🔍 Execution Error ${index + 1}:`, {
-              nodeId: validationError.nodeId,
-              message: validationError.message,
-              type: validationError.type,
-              severity: validationError.severity,
-              additionalContext: validationError.additionalContext,
-            });
-          });
-        }
-      }
     },
   });
 }

@@ -1,6 +1,7 @@
 import { create, type StoreApi, type UseBoundStore } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
+import { useShallow } from 'zustand/shallow';
 import type { Node, Edge, NodeChange, EdgeChange } from '@xyflow/react';
 import { applyNodeChanges, applyEdgeChanges, addEdge, type Connection } from '@xyflow/react';
 import type { LayoutAlgorithm } from '~/utils/layoutUtils';
@@ -372,31 +373,35 @@ export const useFlowEditorStore: UseBoundStore<StoreApi<FlowEditorStore>> =
               state.nodesInitialized = initialized;
             }),
 
-          setAllNodesHaveDefinitions: (hasDefinitions) =>
+          setAllNodesHaveDefinitions: (hasDefinitions) => {
+            const prevHadDefinitions = _get().allNodesHaveDefinitions;
             set((state) => {
-              const prevHadDefinitions = state.allNodesHaveDefinitions;
               state.allNodesHaveDefinitions = hasDefinitions;
 
               // When definitions become available, record the time and reset reinit flag
               if (hasDefinitions && !prevHadDefinitions) {
                 state.definitionsLoadedTime = Date.now();
                 state.nodesReinitializedAfterRegistry = false;
-
-                // Schedule re-init confirmation after delay for handles to mount
-                const MINIMUM_DELAY = 250;
-                setTimeout(() => {
-                  const currentState = _get();
-                  if (
-                    currentState.allNodesHaveDefinitions &&
-                    !currentState.nodesReinitializedAfterRegistry
-                  ) {
-                    set((s) => {
-                      s.nodesReinitializedAfterRegistry = true;
-                    });
-                  }
-                }, MINIMUM_DELAY);
               }
-            }),
+            });
+
+            // Schedule re-init confirmation after delay for handles to mount
+            // (kept outside set() to avoid side effects inside immer drafts)
+            if (hasDefinitions && !prevHadDefinitions) {
+              const MINIMUM_DELAY = 250;
+              setTimeout(() => {
+                const currentState = _get();
+                if (
+                  currentState.allNodesHaveDefinitions &&
+                  !currentState.nodesReinitializedAfterRegistry
+                ) {
+                  set((s) => {
+                    s.nodesReinitializedAfterRegistry = true;
+                  });
+                }
+              }, MINIMUM_DELAY);
+            }
+          },
 
           checkAndUpdateEdgesReady: () =>
             set((state) => {
@@ -660,26 +665,31 @@ export const useInitialLayoutApplied = () => useFlowEditorStore((s) => s.initial
 export const useIsLoading = () => useFlowEditorStore((s) => s.isLoading);
 export const useFlowError = () => useFlowEditorStore((s) => s.error);
 
-// Combined selectors for common use cases
+// Combined selectors for common use cases (useShallow prevents re-renders when
+// the returned object is structurally equal)
 export const useFlowEditorSelection = () =>
-  useFlowEditorStore((s) => ({
-    selectedNodeId: s.selectedNodeId,
-    configPanelOpen: s.configPanelOpen,
-    selectNode: s.selectNode,
-    openConfigPanel: s.openConfigPanel,
-    closeConfigPanel: s.closeConfigPanel,
-  }));
+  useFlowEditorStore(
+    useShallow((s) => ({
+      selectedNodeId: s.selectedNodeId,
+      configPanelOpen: s.configPanelOpen,
+      selectNode: s.selectNode,
+      openConfigPanel: s.openConfigPanel,
+      closeConfigPanel: s.closeConfigPanel,
+    })),
+  );
 
 export const useFlowEditorLayout = () =>
-  useFlowEditorStore((s) => ({
-    currentLayout: s.currentLayout,
-    layoutDirection: s.layoutDirection,
-    initialLayoutApplied: s.initialLayoutApplied,
-    setLayout: s.setLayout,
-    setLayoutedNodes: s.setLayoutedNodes,
-    markInitialLayoutApplied: s.markInitialLayoutApplied,
-    needsInitialLayout: s.needsInitialLayout,
-  }));
+  useFlowEditorStore(
+    useShallow((s) => ({
+      currentLayout: s.currentLayout,
+      layoutDirection: s.layoutDirection,
+      initialLayoutApplied: s.initialLayoutApplied,
+      setLayout: s.setLayout,
+      setLayoutedNodes: s.setLayoutedNodes,
+      markInitialLayoutApplied: s.markInitialLayoutApplied,
+      needsInitialLayout: s.needsInitialLayout,
+    })),
+  );
 
 // Get node by ID
 export const useNode = (nodeId: string | null) =>
@@ -730,9 +740,11 @@ export const useDownstreamNodes = (nodeId: string | null) =>
 
 // Get flow statistics
 export const useFlowStats = () =>
-  useFlowEditorStore((s) => ({
-    nodeCount: s.nodes.length,
-    edgeCount: s.edges.length,
-    isDirty: s.currentSnapshot !== null && s.currentSnapshot !== s.lastSavedSnapshot,
-    isLoading: s.isLoading,
-  }));
+  useFlowEditorStore(
+    useShallow((s) => ({
+      nodeCount: s.nodes.length,
+      edgeCount: s.edges.length,
+      isDirty: s.currentSnapshot !== null && s.currentSnapshot !== s.lastSavedSnapshot,
+      isLoading: s.isLoading,
+    })),
+  );

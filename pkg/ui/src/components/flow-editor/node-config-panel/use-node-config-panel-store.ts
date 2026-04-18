@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { devtools } from 'zustand/middleware';
 import type { FlowRunResult } from '@invect/core/types';
 import { parseJson, stringifyJson } from './utils';
 
@@ -130,149 +131,154 @@ function formatOutputForDisplay(output: unknown): string {
 /**
  * Zustand store for node config panel state management
  */
-export const useNodeConfigPanelStore = create<NodeConfigPanelStore>((set, get) => ({
-  ...initialState,
+export const useNodeConfigPanelStore = create<NodeConfigPanelStore>()(
+  devtools(
+    (set, get) => ({
+      ...initialState,
 
-  initializeForNode: (nodeId, flowId, initialInput, initialOutput) => {
-    set({
-      nodeId,
-      flowId,
-      inputPreview: initialInput,
-      outputPreview: initialOutput,
-      originalInputPreview: initialInput,
-      inputError: null,
-      outputError: null,
-      isTestMode: false,
-      runError: null,
-    });
-  },
+      initializeForNode: (nodeId, flowId, initialInput, initialOutput) => {
+        set({
+          nodeId,
+          flowId,
+          inputPreview: initialInput,
+          outputPreview: initialOutput,
+          originalInputPreview: initialInput,
+          inputError: null,
+          outputError: null,
+          isTestMode: false,
+          runError: null,
+        });
+      },
 
-  reset: () => {
-    set(initialState);
-  },
+      reset: () => {
+        set(initialState);
+      },
 
-  setInputPreview: (value) => {
-    const { originalInputPreview } = get();
-    const isTestMode = originalInputPreview !== null && value !== originalInputPreview;
+      setInputPreview: (value) => {
+        const { originalInputPreview } = get();
+        const isTestMode = originalInputPreview !== null && value !== originalInputPreview;
 
-    set({
-      inputPreview: value,
-      inputError: null,
-      isTestMode,
-    });
-  },
+        set({
+          inputPreview: value,
+          inputError: null,
+          isTestMode,
+        });
+      },
 
-  setInputError: (error) => {
-    set({ inputError: error });
-  },
+      setInputError: (error) => {
+        set({ inputError: error });
+      },
 
-  setOutputPreview: (value) => {
-    set({
-      outputPreview: value,
-      outputError: null,
-    });
-  },
+      setOutputPreview: (value) => {
+        set({
+          outputPreview: value,
+          outputError: null,
+        });
+      },
 
-  setOutputError: (error) => {
-    set({ outputError: error });
-  },
+      setOutputError: (error) => {
+        set({ outputError: error });
+      },
 
-  enterTestMode: () => {
-    set({ isTestMode: true });
-  },
+      enterTestMode: () => {
+        set({ isTestMode: true });
+      },
 
-  exitTestMode: () => {
-    set({ isTestMode: false });
-  },
+      exitTestMode: () => {
+        set({ isTestMode: false });
+      },
 
-  resetTestMode: () => {
-    const { originalInputPreview } = get();
-    if (originalInputPreview !== null) {
-      set({
-        inputPreview: originalInputPreview,
-        isTestMode: false,
-      });
-    }
-  },
+      resetTestMode: () => {
+        const { originalInputPreview } = get();
+        if (originalInputPreview !== null) {
+          set({
+            inputPreview: originalInputPreview,
+            isTestMode: false,
+          });
+        }
+      },
 
-  setIsRunningNode: (isRunning) => {
-    set({ isRunningNode: isRunning });
-  },
+      setIsRunningNode: (isRunning) => {
+        set({ isRunningNode: isRunning });
+      },
 
-  setRunError: (error) => {
-    set({ runError: error });
-  },
+      setRunError: (error) => {
+        set({ runError: error });
+      },
 
-  openCreateCredentialModal: (fieldName) => {
-    set({
-      isCreateCredentialOpen: true,
-      activeCredentialField: fieldName,
-    });
-  },
+      openCreateCredentialModal: (fieldName) => {
+        set({
+          isCreateCredentialOpen: true,
+          activeCredentialField: fieldName,
+        });
+      },
 
-  closeCreateCredentialModal: () => {
-    set({
-      isCreateCredentialOpen: false,
-      activeCredentialField: null,
-    });
-  },
+      closeCreateCredentialModal: () => {
+        set({
+          isCreateCredentialOpen: false,
+          activeCredentialField: null,
+        });
+      },
 
-  handleTestModeSuccess: (output) => {
-    const displayValue = formatOutputForDisplay(output);
-    set({
-      outputPreview: displayValue,
-      outputError: null,
-      runError: null,
-    });
-  },
+      handleTestModeSuccess: (output) => {
+        const displayValue = formatOutputForDisplay(output);
+        set({
+          outputPreview: displayValue,
+          outputError: null,
+          runError: null,
+        });
+      },
 
-  handleNormalModeSuccess: (result, nodeId, updateNodeData) => {
-    // Update input/output data for all executed nodes from traces
-    if (result.traces && Array.isArray(result.traces)) {
-      for (const trace of result.traces) {
-        const traceNodeId = trace.nodeId;
-        if (!traceNodeId) {
-          continue;
+      handleNormalModeSuccess: (result, nodeId, updateNodeData) => {
+        // Update input/output data for all executed nodes from traces
+        if (result.traces && Array.isArray(result.traces)) {
+          for (const trace of result.traces) {
+            const traceNodeId = trace.nodeId;
+            if (!traceNodeId) {
+              continue;
+            }
+
+            const traceInputs = trace.inputs;
+            const traceOutput = extractOutputValue(trace.outputs);
+
+            updateNodeData(traceNodeId, {
+              previewInput: traceInputs,
+              previewOutput: traceOutput,
+            });
+          }
         }
 
-        const traceInputs = trace.inputs;
-        const traceOutput = extractOutputValue(trace.outputs);
+        // Update local state for the current node's output display
+        const nodeOutput = result.outputs?.[nodeId];
+        const output = extractOutputValue(nodeOutput);
+        const displayValue = formatOutputForDisplay(output);
 
-        updateNodeData(traceNodeId, {
-          previewInput: traceInputs,
-          previewOutput: traceOutput,
+        // Update input preview from the current node's trace
+        const currentTrace = result.traces?.find((t: { nodeId: string }) => t.nodeId === nodeId);
+        const newInputPreview = currentTrace?.inputs
+          ? stringifyJson(currentTrace.inputs)
+          : get().inputPreview;
+
+        set({
+          outputPreview: displayValue,
+          outputError: null,
+          runError: null,
+          inputPreview: newInputPreview,
+          originalInputPreview: newInputPreview,
+          isTestMode: false,
         });
-      }
-    }
+      },
 
-    // Update local state for the current node's output display
-    const nodeOutput = result.outputs?.[nodeId];
-    const output = extractOutputValue(nodeOutput);
-    const displayValue = formatOutputForDisplay(output);
-
-    // Update input preview from the current node's trace
-    const currentTrace = result.traces?.find((t: { nodeId: string }) => t.nodeId === nodeId);
-    const newInputPreview = currentTrace?.inputs
-      ? stringifyJson(currentTrace.inputs)
-      : get().inputPreview;
-
-    set({
-      outputPreview: displayValue,
-      outputError: null,
-      runError: null,
-      inputPreview: newInputPreview,
-      originalInputPreview: newInputPreview,
-      isTestMode: false,
-    });
-  },
-
-  handleExecutionError: (error) => {
-    set({
-      runError: error,
-      outputError: error,
-    });
-  },
-}));
+      handleExecutionError: (error) => {
+        set({
+          runError: error,
+          outputError: error,
+        });
+      },
+    }),
+    { name: 'node-config-panel' },
+  ),
+);
 
 /**
  * Hook to get parsed input data for test mode execution

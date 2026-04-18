@@ -14,7 +14,17 @@ import { useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useApiClient } from '../../contexts/ApiContext';
-import { useChatStore } from './chat.store';
+import {
+  useChatStore,
+  useChatMessages,
+  useChatStreaming,
+  useChatStreamingText,
+  useChatError,
+  useChatLoadingHistory,
+  useChatOpen,
+  useChatSettings,
+  useChatSettingsPanelOpen,
+} from './chat.store';
 import { useFlowEditorStore } from '~/stores/flow-editor.store';
 import { queryKeys } from '../../api/query-keys';
 import { getAllMemoryNotes, saveMemoryNote, deleteMemoryNote } from './chat-memory';
@@ -30,9 +40,25 @@ interface UseChatOptions {
 
 export function useChat(options: UseChatOptions = {}) {
   const apiClient = useApiClient();
-  const store = useChatStore();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+
+  // Reactive state (individual selectors — only re-render when the specific field changes)
+  const messages = useChatMessages();
+  const isStreaming = useChatStreaming();
+  const streamingText = useChatStreamingText();
+  const error = useChatError();
+  const isLoadingHistory = useChatLoadingHistory();
+  const isOpen = useChatOpen();
+  const settings = useChatSettings();
+  const isSettingsPanelOpen = useChatSettingsPanelOpen();
+
+  // Actions (stable references, never trigger re-renders)
+  const togglePanel = useChatStore((s) => s.togglePanel);
+  const setOpen = useChatStore((s) => s.setOpen);
+  const stopStreaming = useChatStore((s) => s.stopStreaming);
+  const toggleSettingsPanel = useChatStore((s) => s.toggleSettingsPanel);
+  const updateSettings = useChatStore((s) => s.updateSettings);
 
   // Refs for stable access inside the streaming loop (avoids stale closures)
   const optionsRef = useRef(options);
@@ -128,6 +154,7 @@ export function useChat(options: UseChatOptions = {}) {
 
   const sendMessage = useCallback(
     async (content: string, opts?: { isEdit?: boolean }) => {
+      const store = useChatStore.getState();
       if (store.isStreaming || !content.trim()) {
         return;
       }
@@ -169,7 +196,7 @@ export function useChat(options: UseChatOptions = {}) {
 
       // Create abort controller
       const controller = new AbortController();
-      store.startStreaming(controller);
+      useChatStore.getState().startStreaming(controller);
 
       try {
         const response = await apiClient.sendChatMessage(
@@ -179,7 +206,7 @@ export function useChat(options: UseChatOptions = {}) {
         );
 
         if (!response.body) {
-          store.setError('No response body from chat endpoint');
+          useChatStore.getState().setError('No response body from chat endpoint');
           return;
         }
 
@@ -206,7 +233,7 @@ export function useChat(options: UseChatOptions = {}) {
               const data = line.slice(6);
               try {
                 const event: ChatStreamEvent = JSON.parse(data);
-                handleEvent(event, store, {
+                handleEvent(event, useChatStore.getState(), {
                   queryClient,
                   navigate,
                   optionsRef,
@@ -220,29 +247,33 @@ export function useChat(options: UseChatOptions = {}) {
         }
 
         // Finalize: clean up pending tool calls and commit assistant text
-        store.finalizePendingToolCalls();
-        store.finalizeAssistantMessage();
+        useChatStore.getState().finalizePendingToolCalls();
+        useChatStore.getState().finalizeAssistantMessage();
 
         // Auto-save after stream completes
         saveMessages();
       } catch (error: unknown) {
         if ((error as Error).name === 'AbortError') {
           // User cancelled — clean up pending tool calls
-          store.finalizePendingToolCalls();
+          useChatStore.getState().finalizePendingToolCalls();
           saveMessages();
           return;
         }
         // Clean up pending tool calls before showing the error
-        store.finalizePendingToolCalls();
+        useChatStore.getState().finalizePendingToolCalls();
         saveMessages();
         const msg = (error as Error).message || 'Chat request failed';
         // Friendly error messages for common failures
         if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
-          store.setError('Connection lost — check that the server is running and try again.');
+          useChatStore
+            .getState()
+            .setError('Connection lost — check that the server is running and try again.');
         } else if (msg.includes('503') || msg.includes('initializing')) {
-          store.setError('Server is still starting up — please try again in a moment.');
+          useChatStore
+            .getState()
+            .setError('Server is still starting up — please try again in a moment.');
         } else {
-          store.setError(msg);
+          useChatStore.getState().setError(msg);
         }
       }
     },
@@ -251,7 +282,6 @@ export function useChat(options: UseChatOptions = {}) {
       options.flowId,
       options.selectedNodeId,
       options.viewMode,
-      store,
       queryClient,
       navigate,
       saveMessages,
@@ -260,35 +290,35 @@ export function useChat(options: UseChatOptions = {}) {
 
   // Wrap clearMessages to also delete from backend
   const clearMessages = useCallback(async () => {
-    store.clearMessages();
+    useChatStore.getState().clearMessages();
     const flowId = options.flowId;
     if (flowId) {
       try {
         await apiClient.deleteChatMessages(flowId);
-        store.markClean();
+        useChatStore.getState().markClean();
       } catch (err) {
         console.warn('[chat] Failed to delete messages on server:', err);
       }
     }
-  }, [store, options.flowId, apiClient]);
+  }, [options.flowId, apiClient]);
 
   return {
     sendMessage,
-    stopStreaming: store.stopStreaming,
+    stopStreaming,
     clearMessages,
-    messages: store.messages,
-    isStreaming: store.isStreaming,
-    isLoadingHistory: store.isLoadingHistory,
-    streamingText: store.streamingText,
-    error: store.error,
-    isOpen: store.isOpen,
-    togglePanel: store.togglePanel,
-    setOpen: store.setOpen,
+    messages,
+    isStreaming,
+    isLoadingHistory,
+    streamingText,
+    error,
+    isOpen,
+    togglePanel,
+    setOpen,
     // Settings
-    settings: store.settings,
-    isSettingsPanelOpen: store.isSettingsPanelOpen,
-    toggleSettingsPanel: store.toggleSettingsPanel,
-    updateSettings: store.updateSettings,
+    settings,
+    isSettingsPanelOpen,
+    toggleSettingsPanel,
+    updateSettings,
   };
 }
 

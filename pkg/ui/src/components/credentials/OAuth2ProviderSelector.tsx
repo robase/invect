@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useOAuth2Providers } from '../../api/credentials.api';
+import { buildOAuthCallbackUri, useFrontendPath } from '../../contexts/FrontendPathContext';
 import { OAuth2ConnectButton } from './OAuth2ConnectButton';
 import type { OAuth2ProviderDefinition, Credential } from '../../api/types';
 import { InvectLoader } from '../shared/InvectLoader';
@@ -77,6 +78,7 @@ export function OAuth2ProviderSelector({
   scopes,
 }: OAuth2ProviderSelectorProps) {
   const { data: providers, isLoading } = useOAuth2Providers();
+  const frontendPath = useFrontendPath();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProvider, setSelectedProvider] = useState<OAuth2ProviderDefinition | null>(null);
   const [clientId, setClientId] = useState('');
@@ -157,7 +159,9 @@ export function OAuth2ProviderSelector({
 
   // Get redirect URI for OAuth callback
   const redirectUri =
-    typeof window !== 'undefined' ? `${window.location.origin}/oauth/callback` : '';
+    typeof window !== 'undefined'
+      ? buildOAuthCallbackUri(window.location.origin, frontendPath)
+      : '';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

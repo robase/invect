@@ -34,6 +34,15 @@ export interface PluginRegistry {
   /** All provider wrappers from plugins (in registration order) */
   providers: React.ComponentType<{ children: ReactNode }>[];
   /**
+   * Application shell from the first plugin that provides one.
+   * Can conditionally render children (e.g., auth gate).
+   */
+  AppShell: React.ComponentType<{
+    children: ReactNode;
+    apiBaseUrl: string;
+    basePath: string;
+  }> | null;
+  /**
    * Permission checker — first plugin to return non-undefined wins.
    * Returns true if no plugin overrides (default: allow everything).
    */
@@ -53,6 +62,7 @@ const defaultRegistry: PluginRegistry = {
   panelTabs: {},
   headerActions: {},
   providers: [],
+  AppShell: null,
   checkPermission: () => true,
   hasPlugins: false,
 };
@@ -102,6 +112,11 @@ export function usePluginRegistry(): PluginRegistry {
 function buildRegistry(plugins: InvectFrontendPlugin[]): PluginRegistry {
   const sidebarItems: PluginSidebarContribution[] = [];
   let SidebarFooter: React.ComponentType<{ collapsed: boolean; basePath: string }> | null = null;
+  let AppShell: React.ComponentType<{
+    children: ReactNode;
+    apiBaseUrl: string;
+    basePath: string;
+  }> | null = null;
   const routes: PluginRouteContribution[] = [];
   const panelTabs: Record<string, PluginPanelTabContribution[]> = {};
   const headerActions: Record<string, PluginHeaderActionContribution[]> = {};
@@ -119,6 +134,11 @@ function buildRegistry(plugins: InvectFrontendPlugin[]): PluginRegistry {
     // Collect sidebar footer (first plugin to provide wins)
     if (plugin.sidebarFooter && !SidebarFooter) {
       SidebarFooter = plugin.sidebarFooter;
+    }
+
+    // Collect app shell (first plugin to provide wins)
+    if (plugin.appShell && !AppShell) {
+      AppShell = plugin.appShell;
     }
 
     // Collect routes
@@ -172,6 +192,7 @@ function buildRegistry(plugins: InvectFrontendPlugin[]): PluginRegistry {
   return {
     sidebarItems,
     SidebarFooter,
+    AppShell,
     routes,
     panelTabs,
     headerActions,

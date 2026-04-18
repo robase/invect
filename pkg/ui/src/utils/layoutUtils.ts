@@ -76,8 +76,6 @@ export const applyLayout = async (
   direction: 'TB' | 'BT' | 'LR' | 'RL' = 'LR',
   options?: LayoutOptions,
 ): Promise<{ nodes: Node[]; edges: Edge[] }> => {
-  console.log(`Applying layout: ${algorithm}, Direction: ${direction}`);
-
   switch (algorithm) {
     case 'dagre': {
       // Use shared layout utility from @invect/layouts

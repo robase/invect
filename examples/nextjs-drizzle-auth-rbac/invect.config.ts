@@ -1,16 +1,18 @@
 /**
- * Invect configuration — wired into the Next.js API route handler.
+ * Invect configuration — shared between the Next.js API handler and the
+ * `<Invect>` frontend component. Read by the CLI for schema generation.
  *
- * This file is ALSO read by the Invect CLI (`npx invect-cli generate`)
- * to discover plugins and their schemas for code generation.
+ * Backend: import { invectConfig } from '@/invect.config'
+ * Frontend: import config from './invect.config' (Vite/Next.js browser condition
+ *           strips server-only plugin code automatically)
+ * CLI: npx invect-cli generate --config invect.config.ts
  */
 
 import { auth } from '@invect/user-auth';
 import { rbac } from '@invect/rbac';
-import { invectAuth } from './auth';
 import { defineConfig } from '@invect/core';
 
-export const invectConfig = defineConfig({
+const invectConfig = defineConfig({
   encryptionKey: process.env.INVECT_ENCRYPTION_KEY || 'change-me-in-production',
   database: {
     connectionString:
@@ -18,6 +20,9 @@ export const invectConfig = defineConfig({
     type: 'postgresql',
     name: 'Acme Dashboard DB',
   },
+  apiPath: '/api/invect',
+  frontendPath: '/dashboard/workflows',
+  theme: 'light',
   logging: {
     level: 'info',
   },
@@ -56,7 +61,6 @@ export const invectConfig = defineConfig({
   ],
   plugins: [
     auth({
-      auth: invectAuth,
       globalAdmins: [
         {
           email: process.env.INVECT_ADMIN_EMAIL,
@@ -68,3 +72,6 @@ export const invectConfig = defineConfig({
     rbac(),
   ],
 });
+
+export { invectConfig };
+export default invectConfig;

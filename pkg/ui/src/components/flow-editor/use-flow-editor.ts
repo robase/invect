@@ -53,20 +53,17 @@ export function useFlowEditor({ flowId, version, basePath = '' }: UseFlowEditorO
   const createVersionMutation = useCreateFlowVersion();
   const executeFlowMutation = useExecuteFlow();
 
-  // Zustand - client state
-  const store = useFlowEditorStore();
-  const {
-    nodes,
-    edges,
-    flowName,
-    currentLayout,
-    layoutDirection,
-    syncFromServer,
-    markSaved,
-    setFlowId,
-    setLoading,
-    setError,
-  } = store;
+  // Zustand - client state (individual selectors for fine-grained re-renders)
+  const nodes = useFlowEditorStore((s) => s.nodes);
+  const edges = useFlowEditorStore((s) => s.edges);
+  const flowName = useFlowEditorStore((s) => s.flowName);
+  const currentLayout = useFlowEditorStore((s) => s.currentLayout);
+  const layoutDirection = useFlowEditorStore((s) => s.layoutDirection);
+  const syncFromServer = useFlowEditorStore((s) => s.syncFromServer);
+  const markSaved = useFlowEditorStore((s) => s.markSaved);
+  const setFlowId = useFlowEditorStore((s) => s.setFlowId);
+  const setLoading = useFlowEditorStore((s) => s.setLoading);
+  const setError = useFlowEditorStore((s) => s.setError);
 
   // Content-based dirty detection (derived from snapshot comparison)
   const isDirty = useIsDirty();
@@ -200,10 +197,10 @@ export function useFlowEditor({ flowId, version, basePath = '' }: UseFlowEditorO
       direction: LayoutDirection = layoutDirection,
     ) => {
       const { nodes: layoutedNodes } = await applyLayout(nodes, edges, algorithm, direction);
-      store.setLayoutedNodes(layoutedNodes);
-      store.setLayout(algorithm, direction);
+      useFlowEditorStore.getState().setLayoutedNodes(layoutedNodes);
+      useFlowEditorStore.getState().setLayout(algorithm, direction);
     },
-    [nodes, edges, currentLayout, layoutDirection, store],
+    [nodes, edges, currentLayout, layoutDirection],
   );
 
   return {
@@ -234,8 +231,5 @@ export function useFlowEditor({ flowId, version, basePath = '' }: UseFlowEditorO
 
     // Refetch from server
     refetch,
-
-    // Direct store access for advanced usage
-    store,
   };
 }

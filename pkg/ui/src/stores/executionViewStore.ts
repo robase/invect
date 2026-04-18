@@ -1,6 +1,7 @@
 import { create, type StoreApi, type UseBoundStore } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
+import { useShallow } from 'zustand/shallow';
 import type { FlowRunStatus } from '@invect/core/types';
 
 interface ExecutionViewState {
@@ -178,34 +179,42 @@ export const useSelectedExecutionNodeId = () =>
   useExecutionViewStore((s) => s.selectedExecutionNodeId);
 export const useStatusFilter = () => useExecutionViewStore((s) => s.statusFilter);
 export const useExecutionPagination = () =>
-  useExecutionViewStore((s) => ({
-    page: s.page,
-    limit: s.limit,
-    setPage: s.setPage,
-    setLimit: s.setLimit,
-  }));
+  useExecutionViewStore(
+    useShallow((s) => ({
+      page: s.page,
+      limit: s.limit,
+      setPage: s.setPage,
+      setLimit: s.setLimit,
+    })),
+  );
 export const useExecutionSorting = () =>
-  useExecutionViewStore((s) => ({
-    sortBy: s.sortBy,
-    sortOrder: s.sortOrder,
-    setSortBy: s.setSortBy,
-    setSortOrder: s.setSortOrder,
-  }));
+  useExecutionViewStore(
+    useShallow((s) => ({
+      sortBy: s.sortBy,
+      sortOrder: s.sortOrder,
+      setSortBy: s.setSortBy,
+      setSortOrder: s.setSortOrder,
+    })),
+  );
 export const useLogsState = () =>
-  useExecutionViewStore((s) => ({
-    logsExpanded: s.logsExpanded,
-    selectedLogNodeId: s.selectedLogNodeId,
-    toggleLogsExpanded: s.toggleLogsExpanded,
-    setLogsExpanded: s.setLogsExpanded,
-    selectLogNode: s.selectLogNode,
-  }));
+  useExecutionViewStore(
+    useShallow((s) => ({
+      logsExpanded: s.logsExpanded,
+      selectedLogNodeId: s.selectedLogNodeId,
+      toggleLogsExpanded: s.toggleLogsExpanded,
+      setLogsExpanded: s.setLogsExpanded,
+      selectLogNode: s.selectLogNode,
+    })),
+  );
 
 // Combined selectors
 export const useExecutionFilters = () =>
-  useExecutionViewStore((s) => ({
-    statusFilter: s.statusFilter,
-    flowIdFilter: s.flowIdFilter,
-    setStatusFilter: s.setStatusFilter,
-    setFlowIdFilter: s.setFlowIdFilter,
-    clearFilters: s.clearFilters,
-  }));
+  useExecutionViewStore(
+    useShallow((s) => ({
+      statusFilter: s.statusFilter,
+      flowIdFilter: s.flowIdFilter,
+      setStatusFilter: s.setStatusFilter,
+      setFlowIdFilter: s.setFlowIdFilter,
+      clearFilters: s.clearFilters,
+    })),
+  );

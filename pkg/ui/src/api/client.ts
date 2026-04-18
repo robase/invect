@@ -94,103 +94,9 @@ class ApiClient {
       try {
         const errorData = await response.json();
 
-        // Handle ZodError format directly (when backend returns ZodError structure)
-        if (
-          response.status === 400 &&
-          errorData.error === 'Validation Error' &&
-          errorData.details
-        ) {
-          const validationResult = {
-            isValid: false,
-            errors: errorData.details.map((detail: { message: string; path?: string }) => ({
-              type: 'VALIDATION_ERROR',
-              message: detail.message,
-              severity: 'error' as const,
-              field: detail.path || '',
-              value: undefined,
-            })),
-            warnings: [],
-          };
-          const validationError = new ValidationError(
-            errorData.message || 'Flow validation failed',
-            validationResult,
-          );
+        const validationError = this.parseValidationError(errorData);
+        if (validationError) {
           throw validationError;
-        }
-
-        // Handle Express backend validation errors
-        if (
-          response.status === 400 &&
-          errorData.error === 'VALIDATION_ERROR' &&
-          errorData.details
-        ) {
-          const validationResult = {
-            isValid: false,
-            errors: errorData.details.map(
-              (detail: { message: string; field?: string; value?: unknown }) => ({
-                type: 'VALIDATION_ERROR',
-                message: detail.message,
-                severity: 'error' as const,
-                field: detail.field || '',
-                value: detail.value,
-              }),
-            ),
-            warnings: [],
-          };
-          const validationError = new ValidationError(
-            errorData.message || 'Flow validation failed',
-            validationResult,
-          );
-          throw validationError;
-        }
-
-        // Legacy: Handle express-simple backend validation errors (validation field format)
-        if (
-          response.status === 400 &&
-          errorData.error === 'VALIDATION_ERROR' &&
-          errorData.validation
-        ) {
-          throw new ValidationError(
-            errorData.message || 'Flow validation failed',
-            errorData.validation,
-          );
-        }
-
-        // Check if this is a validation error (400 with validation field)
-        if (response.status === 400 && errorData.validation) {
-          throw new ValidationError(
-            errorData.message || 'Flow validation failed',
-            errorData.validation,
-          );
-        }
-
-        // Handle validation errors nested in response property
-        if (
-          (response.status === 400 || response.status === 500) &&
-          errorData.response?.validation
-        ) {
-          throw new ValidationError(
-            errorData.response.message || errorData.message || 'Flow validation failed',
-            errorData.response.validation,
-          );
-        }
-
-        // Check for validation data in any error response structure
-        if (errorData.validation) {
-          throw new ValidationError(
-            errorData.message || 'Flow validation failed',
-            errorData.validation,
-          );
-        }
-
-        // Additional check for validation data nested in response object (any status code)
-        if (errorData.response && typeof errorData.response === 'object') {
-          if (errorData.response.validation) {
-            throw new ValidationError(
-              errorData.response.message || errorData.message || 'Flow validation failed',
-              errorData.response.validation,
-            );
-          }
         }
 
         // Handle other errors
@@ -216,6 +122,58 @@ class ApiClient {
 
     const result = await response.json();
     return result;
+  }
+
+  /**
+   * Parse validation errors from various backend response formats into a
+   * unified ValidationError. Returns null if the response is not a validation error.
+   */
+  private parseValidationError(errorData: Record<string, unknown>): ValidationError | null {
+    const message =
+      (errorData.message as string) ||
+      ((errorData.response as Record<string, unknown> | undefined)?.message as string) ||
+      'Flow validation failed';
+
+    // Format 1: Zod-style { error: "Validation Error", details: [{ message, path }] }
+    // Format 2: Express-style { error: "VALIDATION_ERROR", details: [{ message, field, value }] }
+    if (
+      (errorData.error === 'Validation Error' || errorData.error === 'VALIDATION_ERROR') &&
+      Array.isArray(errorData.details)
+    ) {
+      const details = errorData.details as Array<{
+        message: string;
+        path?: string;
+        field?: string;
+        value?: unknown;
+      }>;
+      return new ValidationError(message, {
+        isValid: false,
+        errors: details.map((d) => ({
+          type: 'VALIDATION_SYSTEM_ERROR' as const,
+          message: d.message,
+          severity: 'error' as const,
+          field: d.field || d.path || '',
+          value: d.value,
+        })),
+        warnings: [],
+      });
+    }
+
+    // Format 3: Pre-built validation result at top level { validation: FlowValidationResult }
+    if (errorData.validation && typeof errorData.validation === 'object') {
+      return new ValidationError(message, errorData.validation as FlowValidationResult);
+    }
+
+    // Format 4: Nested in response property { response: { validation: FlowValidationResult } }
+    const nested = errorData.response as Record<string, unknown> | undefined;
+    if (nested?.validation && typeof nested.validation === 'object') {
+      return new ValidationError(
+        (nested.message as string) || message,
+        nested.validation as FlowValidationResult,
+      );
+    }
+
+    return null;
   }
 
   // Dashboard endpoints

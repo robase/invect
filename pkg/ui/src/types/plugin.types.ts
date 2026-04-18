@@ -9,6 +9,37 @@
 import type { ComponentType, ReactNode } from 'react';
 
 // ─────────────────────────────────────────────────────────────
+// Unified Plugin Definition (mirrors @invect/core InvectPluginDefinition)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * A unified plugin definition containing both backend and frontend parts.
+ * The backend extracts `.backend`, the frontend extracts `.frontend`.
+ */
+export interface InvectPluginDefinition {
+  id: string;
+  name?: string;
+  backend?: unknown;
+  frontend?: unknown;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Plugin Resolution (internal)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Resolve an array of `InvectPluginDefinition` into `InvectFrontendPlugin[]`.
+ * Extracts `.frontend` from each definition, filtering out backend-only plugins.
+ */
+export function resolvePlugins(plugins: InvectPluginDefinition[]): InvectFrontendPlugin[] {
+  return plugins
+    .map((p) =>
+      p.frontend !== null && p.frontend !== undefined ? (p.frontend as InvectFrontendPlugin) : null,
+    )
+    .filter((p): p is InvectFrontendPlugin => p !== null);
+}
+
+// ─────────────────────────────────────────────────────────────
 // Frontend Plugin Interface
 // ─────────────────────────────────────────────────────────────
 
@@ -51,6 +82,37 @@ export interface InvectFrontendPlugin {
 
   /** Wrap the React tree with additional providers (auth context, etc.) */
   providers?: ComponentType<{ children: ReactNode }>[];
+
+  /**
+   * Application shell that wraps the entire Invect layout.
+   *
+   * Unlike `providers` (which always render children), an appShell can
+   * **conditionally** render children — e.g. showing a sign-in page when
+   * the user is not authenticated, then rendering the full Invect app once
+   * they sign in.
+   *
+   * The shell renders inside the CSS scope and QueryClientProvider but
+   * outside the sidebar, routes, and other layout elements.
+   *
+   * Only the **first** plugin to provide an appShell wins.
+   *
+   * @example
+   * ```tsx
+   * // Auth plugin provides an appShell that gates the app:
+   * appShell: ({ children, apiBaseUrl }) => (
+   *   <AuthProvider baseUrl={apiBaseUrl}>
+   *     <AuthGate fallback={<SignInPage />}>
+   *       {children}
+   *     </AuthGate>
+   *   </AuthProvider>
+   * )
+   * ```
+   */
+  appShell?: ComponentType<{
+    children: ReactNode;
+    apiBaseUrl: string;
+    basePath: string;
+  }>;
 
   /**
    * Inject headers into every API request.

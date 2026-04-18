@@ -2,23 +2,27 @@
  * @invect/user-auth — Auth Frontend Plugin Definition
  *
  * Registers the auth plugin's frontend contributions:
+ * - App shell: AuthProvider + AuthGate (sign-in page when unauthenticated)
  * - Sidebar item: "Users" (admin-only)
- * - Route: /users → UserManagementPage
- *
- * Note: AuthProvider is NOT included as a plugin provider because
- * AuthenticatedInvect already wraps the tree with it. This plugin
- * only adds the user management UI.
+ * - Sidebar footer: User avatar + sign-out menu
+ * - Routes: /users → UserManagementPage, /profile → ProfilePage
  */
 
 import { Users } from 'lucide-react';
 import { ProfilePage } from '../components/ProfilePage';
 import { UserManagementPage } from '../components/UserManagementPage';
 import { SidebarUserMenu } from '../components/SidebarUserMenu';
+import { AuthAppShell } from '../components/AuthAppShell';
 import type { InvectFrontendPlugin } from '@invect/ui';
 
 export const authFrontend: InvectFrontendPlugin = {
   id: 'user-auth',
   name: 'User Authentication',
+
+  // ─── App Shell (auth gate) ───
+  // Wraps the entire Invect layout with AuthProvider + AuthGate.
+  // Shows sign-in page when not authenticated.
+  appShell: AuthAppShell,
 
   // ─── Sidebar ───
   sidebar: [

@@ -9,17 +9,24 @@ import { auth } from '@invect/user-auth';
 import { rbac } from '@invect/rbac';
 import { webhooks } from '@invect/webhooks';
 import { mcp } from '@invect/mcp';
+import { versionControl } from '@invect/version-control';
+import { githubProvider } from '@invect/version-control/providers/github';
 import { defineConfig } from '@invect/core';
 
 const webhookBaseUrl = process.env.INVECT_WEBHOOK_BASE_URL || 'http://localhost:3000/invect';
+const versionControlRepo = process.env.INVECT_VC_REPO || 'example/invect-flows';
+const versionControlToken =
+  process.env.GITHUB_TOKEN || 'ghp_dummy_version_control_token_replace_me';
 
 export const invectConfig = defineConfig({
   encryptionKey: process.env.INVECT_ENCRYPTION_KEY || 'change-me-in-production',
   database: {
     type: 'sqlite',
-
     connectionString: process.env.DB_FILE_NAME || 'file:./dev.db',
   },
+  apiPath: '/api/invect',
+  frontendPath: '/invect',
+  theme: 'dark',
   logging: {
     level: 'error',
   },
@@ -106,6 +113,19 @@ export const invectConfig = defineConfig({
     rbac(),
     webhooks({
       webhookBaseUrl,
+    }),
+    versionControl({
+      provider: githubProvider({
+        auth: {
+          type: 'token',
+          token: versionControlToken,
+        },
+      }),
+      repo: versionControlRepo,
+      defaultBranch: 'main',
+      path: 'flows/',
+      mode: 'direct-commit',
+      syncDirection: 'push',
     }),
     mcp(),
   ],

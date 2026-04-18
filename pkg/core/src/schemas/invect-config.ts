@@ -134,6 +134,16 @@ export const InvectConfigSchema = z.object({
    * @example '/api/invect'
    */
   apiPath: z.string().optional(),
+
+  /**
+   * UI theme mode.
+   * - `'light'` — Light theme
+   * - `'dark'`  — Dark theme
+   * - `'system'` — Follow OS preference
+   * @default 'dark'
+   */
+  theme: z.enum(['light', 'dark', 'system']).default('dark').optional(),
+
   /**
    * Execution settings: flow timeout, heartbeat interval, stale run detection.
    */

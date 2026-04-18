@@ -1,6 +1,7 @@
 import { create, type StoreApi, type UseBoundStore } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
+import { useShallow } from 'zustand/shallow';
 
 export type ModalType =
   | 'createFlow'
@@ -204,9 +205,11 @@ export const useNodeSidebarExpandedGroups = () => useUIStore((s) => s.nodeSideba
 
 // Combined selectors
 export const useModals = () =>
-  useUIStore((s) => ({
-    activeModal: s.activeModal,
-    modalData: s.modalData,
-    openModal: s.openModal,
-    closeModal: s.closeModal,
-  }));
+  useUIStore(
+    useShallow((s) => ({
+      activeModal: s.activeModal,
+      modalData: s.modalData,
+      openModal: s.openModal,
+      closeModal: s.closeModal,
+    })),
+  );

@@ -5,7 +5,7 @@ export { InvectLoader } from './components/shared/InvectLoader';
 export { InvectLogo } from './components/shared/InvectLogo';
 
 // Export types for better TypeScript support
-export type { InvectProps } from './Invect';
+export type { InvectProps, InvectConfig } from './Invect';
 export type { InvectShellProps } from './InvectShell';
 export type { InvectLoaderProps } from './components/shared/InvectLoader';
 export type { InvectLogoProps } from './components/shared/InvectLogo';
@@ -13,6 +13,7 @@ export type { InvectLogoProps } from './components/shared/InvectLogo';
 // Plugin system types
 export type {
   InvectFrontendPlugin,
+  InvectPluginDefinition,
   PluginSidebarContribution,
   PluginRouteContribution,
   PluginPanelTabContribution,
@@ -21,6 +22,7 @@ export type {
   HeaderActionProps,
   PermissionContext,
 } from './types/plugin.types';
+export { resolvePlugins } from './types/plugin.types';
 export { usePluginRegistry } from './contexts/PluginRegistryContext';
 export type { PluginRegistry } from './contexts/PluginRegistryContext';
 
@@ -28,7 +30,7 @@ export type { PluginRegistry } from './contexts/PluginRegistryContext';
 export { ApiProvider, useApiClient, useApiBaseURL } from './contexts/ApiContext';
 export type { ApiProviderProps } from './contexts/ApiContext';
 
-// OAuth2 callback handler - needed for OAuth2 redirects
+// OAuth2 callback handler - exported for advanced/custom routing setups
 export { OAuth2CallbackHandler } from './components/credentials/OAuth2ConnectButton';
 
 // Flow editor shell
