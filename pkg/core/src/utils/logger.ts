@@ -106,7 +106,14 @@ export class BaseLogger implements Logger {
     const contextStr = this.context ? `[${this.context}]` : '';
     const color = LOG_COLORS[level];
     const levelStr = `${color}${level.toUpperCase().padEnd(6)}${RESET_COLOR}`;
-    const metaStr = meta ? ` ${JSON.stringify(meta, null, 2)}` : '';
+    const metaStr = meta
+      ? ` ${JSON.stringify(meta, (_key, value: unknown) => {
+          if (value instanceof Error) {
+            return { message: value.message, name: value.name, stack: value.stack };
+          }
+          return value;
+        }, 2)}`
+      : '';
 
     return `${timestamp} | ${levelStr}|${contextStr} ${message}${metaStr}`;
   }
@@ -129,42 +136,9 @@ export class BaseLogger implements Logger {
     }
   }
 
-  error(message: string, error?: unknown, meta?: unknown): void {
+  error(message: string, meta?: unknown, _extra?: unknown): void {
     if (this.shouldLog('error')) {
-      let errorStr: string | object;
-      if (error instanceof Error) {
-        errorStr = error.stack || error.message;
-      } else if (typeof error === 'object' && error !== null) {
-        // Try to extract message/stack if present, else JSON stringify
-        const maybeStack =
-          Object.prototype.hasOwnProperty.call(error, 'stack') &&
-          typeof (error as Record<string, unknown>)['stack'] === 'string'
-            ? ((error as Record<string, unknown>)['stack'] as string)
-            : undefined;
-        const maybeMessage =
-          Object.prototype.hasOwnProperty.call(error, 'message') &&
-          typeof (error as Record<string, unknown>)['message'] === 'string'
-            ? ((error as Record<string, unknown>)['message'] as string)
-            : undefined;
-        if (maybeStack) {
-          errorStr = maybeStack;
-        } else if (maybeMessage) {
-          errorStr = maybeMessage;
-        } else {
-          try {
-            errorStr = error;
-          } catch {
-            errorStr = String(error);
-          }
-        }
-      } else if (typeof error === 'string') {
-        errorStr = error;
-      } else if (typeof error === 'undefined') {
-        errorStr = 'undefined';
-      } else {
-        errorStr = String(error);
-      }
-      console.error(this.formatMessage('error', message, { error: errorStr }), meta);
+      console.error(this.formatMessage('error', message, meta));
     }
   }
 }
@@ -213,7 +187,14 @@ export class ScopedLogger implements Logger {
 
     const color = LOG_COLORS[level];
     const levelStr = `${color}${level.toUpperCase().padEnd(6)}${RESET_COLOR}`;
-    const metaStr = meta ? ` ${JSON.stringify(meta, null, 2)}` : '';
+    const metaStr = meta
+      ? ` ${JSON.stringify(meta, (_key, value: unknown) => {
+          if (value instanceof Error) {
+            return { message: value.message, name: value.name, stack: value.stack };
+          }
+          return value;
+        }, 2)}`
+      : '';
 
     return `${timestamp} | ${levelStr}| ${scopeStr}${contextStr} ${message}${metaStr}`;
   }
@@ -236,41 +217,9 @@ export class ScopedLogger implements Logger {
     }
   }
 
-  error(message: string, error?: unknown, meta?: unknown): void {
+  error(message: string, meta?: unknown, _extra?: unknown): void {
     if (this.shouldLog('error')) {
-      let errorStr: string | object;
-      if (error instanceof Error) {
-        errorStr = error.stack || error.message;
-      } else if (typeof error === 'object' && error !== null) {
-        const maybeStack =
-          Object.prototype.hasOwnProperty.call(error, 'stack') &&
-          typeof (error as Record<string, unknown>)['stack'] === 'string'
-            ? ((error as Record<string, unknown>)['stack'] as string)
-            : undefined;
-        const maybeMessage =
-          Object.prototype.hasOwnProperty.call(error, 'message') &&
-          typeof (error as Record<string, unknown>)['message'] === 'string'
-            ? ((error as Record<string, unknown>)['message'] as string)
-            : undefined;
-        if (maybeStack) {
-          errorStr = maybeStack;
-        } else if (maybeMessage) {
-          errorStr = maybeMessage;
-        } else {
-          try {
-            errorStr = error;
-          } catch {
-            errorStr = String(error);
-          }
-        }
-      } else if (typeof error === 'string') {
-        errorStr = error;
-      } else if (typeof error === 'undefined') {
-        errorStr = 'undefined';
-      } else {
-        errorStr = String(error);
-      }
-      console.error(this.formatMessage('error', message, { error: errorStr }), meta);
+      console.error(this.formatMessage('error', message, meta));
     }
   }
 

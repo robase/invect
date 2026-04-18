@@ -24,7 +24,7 @@ export const invectConfig = defineConfig({
     type: 'sqlite',
     connectionString: process.env.DB_FILE_NAME || 'file:./dev.db',
   },
-  apiPath: '/api/invect',
+  apiPath: '/invect',
   frontendPath: '/invect',
   theme: 'dark',
   logging: {

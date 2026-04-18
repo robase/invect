@@ -100,7 +100,7 @@ npx invect-cli migrate --push
 | `mapUser`           | `(user, session) => InvectIdentity` | No       | default mapping     | Custom function to map Better Auth users to Invect identities.                                                 |
 | `mapRole`           | `(role) => InvectRole`              | No       | default mapping     | Custom function to map Better Auth role strings to Invect roles.                                               |
 | `apiKey`            | `boolean \| ApiKeyPluginOptions`    | No       | `false`             | Enable the [Better Auth API Key plugin](https://better-auth.com/docs/plugins/api-key) for programmatic access. |
-| `frontend`          | `unknown`                           | No       | —                   | Frontend plugin. Import `authFrontend` from `@invect/user-auth/ui`.                                            |
+| `frontend`          | `unknown`                           | No       | —                   | Deprecated. The auth plugin registers its UI automatically.                                                     |
 
 ## What it does
 
@@ -121,43 +121,41 @@ npx invect-cli migrate --push
 - `ProfilePage` — user profile page
 - `ApiKeysDialog` — API key management (requires `apiKey` option enabled)
 - `SidebarUserMenu` — user menu component for the sidebar
-- `authFrontend` — frontend plugin definition (sidebar items, routes, providers)
+- `authFrontend` — deprecated. Auth UI is now registered automatically via the plugin's `appShell`.
 
 ## Frontend integration
 
-The recommended approach uses `AuthenticatedInvect`, which composes the auth layer around the editor.
+No extra wrapper component is needed. Pass the `auth()` plugin in `invect.config.ts` — `<Invect>` reads the config and automatically wraps itself with an auth gate:
 
-Pass the `authFrontend` plugin to enable frontend contributions (sidebar items, routes):
+```tsx title="app/invect/[[...slug]]/page.tsx"
+'use client';
 
-```tsx
-import { Invect, InvectShell } from '@invect/ui';
-import { AuthenticatedInvect, authFrontend } from '@invect/user-auth/ui';
+import dynamic from 'next/dynamic';
 import '@invect/ui/styles';
+import config from '../../invect.config'; // contains plugins: [auth(...), rbac()]
 
-<AuthenticatedInvect
-  apiBaseUrl="/api/invect"
-  basePath="/invect"
-  InvectComponent={Invect}
-  ShellComponent={InvectShell}
-  theme="light"
-/>;
-```
-
-When you use `Invect` or `AuthenticatedInvect` with the built-in router, the OAuth callback route is already handled internally at `<basePath>/oauth/callback`. You do not need to mount `OAuth2CallbackHandler` separately in the host app unless you are building a custom routing layer.
-
-On the backend, wire the frontend plugin to the auth config:
-
-```ts
-import { auth } from '@invect/user-auth';
-import { authFrontend } from '@invect/user-auth/ui';
-
-auth({
-  // ...
-  frontend: authFrontend,
+const Invect = dynamic(() => import('@invect/ui').then((m) => ({ default: m.Invect })), {
+  ssr: false,
 });
+
+export default function InvectPage() {
+  return <Invect config={config} />;
+}
 ```
 
-When `ShellComponent` is provided, the sign-in page renders inside the Invect CSS scope — so it uses the same theme tokens and looks consistent with the editor.
+The OAuth callback route is handled internally at `<frontendPath>/oauth/callback`. You do not need a separate `OAuth2CallbackHandler` route.
+
+For non-Next.js frontends (e.g. Vite + React), import the shared config and pass it the same way:
+
+```tsx title="src/App.tsx"
+import { Invect } from '@invect/ui';
+import '@invect/ui/styles';
+import { invectConfig } from '../invect.config';
+
+export default function App() {
+  return <Invect config={invectConfig} />;
+}
+```
 
 ## Environment variables
 

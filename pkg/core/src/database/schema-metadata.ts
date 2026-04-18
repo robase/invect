@@ -12,19 +12,19 @@
 import type { SchemaMetadata } from './adapter-factory';
 
 export const INVECT_SCHEMA_META: SchemaMetadata = {
-  flows: {
+  invect_flows: {
     tags: { type: 'string[]' },
     is_active: { type: 'boolean' },
     created_at: { type: 'date' },
     updated_at: { type: 'date' },
   },
 
-  flow_versions: {
+  invect_flow_versions: {
     invect_definition: { type: 'json' },
     created_at: { type: 'date' },
   },
 
-  flow_executions: {
+  invect_flow_executions: {
     id: { type: 'uuid', defaultValue: 'uuid' },
     inputs: { type: 'json' },
     outputs: { type: 'json' },
@@ -34,7 +34,7 @@ export const INVECT_SCHEMA_META: SchemaMetadata = {
     last_heartbeat_at: { type: 'date' },
   },
 
-  action_traces: {
+  invect_action_traces: {
     id: { type: 'uuid', defaultValue: 'uuid' },
     inputs: { type: 'json' },
     outputs: { type: 'json' },
@@ -43,7 +43,7 @@ export const INVECT_SCHEMA_META: SchemaMetadata = {
     completed_at: { type: 'date' },
   },
 
-  batch_jobs: {
+  invect_batch_jobs: {
     id: { type: 'uuid', defaultValue: 'uuid' },
     request_data: { type: 'json' },
     response_data: { type: 'json' },
@@ -53,7 +53,7 @@ export const INVECT_SCHEMA_META: SchemaMetadata = {
     updated_at: { type: 'date' },
   },
 
-  credentials: {
+  invect_credentials: {
     id: { type: 'uuid', defaultValue: 'uuid' },
     config: { type: 'json' },
     is_active: { type: 'boolean' },
@@ -63,14 +63,14 @@ export const INVECT_SCHEMA_META: SchemaMetadata = {
     updated_at: { type: 'date' },
   },
 
-  flow_triggers: {
+  invect_flow_triggers: {
     id: { type: 'uuid', defaultValue: 'uuid' },
     is_enabled: { type: 'boolean' },
     created_at: { type: 'date' },
     updated_at: { type: 'date' },
   },
 
-  chat_messages: {
+  invect_chat_messages: {
     id: { type: 'uuid', defaultValue: 'uuid' },
     tool_meta: { type: 'json' },
     created_at: { type: 'date' },

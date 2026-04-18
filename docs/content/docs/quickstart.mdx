@@ -53,9 +53,10 @@ If your frontend is a separate React app, install `@invect/ui` and mount the edi
 ```tsx title="App.tsx"
 import { Invect } from '@invect/ui';
 import '@invect/ui/styles';
+import { invectConfig } from '../invect.config';
 
 function App() {
-  return <Invect apiPath="http://localhost:3000/invect" />;
+  return <Invect config={invectConfig} />;
 }
 ```
 

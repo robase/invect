@@ -36,6 +36,31 @@ CREATE TABLE `invect_action_traces` (
 	FOREIGN KEY (`parent_node_execution_id`) REFERENCES `invect_action_traces`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
+CREATE TABLE `invect_apikey` (
+	`id` text PRIMARY KEY NOT NULL,
+	`config_id` text DEFAULT 'default' NOT NULL,
+	`name` text,
+	`start` text,
+	`prefix` text,
+	`key` text NOT NULL,
+	`reference_id` text NOT NULL,
+	`refill_interval` integer,
+	`refill_amount` integer,
+	`last_refill_at` text,
+	`enabled` integer DEFAULT true,
+	`rate_limit_enabled` integer,
+	`rate_limit_time_window` integer,
+	`rate_limit_max` integer,
+	`request_count` integer,
+	`remaining` integer,
+	`last_request` text,
+	`expires_at` text,
+	`created_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	`updated_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	`permissions` text,
+	`metadata` text
+);
+--> statement-breakpoint
 CREATE TABLE `invect_batch_jobs` (
 	`id` text PRIMARY KEY NOT NULL,
 	`flow_run_id` text NOT NULL,
@@ -76,13 +101,10 @@ CREATE TABLE `invect_credentials` (
 	`metadata` text,
 	`last_used_at` text,
 	`expires_at` text,
-	`webhook_path` text,
-	`webhook_secret` text,
 	`created_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	`updated_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `credentials_webhook_path_unique` ON `invect_credentials` (`webhook_path`);--> statement-breakpoint
 CREATE TABLE `invect_flow_access` (
 	`id` text PRIMARY KEY NOT NULL,
 	`flow_id` text NOT NULL,
@@ -131,7 +153,7 @@ CREATE TABLE `invect_flow_triggers` (
 	FOREIGN KEY (`flow_id`) REFERENCES `invect_flows`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `flow_triggers_webhook_path_unique` ON `invect_flow_triggers` (`webhook_path`);--> statement-breakpoint
+CREATE UNIQUE INDEX `invect_flow_triggers_webhook_path_unique` ON `invect_flow_triggers` (`webhook_path`);--> statement-breakpoint
 CREATE TABLE `invect_flow_versions` (
 	`flow_id` text NOT NULL,
 	`version` integer NOT NULL,
@@ -200,7 +222,16 @@ CREATE TABLE `invect_session` (
 	FOREIGN KEY (`user_id`) REFERENCES `invect_user`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `session_token_unique` ON `invect_session` (`token`);--> statement-breakpoint
+CREATE UNIQUE INDEX `invect_session_token_unique` ON `invect_session` (`token`);--> statement-breakpoint
+CREATE TABLE `invect_two_factor` (
+	`id` text PRIMARY KEY NOT NULL,
+	`user_id` text NOT NULL,
+	`secret` text NOT NULL,
+	`backup_codes` text NOT NULL,
+	`verified` integer DEFAULT false,
+	FOREIGN KEY (`user_id`) REFERENCES `invect_user`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
 CREATE TABLE `invect_user` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
@@ -211,11 +242,47 @@ CREATE TABLE `invect_user` (
 	`banned` integer DEFAULT false,
 	`ban_reason` text,
 	`ban_expires` text,
+	`two_factor_enabled` integer DEFAULT false,
 	`created_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	`updated_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `user_email_unique` ON `invect_user` (`email`);--> statement-breakpoint
+CREATE UNIQUE INDEX `invect_user_email_unique` ON `invect_user` (`email`);--> statement-breakpoint
+CREATE TABLE `invect_vc_sync_config` (
+	`id` text PRIMARY KEY NOT NULL,
+	`flow_id` text NOT NULL,
+	`provider` text NOT NULL,
+	`repo` text NOT NULL,
+	`branch` text NOT NULL,
+	`file_path` text NOT NULL,
+	`mode` text NOT NULL,
+	`sync_direction` text DEFAULT 'push' NOT NULL,
+	`last_synced_at` text,
+	`last_commit_sha` text,
+	`last_synced_version` integer,
+	`draft_branch` text,
+	`active_pr_number` integer,
+	`active_pr_url` text,
+	`enabled` integer DEFAULT true NOT NULL,
+	`created_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	`updated_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	FOREIGN KEY (`flow_id`) REFERENCES `invect_flows`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `invect_vc_sync_config_flow_id_unique` ON `invect_vc_sync_config` (`flow_id`);--> statement-breakpoint
+CREATE TABLE `invect_vc_sync_history` (
+	`id` text PRIMARY KEY NOT NULL,
+	`flow_id` text NOT NULL,
+	`action` text NOT NULL,
+	`commit_sha` text,
+	`pr_number` integer,
+	`version` integer,
+	`message` text,
+	`created_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	`created_by` text,
+	FOREIGN KEY (`flow_id`) REFERENCES `invect_flows`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
 CREATE TABLE `invect_verification` (
 	`id` text PRIMARY KEY NOT NULL,
 	`identifier` text NOT NULL,
@@ -247,4 +314,4 @@ CREATE TABLE `invect_webhook_triggers` (
 	FOREIGN KEY (`flow_id`) REFERENCES `invect_flows`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `webhook_triggers_webhook_path_unique` ON `invect_webhook_triggers` (`webhook_path`);
+CREATE UNIQUE INDEX `invect_webhook_triggers_webhook_path_unique` ON `invect_webhook_triggers` (`webhook_path`);

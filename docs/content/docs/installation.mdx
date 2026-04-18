@@ -290,9 +290,10 @@ Then mount the editor:
 ```tsx title="App.tsx"
 import { Invect } from '@invect/ui';
 import '@invect/ui/styles';
+import { invectConfig } from '../invect.config';
 
 function App() {
-  return <Invect apiPath="http://localhost:3000/invect" />;
+  return <Invect config={invectConfig} />;
 }
 ```
 
@@ -310,9 +311,10 @@ Then mount the editor:
 ```tsx title="App.tsx"
 import { Invect } from '@invect/ui';
 import '@invect/ui/styles';
+import { invectConfig } from '../invect.config';
 
 function App() {
-  return <Invect apiPath="http://localhost:3000/invect" />;
+  return <Invect config={invectConfig} />;
 }
 ```
 
@@ -326,18 +328,19 @@ Mount the frontend in a catch-all page route:
 
 import dynamic from 'next/dynamic';
 import '@invect/ui/styles';
+import config from '../../invect.config';
 
 const Invect = dynamic(() => import('@invect/ui').then((mod) => ({ default: mod.Invect })), {
   ssr: false,
 });
 
 export default function InvectPage() {
-  return <Invect apiPath="/api/invect" frontendPath="/invect" />;
+  return <Invect config={config} />;
 }
 ```
 
 <Callout type="info">
-Dynamic import with `ssr: false` is required because the flow editor uses browser APIs. The `frontendPath` prop tells the router where it is mounted so internal navigation works correctly.
+Dynamic import with `ssr: false` is required because the flow editor uses browser APIs. `invect.config.ts` sets `frontendPath` so the router knows where it is mounted.
 </Callout>
 </Tab>
 </Tabs>
@@ -478,6 +481,8 @@ export class AppModule {}
 
 ```ts title="app/api/invect/[...invect]/route.ts"
 import { createInvectHandler } from '@invect/nextjs';
+import { auth } from '@invect/user-auth';
+import { rbac } from '@invect/rbac';
 
 const handler = createInvectHandler({
   database: {
@@ -491,6 +496,17 @@ const handler = createInvectHandler({
   },
   triggers: {
     cronEnabled: true,
+    webhookBaseUrl: 'https://your-app.com/api/invect',
+  },
+  plugins: [
+    auth({
+      /* Better Auth options */
+    }),
+    rbac(),
+  ],
+  defaultCredentials: [
+    {
+      name: 'OpenAI',
       type: 'llm',
       provider: 'openai',
       authType: 'apiKey',
@@ -508,8 +524,10 @@ export const DELETE = handler.DELETE;
 
 ```ts title="app/api/invect/cron/route.ts"
 import { createInvectCronHandler } from '@invect/nextjs';
+import { auth } from '@invect/user-auth';
+import { rbac } from '@invect/rbac';
 
-const handleCron = createInvectCronHandler({
+export const GET = createInvectCronHandler({
   database: {
     type: 'sqlite',
     connectionString: process.env.DATABASE_URL!,
@@ -524,20 +542,21 @@ const handleCron = createInvectCronHandler({
     webhookBaseUrl: 'https://your-app.com/api/invect',
   },
   plugins: [
-    // Add plugins here
+    auth({
+      /* Better Auth options */
+    }),
+    rbac(),
   ],
   defaultCredentials: [
     {
       name: 'OpenAI',
-    webhookBaseUrl: 'https://your-app.com/api/invect',
-  },
+      type: 'llm',
+      provider: 'openai',
       authType: 'apiKey',
       config: { apiKey: process.env.OPENAI_API_KEY! },
     },
   ],
 });
-
-export const GET = handleCron;
 ```
 
 ```json title="vercel.json"
@@ -545,18 +564,6 @@ export const GET = handleCron;
   "crons": [{ "path": "/api/invect/cron", "schedule": "* * * * *" }]
 }
 ```
-
-});
-
-export const GET = handleCron;
-
-````
-
-```json title="vercel.json"
-{
-  "crons": [{ "path": "/api/invect/cron", "schedule": "* * * * *" }]
-}
-````
 
 </Tab>
 </Tabs>
@@ -572,51 +579,21 @@ After adding plugins with database tables, run `npx invect-cli generate` and `np
 
 ```ts title="index.ts"
 import { createInvectRouter } from '@invect/express';
-import { auth } from '@invect/user-auth';
-import { rbac } from '@invect/rbac';
+import { invectConfig } from './invect.config';
 
-app.use(
-  '/invect',
-  await createInvectRouter({
-    database: {
-      type: 'sqlite',
-      connectionString: process.env.DATABASE_URL!,
-    },
-    encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
-    plugins: [
-      auth({
-        /* Better Auth options */
-      }),
-      rbac(),
-    ],
-  }),
-);
+app.use('/invect', await createInvectRouter(invectConfig));
 ```
 
 </Tab>
 <Tab value="NestJS">
 
 ```ts title="app.module.ts"
+import { Module } from '@nestjs/common';
 import { InvectModule } from '@invect/nestjs';
-import { auth } from '@invect/user-auth';
-import { rbac } from '@invect/rbac';
+import { invectConfig } from './invect.config';
 
 @Module({
-  imports: [
-    InvectModule.forRoot({
-      database: {
-        type: 'sqlite',
-        connectionString: process.env.DATABASE_URL!,
-      },
-      encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
-      plugins: [
-        auth({
-          /* Better Auth options */
-        }),
-        rbac(),
-      ],
-    }),
-  ],
+  imports: [InvectModule.forRoot(invectConfig)],
 })
 export class AppModule {}
 ```
@@ -626,22 +603,9 @@ export class AppModule {}
 
 ```ts title="app/api/invect/[...invect]/route.ts"
 import { createInvectHandler } from '@invect/nextjs';
-import { auth } from '@invect/user-auth';
-import { rbac } from '@invect/rbac';
+import { invectConfig } from '@/invect.config';
 
-const handler = createInvectHandler({
-  database: {
-    type: 'postgresql',
-    connectionString: process.env.DATABASE_URL!,
-  },
-  encryptionKey: process.env.INVECT_ENCRYPTION_KEY,
-  plugins: [
-    auth({
-      /* Better Auth options */
-    }),
-    rbac(),
-  ],
-});
+const handler = createInvectHandler(invectConfig);
 
 export const GET = handler.GET;
 export const POST = handler.POST;
@@ -650,29 +614,25 @@ export const PUT = handler.PUT;
 export const DELETE = handler.DELETE;
 ```
 
-With authentication, use `AuthenticatedInvect` for the frontend:
+Then mount the frontend:
 
 ```tsx title="app/invect/[[...slug]]/page.tsx"
 'use client';
 
-import { Invect, InvectShell } from '@invect/ui';
-import { AuthenticatedInvect } from '@invect/user-auth/ui';
+import dynamic from 'next/dynamic';
 import '@invect/ui/styles';
+import config from '../../invect.config';
+
+const Invect = dynamic(() => import('@invect/ui').then((m) => ({ default: m.Invect })), {
+  ssr: false,
+});
 
 export default function InvectPage() {
-  return (
-    <AuthenticatedInvect
-      apiBaseUrl="/api/invect"
-      basePath="/invect"
-      InvectComponent={Invect}
-      ShellComponent={InvectShell}
-      theme="dark"
-    />
-  );
+  return <Invect config={config} />;
 }
 ```
 
-`Invect` now handles the OAuth callback route internally at `<basePath>/oauth/callback`, so you do not need to add a separate top-level `OAuth2CallbackHandler` route in your app when using the built-in router.
+When the `@invect/user-auth` plugin is included in `invect.config.ts`, `<Invect>` automatically wraps itself with an auth gate — no extra wrapper component needed. The OAuth callback route is handled internally at `<frontendPath>/oauth/callback`.
 
 See [Authentication Plugin](/docs/plugins/authentication) and [Access Control Plugin](/docs/plugins/access-control) for details.
 
