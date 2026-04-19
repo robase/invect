@@ -1,0 +1,62 @@
+{
+  "name": "@invect/vercel-workflows",
+  "version": "0.1.0",
+  "description": "Run Invect primitive flows as Vercel Workflows — server plugin and single-step wrapping helpers",
+  "license": "MIT",
+  "author": "robase <team@invect.dev>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/robase/invect.git",
+    "directory": "pkg/plugins/vercel-workflows"
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "type": "module",
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./runtime": {
+      "types": "./dist/runtime/index.d.mts",
+      "import": "./dist/runtime/index.mjs",
+      "require": "./dist/runtime/index.cjs"
+    },
+    "./compiler": {
+      "types": "./dist/compiler/index.d.mts",
+      "import": "./dist/compiler/index.mjs",
+      "require": "./dist/compiler/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "build:w": "tsdown --watch",
+    "dev": "tsdown --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@invect/core": "workspace:*",
+    "@invect/primitives": "workspace:*"
+  },
+  "devDependencies": {
+    "tsdown": "latest",
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.4"
+  },
+  "peerDependencies": {
+    "workflow": "*"
+  },
+  "peerDependenciesMeta": {
+    "workflow": {
+      "optional": true
+    }
+  }
+}

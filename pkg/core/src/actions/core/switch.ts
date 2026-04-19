@@ -16,6 +16,7 @@ import {
   getJsExpressionService,
   JsExpressionError,
 } from 'src/services/templating/js-expression.service';
+import { JsExpressionEvaluationError } from 'src/services/templating/evaluator';
 
 const switchCaseSchema = z.object({
   slug: z.string().min(1),
@@ -88,7 +89,9 @@ export const switchAction = defineAction({
       incomingDataKeys: Object.keys(evaluationData),
     });
 
-    const jsService = await getJsExpressionService(context.logger);
+    const evaluator =
+      context.functions?.evaluator ?? (await getJsExpressionService(context.logger));
+    await evaluator.initialize?.();
 
     let matchedSlug: string | undefined;
     let matchedLabel: string | undefined;
@@ -102,7 +105,7 @@ export const switchAction = defineAction({
 
     for (const c of cases) {
       try {
-        const result = await jsService.evaluate(c.expression, evaluationData);
+        const result = await evaluator.evaluate(c.expression, evaluationData);
         const matched = Boolean(result);
         caseResults.push({ slug: c.slug, label: c.label, matched });
 
@@ -117,7 +120,7 @@ export const switchAction = defineAction({
         }
       } catch (error) {
         const msg =
-          error instanceof JsExpressionError
+          error instanceof JsExpressionError || error instanceof JsExpressionEvaluationError
             ? error.message
             : error instanceof Error
               ? error.message

@@ -351,6 +351,22 @@ export type {
   TemplateRenderResult,
 } from './services/templating/template.service';
 
+// Re-export JS expression evaluator (pluggable backend for core.javascript / if_else / switch).
+export {
+  DirectEvaluator,
+  JsExpressionEvaluationError,
+  needsAutoReturn,
+} from './services/templating/evaluator';
+export type { JsExpressionEvaluator } from './services/templating/evaluator';
+export {
+  JsExpressionService,
+  JsExpressionError,
+  getJsExpressionService,
+  createJsExpressionService,
+  disposeJsExpressionService,
+} from './services/templating/js-expression.service';
+export type { JsExpressionServiceConfig } from './services/templating/js-expression.service';
+
 // Re-export React Flow types
 export type {
   ReactFlowNode,

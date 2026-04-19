@@ -15,6 +15,7 @@ import {
   getJsExpressionService,
   JsExpressionError,
 } from 'src/services/templating/js-expression.service';
+import { JsExpressionEvaluationError } from 'src/services/templating/evaluator';
 
 const paramsSchema = z.object({
   expression: z.string().min(1, 'A JavaScript expression is required'),
@@ -66,12 +67,14 @@ export const ifElseAction = defineAction({
     let evaluationError: string | undefined;
 
     try {
-      const jsService = await getJsExpressionService(context.logger);
-      const result = await jsService.evaluate(params.expression, evaluationData);
+      const evaluator =
+        context.functions?.evaluator ?? (await getJsExpressionService(context.logger));
+      await evaluator.initialize?.();
+      const result = await evaluator.evaluate(params.expression, evaluationData);
       evaluationResult = Boolean(result);
     } catch (error) {
       evaluationError =
-        error instanceof JsExpressionError
+        error instanceof JsExpressionError || error instanceof JsExpressionEvaluationError
           ? error.message
           : error instanceof Error
             ? error.message

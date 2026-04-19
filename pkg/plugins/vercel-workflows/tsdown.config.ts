@@ -2,10 +2,9 @@ import { defineConfig } from 'tsdown';
 
 export default defineConfig({
   entry: {
-    'backend/index': 'src/backend/index.ts',
+    index: 'src/index.ts',
+    'runtime/index': 'src/runtime/index.ts',
     'compiler/index': 'src/compiler/index.ts',
-    'shared/types': 'src/shared/types.ts',
-    'adapter/index': 'src/adapter/index.ts',
   },
   format: ['esm', 'cjs'],
   dts: true,

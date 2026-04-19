@@ -18,6 +18,7 @@ import {
   getJsExpressionService,
   JsExpressionError,
 } from 'src/services/templating/js-expression.service';
+import { JsExpressionEvaluationError } from 'src/services/templating/evaluator';
 
 const paramsSchema = z.object({
   code: z.string().min(1, 'JavaScript code is required'),
@@ -68,8 +69,10 @@ export const javascriptAction = defineAction({
     });
 
     try {
-      const jsService = await getJsExpressionService(context.logger);
-      const result = await jsService.evaluate(code, data);
+      const evaluator =
+        context.functions?.evaluator ?? (await getJsExpressionService(context.logger));
+      await evaluator.initialize?.();
+      const result = await evaluator.evaluate(code, data);
 
       // Stringify non-string results for the output variable
       const outputValue =
@@ -87,7 +90,7 @@ export const javascriptAction = defineAction({
       };
     } catch (error) {
       const msg =
-        error instanceof JsExpressionError
+        error instanceof JsExpressionError || error instanceof JsExpressionEvaluationError
           ? error.message
           : error instanceof Error
             ? error.message

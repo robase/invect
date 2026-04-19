@@ -21,6 +21,7 @@ import type { FlowEdge, FlowNodeDefinitions } from 'src/services/flow-versions/s
 import type { NodeDefinition } from 'src/types/node-definition.types';
 import type { CredentialsService } from 'src/services/credentials/credentials.service';
 import type { BaseAIClient } from 'src/services/ai/base-client';
+import type { JsExpressionEvaluator } from 'src/services/templating/evaluator';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PROVIDER
@@ -266,6 +267,13 @@ export interface ActionExecutionContext {
     ) => void;
     /** Record a tool execution (for Agent node) */
     recordToolExecution?: (input: RecordToolExecutionInput) => Promise<{ id: string } | null>;
+    /**
+     * JS expression evaluator (for if-else, switch, javascript actions).
+     * When absent, actions fall back to the default QuickJS-backed service.
+     * Edge runtimes (Vercel Workflows, Cloudflare Workers) inject a
+     * `DirectEvaluator` here to avoid bundling the QuickJS WASM.
+     */
+    evaluator?: JsExpressionEvaluator;
   };
 
   /**

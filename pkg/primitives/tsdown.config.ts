@@ -2,10 +2,7 @@ import { defineConfig } from 'tsdown';
 
 export default defineConfig({
   entry: {
-    'backend/index': 'src/backend/index.ts',
-    'compiler/index': 'src/compiler/index.ts',
-    'shared/types': 'src/shared/types.ts',
-    'adapter/index': 'src/adapter/index.ts',
+    index: 'src/index.ts',
   },
   format: ['esm', 'cjs'],
   dts: true,
@@ -13,7 +10,7 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   deps: {
-    neverBundle: ['@invect/core', '@invect/primitives', 'zod'],
+    neverBundle: ['@invect/core', 'zod'],
   },
   outExtensions({ format }) {
     return {

@@ -1,0 +1,44 @@
+{
+  "name": "@invect/primitives",
+  "version": "0.1.0",
+  "description": "TypeScript-native flow execution primitives — run Invect flows in any JS runtime without a database or framework",
+  "license": "MIT",
+  "author": "robase <team@invect.dev>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/robase/invect.git",
+    "directory": "pkg/primitives"
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "type": "module",
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsdown && tsc --emitDeclarationOnly --outDir dist",
+    "build:w": "tsdown --watch",
+    "dev": "tsdown --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@invect/core": "workspace:*",
+    "zod": "^3.25.1"
+  },
+  "devDependencies": {
+    "tsdown": "latest",
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.4"
+  }
+}

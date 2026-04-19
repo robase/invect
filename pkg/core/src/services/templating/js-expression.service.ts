@@ -13,6 +13,7 @@
 import { getQuickJS, shouldInterruptAfterDeadline } from 'quickjs-emscripten';
 import type { QuickJSWASMModule } from 'quickjs-emscripten';
 import type { Logger } from 'src/schemas';
+import { needsAutoReturn, type JsExpressionEvaluator } from './evaluator';
 
 export interface JsExpressionServiceConfig {
   /** Memory limit for the QuickJS runtime in MB. Default: 128 */
@@ -28,7 +29,7 @@ const DEFAULT_MAX_STACK_SIZE_BYTES = 512 * 1024;
 /** Matches a valid JavaScript identifier (used to filter context keys for safe destructuring). */
 const VALID_JS_IDENT = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
 
-export class JsExpressionService {
+export class JsExpressionService implements JsExpressionEvaluator {
   private quickJS: QuickJSWASMModule | null = null;
   private logger?: Logger;
   private config: Required<JsExpressionServiceConfig>;
@@ -138,76 +139,6 @@ function isPromiseStateResult(result: unknown): boolean {
 
   const type = result.type;
   return type === 'pending' || type === 'fulfilled' || type === 'rejected';
-}
-
-/**
- * Determine if user code needs auto-return wrapping.
- *
- * Auto-return is applied when the code does NOT contain a `return` keyword
- * (as a word boundary match, to avoid false positives in strings like "returns").
- */
-function needsAutoReturn(code: string): boolean {
-  let stripped = '';
-  let i = 0;
-  while (i < code.length) {
-    if (code[i] === '/' && code[i + 1] === '/') {
-      i += 2;
-      while (i < code.length && code[i] !== '\n') {
-        i++;
-      }
-      continue;
-    }
-
-    if (code[i] === '/' && code[i + 1] === '*') {
-      i += 2;
-      while (i < code.length && !(code[i] === '*' && code[i + 1] === '/')) {
-        i++;
-      }
-      i += 2;
-      continue;
-    }
-
-    if (code[i] === "'") {
-      i++;
-      while (i < code.length && code[i] !== "'") {
-        if (code[i] === '\\') {
-          i++;
-        }
-        i++;
-      }
-      i++;
-      continue;
-    }
-
-    if (code[i] === '"') {
-      i++;
-      while (i < code.length && code[i] !== '"') {
-        if (code[i] === '\\') {
-          i++;
-        }
-        i++;
-      }
-      i++;
-      continue;
-    }
-
-    if (code[i] === '`') {
-      i++;
-      while (i < code.length && code[i] !== '`') {
-        if (code[i] === '\\') {
-          i++;
-        }
-        i++;
-      }
-      i++;
-      continue;
-    }
-
-    stripped += code[i];
-    i++;
-  }
-
-  return !/\breturn\b/.test(stripped);
 }
 
 /**

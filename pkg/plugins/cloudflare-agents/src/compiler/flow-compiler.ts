@@ -201,7 +201,7 @@ function compileIfElseNode(
   nodeMap: Map<string, FlowNodeDefinitions>,
   _allOrder: string[],
 ): StepCodeResult {
-  const condition = String(node.params.condition ?? 'true');
+  const condition = String(node.params.expression ?? 'true');
   const src = upstreamSlugs[0] ?? '{}';
 
   // Find true/false branch targets

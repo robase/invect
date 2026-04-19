@@ -31,6 +31,11 @@
       "types": "./dist/shared/types.d.mts",
       "import": "./dist/shared/types.mjs",
       "require": "./dist/shared/types.cjs"
+    },
+    "./adapter": {
+      "types": "./dist/adapter/index.d.mts",
+      "import": "./dist/adapter/index.mjs",
+      "require": "./dist/adapter/index.cjs"
     }
   },
   "scripts": {
@@ -43,7 +48,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@invect/core": "workspace:*"
+    "@invect/core": "workspace:*",
+    "@invect/primitives": "workspace:*"
   },
   "devDependencies": {
     "tsdown": "latest",
