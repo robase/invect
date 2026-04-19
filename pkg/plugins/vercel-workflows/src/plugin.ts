@@ -1,26 +1,24 @@
 import type { InvectPlugin } from '@invect/core';
+import { buildBackendPlugin, type VercelWorkflowsBackendOptions } from './backend/endpoints';
 
-export interface VercelWorkflowsPluginOptions {
+export interface VercelWorkflowsPluginOptions extends VercelWorkflowsBackendOptions {
   // Optional: base URL for the Vercel deployment (used in logging / config validation).
   deploymentUrl?: string;
 }
 
-// Server plugin for documenting Vercel Workflows integration with an Invect server.
-// This plugin has no database schema and no server-side endpoints of its own —
-// Vercel Workflows routes are authored and compiled by the user's Next.js app.
-// Its purpose is to validate configuration and surface the integration context
-// to other plugins (e.g. trigger registration).
+// Server plugin for the Vercel Workflows integration. Exposes a Deploy preview
+// endpoint that returns both the compiled `'use workflow'` source and the
+// SDK-source file it imports, ready for copy-paste into the user's Next.js app.
 export function vercelWorkflowsPlugin(options: VercelWorkflowsPluginOptions = {}): InvectPlugin {
+  const backend = buildBackendPlugin(options);
   return {
-    id: 'vercel-workflows',
+    ...backend,
     schema: {},
     actions: [],
-    endpoints: [],
-
     async init(ctx) {
       ctx.logger.info('[vercel-workflows] Plugin initialised', {
         deploymentUrl: options.deploymentUrl ?? '(not set)',
-        note: 'Flows run inside Vercel Workflow "use workflow" functions. No server-side routing is needed.',
+        endpoints: backend.endpoints?.length ?? 0,
       });
       return {};
     },

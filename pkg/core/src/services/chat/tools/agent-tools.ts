@@ -714,7 +714,7 @@ export const configureAgentTool: ChatToolDefinition = {
       .optional()
       .describe('Main task prompt (supports {{ template }} variables)'),
     systemPrompt: z.string().optional().describe('System prompt / instructions'),
-    maxIterations: z.number().optional().describe('Max tool-call iterations (1-50)'),
+    maxIterations: z.number().optional().describe('Max tool-call iterations (1-200)'),
     stopCondition: z
       .enum(['explicit_stop', 'tool_result', 'max_iterations'])
       .optional()

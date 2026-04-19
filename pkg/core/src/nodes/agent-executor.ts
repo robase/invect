@@ -88,7 +88,7 @@ export const agentNodeParamsSchema = z.object({
   systemPrompt: z.string().optional().default(''),
   provider: z.string().optional(),
   addedTools: z.array(addedToolInstanceSchema).optional().default([]),
-  maxIterations: z.number().int().min(1).max(50).optional().default(10),
+  maxIterations: z.number().int().min(1).max(200).optional().default(10),
   stopCondition: z
     .enum(['explicit_stop', 'tool_result', 'max_iterations'])
     .optional()

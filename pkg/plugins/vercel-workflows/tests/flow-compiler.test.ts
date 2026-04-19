@@ -61,11 +61,11 @@ describe('compile — emitter integration', () => {
 
     const { code: generated } = compile(flow, defaultOptions);
 
-    expect(generated).toContain(`if ('true_output' in (r_check.outputVariables ?? {}))`);
+    expect(generated).toContain(`if ("true_output" in (r_check.outputVariables ?? {}))`);
     expect(generated).toMatch(/step_pos\(/);
     expect(generated).toMatch(/step_neg\(/);
     // result is emitted after the branch converges
-    const idxBranch = generated.indexOf(`if ('true_output'`);
+    const idxBranch = generated.indexOf(`if ("true_output"`);
     const idxResult = generated.indexOf(`step_result({`);
     expect(idxBranch).toBeGreaterThanOrEqual(0);
     expect(idxResult).toBeGreaterThan(idxBranch);

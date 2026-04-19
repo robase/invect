@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(pnpm exec *)",
-      "Bash(pnpm --filter @invect/vercel-workflows run build)"
+      "Bash(pnpm --filter @invect/vercel-workflows run build)",
+      "Bash(pnpm --filter @invect/primitives exec vitest run tests/sdk-source-emitter.test.ts)",
+      "Bash(pnpm --filter @invect/primitives run test)",
+      "Bash(pnpm run *)",
+      "Bash(git rev-list *)"
     ]
   }
 }

@@ -125,7 +125,7 @@ export const AgentConfigDialog = memo(function AgentConfigDialog({
       maxTokens: agentParams.maxTokens as number | undefined,
       enableParallelTools: (agentParams.enableParallelTools as boolean) ?? true,
       toolTimeoutMs: (agentParams.toolTimeoutMs as number) ?? 30000,
-      maxConversationTokens: (agentParams.maxConversationTokens as number) ?? 100000,
+      maxConversationTokens: (agentParams.maxConversationTokens as number) ?? 500000,
       useBatchProcessing: (agentParams.useBatchProcessing as boolean) ?? false,
     }),
     [agentParams],
@@ -584,7 +584,7 @@ function AgentSettingsView({
                 <Slider
                   value={[settings.maxIterations]}
                   onValueChange={([v]) => onSettingsChange({ maxIterations: v })}
-                  max={50}
+                  max={200}
                   min={1}
                   step={1}
                   className="flex-1"
@@ -667,7 +667,7 @@ function AgentSettingsView({
                 value={settings.maxConversationTokens}
                 onChange={(e) =>
                   onSettingsChange({
-                    maxConversationTokens: parseInt(e.target.value) || 100000,
+                    maxConversationTokens: parseInt(e.target.value) || 500000,
                   })
                 }
               />

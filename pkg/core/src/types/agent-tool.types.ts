@@ -21,7 +21,7 @@ export const DEFAULT_TOOL_TIMEOUT_MS = 30000;
  * Default max tokens for conversation history (approximate)
  * This is used to estimate when to truncate conversation history
  */
-export const DEFAULT_MAX_CONVERSATION_TOKENS = 100000;
+export const DEFAULT_MAX_CONVERSATION_TOKENS = 500000;
 
 /**
  * Approximate tokens per character by provider family.

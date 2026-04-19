@@ -1,6 +1,10 @@
 import type { ControlFlow } from './control-flow';
 import { OUTPUT_TYPES } from './control-flow';
 import type { PrimitiveFlowDefinition } from '@invect/primitives';
+import { ifElseAction } from '@invect/primitives';
+
+// Derive if_else handle IDs from the action definition (see control-flow.ts).
+const IF_ELSE_TRUE_HANDLE = ifElseAction.outputs?.[0]?.id ?? 'true_output';
 
 // Sanitize a referenceId for use as a TypeScript identifier.
 // Non-[a-zA-Z0-9_] characters → '_'. Collisions are possible for weird refs;
@@ -61,7 +65,7 @@ function emitBlock(block: ControlFlow, ctx: EmitContext): string {
     const lines: string[] = [];
     lines.push(emitStepCallAndCollect(block.nodeRef, ctx));
     lines.push(
-      `${ctx.indent}if ('true_output' in (r_${ident}.outputVariables ?? {})) {`,
+      `${ctx.indent}if (${quote(IF_ELSE_TRUE_HANDLE)} in (r_${ident}.outputVariables ?? {})) {`,
     );
     if (block.trueBlock.length === 0) {
       lines.push(`${nested.indent}// (empty true branch)`);

@@ -1,14 +1,18 @@
 import type { PrimitiveFlowDefinition, PrimitiveEdge, PrimitiveNode } from '@invect/primitives';
-import { topologicalSort } from '@invect/primitives';
+import { ifElseAction, switchAction, topologicalSort } from '@invect/primitives';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export const BRANCH_TYPES = {
-  ifElse: 'primitives.if_else',
-  switch: 'primitives.switch',
+  ifElse: ifElseAction.id,
+  switch: switchAction.id,
 } as const;
 
 export const OUTPUT_TYPES = new Set(['core.output', 'primitives.output']);
+
+// Slug used for the switch "no case matched" branch — re-exported so the emitter
+// stays in lockstep with the analyzer.
+export const SWITCH_DEFAULT_SLUG = 'default';
 
 export type ControlFlow =
   | { kind: 'step'; nodeRef: string }
@@ -192,6 +196,17 @@ export function analyzeFlow(flow: PrimitiveFlowDefinition): AnalyzedFlow {
   const nodesById = new Map(flow.nodes.map((n) => [n.referenceId, n]));
   const { adj, reverseAdj } = buildAdjacency(flow.edges);
 
+  // Derive if/else handle IDs from the action definition, so a rename of
+  // `true_output` / `false_output` only needs to happen in one place.
+  const ifElseOutputs = ifElseAction.outputs ?? [];
+  if (ifElseOutputs.length !== 2) {
+    throw new CompileError(
+      `primitives.if_else must declare exactly 2 output handles (found ${ifElseOutputs.length}).`,
+    );
+  }
+  const trueHandle = ifElseOutputs[0]!.id;
+  const falseHandle = ifElseOutputs[1]!.id;
+
   const placed = new Set<string>();
 
   const compileNodeInto = (nodeRef: string, out: ControlFlow[]): void => {
@@ -204,15 +219,15 @@ export function analyzeFlow(flow: PrimitiveFlowDefinition): AnalyzedFlow {
     }
 
     if (node.type === BRANCH_TYPES.ifElse) {
-      const trueStart = armStartFor(nodeRef, 'true_output', flow.edges);
-      const falseStart = armStartFor(nodeRef, 'false_output', flow.edges);
+      const trueStart = armStartFor(nodeRef, trueHandle, flow.edges);
+      const falseStart = armStartFor(nodeRef, falseHandle, flow.edges);
       const outgoingWithoutHandle = flow.edges.filter(
         (e) => e[0] === nodeRef && edgeHandle(e) === undefined,
       );
       if (outgoingWithoutHandle.length > 0) {
         throw new CompileError(
           `If/else node "${nodeRef}" has edges without a sourceHandle; ` +
-            `expected "true_output" or "false_output" on every outgoing edge`,
+            `expected "${trueHandle}" or "${falseHandle}" on every outgoing edge`,
         );
       }
 
@@ -238,7 +253,7 @@ export function analyzeFlow(flow: PrimitiveFlowDefinition): AnalyzedFlow {
       }
 
       const armStarts = slugs.map((slug) => armStartFor(nodeRef, slug, flow.edges));
-      const defaultStart = armStartFor(nodeRef, 'default', flow.edges);
+      const defaultStart = armStartFor(nodeRef, SWITCH_DEFAULT_SLUG, flow.edges);
 
       const converge = findConvergence(
         [...armStarts, defaultStart],

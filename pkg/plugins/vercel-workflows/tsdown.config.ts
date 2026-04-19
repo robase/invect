@@ -5,6 +5,7 @@ export default defineConfig({
     index: 'src/index.ts',
     'runtime/index': 'src/runtime/index.ts',
     'compiler/index': 'src/compiler/index.ts',
+    'frontend/index': 'src/frontend/index.ts',
   },
   format: ['esm', 'cjs'],
   dts: true,
@@ -12,7 +13,15 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   deps: {
-    neverBundle: ['@invect/core', '@invect/primitives', 'zod'],
+    neverBundle: [
+      '@invect/core',
+      '@invect/primitives',
+      '@invect/ui',
+      'react',
+      'react-dom',
+      'lucide-react',
+      'zod',
+    ],
   },
   outExtensions({ format }) {
     return {

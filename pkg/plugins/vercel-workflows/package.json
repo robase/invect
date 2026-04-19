@@ -31,6 +31,11 @@
       "types": "./dist/compiler/index.d.mts",
       "import": "./dist/compiler/index.mjs",
       "require": "./dist/compiler/index.cjs"
+    },
+    "./ui": {
+      "types": "./dist/frontend/index.d.mts",
+      "import": "./dist/frontend/index.mjs",
+      "require": "./dist/frontend/index.cjs"
     }
   },
   "scripts": {
@@ -47,14 +52,30 @@
     "@invect/primitives": "workspace:*"
   },
   "devDependencies": {
+    "@invect/ui": "workspace:*",
+    "@types/react": "18.3.7",
+    "lucide-react": "^0.475.0",
+    "react": "^18.3.1",
     "tsdown": "latest",
     "typescript": "^5.8.3",
     "vitest": "^4.1.4"
   },
   "peerDependencies": {
+    "@invect/ui": ">=0.0.11",
+    "lucide-react": ">=0.475.0",
+    "react": ">=18.0.0",
     "workflow": "*"
   },
   "peerDependenciesMeta": {
+    "@invect/ui": {
+      "optional": true
+    },
+    "lucide-react": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
     "workflow": {
       "optional": true
     }
