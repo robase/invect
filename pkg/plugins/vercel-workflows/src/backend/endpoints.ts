@@ -83,8 +83,15 @@ export function buildBackendPlugin(options: VercelWorkflowsBackendOptions = {}):
                 })),
                 edges: flowVersion.invectDefinition.edges.map((e) =>
                   e.sourceHandle
-                    ? [edgeRef(flowVersion.invectDefinition.nodes, e.source), edgeRef(flowVersion.invectDefinition.nodes, e.target), e.sourceHandle]
-                    : [edgeRef(flowVersion.invectDefinition.nodes, e.source), edgeRef(flowVersion.invectDefinition.nodes, e.target)],
+                    ? [
+                        edgeRef(flowVersion.invectDefinition.nodes, e.source),
+                        edgeRef(flowVersion.invectDefinition.nodes, e.target),
+                        e.sourceHandle,
+                      ]
+                    : [
+                        edgeRef(flowVersion.invectDefinition.nodes, e.source),
+                        edgeRef(flowVersion.invectDefinition.nodes, e.target),
+                      ],
                 ),
               },
               {
@@ -154,18 +161,19 @@ export function buildBackendPlugin(options: VercelWorkflowsBackendOptions = {}):
   };
 }
 
-function edgeRef(
-  nodes: ReadonlyArray<{ id: string; referenceId?: string }>,
-  id: string,
-): string {
+function edgeRef(nodes: ReadonlyArray<{ id: string; referenceId?: string }>, id: string): string {
   const match = nodes.find((n) => n.id === id);
   return match?.referenceId ?? match?.id ?? id;
 }
 
 function sanitizeIdent(input: string, opts?: { initialLower?: boolean }): string {
   let cleaned = input.replace(/[^a-zA-Z0-9_$]/g, '_');
-  if (/^[0-9]/.test(cleaned)) cleaned = `_${cleaned}`;
-  if (cleaned.length === 0) cleaned = 'myFlow';
+  if (/^[0-9]/.test(cleaned)) {
+    cleaned = `_${cleaned}`;
+  }
+  if (cleaned.length === 0) {
+    cleaned = 'myFlow';
+  }
   if (opts?.initialLower && /^[A-Z]/.test(cleaned)) {
     cleaned = cleaned[0]!.toLowerCase() + cleaned.slice(1);
   }

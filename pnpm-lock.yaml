@@ -675,6 +675,41 @@ importers:
         specifier: ^5.1.4
         version: 5.1.4(typescript@5.9.3)(vite@8.0.8(@types/node@24.12.0)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.3))
 
+  pkg/action-kit:
+    dependencies:
+      zod:
+        specifier: ^3.25.1
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.19.15
+      tsdown:
+        specifier: ^0.21.1
+        version: 0.21.9(oxc-resolver@11.19.1)(synckit@0.11.12)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  pkg/actions:
+    dependencies:
+      '@invect/action-kit':
+        specifier: workspace:*
+        version: link:../action-kit
+      zod:
+        specifier: ^3.25.1
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.19.15
+      tsdown:
+        specifier: ^0.21.1
+        version: 0.21.9(oxc-resolver@11.19.1)(synckit@0.11.12)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
   pkg/cli:
     dependencies:
       '@invect/core':
@@ -724,6 +759,12 @@ importers:
       '@anthropic-ai/sdk':
         specifier: ^0.57.0
         version: 0.57.0
+      '@invect/action-kit':
+        specifier: workspace:*
+        version: link:../action-kit
+      '@invect/actions':
+        specifier: workspace:*
+        version: link:../actions
       '@invect/layouts':
         specifier: workspace:*
         version: link:../layouts
@@ -1127,6 +1168,12 @@ importers:
 
   pkg/plugins/vercel-workflows:
     dependencies:
+      '@invect/action-kit':
+        specifier: workspace:*
+        version: link:../../action-kit
+      '@invect/actions':
+        specifier: workspace:*
+        version: link:../../actions
       '@invect/core':
         specifier: workspace:*
         version: link:../../core
@@ -1241,6 +1288,12 @@ importers:
 
   pkg/primitives:
     dependencies:
+      '@invect/action-kit':
+        specifier: workspace:*
+        version: link:../action-kit
+      '@invect/actions':
+        specifier: workspace:*
+        version: link:../actions
       '@invect/core':
         specifier: workspace:*
         version: link:../core

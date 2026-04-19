@@ -39,32 +39,34 @@ export class CompileError extends Error {
 
 // ─── Graph helpers ────────────────────────────────────────────────────────────
 
-function descendantsOf(
-  start: string,
-  adj: Map<string, string[]>,
-): Set<string> {
+function descendantsOf(start: string, adj: Map<string, string[]>): Set<string> {
   const visited = new Set<string>();
   const stack = [start];
   while (stack.length > 0) {
     const n = stack.pop()!;
-    if (visited.has(n)) continue;
+    if (visited.has(n)) {
+      continue;
+    }
     visited.add(n);
-    for (const next of adj.get(n) ?? []) stack.push(next);
+    for (const next of adj.get(n) ?? []) {
+      stack.push(next);
+    }
   }
   return visited;
 }
 
-function ancestorsOf(
-  target: string,
-  reverseAdj: Map<string, string[]>,
-): Set<string> {
+function ancestorsOf(target: string, reverseAdj: Map<string, string[]>): Set<string> {
   const visited = new Set<string>();
   const stack = [target];
   while (stack.length > 0) {
     const n = stack.pop()!;
-    if (visited.has(n)) continue;
+    if (visited.has(n)) {
+      continue;
+    }
     visited.add(n);
-    for (const prev of reverseAdj.get(n) ?? []) stack.push(prev);
+    for (const prev of reverseAdj.get(n) ?? []) {
+      stack.push(prev);
+    }
   }
   return visited;
 }
@@ -76,8 +78,12 @@ function buildAdjacency(edges: PrimitiveEdge[]): {
   const adj = new Map<string, string[]>();
   const reverseAdj = new Map<string, string[]>();
   for (const [from, to] of edges) {
-    if (!adj.has(from)) adj.set(from, []);
-    if (!reverseAdj.has(to)) reverseAdj.set(to, []);
+    if (!adj.has(from)) {
+      adj.set(from, []);
+    }
+    if (!reverseAdj.has(to)) {
+      reverseAdj.set(to, []);
+    }
     adj.get(from)!.push(to);
     reverseAdj.get(to)!.push(from);
   }
@@ -95,14 +101,18 @@ function findConvergence(
     .filter((s): s is string => s !== null)
     .map((s) => descendantsOf(s, adj));
 
-  if (reachabilities.length === 0) return null;
+  if (reachabilities.length === 0) {
+    return null;
+  }
 
   // Intersection in topological order — pick the earliest node reachable from all arms
   let candidates = Array.from(reachabilities[0]!);
   for (let i = 1; i < reachabilities.length; i++) {
     candidates = candidates.filter((c) => reachabilities[i]!.has(c));
   }
-  if (candidates.length === 0) return null;
+  if (candidates.length === 0) {
+    return null;
+  }
 
   candidates.sort((a, b) => (topoIndex.get(a) ?? 0) - (topoIndex.get(b) ?? 0));
   return candidates[0] ?? null;
@@ -117,19 +127,31 @@ function armMembership(
   adj: Map<string, string[]>,
   reverseAdj: Map<string, string[]>,
 ): Set<string> {
-  if (!start) return new Set();
+  if (!start) {
+    return new Set();
+  }
   const descendants = descendantsOf(start, adj);
-  if (converge === null) return descendants;
+  if (converge === null) {
+    return descendants;
+  }
   const ancestorsOfConverge = ancestorsOf(converge, reverseAdj);
   const out = new Set<string>();
   for (const n of descendants) {
-    if (n === converge) continue;
-    if (ancestorsOfConverge.has(n)) out.add(n);
+    if (n === converge) {
+      continue;
+    }
+    if (ancestorsOfConverge.has(n)) {
+      out.add(n);
+    }
   }
   // Handle the case where `start` has no path to `converge` (terminal arm):
   // keep the pure descendants (minus converge itself).
   if (out.size === 0) {
-    for (const n of descendants) if (n !== converge) out.add(n);
+    for (const n of descendants) {
+      if (n !== converge) {
+        out.add(n);
+      }
+    }
   }
   return out;
 }
@@ -140,11 +162,7 @@ function edgeHandle(edge: PrimitiveEdge): string | undefined {
   return edge[2];
 }
 
-function armStartFor(
-  nodeRef: string,
-  handle: string,
-  edges: PrimitiveEdge[],
-): string | null {
+function armStartFor(nodeRef: string, handle: string, edges: PrimitiveEdge[]): string | null {
   const match = edges.find((e) => e[0] === nodeRef && edgeHandle(e) === handle);
   return match?.[1] ?? null;
 }
@@ -164,9 +182,7 @@ function extractSwitchCases(node: PrimitiveNode): {
     );
   }
   if (!Array.isArray(casesRaw)) {
-    throw new CompileError(
-      `Switch node "${node.referenceId}": missing or invalid "cases" param`,
-    );
+    throw new CompileError(`Switch node "${node.referenceId}": missing or invalid "cases" param`);
   }
   const slugs: string[] = [];
   for (const c of casesRaw) {
@@ -210,7 +226,9 @@ export function analyzeFlow(flow: PrimitiveFlowDefinition): AnalyzedFlow {
   const placed = new Set<string>();
 
   const compileNodeInto = (nodeRef: string, out: ControlFlow[]): void => {
-    if (placed.has(nodeRef)) return;
+    if (placed.has(nodeRef)) {
+      return;
+    }
     placed.add(nodeRef);
 
     const node = nodesById.get(nodeRef);
@@ -255,11 +273,7 @@ export function analyzeFlow(flow: PrimitiveFlowDefinition): AnalyzedFlow {
       const armStarts = slugs.map((slug) => armStartFor(nodeRef, slug, flow.edges));
       const defaultStart = armStartFor(nodeRef, SWITCH_DEFAULT_SLUG, flow.edges);
 
-      const converge = findConvergence(
-        [...armStarts, defaultStart],
-        adj,
-        topoIndex,
-      );
+      const converge = findConvergence([...armStarts, defaultStart], adj, topoIndex);
       const caseBlocks = slugs.map((slug, i) => {
         const startNode = armStarts[i] ?? null;
         const armSet = armMembership(startNode, converge, adj, reverseAdj);
@@ -293,8 +307,12 @@ export function analyzeFlow(flow: PrimitiveFlowDefinition): AnalyzedFlow {
   const compileArm = (armSet: Set<string>): ControlFlow[] => {
     const arm: ControlFlow[] = [];
     for (const ref of topoOrder) {
-      if (!armSet.has(ref)) continue;
-      if (placed.has(ref)) continue;
+      if (!armSet.has(ref)) {
+        continue;
+      }
+      if (placed.has(ref)) {
+        continue;
+      }
       compileNodeInto(ref, arm);
     }
     return arm;
@@ -302,13 +320,13 @@ export function analyzeFlow(flow: PrimitiveFlowDefinition): AnalyzedFlow {
 
   const blocks: ControlFlow[] = [];
   for (const ref of topoOrder) {
-    if (placed.has(ref)) continue;
+    if (placed.has(ref)) {
+      continue;
+    }
     compileNodeInto(ref, blocks);
   }
 
-  const outputNodes = flow.nodes
-    .filter((n) => OUTPUT_TYPES.has(n.type))
-    .map((n) => n.referenceId);
+  const outputNodes = flow.nodes.filter((n) => OUTPUT_TYPES.has(n.type)).map((n) => n.referenceId);
 
   return { blocks, outputNodes, topoOrder };
 }

@@ -1,20 +1,5 @@
-// Node execution status
-export enum NodeExecutionStatus {
-  PENDING = 'PENDING',
-  RUNNING = 'RUNNING',
-  SUCCESS = 'SUCCESS',
-  FAILED = 'FAILED',
-  SKIPPED = 'SKIPPED',
-  BATCH_SUBMITTED = 'BATCH_SUBMITTED',
-}
-
-// Execution status
-export enum FlowRunStatus {
-  PENDING = 'PENDING',
-  RUNNING = 'RUNNING',
-  SUCCESS = 'SUCCESS',
-  FAILED = 'FAILED',
-  PAUSED = 'PAUSED',
-  CANCELLED = 'CANCELLED',
-  PAUSED_FOR_BATCH = 'PAUSED_FOR_BATCH',
-}
+// Node and flow-run execution status — re-exported from `@invect/action-kit`.
+// Kept here as a value re-export so the enum identity is preserved across the
+// codebase and existing `import { NodeExecutionStatus } from 'src/types/base'`
+// call-sites keep working.
+export { NodeExecutionStatus, FlowRunStatus } from '@invect/action-kit';

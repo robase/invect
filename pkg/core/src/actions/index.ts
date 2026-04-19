@@ -2,9 +2,14 @@
  * Actions Module – barrel export
  *
  * Public API for the Provider-Actions system.
+ *
+ * Integration provider actions (Gmail, Slack, GitHub, …) live in
+ * `@invect/actions`. Core-runtime actions (Model, JavaScript, If/Else,
+ * Switch, Template, HTTP, Triggers) stay here because they depend on
+ * core's execution internals.
  */
 
-// Types
+// ── Types & helpers (re-exported from @invect/action-kit) ───────────────
 export type {
   ActionDefinition,
   ActionExecutionContext,
@@ -23,10 +28,9 @@ export type {
   LoadOptionsResult,
 } from './types';
 
-// defineAction helper
 export { defineAction } from './define-action';
 
-// Providers
+// ── Providers (from @invect/actions) ────────────────────────────────────
 export {
   CORE_PROVIDER,
   HTTP_PROVIDER,
@@ -71,7 +75,7 @@ export {
   PAGERDUTY_PROVIDER,
 } from './providers';
 
-// Registry
+// ── Registry (from @invect/actions) ─────────────────────────────────────
 export {
   ActionRegistry,
   getGlobalActionRegistry,
@@ -80,146 +84,65 @@ export {
   resetGlobalActionRegistry,
 } from './action-registry';
 
-// Executor bridge
+// ── Executor bridge (stays in core) ─────────────────────────────────────
 export {
   executeActionAsNode,
   executeActionAsTool,
   createToolExecutorForAction,
 } from './action-executor';
 
-// ── Action bundles (by provider) ────────────────────────────────────────
-
-export { coreActions } from './core';
-export { httpActions } from './http';
-export { gmailActions } from './gmail';
-export { slackActions } from './slack';
-export { githubActions } from './github';
-export { googleDocsActions } from './google-docs';
-export { googleSheetsActions } from './google-sheets';
-export { googleDriveActions } from './google-drive';
-export { googleCalendarActions } from './google-calendar';
-export { linearActions } from './linear';
-export { postgresActions } from './postgres';
-export { triggerActions } from './triggers';
-export { microsoftActions } from './microsoft';
-export { sentryActions } from './sentry';
-export { microsoftTeamsActions } from './microsoft-teams';
-export { grafanaActions } from './grafana';
-export { salesforceActions } from './salesforce';
-export { hubspotActions } from './hubspot';
-export { jiraActions } from './jira';
-export { asanaActions } from './asana';
-export { trelloActions } from './trello';
-export { dropboxActions } from './dropbox';
-export { onedriveActions } from './onedrive';
-export { stripeActions } from './stripe';
-export { twitterActions } from './twitter';
-export { linkedinActions } from './linkedin';
-export { facebookActions } from './facebook';
-export { shopifyActions } from './shopify';
-export { woocommerceActions } from './woocommerce';
-export { zendeskActions } from './zendesk';
-export { intercomActions } from './intercom';
-export { freshdeskActions } from './freshdesk';
-export { segmentActions } from './segment';
-export { mixpanelActions } from './mixpanel';
-export { googleAnalyticsActions } from './google-analytics';
-export { gitlabActions } from './gitlab';
-export { resendActions } from './resend';
-export { sendgridActions } from './sendgrid';
-export { notionActions } from './notion';
-export { cloudwatchActions } from './cloudwatch';
-export { pagerdutyActions } from './pagerduty';
+// ── Action bundles — from @invect/actions ───────────────────────────────
+export {
+  coreActions,
+  asanaActions,
+  cloudwatchActions,
+  dropboxActions,
+  facebookActions,
+  freshdeskActions,
+  githubActions,
+  gitlabActions,
+  gmailActions,
+  googleAnalyticsActions,
+  googleCalendarActions,
+  googleDocsActions,
+  googleDriveActions,
+  googleSheetsActions,
+  grafanaActions,
+  httpActions,
+  hubspotActions,
+  intercomActions,
+  jiraActions,
+  linearActions,
+  linkedinActions,
+  microsoftActions,
+  microsoftTeamsActions,
+  mixpanelActions,
+  notionActions,
+  onedriveActions,
+  pagerdutyActions,
+  postgresActions,
+  resendActions,
+  salesforceActions,
+  segmentActions,
+  sendgridActions,
+  sentryActions,
+  shopifyActions,
+  slackActions,
+  stripeActions,
+  trelloActions,
+  triggerActions,
+  twitterActions,
+  woocommerceActions,
+  zendeskActions,
+} from '@invect/actions';
 
 // ── Convenience: all built-in actions ───────────────────────────────────
 
 import type { ActionDefinition } from './types';
-import { coreActions } from './core';
-import { httpActions } from './http';
-import { gmailActions } from './gmail';
-import { slackActions } from './slack';
-import { githubActions } from './github';
-import { googleDocsActions } from './google-docs';
-import { googleSheetsActions } from './google-sheets';
-import { googleDriveActions } from './google-drive';
-import { googleCalendarActions } from './google-calendar';
-import { linearActions } from './linear';
-import { postgresActions } from './postgres';
-import { triggerActions } from './triggers';
-import { microsoftActions } from './microsoft';
-import { microsoftTeamsActions } from './microsoft-teams';
-import { sentryActions } from './sentry';
-import { grafanaActions } from './grafana';
-import { salesforceActions } from './salesforce';
-import { hubspotActions } from './hubspot';
-import { jiraActions } from './jira';
-import { asanaActions } from './asana';
-import { trelloActions } from './trello';
-import { dropboxActions } from './dropbox';
-import { onedriveActions } from './onedrive';
-import { stripeActions } from './stripe';
-import { twitterActions } from './twitter';
-import { linkedinActions } from './linkedin';
-import { facebookActions } from './facebook';
-import { shopifyActions } from './shopify';
-import { woocommerceActions } from './woocommerce';
-import { zendeskActions } from './zendesk';
-import { intercomActions } from './intercom';
-import { freshdeskActions } from './freshdesk';
-import { segmentActions } from './segment';
-import { mixpanelActions } from './mixpanel';
-import { googleAnalyticsActions } from './google-analytics';
-import { gitlabActions } from './gitlab';
-import { resendActions } from './resend';
-import { sendgridActions } from './sendgrid';
-import { notionActions } from './notion';
-import { cloudwatchActions } from './cloudwatch';
-import { pagerdutyActions } from './pagerduty';
+import { allProviderActions } from '@invect/actions';
 
 /** Every built-in action across all providers. */
-export const allBuiltinActions: ActionDefinition[] = [
-  ...coreActions,
-  ...httpActions,
-  ...gmailActions,
-  ...slackActions,
-  ...githubActions,
-  ...googleDocsActions,
-  ...googleSheetsActions,
-  ...googleDriveActions,
-  ...googleCalendarActions,
-  ...linearActions,
-  ...postgresActions,
-  ...triggerActions,
-  ...microsoftActions,
-  ...microsoftTeamsActions,
-  ...sentryActions,
-  ...grafanaActions,
-  ...salesforceActions,
-  ...hubspotActions,
-  ...jiraActions,
-  ...asanaActions,
-  ...trelloActions,
-  ...dropboxActions,
-  ...onedriveActions,
-  ...stripeActions,
-  ...twitterActions,
-  ...linkedinActions,
-  ...facebookActions,
-  ...shopifyActions,
-  ...woocommerceActions,
-  ...zendeskActions,
-  ...intercomActions,
-  ...freshdeskActions,
-  ...segmentActions,
-  ...mixpanelActions,
-  ...googleAnalyticsActions,
-  ...gitlabActions,
-  ...resendActions,
-  ...sendgridActions,
-  ...notionActions,
-  ...cloudwatchActions,
-  ...pagerdutyActions,
-];
+export const allBuiltinActions: ActionDefinition[] = [...allProviderActions];
 
 // ── Registration helper ─────────────────────────────────────────────────
 

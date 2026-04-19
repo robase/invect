@@ -59,6 +59,11 @@
       "import": "./dist/sdk/index.js",
       "require": "./dist/sdk/index.cjs"
     },
+    "./actions": {
+      "types": "./dist/actions/index.d.ts",
+      "import": "./dist/actions/index.js",
+      "require": "./dist/actions/index.cjs"
+    },
     "./config": {
       "types": "./dist/config.d.ts",
       "import": "./dist/config.js",
@@ -86,6 +91,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.57.0",
+    "@invect/action-kit": "workspace:*",
+    "@invect/actions": "workspace:*",
     "@invect/layouts": "workspace:*",
     "@secure-exec/core": "^0.1.0",
     "@secure-exec/node": "^0.1.0",

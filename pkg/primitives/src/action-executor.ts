@@ -1,4 +1,4 @@
-import type { ActionDefinition, ActionExecutionContext, ActionResult } from '@invect/core';
+import type { ActionDefinition, ActionExecutionContext, ActionResult } from '@invect/action-kit';
 import { BaseLogger } from '@invect/core';
 import type { PrimitiveNode, NodeContext, FlowRunnerConfig } from './types';
 

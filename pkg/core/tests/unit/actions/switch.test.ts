@@ -4,27 +4,17 @@
  * Tests evaluate against a mock context without a full Invect instance.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { switchAction } from 'src/actions/core/switch';
+import { switchAction } from '@invect/actions';
 
-// Mock JsExpressionService
-vi.mock('src/services/templating/js-expression.service', () => {
-  const evaluate = async (expression: string, data: Record<string, unknown>): Promise<unknown> => {
-    // Simple evaluator for test purposes — uses Function constructor
-    // (acceptable in test environment only)
+const evaluator = {
+  evaluate: async (expression: string, data: Record<string, unknown>): Promise<unknown> => {
     const keys = Object.keys(data);
     const values = Object.values(data);
     // eslint-disable-next-line @typescript-eslint/no-implied-eval
     const fn = new Function(...keys, `return (${expression})`);
     return fn(...values);
-  };
-
-  return {
-    getJsExpressionService: vi.fn().mockResolvedValue({
-      evaluate,
-    }),
-    JsExpressionError: class JsExpressionError extends Error {},
-  };
-});
+  },
+};
 
 function makeContext(incomingData: Record<string, unknown> = {}) {
   return {
@@ -38,7 +28,7 @@ function makeContext(incomingData: Record<string, unknown> = {}) {
     credential: undefined,
     flowInputs: {},
     flowContext: { nodeId: 'switch-1', flowRunId: 'run-1' },
-    functions: {},
+    functions: { evaluator },
     flowRunState: undefined,
   } as Parameters<typeof switchAction.execute>[1];
 }

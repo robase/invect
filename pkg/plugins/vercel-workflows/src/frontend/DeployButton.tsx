@@ -127,9 +127,7 @@ function DeployButtonInner({ flowId }: { flowId: string }) {
 
           {data && data.success === false && (
             <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
-              <p className="font-medium">
-                Compile failed{data.stage ? ` (${data.stage})` : ''}
-              </p>
+              <p className="font-medium">Compile failed{data.stage ? ` (${data.stage})` : ''}</p>
               <p className="mt-1 whitespace-pre-wrap break-words">{data.error}</p>
               {data.sdkSource && (
                 <CodeBlock
@@ -211,9 +209,7 @@ function CodeBlock({
       <div className="flex items-center justify-between gap-3 border-b px-3 py-2">
         <div className="min-w-0">
           <p className="truncate text-sm font-medium">{title}</p>
-          {description && (
-            <p className="truncate text-xs text-muted-foreground">{description}</p>
-          )}
+          {description && <p className="truncate text-xs text-muted-foreground">{description}</p>}
         </div>
         <button
           type="button"

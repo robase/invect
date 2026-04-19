@@ -221,14 +221,17 @@ describe('analyzeFlow — control-flow analyzer', () => {
     const placed: string[] = [];
     const walk = (bs: typeof blocks) => {
       for (const b of bs) {
-        if (b.kind === 'step') placed.push(b.nodeRef);
-        else if (b.kind === 'ifElse') {
+        if (b.kind === 'step') {
+          placed.push(b.nodeRef);
+        } else if (b.kind === 'ifElse') {
           placed.push(b.nodeRef);
           walk(b.trueBlock);
           walk(b.falseBlock);
         } else {
           placed.push(b.nodeRef);
-          for (const c of b.cases) walk(c.block);
+          for (const c of b.cases) {
+            walk(c.block);
+          }
           walk(b.defaultBlock);
         }
       }

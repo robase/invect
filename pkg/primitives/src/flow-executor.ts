@@ -1,5 +1,6 @@
-import { allBuiltinActions, BaseLogger } from '@invect/core';
-import type { ActionDefinition, ActionResult } from '@invect/core';
+import { BaseLogger } from '@invect/core';
+import { allProviderActions as allBuiltinActions } from '@invect/actions';
+import type { ActionDefinition, ActionResult } from '@invect/action-kit';
 import type {
   PrimitiveFlowDefinition,
   PrimitiveEdge,
@@ -93,7 +94,9 @@ function handleBranchSkipping(
   const activeHandles = new Set(Object.keys(result.outputVariables));
 
   for (const edge of edges) {
-    if (edge[0] !== nodeRef) {continue;}
+    if (edge[0] !== nodeRef) {
+      continue;
+    }
     const sourceHandle = edge[2];
     // If this edge has a source handle that isn't in the active set, the target branch is inactive
     if (sourceHandle && !activeHandles.has(sourceHandle)) {
@@ -108,7 +111,9 @@ function markSkipped(
   skipSet: Set<string>,
   force: boolean,
 ): void {
-  if (skipSet.has(nodeRef)) {return;}
+  if (skipSet.has(nodeRef)) {
+    return;
+  }
 
   if (!force) {
     // Only skip if ALL incoming edges come from already-skipped nodes

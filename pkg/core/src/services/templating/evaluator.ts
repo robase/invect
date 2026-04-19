@@ -14,18 +14,9 @@
  * Consumers select an evaluator via FlowRunnerConfig (primitives) or
  * InvectConfig (server). Actions read it from `ctx.functions.evaluator`.
  */
-export interface JsExpressionEvaluator {
-  /** Lazy init — safe to call repeatedly. */
-  initialize?(): Promise<void>;
-  /**
-   * Evaluate user code against a context record. Upstream node keys are
-   * exposed as local variables; `$input` is always the full context.
-   * Single-expression code (no `return` keyword) auto-returns.
-   */
-  evaluate(expression: string, context: Record<string, unknown>): Promise<unknown>;
-  /** Optional cleanup — called on shutdown for long-lived hosts. */
-  dispose?(): void;
-}
+import { JsExpressionEvaluationError, type JsExpressionEvaluator } from '@invect/action-kit';
+export type { JsExpressionEvaluator };
+export { JsExpressionEvaluationError };
 
 /** Matches a valid JavaScript identifier (used to gate context-key destructuring). */
 const VALID_JS_IDENT = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
@@ -41,12 +32,16 @@ export function needsAutoReturn(code: string): boolean {
   while (i < code.length) {
     if (code[i] === '/' && code[i + 1] === '/') {
       i += 2;
-      while (i < code.length && code[i] !== '\n') i++;
+      while (i < code.length && code[i] !== '\n') {
+        i++;
+      }
       continue;
     }
     if (code[i] === '/' && code[i + 1] === '*') {
       i += 2;
-      while (i < code.length && !(code[i] === '*' && code[i + 1] === '/')) i++;
+      while (i < code.length && !(code[i] === '*' && code[i + 1] === '/')) {
+        i++;
+      }
       i += 2;
       continue;
     }
@@ -54,7 +49,9 @@ export function needsAutoReturn(code: string): boolean {
       const quote = code[i];
       i++;
       while (i < code.length && code[i] !== quote) {
-        if (code[i] === '\\') i++;
+        if (code[i] === '\\') {
+          i++;
+        }
         i++;
       }
       i++;
@@ -97,19 +94,5 @@ export class DirectEvaluator implements JsExpressionEvaluator {
       const message = error instanceof Error ? error.message : String(error);
       throw new JsExpressionEvaluationError(message, expression);
     }
-  }
-}
-
-/**
- * Error thrown by evaluator implementations when user code fails. Actions
- * unwrap the `expression` field for logging; keep the shape stable.
- */
-export class JsExpressionEvaluationError extends Error {
-  constructor(
-    message: string,
-    public readonly expression: string,
-  ) {
-    super(`JS expression error: ${message}`);
-    this.name = 'JsExpressionEvaluationError';
   }
 }

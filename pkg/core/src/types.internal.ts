@@ -3,68 +3,20 @@ import type { NodeExecutionResult } from './types/node-execution.types';
 import type { NodeOutput } from './types/node-io-types';
 import type { Logger } from './schemas/invect-config';
 import type { FlowEdge, FlowNodeDefinitions } from './services/flow-versions/schemas-fresh';
-import type { BatchProvider, PromptResult } from './services/ai/base-client';
+import type { AgentPromptResult } from './types/agent-tool.types';
+
+export type {
+  SubmitPromptRequest,
+  SubmitAgentPromptRequest,
+  SubmitPromptResult,
+  RecordToolExecutionInput,
+} from '@invect/action-kit';
 import type {
-  AgentToolDefinition,
-  AgentMessage,
-  AgentPromptResult,
-} from './types/agent-tool.types';
-import type { SubmitPromptRequest } from './services/node-data.service';
-export type { SubmitPromptRequest };
-
-/**
- * Request to run an agent prompt with tools
- */
-export interface SubmitAgentPromptRequest {
-  model: string;
-  messages: AgentMessage[];
-  tools: AgentToolDefinition[];
-  systemPrompt?: string;
-  temperature?: number;
-  maxTokens?: number;
-  provider: BatchProvider;
-  credentialId: string;
-  toolChoice?: 'auto' | 'none' | { type: 'tool'; name: string };
-  /** Whether to allow parallel tool calls (defaults to true) */
-  parallelToolCalls?: boolean;
-  /** When true, the first LLM call is submitted via the Batch API. */
-  useBatchProcessing?: boolean;
-  /** Node ID (required when useBatchProcessing is true). */
-  nodeId?: string;
-  /** Flow run ID (required when useBatchProcessing is true). */
-  flowRunId?: string;
-}
-
-/**
- * Result of a submitPrompt call — either a synchronous prompt result
- * or a batch submission acknowledgement.
- */
-export type SubmitPromptResult =
-  | PromptResult
-  | {
-      type: 'batch_submitted';
-      batchJobId: string;
-      nodeId: string;
-      flowRunId: string;
-    };
-
-/**
- * Input shape for recording a tool execution (agent nodes).
- */
-export interface RecordToolExecutionInput {
-  nodeExecutionId: string;
-  flowRunId: string;
-  toolId: string;
-  toolName: string;
-  iteration: number;
-  input: Record<string, unknown>;
-  output?: unknown;
-  error?: string;
-  success: boolean;
-  startedAt: string;
-  completedAt?: string;
-  duration?: number;
-}
+  SubmitPromptRequest,
+  SubmitAgentPromptRequest,
+  SubmitPromptResult,
+  RecordToolExecutionInput,
+} from '@invect/action-kit';
 
 /**
  * Context of an individual run of a flow

@@ -35,7 +35,9 @@ function findIdentCollisions(refs: string[]): string[] {
   const byIdent = new Map<string, string[]>();
   for (const r of refs) {
     const ident = sanitizeIdent(r);
-    if (!byIdent.has(ident)) byIdent.set(ident, []);
+    if (!byIdent.has(ident)) {
+      byIdent.set(ident, []);
+    }
     byIdent.get(ident)!.push(r);
   }
   const collisions: string[] = [];
@@ -47,10 +49,7 @@ function findIdentCollisions(refs: string[]): string[] {
   return collisions;
 }
 
-export function compile(
-  flow: PrimitiveFlowDefinition,
-  options: CompileOptions,
-): CompileResult {
+export function compile(flow: PrimitiveFlowDefinition, options: CompileOptions): CompileResult {
   const warnings: string[] = [];
 
   const collisions = findIdentCollisions(flow.nodes.map((n) => n.referenceId));
@@ -64,9 +63,7 @@ export function compile(
   const outputNodeSet = new Set(outputNodes);
 
   if (outputNodes.length === 0) {
-    warnings.push(
-      'Flow has no output nodes; compiled workflow will always return an empty object',
-    );
+    warnings.push('Flow has no output nodes; compiled workflow will always return an empty object');
   }
 
   // Non-plain-object output warning: if a node's mapper or params look like they

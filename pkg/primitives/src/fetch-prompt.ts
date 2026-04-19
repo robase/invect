@@ -1,5 +1,4 @@
-import type { ActionExecutionContext } from '@invect/core';
-import type { SubmitPromptRequest } from '@invect/core';
+import type { ActionExecutionContext, SubmitPromptRequest } from '@invect/action-kit';
 
 type SubmitPromptFn = NonNullable<ActionExecutionContext['functions']>['submitPrompt'];
 
@@ -73,7 +72,9 @@ async function callOpenAI(opts: {
     temperature: request.temperature ?? 0.7,
   };
 
-  if (request.maxTokens) {body.max_tokens = request.maxTokens;}
+  if (request.maxTokens) {
+    body.max_tokens = request.maxTokens;
+  }
 
   if (request.outputJsonSchema) {
     try {
@@ -132,7 +133,9 @@ async function callAnthropic(opts: {
     temperature: request.temperature ?? 0.7,
   };
 
-  if (request.systemPrompt) {body.system = request.systemPrompt;}
+  if (request.systemPrompt) {
+    body.system = request.systemPrompt;
+  }
 
   if (request.outputJsonSchema) {
     try {
@@ -170,7 +173,9 @@ async function callAnthropic(opts: {
   };
 
   const block = json.content[0];
-  if (!block) {throw new Error('Anthropic returned empty content');}
+  if (!block) {
+    throw new Error('Anthropic returned empty content');
+  }
 
   if (block.type === 'tool_use' && block.input !== undefined) {
     return { type: 'object', value: block.input as object };

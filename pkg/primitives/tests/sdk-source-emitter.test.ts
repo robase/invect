@@ -127,9 +127,7 @@ describe('emitSdkSource — DB InvectDefinition → primitives SDK source', () =
 
   it('throws SdkEmitError for unsupported action types', () => {
     const def: InvectDefinition = {
-      nodes: [
-        { id: 'n1', type: 'gmail.send_message', referenceId: 'email', params: {} },
-      ],
+      nodes: [{ id: 'n1', type: 'gmail.send_message', referenceId: 'email', params: {} }],
       edges: [],
     };
 
@@ -139,9 +137,7 @@ describe('emitSdkSource — DB InvectDefinition → primitives SDK source', () =
 
   it('throws for invalid flowName identifier', () => {
     const def: InvectDefinition = { nodes: [], edges: [] };
-    expect(() => emitSdkSource(def, { flowName: 'bad name' })).toThrow(
-      /not a valid JS identifier/,
-    );
+    expect(() => emitSdkSource(def, { flowName: 'bad name' })).toThrow(/not a valid JS identifier/);
   });
 
   it('preserves explicit return in multi-line code', () => {

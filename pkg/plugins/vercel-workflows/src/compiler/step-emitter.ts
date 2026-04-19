@@ -11,7 +11,9 @@ const IF_ELSE_TRUE_HANDLE = ifElseAction.outputs?.[0]?.id ?? 'true_output';
 // validate elsewhere that referenceIds remain unique post-sanitization.
 export function sanitizeIdent(ref: string): string {
   const cleaned = ref.replace(/[^a-zA-Z0-9_]/g, '_');
-  if (/^[0-9]/.test(cleaned)) return `_${cleaned}`;
+  if (/^[0-9]/.test(cleaned)) {
+    return `_${cleaned}`;
+  }
   return cleaned;
 }
 
@@ -36,16 +38,12 @@ function emitStepCallAndCollect(nodeRef: string, ctx: EmitContext): string {
   lines.push(
     `${indent}const r_${ident} = await step_${ident}({ inputs: __inputs, completedOutputs, flowRunId: __flowRunId });`,
   );
-  lines.push(
-    `${indent}if (!r_${ident}.success) {`,
-  );
+  lines.push(`${indent}if (!r_${ident}.success) {`);
   lines.push(
     `${indent}  throw new Error(\`Node ${quote(nodeRef).slice(1, -1)} failed: \${r_${ident}.error ?? 'unknown'}\`);`,
   );
   lines.push(`${indent}}`);
-  lines.push(
-    `${indent}completedOutputs[${quote(nodeRef)}] = __extractPrimary(r_${ident});`,
-  );
+  lines.push(`${indent}completedOutputs[${quote(nodeRef)}] = __extractPrimary(r_${ident});`);
   if (ctx.outputNodeSet.has(nodeRef)) {
     lines.push(
       `${indent}flowOutputs[(r_${ident}.metadata?.outputName as string | undefined) ?? ${quote(nodeRef)}] = __extractPrimary(r_${ident});`,
@@ -70,13 +68,17 @@ function emitBlock(block: ControlFlow, ctx: EmitContext): string {
     if (block.trueBlock.length === 0) {
       lines.push(`${nested.indent}// (empty true branch)`);
     } else {
-      for (const inner of block.trueBlock) lines.push(emitBlock(inner, nested));
+      for (const inner of block.trueBlock) {
+        lines.push(emitBlock(inner, nested));
+      }
     }
     lines.push(`${ctx.indent}} else {`);
     if (block.falseBlock.length === 0) {
       lines.push(`${nested.indent}// (empty false branch)`);
     } else {
-      for (const inner of block.falseBlock) lines.push(emitBlock(inner, nested));
+      for (const inner of block.falseBlock) {
+        lines.push(emitBlock(inner, nested));
+      }
     }
     lines.push(`${ctx.indent}}`);
     return lines.join('\n');
@@ -91,7 +93,9 @@ function emitBlock(block: ControlFlow, ctx: EmitContext): string {
   if (block.cases.length === 0) {
     // All-default switch: still emit the default block
     if (block.defaultBlock.length > 0) {
-      for (const inner of block.defaultBlock) lines.push(emitBlock(inner, ctx));
+      for (const inner of block.defaultBlock) {
+        lines.push(emitBlock(inner, ctx));
+      }
     }
     return lines.join('\n');
   }
@@ -104,7 +108,9 @@ function emitBlock(block: ControlFlow, ctx: EmitContext): string {
     if (c.block.length === 0) {
       lines.push(`${nested.indent}// (empty ${c.slug} branch)`);
     } else {
-      for (const inner of c.block) lines.push(emitBlock(inner, nested));
+      for (const inner of c.block) {
+        lines.push(emitBlock(inner, nested));
+      }
     }
   });
 
@@ -112,7 +118,9 @@ function emitBlock(block: ControlFlow, ctx: EmitContext): string {
   if (block.defaultBlock.length === 0) {
     lines.push(`${nested.indent}// (empty default branch)`);
   } else {
-    for (const inner of block.defaultBlock) lines.push(emitBlock(inner, nested));
+    for (const inner of block.defaultBlock) {
+      lines.push(emitBlock(inner, nested));
+    }
   }
   lines.push(`${ctx.indent}}`);
   return lines.join('\n');

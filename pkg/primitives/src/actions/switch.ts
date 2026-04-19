@@ -1,4 +1,4 @@
-import { defineAction } from '@invect/core';
+import { defineAction } from '@invect/action-kit';
 import { z } from 'zod/v4';
 
 const PROVIDER = {
@@ -68,9 +68,13 @@ export const switchAction = defineAction({
 
     for (const c of cases) {
       if (c.condition) {
-        if (!firstMatchSlug) {firstMatchSlug = c.slug;}
+        if (!firstMatchSlug) {
+          firstMatchSlug = c.slug;
+        }
         matchedSlugs.push(c.slug);
-        if (matchMode === 'first') {break;}
+        if (matchMode === 'first') {
+          break;
+        }
       }
     }
 

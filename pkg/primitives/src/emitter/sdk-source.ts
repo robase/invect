@@ -129,19 +129,22 @@ function resolveBuilder(node: FlowNodeDefinitions): BuilderName {
   return builder;
 }
 
-function buildUpstreamMap(
-  nodes: FlowNodeDefinitions[],
-  edges: FlowEdge[],
-): Map<string, string[]> {
+function buildUpstreamMap(nodes: FlowNodeDefinitions[], edges: FlowEdge[]): Map<string, string[]> {
   const refById = new Map(nodes.map((n) => [n.id, n.referenceId ?? n.id]));
   const upstream = new Map<string, string[]>();
   for (const edge of edges) {
     const sourceRef = refById.get(edge.source);
-    if (!sourceRef) continue;
-    if (!VALID_JS_IDENT.test(sourceRef)) continue;
+    if (!sourceRef) {
+      continue;
+    }
+    if (!VALID_JS_IDENT.test(sourceRef)) {
+      continue;
+    }
     const existing = upstream.get(edge.target);
     if (existing) {
-      if (!existing.includes(sourceRef)) existing.push(sourceRef);
+      if (!existing.includes(sourceRef)) {
+        existing.push(sourceRef);
+      }
     } else {
       upstream.set(edge.target, [sourceRef]);
     }
@@ -273,16 +276,19 @@ function emitEdge(edge: FlowEdge, nodes: FlowNodeDefinitions[]): string {
 // Build an arrow function from a DB-stored JS expression. Upstream referenceIds
 // available to the expression are destructured into scope, matching QuickJS.
 function arrowFromExpression(expression: string, upstream: string[]): string {
-  const destructure =
-    upstream.length > 0 ? `const { ${upstream.join(', ')} } = ctx;` : '';
+  const destructure = upstream.length > 0 ? `const { ${upstream.join(', ')} } = ctx;` : '';
   const body = needsAutoReturn(expression) ? `return (${expression});` : expression;
   if (!destructure && !body.includes('\n')) {
     // One-liner path: keep it inline for readability.
     return `(ctx) => { ${body} }`;
   }
   const lines: string[] = ['(ctx) => {'];
-  if (destructure) lines.push(`  ${destructure}`);
-  for (const l of body.split('\n')) lines.push(`  ${l}`);
+  if (destructure) {
+    lines.push(`  ${destructure}`);
+  }
+  for (const l of body.split('\n')) {
+    lines.push(`  ${l}`);
+  }
   lines.push('}');
   return lines.join('\n');
 }

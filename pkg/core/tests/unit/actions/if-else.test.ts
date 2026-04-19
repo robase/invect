@@ -2,25 +2,17 @@
  * Unit tests: core.if_else action — JS expression evaluation
  */
 import { describe, it, expect, vi } from 'vitest';
-import { ifElseAction } from 'src/actions/core/if-else';
+import { ifElseAction } from '@invect/actions';
 
-// Mock JsExpressionService
-vi.mock('src/services/templating/js-expression.service', () => {
-  const evaluate = async (expression: string, data: Record<string, unknown>): Promise<unknown> => {
+const evaluator = {
+  evaluate: async (expression: string, data: Record<string, unknown>): Promise<unknown> => {
     const keys = Object.keys(data);
     const values = Object.values(data);
     // eslint-disable-next-line @typescript-eslint/no-implied-eval
     const fn = new Function(...keys, `return (${expression})`);
     return fn(...values);
-  };
-
-  return {
-    getJsExpressionService: vi.fn().mockResolvedValue({
-      evaluate,
-    }),
-    JsExpressionError: class JsExpressionError extends Error {},
-  };
-});
+  },
+};
 
 function makeContext(incomingData: Record<string, unknown> = {}) {
   return {
@@ -34,7 +26,7 @@ function makeContext(incomingData: Record<string, unknown> = {}) {
     credential: undefined,
     flowInputs: {},
     flowContext: { nodeId: 'if-1', flowRunId: 'run-1' },
-    functions: {},
+    functions: { evaluator },
     flowRunState: undefined,
   } as Parameters<typeof ifElseAction.execute>[1];
 }
@@ -94,6 +86,7 @@ describe('core.if_else action', () => {
       skippedNodeIds: new Set(),
     };
     (ctx as Record<string, unknown>).functions = {
+      evaluator,
       markDownstreamNodesAsSkipped: markFn,
     };
 

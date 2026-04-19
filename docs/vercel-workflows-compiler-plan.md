@@ -27,52 +27,52 @@ For a flow `input → model → ifElse → [true: email → output_a | false: ou
 ```ts
 // generated/my-flow.workflow.ts
 
-import { fetch } from 'workflow'
-import { executeStep } from '@invect/vercel-workflows/runtime'
-import { myFlow } from '../my-flow'           // original flow — param functions live here
+import { fetch } from 'workflow';
+import { executeStep } from '@invect/vercel-workflows/runtime';
+import { myFlow } from '../my-flow'; // original flow — param functions live here
 
 export async function myFlowWorkflow(inputs: Record<string, unknown>) {
-  'use workflow'
-  globalThis.fetch = fetch                    // must precede any action that calls fetch
+  'use workflow';
+  globalThis.fetch = fetch; // must precede any action that calls fetch
 
-  const completedOutputs: Record<string, unknown> = {}
+  const completedOutputs: Record<string, unknown> = {};
 
-  const r_query = await step_query({ inputs, completedOutputs: {} })
-  completedOutputs['query'] = r_query.output
+  const r_query = await step_query({ inputs, completedOutputs: {} });
+  completedOutputs['query'] = r_query.output;
 
-  const r_classify = await step_classify({ inputs, completedOutputs })
-  completedOutputs['classify'] = r_classify.output
+  const r_classify = await step_classify({ inputs, completedOutputs });
+  completedOutputs['classify'] = r_classify.output;
 
-  const r_check = await step_check({ inputs, completedOutputs })
-  completedOutputs['check'] = r_check.output
+  const r_check = await step_check({ inputs, completedOutputs });
+  completedOutputs['check'] = r_check.output;
 
   // Branch on outputVariables — mirrors handleBranchSkipping
   if ('true_output' in (r_check.outputVariables ?? {})) {
-    const r_email = await step_email({ inputs, completedOutputs })
-    completedOutputs['email'] = r_email.output
-    return (await step_output_a({ inputs, completedOutputs })).output
+    const r_email = await step_email({ inputs, completedOutputs });
+    completedOutputs['email'] = r_email.output;
+    return (await step_output_a({ inputs, completedOutputs })).output;
   } else {
-    return (await step_output_b({ inputs, completedOutputs })).output
+    return (await step_output_b({ inputs, completedOutputs })).output;
   }
 }
 
 // ── One "use step" function per node ──────────────────────────────────────────
 
-type StepCtx = { inputs: Record<string, unknown>; completedOutputs: Record<string, unknown> }
+type StepCtx = { inputs: Record<string, unknown>; completedOutputs: Record<string, unknown> };
 
 async function step_query(ctx: StepCtx) {
-  'use step'
-  return executeStep(myFlow, 'query', ctx.completedOutputs, ctx.inputs)
+  'use step';
+  return executeStep(myFlow, 'query', ctx.completedOutputs, ctx.inputs);
 }
 
 async function step_classify(ctx: StepCtx) {
-  'use step'
-  return executeStep(myFlow, 'classify', ctx.completedOutputs, ctx.inputs)
+  'use step';
+  return executeStep(myFlow, 'classify', ctx.completedOutputs, ctx.inputs);
 }
 
 async function step_check(ctx: StepCtx) {
-  'use step'
-  return executeStep(myFlow, 'check', ctx.completedOutputs, ctx.inputs)
+  'use step';
+  return executeStep(myFlow, 'check', ctx.completedOutputs, ctx.inputs);
 }
 
 // ... one per node
@@ -110,13 +110,13 @@ them.
 The generator must convert the flow DAG into nested TypeScript `if/else` and `switch`
 control flow for the orchestrator:
 
-| Node type | Generated control flow |
-|---|---|
-| `primitives.if_else` | `if ('true_output' in result.outputVariables) { ... } else { ... }` |
-| `primitives.switch` (first) | `if (...) { } else if (...) { } else { /* default */ }` |
-| `primitives.switch` (all) | Multiple independent `if` blocks, no `else` |
-| Diamond join | Detect convergence point; emit the join node after both arms |
-| Linear segment | Sequential `await step_X(...)` calls, no branching |
+| Node type                   | Generated control flow                                              |
+| --------------------------- | ------------------------------------------------------------------- |
+| `primitives.if_else`        | `if ('true_output' in result.outputVariables) { ... } else { ... }` |
+| `primitives.switch` (first) | `if (...) { } else if (...) { } else { /* default */ }`             |
+| `primitives.switch` (all)   | Multiple independent `if` blocks, no `else`                         |
+| Diamond join                | Detect convergence point; emit the join node after both arms        |
+| Linear segment              | Sequential `await step_X(...)` calls, no branching                  |
 
 The generator runs a DFS from root nodes. When it encounters a branching node, it
 recursively generates each arm, then finds the convergence point (the first node
@@ -125,16 +125,18 @@ reachable from all arms) and emits it after the branch block.
 ### `sleep` and `waitForEvent`
 
 Vercel's `sleep` is imported from `'workflow'`:
+
 ```ts
-import { sleep } from 'workflow'
-await sleep('24h')
+import { sleep } from 'workflow';
+await sleep('24h');
 ```
 
 `waitForEvent` is a Vercel hook:
+
 ```ts
-import { createHook } from 'workflow'
-const hook = createHook()
-const event = await hook  // or: for await (const e of hook) { ... }
+import { createHook } from 'workflow';
+const hook = createHook();
+const event = await hook; // or: for await (const e of hook) { ... }
 ```
 
 These cannot be expressed via the current `DurabilityAdapter` interface since Vercel
@@ -222,6 +224,7 @@ npx invect-vercel generate ./flows/triage.ts --out ./app/workflows/generated
 ```
 
 The CLI:
+
 1. Loads the flow definition file via `tsx` (supports TS without build step)
 2. Calls `compile(flow, options)` → string
 3. Writes the output file

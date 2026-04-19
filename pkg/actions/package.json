@@ -1,0 +1,269 @@
+{
+  "name": "@invect/actions",
+  "version": "0.0.1",
+  "description": "Built-in provider actions for Invect flows (Gmail, Slack, GitHub, etc.)",
+  "keywords": [
+    "actions",
+    "integrations",
+    "invect"
+  ],
+  "homepage": "https://invect.dev",
+  "bugs": {
+    "url": "https://github.com/robase/invect/issues"
+  },
+  "license": "MIT",
+  "author": "robase <team@invect.dev>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/robase/invect.git",
+    "directory": "pkg/actions"
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "type": "module",
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./core": {
+      "types": "./dist/core/index.d.mts",
+      "import": "./dist/core/index.mjs",
+      "require": "./dist/core/index.cjs"
+    },
+    "./asana": {
+      "types": "./dist/asana/index.d.mts",
+      "import": "./dist/asana/index.mjs",
+      "require": "./dist/asana/index.cjs"
+    },
+    "./cloudwatch": {
+      "types": "./dist/cloudwatch/index.d.mts",
+      "import": "./dist/cloudwatch/index.mjs",
+      "require": "./dist/cloudwatch/index.cjs"
+    },
+    "./dropbox": {
+      "types": "./dist/dropbox/index.d.mts",
+      "import": "./dist/dropbox/index.mjs",
+      "require": "./dist/dropbox/index.cjs"
+    },
+    "./facebook": {
+      "types": "./dist/facebook/index.d.mts",
+      "import": "./dist/facebook/index.mjs",
+      "require": "./dist/facebook/index.cjs"
+    },
+    "./freshdesk": {
+      "types": "./dist/freshdesk/index.d.mts",
+      "import": "./dist/freshdesk/index.mjs",
+      "require": "./dist/freshdesk/index.cjs"
+    },
+    "./github": {
+      "types": "./dist/github/index.d.mts",
+      "import": "./dist/github/index.mjs",
+      "require": "./dist/github/index.cjs"
+    },
+    "./gitlab": {
+      "types": "./dist/gitlab/index.d.mts",
+      "import": "./dist/gitlab/index.mjs",
+      "require": "./dist/gitlab/index.cjs"
+    },
+    "./gmail": {
+      "types": "./dist/gmail/index.d.mts",
+      "import": "./dist/gmail/index.mjs",
+      "require": "./dist/gmail/index.cjs"
+    },
+    "./http": {
+      "types": "./dist/http/index.d.mts",
+      "import": "./dist/http/index.mjs",
+      "require": "./dist/http/index.cjs"
+    },
+    "./google-analytics": {
+      "types": "./dist/google-analytics/index.d.mts",
+      "import": "./dist/google-analytics/index.mjs",
+      "require": "./dist/google-analytics/index.cjs"
+    },
+    "./google-calendar": {
+      "types": "./dist/google-calendar/index.d.mts",
+      "import": "./dist/google-calendar/index.mjs",
+      "require": "./dist/google-calendar/index.cjs"
+    },
+    "./google-docs": {
+      "types": "./dist/google-docs/index.d.mts",
+      "import": "./dist/google-docs/index.mjs",
+      "require": "./dist/google-docs/index.cjs"
+    },
+    "./google-drive": {
+      "types": "./dist/google-drive/index.d.mts",
+      "import": "./dist/google-drive/index.mjs",
+      "require": "./dist/google-drive/index.cjs"
+    },
+    "./google-sheets": {
+      "types": "./dist/google-sheets/index.d.mts",
+      "import": "./dist/google-sheets/index.mjs",
+      "require": "./dist/google-sheets/index.cjs"
+    },
+    "./grafana": {
+      "types": "./dist/grafana/index.d.mts",
+      "import": "./dist/grafana/index.mjs",
+      "require": "./dist/grafana/index.cjs"
+    },
+    "./hubspot": {
+      "types": "./dist/hubspot/index.d.mts",
+      "import": "./dist/hubspot/index.mjs",
+      "require": "./dist/hubspot/index.cjs"
+    },
+    "./intercom": {
+      "types": "./dist/intercom/index.d.mts",
+      "import": "./dist/intercom/index.mjs",
+      "require": "./dist/intercom/index.cjs"
+    },
+    "./jira": {
+      "types": "./dist/jira/index.d.mts",
+      "import": "./dist/jira/index.mjs",
+      "require": "./dist/jira/index.cjs"
+    },
+    "./linear": {
+      "types": "./dist/linear/index.d.mts",
+      "import": "./dist/linear/index.mjs",
+      "require": "./dist/linear/index.cjs"
+    },
+    "./linkedin": {
+      "types": "./dist/linkedin/index.d.mts",
+      "import": "./dist/linkedin/index.mjs",
+      "require": "./dist/linkedin/index.cjs"
+    },
+    "./microsoft": {
+      "types": "./dist/microsoft/index.d.mts",
+      "import": "./dist/microsoft/index.mjs",
+      "require": "./dist/microsoft/index.cjs"
+    },
+    "./microsoft-teams": {
+      "types": "./dist/microsoft-teams/index.d.mts",
+      "import": "./dist/microsoft-teams/index.mjs",
+      "require": "./dist/microsoft-teams/index.cjs"
+    },
+    "./mixpanel": {
+      "types": "./dist/mixpanel/index.d.mts",
+      "import": "./dist/mixpanel/index.mjs",
+      "require": "./dist/mixpanel/index.cjs"
+    },
+    "./notion": {
+      "types": "./dist/notion/index.d.mts",
+      "import": "./dist/notion/index.mjs",
+      "require": "./dist/notion/index.cjs"
+    },
+    "./onedrive": {
+      "types": "./dist/onedrive/index.d.mts",
+      "import": "./dist/onedrive/index.mjs",
+      "require": "./dist/onedrive/index.cjs"
+    },
+    "./pagerduty": {
+      "types": "./dist/pagerduty/index.d.mts",
+      "import": "./dist/pagerduty/index.mjs",
+      "require": "./dist/pagerduty/index.cjs"
+    },
+    "./postgres": {
+      "types": "./dist/postgres/index.d.mts",
+      "import": "./dist/postgres/index.mjs",
+      "require": "./dist/postgres/index.cjs"
+    },
+    "./resend": {
+      "types": "./dist/resend/index.d.mts",
+      "import": "./dist/resend/index.mjs",
+      "require": "./dist/resend/index.cjs"
+    },
+    "./salesforce": {
+      "types": "./dist/salesforce/index.d.mts",
+      "import": "./dist/salesforce/index.mjs",
+      "require": "./dist/salesforce/index.cjs"
+    },
+    "./segment": {
+      "types": "./dist/segment/index.d.mts",
+      "import": "./dist/segment/index.mjs",
+      "require": "./dist/segment/index.cjs"
+    },
+    "./sendgrid": {
+      "types": "./dist/sendgrid/index.d.mts",
+      "import": "./dist/sendgrid/index.mjs",
+      "require": "./dist/sendgrid/index.cjs"
+    },
+    "./sentry": {
+      "types": "./dist/sentry/index.d.mts",
+      "import": "./dist/sentry/index.mjs",
+      "require": "./dist/sentry/index.cjs"
+    },
+    "./shopify": {
+      "types": "./dist/shopify/index.d.mts",
+      "import": "./dist/shopify/index.mjs",
+      "require": "./dist/shopify/index.cjs"
+    },
+    "./slack": {
+      "types": "./dist/slack/index.d.mts",
+      "import": "./dist/slack/index.mjs",
+      "require": "./dist/slack/index.cjs"
+    },
+    "./stripe": {
+      "types": "./dist/stripe/index.d.mts",
+      "import": "./dist/stripe/index.mjs",
+      "require": "./dist/stripe/index.cjs"
+    },
+    "./trello": {
+      "types": "./dist/trello/index.d.mts",
+      "import": "./dist/trello/index.mjs",
+      "require": "./dist/trello/index.cjs"
+    },
+    "./triggers": {
+      "types": "./dist/triggers/index.d.mts",
+      "import": "./dist/triggers/index.mjs",
+      "require": "./dist/triggers/index.cjs"
+    },
+    "./twitter": {
+      "types": "./dist/twitter/index.d.mts",
+      "import": "./dist/twitter/index.mjs",
+      "require": "./dist/twitter/index.cjs"
+    },
+    "./woocommerce": {
+      "types": "./dist/woocommerce/index.d.mts",
+      "import": "./dist/woocommerce/index.mjs",
+      "require": "./dist/woocommerce/index.cjs"
+    },
+    "./zendesk": {
+      "types": "./dist/zendesk/index.d.mts",
+      "import": "./dist/zendesk/index.mjs",
+      "require": "./dist/zendesk/index.cjs"
+    },
+    "./providers": {
+      "types": "./dist/providers.d.mts",
+      "import": "./dist/providers.mjs",
+      "require": "./dist/providers.cjs"
+    },
+    "./registry": {
+      "types": "./dist/registry/index.d.mts",
+      "import": "./dist/registry/index.mjs",
+      "require": "./dist/registry/index.cjs"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "build:watch": "tsdown --watch",
+    "dev": "tsdown --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@invect/action-kit": "workspace:*",
+    "zod": "^3.25.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsdown": "^0.21.1",
+    "typescript": "^5.8.3"
+  }
+}

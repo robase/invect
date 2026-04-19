@@ -14,6 +14,9 @@ import { getQuickJS, shouldInterruptAfterDeadline } from 'quickjs-emscripten';
 import type { QuickJSWASMModule } from 'quickjs-emscripten';
 import type { Logger } from 'src/schemas';
 import { needsAutoReturn, type JsExpressionEvaluator } from './evaluator';
+import { JsExpressionError } from '@invect/action-kit';
+
+export { JsExpressionError };
 
 export interface JsExpressionServiceConfig {
   /** Memory limit for the QuickJS runtime in MB. Default: 128 */
@@ -139,20 +142,6 @@ function isPromiseStateResult(result: unknown): boolean {
 
   const type = result.type;
   return type === 'pending' || type === 'fulfilled' || type === 'rejected';
-}
-
-/**
- * Custom error class for mapper expression errors.
- * Includes the original expression for debugging.
- */
-export class JsExpressionError extends Error {
-  constructor(
-    message: string,
-    public readonly expression: string,
-  ) {
-    super(`Mapper expression error: ${message}`);
-    this.name = 'JsExpressionError';
-  }
 }
 
 let defaultInstance: JsExpressionService | null = null;

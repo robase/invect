@@ -33,6 +33,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@invect/action-kit": "workspace:*",
+    "@invect/actions": "workspace:*",
     "@invect/core": "workspace:*",
     "zod": "^3.25.1"
   },

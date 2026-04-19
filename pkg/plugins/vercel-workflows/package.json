@@ -48,6 +48,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@invect/action-kit": "workspace:*",
+    "@invect/actions": "workspace:*",
     "@invect/core": "workspace:*",
     "@invect/primitives": "workspace:*"
   },

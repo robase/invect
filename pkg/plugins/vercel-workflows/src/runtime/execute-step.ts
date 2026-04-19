@@ -1,5 +1,6 @@
-import { allBuiltinActions, BaseLogger, DirectEvaluator } from '@invect/core';
-import type { ActionDefinition, ActionExecutionContext, ActionResult } from '@invect/core';
+import { BaseLogger, DirectEvaluator } from '@invect/core';
+import { allProviderActions as allBuiltinActions } from '@invect/actions';
+import type { ActionDefinition, ActionExecutionContext, ActionResult } from '@invect/action-kit';
 import {
   buildNodeContext,
   resolveCallableParams,
@@ -15,13 +16,17 @@ import type { FlowRunnerConfig, PrimitiveFlowDefinition } from '@invect/primitiv
 // core builtins, then primitive forks, then user-supplied actions.
 function buildRegistry(extraActions?: ActionDefinition[]): Map<string, ActionDefinition> {
   const registry = new Map<string, ActionDefinition>();
-  for (const action of allBuiltinActions) registry.set(action.id, action);
+  for (const action of allBuiltinActions) {
+    registry.set(action.id, action);
+  }
   registry.set(ifElseAction.id, ifElseAction);
   registry.set(switchAction.id, switchAction);
   registry.set(javascriptAction.id, javascriptAction);
   registry.set(outputAction.id, outputAction);
   if (extraActions) {
-    for (const action of extraActions) registry.set(action.id, action);
+    for (const action of extraActions) {
+      registry.set(action.id, action);
+    }
   }
   return registry;
 }
@@ -63,10 +68,7 @@ export async function executeStep(args: StepRuntimeArgs): Promise<ActionResult> 
     ctx = await node.mapper(ctx);
   }
 
-  const resolvedParams = await resolveCallableParams(
-    node.params as Record<string, unknown>,
-    ctx,
-  );
+  const resolvedParams = await resolveCallableParams(node.params as Record<string, unknown>, ctx);
 
   return executeNodeAction({
     node,

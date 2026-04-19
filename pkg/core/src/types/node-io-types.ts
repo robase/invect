@@ -1,13 +1,10 @@
 /**
  * Node I/O Types
  *
- * Generic types for node inputs and outputs.
- * These are NOT parameterised by node type — every node (whether a legacy
- * executor or a provider-action) uses the same shapes. This keeps the type
- * system scalable as hundreds of new actions are added.
- *
- * IMPORTANT: This file must NOT import from src/nodes/* to avoid pulling
- * Node.js runtime code into the frontend bundle via @invect/core/types.
+ * Generic types for node inputs and outputs. The `OutputVariable`,
+ * `OutputVariables`, `StructuredOutput`, and `NodeOutput` types are
+ * now canonicalised in `@invect/action-kit`; this file re-exports them
+ * and keeps the local `NodeInputMapping*` schema + input-data aliases.
  */
 
 import { z } from 'zod/v4';
@@ -35,52 +32,17 @@ export type NodeIncomingDataObject = Record<string, unknown>;
 export type NodeInputData = Record<string, unknown>;
 
 // =============================================================================
-// OUTPUT TYPES
+// OUTPUT TYPES — canonical in @invect/action-kit
 // =============================================================================
 
-/**
- * A single output variable produced by a node.
- *
- * The `type` discriminator categorises the runtime `value`:
- *   - `'string'`  → value is a `string`, or a primitive (`number | boolean | null | undefined`)
- *   - `'object'`  → value is a non-null `object` (plain object or array)
- *
- * In practice every action returns one of:
- *   • a plain string (JQ, model, template_string, output)
- *   • a JSON-serializable object (http.request, gmail.*, trigger.*, sql_query)
- *   • `undefined` (batch-pending sentinel — only `core.model`)
- *
- * No action returns raw numbers, booleans, `null`, Buffers, Dates, or class instances.
- */
-export type OutputVariable = {
-  value: unknown;
-  type: 'string' | 'object';
-};
+export type {
+  OutputVariable,
+  OutputVariables,
+  StructuredOutput,
+  NodeOutput,
+} from '@invect/action-kit';
 
-/**
- * Record of named output variables.
- */
-export type OutputVariables = Record<string, OutputVariable>;
-
-/**
- * Structured output envelope produced by every node.
- */
-export interface StructuredOutput {
-  /** Named outputs produced by node execution (e.g. `output`, `true_output`). */
-  variables: OutputVariables;
-  /** Optional metadata about the execution (model, timing, etc.). */
-  metadata?: Record<string, unknown>;
-}
-
-/**
- * The generic node output shape stored in execution traces and passed
- * downstream.  `nodeType` is the action/executor ID string (e.g.
- * `"core.model"`, `"AGENT"`).
- */
-export interface NodeOutput {
-  nodeType: string;
-  data: StructuredOutput;
-}
+import type { NodeOutput } from '@invect/action-kit';
 
 /**
  * Union kept as an alias for backwards compatibility — it is simply

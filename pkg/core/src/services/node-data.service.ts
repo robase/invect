@@ -4,29 +4,7 @@ import { Logger, InvectConfig } from 'src/schemas';
 import { DatabaseError, ValidationError } from 'src/types/common/errors.types';
 import { Model, BaseAIClient, BatchProvider } from './ai/base-client';
 
-type BasePromptRequest = {
-  prompt: string;
-  model: string;
-  provider: BatchProvider;
-  /** Credential ID used to resolve the API key for this request. */
-  credentialId?: string;
-  outputJsonSchema?: string;
-  maxTokens?: number;
-  temperature?: number;
-  systemPrompt?: string;
-};
-
-export interface PromptRequest extends BasePromptRequest {
-  useBatchProcessing?: false;
-}
-
-export interface BatchRequest extends BasePromptRequest {
-  useBatchProcessing: true;
-  nodeId: string;
-  flowRunId: string;
-}
-
-export type SubmitPromptRequest = PromptRequest | BatchRequest;
+export type { PromptRequest, BatchRequest, SubmitPromptRequest } from '@invect/action-kit';
 
 /**
  * Node Data Service implementation

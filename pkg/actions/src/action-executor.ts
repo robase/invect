@@ -1,0 +1,282 @@
+/**
+ * Universal Action Executor
+ *
+ * Bridges the `ActionDefinition` system with the flow + agent execution paths.
+ * Provides two entry points:
+ *
+ * - `executeActionAsNode()`  — called by the flow-run coordinator
+ * - `executeActionAsTool()`  — called by the agent executor loop
+ *
+ * Both ultimately call the same `action.execute(params, context)` function.
+ * The executor consumes the structural `NodeExecutionContext` exported by
+ * `@invect/action-kit`, so it has no dependency on `@invect/core`.
+ */
+
+import {
+  NodeExecutionStatus,
+  type ActionCredential,
+  type ActionDefinition,
+  type ActionExecutionContext,
+  type ActionResult,
+  type AgentToolExecutionContext,
+  type AgentToolResult,
+  type NodeExecutionContext,
+  type NodeExecutionFailedResult,
+  type NodeExecutionPendingResult,
+  type NodeExecutionResult,
+} from '@invect/action-kit';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Coerce JSON-encoded string params into real objects/arrays.
+ *
+ * The UI config panel stores JSON-type fields (like `inputDefinitions`) as
+ * stringified JSON from the code editor textarea.  Before Zod validation we
+ * attempt to parse any string value that looks like a JSON array or object so
+ * that the schema receives the expected types.
+ *
+ * Template expressions (containing `{{`) are left as-is.
+ */
+export function coerceJsonStringParams(params: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(params)) {
+    if (typeof value === 'string' && !value.includes('{{')) {
+      const trimmed = value.trim();
+      if (trimmed === '') {
+        result[key] = undefined;
+        continue;
+      }
+      if (
+        (trimmed.startsWith('[') && trimmed.endsWith(']')) ||
+        (trimmed.startsWith('{') && trimmed.endsWith('}'))
+      ) {
+        try {
+          result[key] = JSON.parse(trimmed);
+          continue;
+        } catch {
+          // Not valid JSON — keep as string
+        }
+      }
+    }
+    result[key] = value;
+  }
+  return result;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PUBLIC API
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Execute an action as a flow node.
+ *
+ * Resolves credential, builds the shared context, runs `action.execute()`,
+ * then wraps the ActionResult into a NodeExecutionResult.
+ */
+export async function executeActionAsNode(
+  action: ActionDefinition,
+  params: Record<string, unknown>,
+  nodeContext: NodeExecutionContext,
+): Promise<NodeExecutionResult> {
+  const logger = nodeContext.logger;
+
+  const coercedParams = coerceJsonStringParams(params);
+
+  const parseResult = action.params.schema.safeParse(coercedParams);
+  if (!parseResult.success) {
+    const { prettifyError } = await import('zod/v4');
+
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parseResult.error.issues) {
+      if (issue.path && issue.path.length > 0) {
+        const fieldName = String(issue.path[0]);
+        fieldErrors[fieldName] = issue.message;
+      }
+    }
+
+    return {
+      state: NodeExecutionStatus.FAILED,
+      errors: [prettifyError(parseResult.error)],
+      ...(Object.keys(fieldErrors).length > 0 && { fieldErrors }),
+    } satisfies NodeExecutionFailedResult;
+  }
+
+  let credential: ActionCredential | null = null;
+  const credentialId = params.credentialId as string | undefined;
+  if (credentialId && nodeContext.functions.getCredential) {
+    try {
+      credential = await nodeContext.functions.getCredential(credentialId);
+    } catch (err) {
+      logger.error('Failed to fetch credential for action', {
+        actionId: action.id,
+        credentialId,
+        error: err,
+      });
+      return {
+        state: NodeExecutionStatus.FAILED,
+        errors: [`Failed to fetch credential: ${err instanceof Error ? err.message : String(err)}`],
+      } satisfies NodeExecutionFailedResult;
+    }
+  }
+
+  const context: ActionExecutionContext = {
+    logger,
+    credential,
+    incomingData: nodeContext.incomingData,
+    flowInputs: nodeContext.flowInputs as Record<string, unknown> | undefined,
+    flowContext: {
+      flowId: nodeContext.flowId,
+      flowRunId: nodeContext.flowRunId,
+      nodeId: nodeContext.nodeId,
+      traceId: nodeContext.traceId,
+    },
+    functions: nodeContext.functions,
+    flowRunState: {
+      edges: nodeContext.edges,
+      nodes: nodeContext.nodes,
+      skippedNodeIds: nodeContext.skippedNodeIds,
+      flowParams: nodeContext.flowParams,
+      globalConfig: nodeContext.globalConfig,
+    },
+  };
+
+  let result: ActionResult;
+  try {
+    result = await action.execute(parseResult.data, context);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error('Action execution threw', { actionId: action.id, error: msg });
+    return {
+      state: NodeExecutionStatus.FAILED,
+      errors: [msg],
+    } satisfies NodeExecutionFailedResult;
+  }
+
+  if (!result.success) {
+    return {
+      state: NodeExecutionStatus.FAILED,
+      errors: [result.error ?? 'Action failed without error message'],
+      metadata: result.metadata,
+    } satisfies NodeExecutionFailedResult;
+  }
+
+  if (result.metadata?.__batchSubmitted === true) {
+    return {
+      state: NodeExecutionStatus.PENDING,
+      type: 'batch_submitted' as const,
+      batchJobId: String(result.metadata.batchJobId ?? ''),
+      nodeId: String(result.metadata.nodeId ?? nodeContext.nodeId),
+      executionId: String(result.metadata.flowRunId ?? nodeContext.flowRunId),
+    } satisfies NodeExecutionPendingResult;
+  }
+
+  const variables = result.outputVariables
+    ? result.outputVariables
+    : {
+        output: {
+          value: result.output,
+          type: (result.output !== null &&
+          result.output !== undefined &&
+          typeof result.output === 'object'
+            ? 'object'
+            : 'string') as 'string' | 'object',
+        },
+      };
+
+  return {
+    state: NodeExecutionStatus.SUCCESS,
+    type: 'output' as const,
+    output: {
+      nodeType: action.id,
+      data: {
+        variables,
+        metadata: result.metadata,
+      },
+    },
+  } satisfies NodeExecutionResult;
+}
+
+/**
+ * Execute an action as an AI-agent tool.
+ *
+ * Called by the agent executor loop. Merges static params with AI-provided
+ * input, resolves credential, builds the shared context, runs
+ * `action.execute()`, then returns an `AgentToolResult`.
+ */
+export async function executeActionAsTool(
+  action: ActionDefinition,
+  input: Record<string, unknown>,
+  toolContext: AgentToolExecutionContext<NodeExecutionContext>,
+): Promise<AgentToolResult> {
+  const logger = toolContext.logger;
+
+  const mergedParams = {
+    ...input,
+    ...toolContext.staticParams,
+  };
+
+  const parseResult = action.params.schema.safeParse(mergedParams);
+  if (!parseResult.success) {
+    const { prettifyError } = await import('zod/v4');
+    return {
+      success: false,
+      error: `Invalid params: ${prettifyError(parseResult.error)}`,
+    };
+  }
+
+  let credential: ActionCredential | null = null;
+  const credentialId =
+    (toolContext.staticParams?.credentialId as string | undefined) ??
+    (input.credentialId as string | undefined);
+
+  if (credentialId && toolContext.nodeContext.functions.getCredential) {
+    try {
+      credential = await toolContext.nodeContext.functions.getCredential(credentialId);
+    } catch (err) {
+      return {
+        success: false,
+        error: `Failed to fetch credential: ${err instanceof Error ? err.message : String(err)}`,
+      };
+    }
+  }
+
+  const context: ActionExecutionContext = {
+    logger,
+    credential,
+    incomingData: toolContext.nodeContext.incomingData,
+    flowContext: {
+      flowId: toolContext.nodeContext.flowId,
+      flowRunId: toolContext.nodeContext.flowRunId,
+      nodeId: toolContext.nodeContext.nodeId,
+      traceId: toolContext.nodeContext.traceId,
+    },
+  };
+
+  try {
+    const result = await action.execute(parseResult.data, context);
+    return {
+      success: result.success,
+      output: result.output,
+      error: result.error,
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error('Action tool execution threw', { actionId: action.id, error: msg });
+    return { success: false, error: msg };
+  }
+}
+
+/**
+ * Create an `AgentToolExecutor` function for a given action.
+ */
+export function createToolExecutorForAction(
+  action: ActionDefinition,
+): (
+  input: Record<string, unknown>,
+  context: AgentToolExecutionContext<NodeExecutionContext>,
+) => Promise<AgentToolResult> {
+  return (input, context) => executeActionAsTool(action, input, context);
+}

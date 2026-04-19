@@ -1,0 +1,218 @@
+/**
+ * Action Types — single source of truth for the Provider-Actions architecture.
+ *
+ * An "action" is the fundamental unit — renderable as a flow Node, callable
+ * as an agent Tool, or both. The same `execute()` handles both paths.
+ */
+
+import type { z } from 'zod/v4';
+import type { ActionCredential } from './action-credential';
+import type { FlowEdge, FlowNodeDefinitions } from './flow';
+import type { AgentPromptResult } from './agent-tool';
+import type { JsExpressionEvaluator } from './evaluator';
+import type { Logger } from './logger';
+import type { NodeDefinition } from './node';
+import type {
+  RecordToolExecutionInput,
+  SubmitAgentPromptRequest,
+  SubmitAgentPromptResult,
+  SubmitPromptRequest,
+  SubmitPromptResult,
+} from './prompt';
+import type { ActionAIClient, ActionCredentialsService } from './services';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PROVIDER
+// ═══════════════════════════════════════════════════════════════════════════
+
+export type ProviderCategory =
+  | 'email'
+  | 'messaging'
+  | 'storage'
+  | 'database'
+  | 'development'
+  | 'ai'
+  | 'http'
+  | 'utility'
+  | 'core'
+  | 'custom';
+
+export interface ProviderDef {
+  id: string;
+  name: string;
+  icon: string;
+  svgIcon?: string;
+  category: ProviderCategory;
+  nodeCategory: 'Common' | 'AI' | 'Data' | 'Logic' | 'IO' | 'Integrations' | 'Custom' | 'Triggers';
+  description?: string;
+  docsUrl?: string;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CREDENTIAL
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface CredentialRequirement {
+  required: boolean;
+  type?: 'oauth2' | 'api_key' | 'basic_auth' | 'database' | 'llm';
+  oauth2Provider?: string;
+  requiredScopes?: string[];
+  description?: string;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PARAMETER FIELDS
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface ParamField {
+  name: string;
+  label: string;
+  type: 'text' | 'textarea' | 'number' | 'boolean' | 'select' | 'json' | 'code' | 'switch-cases';
+  description?: string;
+  placeholder?: string;
+  defaultValue?: unknown;
+  required?: boolean;
+  hidden?: boolean;
+  options?: { label: string; value: string | number; description?: string }[];
+  extended?: boolean;
+  aiProvided?: boolean;
+  loadOptions?: LoadOptionsConfig;
+}
+
+export interface LoadOptionsContext {
+  logger: Logger;
+  services: {
+    credentials: ActionCredentialsService;
+    baseAIClient?: ActionAIClient;
+  };
+}
+
+export interface LoadOptionsConfig {
+  dependsOn: string[];
+  handler: (
+    dependencyValues: Record<string, unknown>,
+    context: LoadOptionsContext,
+  ) => Promise<LoadOptionsResult>;
+}
+
+export interface LoadOptionsResult {
+  options: { label: string; value: string | number }[];
+  defaultValue?: string | number;
+  placeholder?: string;
+  disabled?: boolean;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EXECUTION CONTEXT
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface ActionExecutionContext {
+  logger: Logger;
+  credential: ActionCredential | null;
+  incomingData?: Record<string, unknown>;
+  flowInputs?: Record<string, unknown>;
+  flowContext?: {
+    flowId: string;
+    flowRunId: string;
+    nodeId: string;
+    traceId?: string;
+  };
+  functions?: {
+    runTemplateReplacement?: (
+      template: string,
+      variables: Record<string, unknown>,
+    ) => Promise<string>;
+    submitPrompt?: (request: SubmitPromptRequest) => Promise<SubmitPromptResult>;
+    submitAgentPrompt?: (request: SubmitAgentPromptRequest) => Promise<SubmitAgentPromptResult>;
+    getCredential?: (credentialId: string) => Promise<ActionCredential | null>;
+    markDownstreamNodesAsSkipped?: (
+      nodeId: string,
+      edges: readonly FlowEdge[],
+      skippedNodes: Set<string>,
+      isFromIfElse?: boolean,
+    ) => void;
+    recordToolExecution?: (input: RecordToolExecutionInput) => Promise<{ id: string } | null>;
+    evaluator?: JsExpressionEvaluator;
+  };
+  flowRunState?: {
+    edges?: readonly FlowEdge[];
+    nodes?: readonly FlowNodeDefinitions[];
+    skippedNodeIds?: Set<string>;
+    flowParams?: Record<string, unknown>;
+    globalConfig?: Record<string, unknown>;
+  };
+}
+
+// Re-export for consumers that want the type at this module path.
+export type { AgentPromptResult };
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CONFIG UPDATE
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface ActionConfigUpdateContext {
+  logger: Logger;
+  services: {
+    credentials: ActionCredentialsService;
+    baseAIClient: ActionAIClient;
+  };
+}
+
+export interface ActionConfigUpdateEvent {
+  nodeId: string;
+  nodeType: string;
+  flowId?: string;
+  params: Record<string, unknown>;
+  change?: { field: string; value: unknown };
+}
+
+export interface ActionConfigUpdateResponse {
+  definition: NodeDefinition;
+  params?: Record<string, unknown>;
+  warnings?: string[];
+  errors?: string[];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RESULT
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface ActionResult {
+  success: boolean;
+  output?: unknown;
+  error?: string;
+  metadata?: Record<string, unknown>;
+  outputVariables?: Record<string, { value: unknown; type: 'string' | 'object' }>;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ACTION DEFINITION
+// ═══════════════════════════════════════════════════════════════════════════
+
+export type ActionCategory = 'read' | 'write' | 'delete' | 'manage';
+
+export interface ActionDefinition<TParams = unknown> {
+  id: string;
+  name: string;
+  description: string;
+  provider: ProviderDef;
+  credential?: CredentialRequirement;
+  params: {
+    schema: z.ZodType<TParams>;
+    fields: ParamField[];
+  };
+  outputs?: Array<{ id: string; label: string; type: string }>;
+  dynamicOutputs?: boolean;
+  noInput?: boolean;
+  maxInstances?: number;
+  hidden?: boolean;
+  excludeFromTools?: boolean;
+  tags?: string[];
+  icon?: string;
+  actionCategory?: ActionCategory;
+  execute(params: TParams, context: ActionExecutionContext): Promise<ActionResult>;
+  onConfigUpdate?(
+    event: ActionConfigUpdateEvent,
+    context: ActionConfigUpdateContext,
+  ): Promise<ActionConfigUpdateResponse>;
+}

@@ -1,4 +1,8 @@
-import type { ActionDefinition, ActionExecutionContext, JsExpressionEvaluator } from '@invect/core';
+import type {
+  ActionDefinition,
+  ActionExecutionContext,
+  JsExpressionEvaluator,
+} from '@invect/action-kit';
 
 export type { ActionDefinition };
 

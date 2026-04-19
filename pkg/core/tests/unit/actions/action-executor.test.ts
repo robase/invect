@@ -7,7 +7,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { coerceJsonStringParams, executeActionAsNode } from 'src/actions/action-executor';
-import { manualTriggerAction } from 'src/actions/triggers/manual';
+import { manualTriggerAction } from '@invect/actions';
 import { defineAction } from 'src/actions/define-action';
 import { CORE_PROVIDER } from 'src/actions/providers';
 import { NodeExecutionStatus } from 'src/types/base';

@@ -23,7 +23,9 @@ export function topologicalSort(nodes: PrimitiveNode[], edges: PrimitiveEdge[]):
 
   const queue: string[] = [];
   for (const [id, degree] of inDegree) {
-    if (degree === 0) {queue.push(id);}
+    if (degree === 0) {
+      queue.push(id);
+    }
   }
 
   const result: string[] = [];
@@ -34,7 +36,9 @@ export function topologicalSort(nodes: PrimitiveNode[], edges: PrimitiveEdge[]):
     for (const neighbor of adjList.get(current) ?? []) {
       const newDegree = (inDegree.get(neighbor) ?? 1) - 1;
       inDegree.set(neighbor, newDegree);
-      if (newDegree === 0) {queue.push(neighbor);}
+      if (newDegree === 0) {
+        queue.push(neighbor);
+      }
     }
   }
 
