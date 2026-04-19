@@ -33,6 +33,7 @@ import { rbac } from '../../../../plugins/rbac/src/backend/plugin';
 import type { InvectIdentity } from '../../../src/types/auth.types';
 import type {
   InvectPlugin,
+  InvectPluginDefinition,
   PluginDatabaseApi,
   InvectPluginEndpoint,
   PluginEndpointContext,
@@ -108,6 +109,17 @@ CREATE TABLE IF NOT EXISTS invect_rbac_scope_access (
   granted_by TEXT,
   granted_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS invect_flow_access (
+  id TEXT PRIMARY KEY NOT NULL,
+  flow_id TEXT NOT NULL,
+  user_id TEXT,
+  team_id TEXT,
+  permission TEXT NOT NULL DEFAULT 'viewer',
+  granted_by TEXT,
+  granted_at TEXT NOT NULL DEFAULT (datetime('now')),
+  expires_at TEXT
+);
 `;
 
 // ─────────────────────────────────────────────────────────────
@@ -157,6 +169,7 @@ const OUTSIDER: InvectIdentity = {
 // ─────────────────────────────────────────────────────────────
 
 let invect: InvectInstance;
+let pluginDef: InvectPluginDefinition;
 let plugin: InvectPlugin;
 let rawDb: Database.Database;
 let tmpDir: string;
@@ -314,7 +327,8 @@ describe('RBAC Plugin — Security Red Team', () => {
     sqlite.close();
 
     // 7. Create plugin + Invect
-    plugin = rbac({ enableTeams: true });
+    pluginDef = rbac({ enableTeams: true });
+    plugin = pluginDef.backend!;
     invect = await createInvect({
       encryptionKey: 'dGVzdC1lbmNyeXB0aW9uLWtleS0xMjM0NTY3ODkw',
       database: {
@@ -323,7 +337,7 @@ describe('RBAC Plugin — Security Red Team', () => {
         id: 'rbac-test',
       },
       logging: { level: 'warn' },
-      plugins: [plugin],
+      plugins: [pluginDef],
     });
 
     // 8. Open a raw connection for the test PluginDatabaseApi
@@ -1108,7 +1122,7 @@ describe('RBAC Plugin — Security Red Team', () => {
 
       // Effective permission should be 'editor' (team > individual)
       // Use the onAuthorize hook for permission checking via authorize()
-      const authResult = await invect.authorize({
+      const authResult = await invect.auth.authorize({
         identity: TEAM_MEMBER,
         action: 'flow:read',
         resource: { type: 'flow', id: flowId1 },
@@ -1193,7 +1207,9 @@ describe('RBAC Plugin — Security Red Team', () => {
       expect(delRes.status).toBe(204);
 
       // Flow should now be re-parented to team-a (parent of deleted team)
-      const rows = rawDb.prepare('SELECT scope_id FROM flows WHERE id = ?').all(flow.id) as Array<{
+      const rows = rawDb
+        .prepare('SELECT scope_id FROM invect_flows WHERE id = ?')
+        .all(flow.id) as Array<{
         scope_id: string | null;
       }>;
       expect(rows[0]?.scope_id).toBe('team-a');
