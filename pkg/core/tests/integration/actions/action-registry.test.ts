@@ -27,15 +27,14 @@ describe('Action Registry', () => {
     expect(tools.length).toBeGreaterThan(10);
   });
 
-  it('should include core actions (javascript, if_else, template_string, input, output)', async () => {
+  it('should include core actions exposed as agent tools (javascript)', async () => {
     const tools = await invect.agent.getTools();
     const ids = tools.map((t) => t.id);
 
+    // Only core.javascript is exposed as an agent tool; the other core actions
+    // (if_else, switch, input, output, template_string, model) are flow
+    // primitives marked `excludeFromTools: true` so an agent can't pick them.
     expect(ids).toContain('core.javascript');
-    expect(ids).toContain('core.if_else');
-    expect(ids).toContain('core.template_string');
-    expect(ids).toContain('core.input');
-    expect(ids).toContain('core.output');
   });
 
   it('should include provider actions (http, gmail, slack, github)', async () => {
@@ -60,12 +59,11 @@ describe('Action Registry', () => {
     }
   });
 
-  it('should include standalone tools (math_eval, json_logic)', async () => {
+  it('should include standalone tools (math_eval)', async () => {
     const tools = await invect.agent.getTools();
     const ids = tools.map((t) => t.id);
 
     expect(ids).toContain('math_eval');
-    expect(ids).toContain('json_logic');
   });
 
   it('should register plugin actions when provided', async () => {

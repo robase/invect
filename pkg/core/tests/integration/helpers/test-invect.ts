@@ -57,7 +57,7 @@ export async function createTestInvect(opts?: {
     logging: {
       level: 'warn',
     },
-    plugins: opts?.plugins ?? [],
+    plugins: (opts?.plugins ?? []).map((p) => ({ id: p.id, backend: p })),
   });
 
   // Attach cleanup to shutdown so temp files are removed

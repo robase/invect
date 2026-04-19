@@ -4,6 +4,7 @@ import type { NodeOutput } from './types/node-io-types';
 import type { Logger } from './schemas/invect-config';
 import type { FlowEdge, FlowNodeDefinitions } from './services/flow-versions/schemas-fresh';
 import type { AgentPromptResult } from './types/agent-tool.types';
+import type { JsExpressionEvaluator } from '@invect/action-kit';
 
 export type {
   SubmitPromptRequest,
@@ -103,6 +104,10 @@ export interface FlowRunContext {
 
     // Record tool execution for agent nodes
     recordToolExecution?: (input: RecordToolExecutionInput) => Promise<{ id: string } | null>;
+
+    // JS expression evaluator (QuickJS-backed on Node, direct on edge runtimes).
+    // Used by core.javascript, core.if_else, core.switch.
+    evaluator?: JsExpressionEvaluator;
   };
 }
 

@@ -542,6 +542,7 @@ export class NodeExecutionCoordinator {
         globalConfig: {},
         flowInputs,
         functions: {
+          evaluator: this.deps.jsExpressionService,
           markDownstreamNodesAsSkipped: (
             nodeId: string,
             edges: readonly FlowEdge[],

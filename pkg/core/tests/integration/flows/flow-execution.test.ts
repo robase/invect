@@ -169,7 +169,7 @@ describe('Flow Execution', () => {
           label: 'Check Score',
           referenceId: 'score_check',
           params: {
-            condition: { '>=': [{ var: 'data.score' }, 80] },
+            expression: 'data.score >= 80',
           },
           position: { x: 200, y: 0 },
         },
@@ -234,7 +234,7 @@ describe('Flow Execution', () => {
           label: 'Check Score',
           referenceId: 'score_check',
           params: {
-            condition: { '>=': [{ var: 'data.score' }, 80] },
+            expression: 'data.score >= 80',
           },
           position: { x: 200, y: 0 },
         },
@@ -309,7 +309,7 @@ describe('Flow Execution', () => {
           label: 'Is Adult?',
           referenceId: 'age_check',
           params: {
-            condition: { '==': [{ var: 'user_info.isAdult' }, true] },
+            expression: 'user_info.isAdult === true',
           },
           position: { x: 500, y: 200 },
         },

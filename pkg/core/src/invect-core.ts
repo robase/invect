@@ -1552,6 +1552,7 @@ export class Invect {
           flowParams: { useBatchProcessing: false },
           incomingData: inputData,
           functions: {
+            evaluator: this.jsExpressionService ?? undefined,
             markDownstreamNodesAsSkipped: () => {
               /* noop */
             },

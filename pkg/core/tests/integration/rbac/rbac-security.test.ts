@@ -289,7 +289,7 @@ describe('RBAC Plugin — Security Red Team', () => {
     // 4. Seed users
     const allUsers = [ADMIN, OWNER, EDITOR, VIEWER, TEAM_MEMBER, OUTSIDER];
     const insertUser = sqlite.prepare(
-      'INSERT INTO user (id, name, email, role) VALUES (?, ?, ?, ?)',
+      'INSERT INTO invect_user (id, name, email, role) VALUES (?, ?, ?, ?)',
     );
     for (const u of allUsers) {
       insertUser.run(u.id, u.name ?? '', `${u.id}@test.com`, u.role ?? 'user');

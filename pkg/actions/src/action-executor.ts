@@ -83,25 +83,34 @@ export async function executeActionAsNode(
 ): Promise<NodeExecutionResult> {
   const logger = nodeContext.logger;
 
-  const coercedParams = coerceJsonStringParams(params);
-
-  const parseResult = action.params.schema.safeParse(coercedParams);
+  // Try the params as-is first — this preserves JSON-encoded strings for
+  // actions whose schema expects a string (e.g. core.input.defaultValue).
+  // Only fall back to JSON coercion when the raw shape fails validation,
+  // which is what UI-stored JSON fields (e.g. triggers.manual.inputDefinitions)
+  // need.
+  let parseResult = action.params.schema.safeParse(params);
   if (!parseResult.success) {
-    const { prettifyError } = await import('zod/v4');
+    const coercedParams = coerceJsonStringParams(params);
+    const coercedResult = action.params.schema.safeParse(coercedParams);
+    if (coercedResult.success) {
+      parseResult = coercedResult;
+    } else {
+      const { prettifyError } = await import('zod/v4');
 
-    const fieldErrors: Record<string, string> = {};
-    for (const issue of parseResult.error.issues) {
-      if (issue.path && issue.path.length > 0) {
-        const fieldName = String(issue.path[0]);
-        fieldErrors[fieldName] = issue.message;
+      const fieldErrors: Record<string, string> = {};
+      for (const issue of coercedResult.error.issues) {
+        if (issue.path && issue.path.length > 0) {
+          const fieldName = String(issue.path[0]);
+          fieldErrors[fieldName] = issue.message;
+        }
       }
-    }
 
-    return {
-      state: NodeExecutionStatus.FAILED,
-      errors: [prettifyError(parseResult.error)],
-      ...(Object.keys(fieldErrors).length > 0 && { fieldErrors }),
-    } satisfies NodeExecutionFailedResult;
+      return {
+        state: NodeExecutionStatus.FAILED,
+        errors: [prettifyError(coercedResult.error)],
+        ...(Object.keys(fieldErrors).length > 0 && { fieldErrors }),
+      } satisfies NodeExecutionFailedResult;
+    }
   }
 
   let credential: ActionCredential | null = null;

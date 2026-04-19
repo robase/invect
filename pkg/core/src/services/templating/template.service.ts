@@ -39,15 +39,21 @@ const PURE_EXPRESSION_PATTERN = /^\{\{([\s\S]*?)\}\}$/;
  * Checks whether a string is a "pure" single-expression template
  * (i.e. the entire string is exactly `{{ expression }}`).
  *
- * We first validate with the regex, then verify no other `{{ }}` blocks exist.
+ * The PURE_EXPRESSION_PATTERN is non-greedy but still stretches to the final
+ * `}}$`, so a mixed template like `{{ a }} {{ b }}` also matches. We reject
+ * any match whose captured expression still contains `{{` or `}}` — that
+ * means there was another block or stray delimiter, so it's not pure.
  */
 function isPureExpression(template: string): RegExpMatchArray | null {
   const m = template.match(PURE_EXPRESSION_PATTERN);
   if (!m) {
     return null;
   }
-  // Trim whitespace from captured expression (moved from regex \s* groups)
-  m[1] = m[1].trim();
+  const inner = m[1];
+  if (inner.includes('{{') || inner.includes('}}')) {
+    return null;
+  }
+  m[1] = inner.trim();
   return m;
 }
 
