@@ -13,6 +13,7 @@ import type {
   NodeExecutionHookContext,
 } from '../../../src/types/plugin.types';
 import { createTestInvect } from '../helpers/test-invect';
+import type { InvectInstance } from '../../../src/api/types';
 
 /** Simple flow definition used across hook tests */
 const simpleFlowDef = {
@@ -29,7 +30,7 @@ const simpleFlowDef = {
   edges: [] as Array<{ id: string; source: string; target: string }>,
 };
 
-async function createAndRunFlow(invect: Invect) {
+async function createAndRunFlow(invect: InvectInstance) {
   const flow = await invect.flows.create({ name: `hook-test-${Date.now()}` });
   await invect.versions.create(flow.id, { invectDefinition: simpleFlowDef });
   return invect.runs.start(flow.id, {}, { useBatchProcessing: false });

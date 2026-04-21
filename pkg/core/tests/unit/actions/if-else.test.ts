@@ -23,12 +23,12 @@ function makeContext(incomingData: Record<string, unknown> = {}) {
       error: vi.fn(),
     },
     incomingData,
-    credential: undefined,
+    credential: null,
     flowInputs: {},
     flowContext: { nodeId: 'if-1', flowRunId: 'run-1' },
     functions: { evaluator },
     flowRunState: undefined,
-  } as Parameters<typeof ifElseAction.execute>[1];
+  } as unknown as Parameters<typeof ifElseAction.execute>[1];
 }
 
 describe('core.if_else action', () => {
@@ -81,11 +81,11 @@ describe('core.if_else action', () => {
   it('should not call markDownstreamNodesAsSkipped', async () => {
     const markFn = vi.fn();
     const ctx = makeContext({ value: 10 });
-    (ctx as Record<string, unknown>).flowRunState = {
+    (ctx as unknown as Record<string, unknown>).flowRunState = {
       edges: [{ id: 'e1', source: 'if-1', target: 'other', sourceHandle: 'false_output' }],
       skippedNodeIds: new Set(),
     };
-    (ctx as Record<string, unknown>).functions = {
+    (ctx as unknown as Record<string, unknown>).functions = {
       evaluator,
       markDownstreamNodesAsSkipped: markFn,
     };

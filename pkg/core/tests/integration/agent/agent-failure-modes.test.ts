@@ -213,7 +213,7 @@ describe('Agent failure modes', () => {
 
       const out = getAgentOutput(result)!;
       expect(out.finishReason).toBe('completed');
-      expect(out.tokenUsage.truncationOccurred).toBe(true);
+      expect(out.tokenUsage?.truncationOccurred).toBe(true);
 
       // The truncation notice should appear in the second request's messages
       // (the first message — the huge task prompt — is preserved by design).

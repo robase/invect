@@ -78,7 +78,13 @@ describe('Action Registry', () => {
               id: 'test.custom_action',
               name: 'Custom Test Action',
               description: 'A test action from a plugin',
-              provider: { id: 'test', name: 'Test', icon: 'Beaker' },
+              provider: {
+                id: 'test',
+                name: 'Test',
+                icon: 'Beaker',
+                category: 'custom',
+                nodeCategory: 'Custom',
+              },
               params: {
                 schema: z.object({}),
                 fields: [],

@@ -52,7 +52,6 @@ export async function createTestInvect(opts?: {
     database: {
       type: 'sqlite',
       connectionString: `file:${dbPath}`,
-      id: 'test',
     },
     logging: {
       level: 'warn',

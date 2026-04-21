@@ -36,7 +36,9 @@ function successTrace(nodeId: string, variables: Record<string, unknown>): NodeE
     },
     inputs: {},
     createdAt: new Date(),
-  } as NodeExecution;
+    startedAt: new Date(),
+    retryCount: 0,
+  } as unknown as NodeExecution;
 }
 
 const mockGraphService = {
@@ -104,7 +106,9 @@ describe('FlowRunCoordinator.handleBranchSkipping', () => {
       outputs: undefined,
       inputs: {},
       createdAt: new Date(),
-    } as NodeExecution;
+      startedAt: new Date(),
+      retryCount: 0,
+    } as unknown as NodeExecution;
     callHandleBranchSkipping(coordinator, 'if-1', trace, [], skipped);
     expect(skipped.size).toBe(0);
   });

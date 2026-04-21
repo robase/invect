@@ -79,7 +79,7 @@
     "dev": "tsdown --watch",
     "clean": "rm -rf dist",
     "format": "oxfmt",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "lint": "oxlint --fix",
     "test": "vitest run",
     "test:watch": "vitest",

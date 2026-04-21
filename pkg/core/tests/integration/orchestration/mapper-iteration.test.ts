@@ -468,7 +468,7 @@ describe('Node mapper / iteration', () => {
             params: { code: 'return n * 2' },
             mapper: { enabled: true, expression: 'src' },
             position: { x: 200, y: 0 },
-          } as InvectDefinition['nodes'][number],
+          } as unknown as InvectDefinition['nodes'][number],
           {
             id: 'sum',
             type: 'core.javascript',

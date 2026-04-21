@@ -54,7 +54,7 @@ beforeAll(async () => {
 
   const httpCred = await invect.credentials.create({
     name: 'Huge-response HTTP (none)',
-    type: 'custom',
+    type: 'http-api',
     authType: 'custom',
     config: { headers: {} },
     description: 'no-op auth for local HTTP',
@@ -76,8 +76,11 @@ afterAll(async () => {
     server.close((err) => (err ? reject(err) : resolve())),
   );
   await invect.shutdown();
-  if (originalOpenAIBaseUrl === undefined) {delete process.env.OPENAI_BASE_URL;}
-  else {process.env.OPENAI_BASE_URL = originalOpenAIBaseUrl;}
+  if (originalOpenAIBaseUrl === undefined) {
+    delete process.env.OPENAI_BASE_URL;
+  } else {
+    process.env.OPENAI_BASE_URL = originalOpenAIBaseUrl;
+  }
 });
 
 beforeEach(() => {
@@ -115,7 +118,9 @@ function getNodeOutputValue(
 }
 
 function parseIfJson(value: unknown): unknown {
-  if (typeof value !== 'string') {return value;}
+  if (typeof value !== 'string') {
+    return value;
+  }
   try {
     return JSON.parse(value);
   } catch {
@@ -236,7 +241,7 @@ describe('Huge payload handling', () => {
             params: { code: 'return n * 2' },
             mapper: { enabled: true, expression: 'src', concurrency: 25 },
             position: { x: 200, y: 0 },
-          } as InvectDefinition['nodes'][number],
+          } as unknown as InvectDefinition['nodes'][number],
           {
             id: 'sum',
             type: 'core.javascript',

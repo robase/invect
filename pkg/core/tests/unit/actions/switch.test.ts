@@ -25,18 +25,19 @@ function makeContext(incomingData: Record<string, unknown> = {}) {
       error: vi.fn(),
     },
     incomingData,
-    credential: undefined,
+    credential: null,
     flowInputs: {},
     flowContext: { nodeId: 'switch-1', flowRunId: 'run-1' },
     functions: { evaluator },
     flowRunState: undefined,
-  } as Parameters<typeof switchAction.execute>[1];
+  } as unknown as Parameters<typeof switchAction.execute>[1];
 }
 
 describe('core.switch action', () => {
   it('should match the first truthy case', async () => {
     const result = await switchAction.execute(
       {
+        matchMode: 'first',
         cases: [
           { slug: 'high', label: 'High', expression: 'priority === "high"' },
           { slug: 'medium', label: 'Medium', expression: 'priority === "medium"' },
@@ -58,6 +59,7 @@ describe('core.switch action', () => {
   it('should match the second case when first is falsy', async () => {
     const result = await switchAction.execute(
       {
+        matchMode: 'first',
         cases: [
           { slug: 'high', label: 'High', expression: 'priority === "high"' },
           { slug: 'medium', label: 'Medium', expression: 'priority === "medium"' },
@@ -75,6 +77,7 @@ describe('core.switch action', () => {
   it('should fall through to default when no case matches', async () => {
     const result = await switchAction.execute(
       {
+        matchMode: 'first',
         cases: [
           { slug: 'high', label: 'High', expression: 'priority === "high"' },
           { slug: 'low', label: 'Low', expression: 'priority === "low"' },
@@ -93,6 +96,7 @@ describe('core.switch action', () => {
   it('should only match the first truthy case (short-circuit routing)', async () => {
     const result = await switchAction.execute(
       {
+        matchMode: 'first',
         cases: [
           { slug: 'first', label: 'First', expression: 'true' },
           { slug: 'second', label: 'Second', expression: 'true' },
@@ -111,6 +115,7 @@ describe('core.switch action', () => {
     const data = { user: { name: 'Alice', age: 30 } };
     const result = await switchAction.execute(
       {
+        matchMode: 'first',
         cases: [{ slug: 'adult', label: 'Adult', expression: 'user.age >= 18' }],
       },
       makeContext(data),
@@ -124,6 +129,7 @@ describe('core.switch action', () => {
   it('should handle expression errors gracefully and continue', async () => {
     const result = await switchAction.execute(
       {
+        matchMode: 'first',
         cases: [
           { slug: 'error_case', label: 'Error', expression: 'nonexistent.property.access' },
           { slug: 'safe', label: 'Safe', expression: 'true' },
@@ -136,12 +142,14 @@ describe('core.switch action', () => {
     // Error case fails, falls through to safe case
     expect(result.outputVariables!.safe).toBeDefined();
     expect(result.metadata?.matchedSlug).toBe('safe');
-    expect(result.metadata?.caseResults?.[0]?.error).toBeDefined();
+    const errorCaseResults = result.metadata?.caseResults as Array<{ error?: unknown }> | undefined;
+    expect(errorCaseResults?.[0]?.error).toBeDefined();
   });
 
   it('should include all case results in metadata', async () => {
     const result = await switchAction.execute(
       {
+        matchMode: 'first',
         cases: [
           { slug: 'a', label: 'A', expression: 'false' },
           { slug: 'b', label: 'B', expression: 'true' },
@@ -164,6 +172,7 @@ describe('core.switch action', () => {
   it('should work with empty incoming data (default branch)', async () => {
     const result = await switchAction.execute(
       {
+        matchMode: 'first',
         cases: [{ slug: 'has_data', label: 'Has Data', expression: 'items.length > 0' }],
       },
       makeContext({}),

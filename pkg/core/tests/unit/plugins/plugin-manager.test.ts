@@ -74,6 +74,7 @@ describe('PluginManager', () => {
         config: {},
         logger: mockLogger,
         registerAction: vi.fn(),
+        getInvect: vi.fn() as never,
       });
 
       expect(initFn).toHaveBeenCalledOnce();
@@ -102,6 +103,7 @@ describe('PluginManager', () => {
         config: {},
         logger: mockLogger,
         registerAction,
+        getInvect: vi.fn() as never,
       });
 
       expect(registerAction).toHaveBeenCalledWith(fakeAction);
@@ -117,7 +119,12 @@ describe('PluginManager', () => {
       const pm = new PluginManager([plugin]);
 
       await expect(
-        pm.initializePlugins({ config: {}, logger: mockLogger, registerAction: vi.fn() }),
+        pm.initializePlugins({
+          config: {},
+          logger: mockLogger,
+          registerAction: vi.fn(),
+          getInvect: vi.fn() as never,
+        }),
       ).rejects.toThrow('Plugin "fail-init" initialization failed: boom');
     });
   });

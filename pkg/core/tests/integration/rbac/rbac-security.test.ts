@@ -239,6 +239,7 @@ function createContext(overrides: {
       getResolvedRole: (id) => invect.auth.getService().getResolvedRole(id),
       authorize: (context) => invect.auth.authorize(context),
     },
+    getInvect: () => invect,
   };
 }
 
@@ -327,14 +328,13 @@ describe('RBAC Plugin — Security Red Team', () => {
     sqlite.close();
 
     // 7. Create plugin + Invect
-    pluginDef = rbac({ enableTeams: true });
+    pluginDef = rbac({ enableTeams: true }) as unknown as InvectPluginDefinition;
     plugin = pluginDef.backend!;
     invect = await createInvect({
       encryptionKey: 'dGVzdC1lbmNyeXB0aW9uLWtleS0xMjM0NTY3ODkw',
       database: {
         type: 'sqlite',
         connectionString: `file:${dbPath}`,
-        id: 'rbac-test',
       },
       logging: { level: 'warn' },
       plugins: [pluginDef],

@@ -101,7 +101,7 @@ describe('DatabaseService startup checks', () => {
       const { DatabaseService } = await import('../../../src/services/database/database.service');
       const logger = createMockLogger();
       const service = new DatabaseService(
-        { id: 'test', type: 'sqlite', connectionString: 'file:./test.db', name: 'Test' },
+        { type: 'sqlite', connectionString: 'file:./test.db', name: 'Test' },
         logger,
       );
 
@@ -122,7 +122,7 @@ describe('DatabaseService startup checks', () => {
       const { DatabaseService } = await import('../../../src/services/database/database.service');
       const logger = createMockLogger();
       const service = new DatabaseService(
-        { id: 'test', type: 'sqlite', connectionString: 'file:./test.db', name: 'Test' },
+        { type: 'sqlite', connectionString: 'file:./test.db', name: 'Test' },
         logger,
       );
 
@@ -141,7 +141,7 @@ describe('DatabaseService startup checks', () => {
       const { DatabaseService } = await import('../../../src/services/database/database.service');
       const logger = createMockLogger();
       const service = new DatabaseService(
-        { id: 'test', type: 'sqlite', connectionString: 'file:./test.db', name: 'Test' },
+        { type: 'sqlite', connectionString: 'file:./test.db', name: 'Test' },
         logger,
       );
 
@@ -163,7 +163,7 @@ describe('DatabaseService startup checks', () => {
       const { DatabaseService } = await import('../../../src/services/database/database.service');
       const logger = createMockLogger();
       const service = new DatabaseService(
-        { id: 'test', type: 'sqlite', connectionString: 'file:./bad/path.db', name: 'Test' },
+        { type: 'sqlite', connectionString: 'file:./bad/path.db', name: 'Test' },
         logger,
       );
 
@@ -185,7 +185,6 @@ describe('DatabaseService startup checks', () => {
       const logger = createMockLogger();
       const service = new DatabaseService(
         {
-          id: 'test',
           type: 'postgresql',
           connectionString: 'postgres://user:s3cret_pass@localhost:5432/mydb',
           name: 'Test',
@@ -215,7 +214,7 @@ describe('DatabaseService startup checks', () => {
       const { DatabaseService } = await import('../../../src/services/database/database.service');
       const logger = createMockLogger();
       const service = new DatabaseService(
-        { id: 'test', type: 'sqlite', connectionString: 'file:./test.db', name: 'Test' },
+        { type: 'sqlite', connectionString: 'file:./test.db', name: 'Test' },
         logger,
       );
 
@@ -245,7 +244,7 @@ describe('DatabaseService startup checks', () => {
         },
       ];
       const service = new DatabaseService(
-        { id: 'test', type: 'sqlite', connectionString: 'file:./test.db', name: 'Test' },
+        { type: 'sqlite', connectionString: 'file:./test.db', name: 'Test' },
         logger,
         undefined,
         plugins,
@@ -274,7 +273,7 @@ describe('DatabaseService startup checks', () => {
         },
       ];
       const service = new DatabaseService(
-        { id: 'test', type: 'sqlite', connectionString: 'file:./test.db', name: 'Test' },
+        { type: 'sqlite', connectionString: 'file:./test.db', name: 'Test' },
         logger,
         undefined,
         plugins,
@@ -300,7 +299,7 @@ describe('DatabaseService startup checks', () => {
         },
       ];
       const service = new DatabaseService(
-        { id: 'test', type: 'sqlite', connectionString: 'file:./test.db', name: 'Test' },
+        { type: 'sqlite', connectionString: 'file:./test.db', name: 'Test' },
         logger,
         undefined,
         plugins,
@@ -332,7 +331,7 @@ describe('DatabaseService startup checks', () => {
         },
       ];
       const service = new DatabaseService(
-        { id: 'test', type: 'sqlite', connectionString: 'file:./test.db', name: 'Test' },
+        { type: 'sqlite', connectionString: 'file:./test.db', name: 'Test' },
         logger,
         undefined,
         plugins,
@@ -368,7 +367,7 @@ describe('DatabaseService startup checks', () => {
         },
       ];
       const service = new DatabaseService(
-        { id: 'test', type: 'sqlite', connectionString: 'file:./test.db', name: 'Test' },
+        { type: 'sqlite', connectionString: 'file:./test.db', name: 'Test' },
         logger,
         undefined,
         plugins,
@@ -393,7 +392,7 @@ describe('DatabaseService startup checks', () => {
         },
       ];
       const service = new DatabaseService(
-        { id: 'test', type: 'sqlite', connectionString: 'file:./test.db', name: 'Test' },
+        { type: 'sqlite', connectionString: 'file:./test.db', name: 'Test' },
         logger,
         undefined,
         plugins,
@@ -422,7 +421,7 @@ describe('DatabaseService startup checks', () => {
         },
       ];
       const service = new DatabaseService(
-        { id: 'test', type: 'sqlite', connectionString: 'file:./test.db', name: 'Test' },
+        { type: 'sqlite', connectionString: 'file:./test.db', name: 'Test' },
         logger,
         undefined,
         plugins,
