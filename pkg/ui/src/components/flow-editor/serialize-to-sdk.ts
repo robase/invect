@@ -182,9 +182,9 @@ function serializeEdge(edge: ClipboardEdge, nodeIdToRef: Map<string, string>): s
   }
 
   if (edge.sourceHandle) {
-    return `['${sourceRef}', '${targetRef}', '${edge.sourceHandle}']`;
+    return `{ from: ${JSON.stringify(sourceRef)}, to: ${JSON.stringify(targetRef)}, handle: ${JSON.stringify(edge.sourceHandle)} }`;
   }
-  return `['${sourceRef}', '${targetRef}']`;
+  return `{ from: ${JSON.stringify(sourceRef)}, to: ${JSON.stringify(targetRef)} }`;
 }
 
 // ---------------------------------------------------------------------------

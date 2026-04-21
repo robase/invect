@@ -106,14 +106,22 @@ function isNodeDefinition(item: unknown): item is FlowNodeDefinitions {
   );
 }
 
-function isEdgeTuple(item: unknown): item is EdgeInput {
-  if (!Array.isArray(item)) {
-    return false;
+function isEdgeInput(item: unknown): item is EdgeInput {
+  if (Array.isArray(item)) {
+    if (item.length < 2 || item.length > 3) {
+      return false;
+    }
+    return item.every((el) => typeof el === 'string');
   }
-  if (item.length < 2 || item.length > 3) {
-    return false;
+  if (typeof item === 'object' && item !== null) {
+    const obj = item as Record<string, unknown>;
+    return (
+      typeof obj.from === 'string' &&
+      typeof obj.to === 'string' &&
+      (obj.handle === undefined || typeof obj.handle === 'string')
+    );
   }
-  return item.every((el) => typeof el === 'string');
+  return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -213,7 +221,7 @@ export function parseSDKText(text: string): ParsedSDK {
   }
 
   for (const item of rawEdges) {
-    if (item !== null && item !== undefined && isEdgeTuple(item)) {
+    if (item !== null && item !== undefined && isEdgeInput(item)) {
       edges.push(item as EdgeInput);
     }
   }
