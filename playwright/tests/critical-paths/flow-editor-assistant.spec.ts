@@ -201,7 +201,7 @@ test.describe('Flow Editor Assistant And Tooling', () => {
         },
         {
           id: 'agent-linear',
-          type: 'AGENT',
+          type: 'core.agent',
           label: 'Linear Assistant Agent',
           referenceId: 'linear_agent',
           params: {

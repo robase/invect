@@ -193,7 +193,7 @@ function _backendPlugin(options?: CloudflareAgentsPluginOptions): InvectPlugin {
                 'core.template_string',
                 'core.text',
                 'http.request',
-                'AGENT',
+                'core.agent',
               ],
               passthroughFallback: true,
               description:

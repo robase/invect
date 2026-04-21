@@ -60,11 +60,9 @@ function findAgentNode(nodes: FlowNodeDefinitions[], nodeId: string): FindAgentN
   if (!node) {
     return { error: `Node "${nodeId}" not found in flow` };
   }
-  // AGENT type check — could be "AGENT" (legacy) or the node could have addedTools
-  const isAgent = node.type === 'AGENT' || node.type === 'agent';
-  if (!isAgent) {
+  if (node.type !== 'core.agent') {
     return {
-      error: `Node "${nodeId}" is type "${node.type}", not an AGENT node. Only AGENT nodes have tools.`,
+      error: `Node "${nodeId}" is type "${node.type}", not a core.agent node. Only core.agent nodes have tools.`,
     };
   }
   return { node };

@@ -1,9 +1,7 @@
 // Core services and factories
 import { ServiceFactory } from './services/service-factory';
-import { DefaultNodeRegistryFactory, NodeExecutorRegistry } from './nodes/executor-registry';
 import { FlowValidator } from './services/flow-validator';
 import { GraphNodeType, SubmitAgentPromptRequest, NodeExecutionContext } from './types.internal';
-import { AgentNodeExecutor } from './nodes/agent-executor';
 
 // Database models
 import type { Flow } from './services/flows/flows.model';
@@ -39,7 +37,6 @@ import { InvectConfig, InvectConfigSchema, PaginatedResponse, QueryOptions } fro
 import {
   CreateFlowVersionRequest,
   createFlowVersionRequestSchema,
-  FlowNodeForType,
   InvectDefinition,
   invectDefinitionSchema,
 } from './services/flow-versions/schemas-fresh';
@@ -75,13 +72,6 @@ import type {
   NodeConfigUpdateResponse,
 } from './types/node-config-update.types';
 
-// Agent tools
-import {
-  AgentToolRegistry,
-  initializeGlobalToolRegistry,
-  getGlobalToolRegistry,
-} from './services/agent-tools';
-
 // Plugin system
 import { PluginManager } from './services/plugin-manager';
 import type {
@@ -93,12 +83,7 @@ import type {
 import type { AgentToolDefinition, AgentPromptResult } from './types/agent-tool.types';
 
 // Action registry (Provider-Actions architecture)
-import {
-  ActionRegistry,
-  initializeGlobalActionRegistry,
-  createToolExecutorForAction,
-  registerBuiltinActions,
-} from './actions';
+import { ActionRegistry, initializeGlobalActionRegistry, registerBuiltinActions } from './actions';
 import type { ActionDefinition, ProviderDef, LoadOptionsResult } from './actions';
 
 // Authorization
@@ -195,7 +180,6 @@ const _LEGACY_NODE_PROVIDER_OVERRIDES: Record<string, NonNullable<NodeDefinition
  */
 export class Invect {
   protected serviceFactory: ServiceFactory | null = null;
-  protected nodeRegistry: NodeExecutorRegistry | null = null;
   protected actionRegistry: ActionRegistry | null = null;
   private jsExpressionService: JsExpressionServiceType | null = null;
   private templateService: TemplateService | null = null;
@@ -494,9 +478,6 @@ export class Invect {
         );
       }
 
-      // Initialize node registry first
-      this.nodeRegistry = await this.initializeNodes();
-
       // Initialize JS expression engine (sandboxed QuickJS runtime for data mapper)
       try {
         this.jsExpressionService = new JsExpressionService({}, this.config.logger);
@@ -512,11 +493,8 @@ export class Invect {
         );
       }
 
-      // Register action-based tools into the existing tool registry
-      this.registerActionsAsTools();
-
-      // Initialize service factory (requires node registry)
-      await this.initializeServices(this.nodeRegistry);
+      // Initialize service factory
+      await this.initializeServices();
 
       this.initialized = true;
 
@@ -594,7 +572,6 @@ export class Invect {
         this.serviceFactory = null;
       }
 
-      this.nodeRegistry = null;
       this.actionRegistry = null;
 
       // Dispose JS expression engine + template service
@@ -1397,19 +1374,8 @@ export class Invect {
   getAvailableNodes(): NodeDefinition[] {
     this.ensureInitialized();
 
-    // Action-based definitions are the primary source for all node types.
-    const actionDefs = this.actionRegistry ? this.actionRegistry.getAllNodeDefinitions() : [];
+    const allDefs = this.actionRegistry ? this.actionRegistry.getAllNodeDefinitions() : [];
 
-    // Legacy executors only cover AGENT — add its definition if not already
-    // present in the action registry.
-    const actionTypes = new Set(actionDefs.map((d) => d.type as string));
-    const legacyDefs = this.nodeRegistry
-      .getAllDefinitions()
-      .filter((d) => !actionTypes.has(d.type as string));
-
-    const allDefs = [...actionDefs, ...legacyDefs];
-
-    // Legacy nodes don't carry provider info — stamp them as Invect Core.
     for (const def of allDefs) {
       if (!def.provider) {
         def.provider = { id: 'core', name: 'Invect Core', icon: 'Blocks' };
@@ -1495,25 +1461,16 @@ export class Invect {
   ): Promise<{ success: boolean; output?: Record<string, unknown>; error?: string }> {
     this.ensureInitialized();
 
-    // Try legacy executor first (only AGENT remains), then action registry
-    const executor = this.nodeRegistry.get(nodeType as GraphNodeType);
-    const action = !executor && this.actionRegistry ? this.actionRegistry.get(nodeType) : undefined;
-
-    if (!executor && !action) {
+    const action = this.actionRegistry ? this.actionRegistry.get(nodeType) : undefined;
+    if (!action) {
       throw new ValidationError(`Unknown node type: ${nodeType}`);
     }
 
-    // Merge default params with provided params (provided params take precedence)
-    let defaultParams: Record<string, unknown> = {};
-    if (executor) {
-      defaultParams = executor.getDefinition().defaultParams ?? {};
-    } else if (action) {
-      defaultParams = Object.fromEntries(
-        (action.params.fields ?? [])
-          .filter((f) => f.defaultValue !== undefined)
-          .map((f) => [f.name, f.defaultValue]),
-      );
-    }
+    const defaultParams: Record<string, unknown> = Object.fromEntries(
+      (action.params.fields ?? [])
+        .filter((f) => f.defaultValue !== undefined)
+        .map((f) => [f.name, f.defaultValue]),
+    );
     const mergedParams = { ...defaultParams, ...params };
 
     // Determine which param keys should NOT be resolved as templates
@@ -1539,79 +1496,10 @@ export class Invect {
     });
 
     try {
-      if (action) {
-        // ── Action path ─────────────────────────────────────────────────
-        const { executeActionAsNode } = await import('./actions/action-executor');
+      const { executeActionAsNode } = await import('./actions/action-executor');
 
-        const mockContext: NodeExecutionContext = {
-          nodeId: `test-${Date.now()}`,
-          flowRunId: `test-run-${Date.now()}`,
-          logger: this.config.logger,
-          globalConfig: {},
-          flowInputs: {},
-          flowParams: { useBatchProcessing: false },
-          incomingData: inputData,
-          functions: {
-            evaluator: this.jsExpressionService ?? undefined,
-            markDownstreamNodesAsSkipped: () => {
-              /* noop */
-            },
-            runTemplateReplacement: async (
-              template: string,
-              variables: Record<string, unknown>,
-            ) => {
-              if (!this.templateService) {
-                return template;
-              }
-              const result = await this.templateService.render(template, variables);
-              if (result === null || result === undefined) {
-                return '';
-              }
-              if (typeof result === 'object') {
-                return JSON.stringify(result);
-              }
-              return String(result);
-            },
-            submitPrompt: async (request: SubmitPromptRequest) =>
-              this.baseAIClient.executePrompt(request),
-            getCredential: async (credentialId: string) =>
-              this.credentialsService.getDecryptedWithRefresh(credentialId),
-          },
-          allNodeOutputs: new Map(),
-        } as unknown as NodeExecutionContext;
-
-        const result = await executeActionAsNode(action, resolvedParams, mockContext);
-
-        if (result.state === NodeExecutionStatus.SUCCESS) {
-          let output: Record<string, unknown> | undefined;
-          if (result.output?.data?.variables) {
-            output = Object.fromEntries(
-              Object.entries(result.output.data.variables).map(([k, v]) => [
-                k,
-                (v as { value: unknown }).value,
-              ]),
-            );
-          } else if (result.output) {
-            output = result.output as unknown as Record<string, unknown>;
-          }
-          return { success: true, output };
-        } else if (result.state === NodeExecutionStatus.FAILED) {
-          return { success: false, error: result.errors?.join(', ') || 'Node execution failed' };
-        } else {
-          return { success: true, output: { status: 'pending' } };
-        }
-      }
-
-      // ── Legacy executor path (AGENT only) ───────────────────────────
-      const mockNode = {
-        id: `test-${Date.now()}`,
-        type: nodeType,
-        params: resolvedParams,
-        position: { x: 0, y: 0 },
-      };
-
-      const context = {
-        nodeId: mockNode.id,
+      const mockContext: NodeExecutionContext = {
+        nodeId: `test-${Date.now()}`,
         flowRunId: `test-run-${Date.now()}`,
         logger: this.config.logger,
         globalConfig: {},
@@ -1619,28 +1507,32 @@ export class Invect {
         flowParams: { useBatchProcessing: false },
         incomingData: inputData,
         functions: {
+          evaluator: this.jsExpressionService ?? undefined,
           markDownstreamNodesAsSkipped: () => {
-            /* noop for test execution */
+            /* noop */
           },
-          submitPrompt: async (request: SubmitPromptRequest) => {
-            this.config.logger.debug('Test node submitting prompt', { request });
-            return this.baseAIClient.executePrompt(request);
+          runTemplateReplacement: async (template: string, variables: Record<string, unknown>) => {
+            if (!this.templateService) {
+              return template;
+            }
+            const result = await this.templateService.render(template, variables);
+            if (result === null || result === undefined) {
+              return '';
+            }
+            if (typeof result === 'object') {
+              return JSON.stringify(result);
+            }
+            return String(result);
           },
-          getCredential: async (credentialId: string) => {
-            return this.credentialsService.getDecryptedWithRefresh(credentialId);
-          },
+          submitPrompt: async (request: SubmitPromptRequest) =>
+            this.baseAIClient.executePrompt(request),
+          getCredential: async (credentialId: string) =>
+            this.credentialsService.getDecryptedWithRefresh(credentialId),
         },
         allNodeOutputs: new Map(),
-      };
+      } as unknown as NodeExecutionContext;
 
-      const effectiveInputs: Record<string, unknown> = { ...inputData };
-
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const result = await executor!.execute(
-        effectiveInputs as unknown as Record<string, unknown>,
-        mockNode as FlowNodeForType<GraphNodeType>,
-        context as unknown as NodeExecutionContext,
-      );
+      const result = await executeActionAsNode(action, resolvedParams, mockContext);
 
       if (result.state === NodeExecutionStatus.SUCCESS) {
         let output: Record<string, unknown> | undefined;
@@ -1692,22 +1584,6 @@ export class Invect {
       },
     };
 
-    // 1. Try legacy executor (AGENT)
-    const executor = this.nodeRegistry.get(event.nodeType);
-    if (executor) {
-      try {
-        return await executor.handleConfigUpdate(event, configContext);
-      } catch (error) {
-        this.config.logger.error('Node config update handler failed', {
-          error,
-          nodeType: event.nodeType,
-          nodeId: event.nodeId,
-        });
-        throw error;
-      }
-    }
-
-    // 2. Try action registry — use onConfigUpdate if defined, else return static definition
     const nodeTypeStr = event.nodeType as string;
     const action = this.actionRegistry?.get(nodeTypeStr);
     if (action) {
@@ -2000,12 +1876,11 @@ export class Invect {
   /**
    * Initialize services
    */
-  private async initializeServices(nodeRegistry: NodeExecutorRegistry): Promise<void> {
+  private async initializeServices(): Promise<void> {
     this.config.logger.debug('Initializing service factory...');
 
     this.serviceFactory = new ServiceFactory(
       this.config,
-      nodeRegistry,
       this.actionRegistry,
       this.pluginManager,
       this.jsExpressionService ?? undefined,
@@ -2015,60 +1890,12 @@ export class Invect {
   }
 
   /**
-   * Initialize node registry with tool registry
-   */
-  private async initializeNodes() {
-    this.config.logger.debug('Initializing node registry...');
-
-    // First create the node registry with all executors (without tool registry yet)
-    const nodeRegistry = await DefaultNodeRegistryFactory.createDefault(this.config.logger);
-
-    // Now initialize tool registry - it will discover tools from node executors
-    const toolRegistry = await initializeGlobalToolRegistry(this.config.logger);
-    this.config.logger.debug(`Initialized agent tool registry with ${toolRegistry.size} tools`);
-
-    // Update agent executor with the tool registry
-    const agentExecutor = nodeRegistry.get(GraphNodeType.AGENT);
-    if (agentExecutor && 'setToolRegistry' in agentExecutor) {
-      (agentExecutor as unknown as AgentNodeExecutor).setToolRegistry(toolRegistry);
-    }
-
-    return nodeRegistry;
-  }
-
-  /**
-   * Register all actions in the ActionRegistry as agent tools.
-   */
-  private registerActionsAsTools(): void {
-    if (!this.actionRegistry) {
-      return;
-    }
-
-    let toolRegistry: AgentToolRegistry;
-    try {
-      toolRegistry = getGlobalToolRegistry();
-    } catch {
-      // Tool registry not yet initialised — actions will be picked up
-      // when initializeGlobalToolRegistry runs during initializeNodes().
-      return;
-    }
-
-    for (const action of this.actionRegistry.getAll()) {
-      const toolDef = this.actionRegistry.toAgentToolDefinition(action.id);
-      if (toolDef && !toolRegistry.has(toolDef.id)) {
-        toolRegistry.register(toolDef, createToolExecutorForAction(action));
-      }
-    }
-  }
-
-  /**
    * Ensure core is initialized
    */
   private ensureInitialized(): asserts this is {
     serviceFactory: ServiceFactory;
-    nodeRegistry: NodeExecutorRegistry;
   } {
-    if (!this.initialized || !this.serviceFactory || !this.nodeRegistry) {
+    if (!this.initialized || !this.serviceFactory) {
       throw new DatabaseError('Invect Core not initialized. Call initialize() first.');
     }
   }
@@ -2097,13 +1924,6 @@ export class Invect {
       throw new DatabaseError('Action registry not initialized');
     }
     this.actionRegistry.register(action);
-
-    // Also register into the tool registry so the agent can discover it
-    const toolDef = this.actionRegistry.toAgentToolDefinition(action.id);
-    if (toolDef) {
-      const toolRegistry: AgentToolRegistry = getGlobalToolRegistry();
-      toolRegistry.register(toolDef, createToolExecutorForAction(action));
-    }
   }
 
   /**
@@ -2137,7 +1957,17 @@ export class Invect {
    */
   getAgentTools(): AgentToolDefinition[] {
     this.ensureInitialized();
-    return getGlobalToolRegistry().getDefinitions();
+    if (!this.actionRegistry) {
+      return [];
+    }
+    const defs: AgentToolDefinition[] = [];
+    for (const action of this.actionRegistry.getAll()) {
+      const toolDef = this.actionRegistry.toAgentToolDefinition(action.id);
+      if (toolDef) {
+        defs.push(toolDef);
+      }
+    }
+    return defs;
   }
 
   /**

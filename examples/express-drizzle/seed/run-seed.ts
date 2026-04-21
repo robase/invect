@@ -1859,7 +1859,7 @@ function buildAgentGmailFlow(aiCredentialId: string): InvectDefinition {
       // in the tool's params when adding it via the UI
       {
         id: 'agent-email-assistant',
-        type: 'AGENT',
+        type: 'core.agent',
         label: 'Email Assistant Agent',
         referenceId: 'email_agent',
         params: {
@@ -2003,7 +2003,7 @@ function buildTriggeredLinearAgentFlow(aiCredentialId: string): InvectDefinition
       // ── Agent: Linear assistant ───────────────────────────────────
       {
         id: 'agent-linear',
-        type: 'AGENT',
+        type: 'core.agent',
         label: 'Linear Assistant Agent',
         referenceId: 'linear_agent',
         params: {

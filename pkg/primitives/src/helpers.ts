@@ -212,9 +212,9 @@ export function code(
 export const javascript = code;
 
 // Generic node builder for action types without a dedicated helper (e.g.
-// integration providers or legacy types like "AGENT"). The returned node is
-// a plain `PrimitiveNode` whose params are stored as-is; runtime execution
-// relies on the action with the same id being registered in the flow runner.
+// integration providers). The returned node is a plain `PrimitiveNode` whose
+// params are stored as-is; runtime execution relies on the action with the
+// same id being registered in the flow runner.
 export function node(
   referenceId: string,
   type: string,
@@ -232,5 +232,7 @@ export function node(
 // ─── Edge helpers ─────────────────────────────────────────────────────────────
 
 export function edge(source: string, target: string, sourceHandle?: string): PrimitiveEdge {
-  return sourceHandle ? [source, target, sourceHandle] : [source, target];
+  return sourceHandle
+    ? { from: source, to: target, handle: sourceHandle }
+    : { from: source, to: target };
 }

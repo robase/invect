@@ -83,7 +83,7 @@ function NodesSidebar({
 
   const getNodeSortRank = (providerId: string, node: NodeDefinition) => {
     if (providerId === 'core') {
-      if (node.type === 'AGENT') {
+      if (node.type === 'core.agent') {
         return 0;
       }
       if (node.type === 'core.model') {

@@ -1,4 +1,4 @@
-import type { PrimitiveFlowDefinition } from './types';
+import { edgeSource, edgeTarget, type PrimitiveFlowDefinition } from './types';
 
 const RESERVED_KEYS = new Set(['previous_nodes']);
 
@@ -40,7 +40,8 @@ export function validateFlow(def: PrimitiveFlowDefinition): void {
 
   // Validate edge references
   for (const edge of def.edges) {
-    const [source, target] = edge;
+    const source = edgeSource(edge);
+    const target = edgeTarget(edge);
     if (!seen.has(source)) {
       throw new FlowValidationError(`Edge references unknown source node: "${source}"`);
     }

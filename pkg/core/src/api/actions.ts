@@ -1,15 +1,11 @@
 import type { ActionsAPI } from './types';
 import type { ActionRegistry } from '../actions';
-import { createToolExecutorForAction } from '../actions';
-import { getGlobalToolRegistry, type AgentToolRegistry } from '../services/agent-tools';
-import type { NodeExecutorRegistry } from '../nodes/executor-registry';
 import type { ServiceFactory } from '../services/service-factory';
 import type { Logger } from '../schemas';
 import { ValidationError } from '../types/common/errors.types';
 
 export function createActionsAPI(
   actionRegistry: ActionRegistry,
-  nodeRegistry: NodeExecutorRegistry,
   sf: ServiceFactory,
   logger: Logger,
 ): ActionsAPI {
@@ -20,13 +16,6 @@ export function createActionsAPI(
 
     register(action) {
       actionRegistry.register(action);
-
-      // Also register into the tool registry so the agent can discover it
-      const toolDef = actionRegistry.toAgentToolDefinition(action.id);
-      if (toolDef) {
-        const toolRegistry: AgentToolRegistry = getGlobalToolRegistry();
-        toolRegistry.register(toolDef, createToolExecutorForAction(action));
-      }
     },
 
     getProviders() {
@@ -38,25 +27,12 @@ export function createActionsAPI(
     },
 
     getAvailableNodes() {
-      // Action-based definitions are the primary source for all node types
-      const actionDefs = actionRegistry.getAllNodeDefinitions();
-
-      // Legacy executors only cover AGENT — add its definition if not already
-      // present in the action registry
-      const actionTypes = new Set(actionDefs.map((d) => d.type as string));
-      const legacyDefs = nodeRegistry
-        .getAllDefinitions()
-        .filter((d) => !actionTypes.has(d.type as string));
-
-      const allDefs = [...actionDefs, ...legacyDefs];
-
-      // Legacy nodes don't carry provider info — stamp them as Invect Core
+      const allDefs = actionRegistry.getAllNodeDefinitions();
       for (const def of allDefs) {
         if (!def.provider) {
           def.provider = { id: 'core', name: 'Invect Core', icon: 'Blocks' };
         }
       }
-
       return allDefs;
     },
 
@@ -77,13 +53,6 @@ export function createActionsAPI(
         },
       };
 
-      // 1. Try legacy executor (AGENT)
-      const executor = nodeRegistry.get(event.nodeType as never);
-      if (executor) {
-        return executor.handleConfigUpdate(event, configContext);
-      }
-
-      // 2. Try action registry
       const action = actionRegistry.get(event.nodeType as string);
       if (action) {
         if (action.onConfigUpdate) {
@@ -93,7 +62,6 @@ export function createActionsAPI(
           );
         }
 
-        // No custom handler — return the static definition
         const definition = actionRegistry.toNodeDefinition(event.nodeType as string);
         if (definition) {
           return { definition, params: event.params };

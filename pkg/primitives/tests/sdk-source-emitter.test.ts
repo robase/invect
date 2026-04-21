@@ -54,8 +54,8 @@ describe('emitSdkSource — DB InvectDefinition → primitives SDK source', () =
     expect(code).toContain(`code("greet", { code:`);
     expect(code).toContain(`const { name } = ctx;`);
     expect(code).toContain(`output("result", { value:`);
-    expect(code).toContain(`["name", "greet"]`);
-    expect(code).toContain(`["greet", "result"]`);
+    expect(code).toContain(`{ from: "name", to: "greet" }`);
+    expect(code).toContain(`{ from: "greet", to: "result" }`);
     expect(importedBuilders).toEqual(['input', 'output', 'code']);
   });
 
@@ -85,8 +85,8 @@ describe('emitSdkSource — DB InvectDefinition → primitives SDK source', () =
     expect(code).toContain(`ifElse("check", { condition:`);
     expect(code).toContain(`const { value } = ctx;`);
     expect(code).toContain(`return (value > 0);`);
-    expect(code).toContain(`["check", "yes", "true_output"]`);
-    expect(code).toContain(`["check", "no", "false_output"]`);
+    expect(code).toContain(`{ from: "check", to: "yes", handle: "true_output" }`);
+    expect(code).toContain(`{ from: "check", to: "no", handle: "false_output" }`);
   });
 
   it('emits switchNode with cases containing condition arrows', () => {

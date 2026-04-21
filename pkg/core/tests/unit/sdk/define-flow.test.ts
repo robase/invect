@@ -347,7 +347,7 @@ describe('agent node', () => {
       taskPrompt: 'Research {{ topic }}',
     });
     expect(n.id).toBe('node-researcher');
-    expect(n.type).toBe('AGENT');
+    expect(n.type).toBe('core.agent');
     expect(n.referenceId).toBe('researcher');
     expect(n.label).toBe('Researcher');
     expect(n.params).toHaveProperty('credentialId', 'openai-cred');
@@ -431,7 +431,7 @@ describe('agent node', () => {
     });
 
     expect(result.nodes).toHaveLength(3);
-    expect(result.nodes[1].type).toBe('AGENT');
+    expect(result.nodes[1].type).toBe('core.agent');
     expect(result.edges).toHaveLength(2);
   });
 });

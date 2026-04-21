@@ -26,8 +26,31 @@ export interface PrimitiveNode {
   mapper?: (ctx: NodeContext) => NodeContext | Promise<NodeContext>;
 }
 
-// Tuple: [source, target] or [source, target, sourceHandle]
-export type PrimitiveEdge = [string, string] | [string, string, string];
+/** Object form edge: `{ from, to, handle? }`. */
+export interface PrimitiveEdgeObject {
+  from: string;
+  to: string;
+  handle?: string;
+}
+
+/**
+ * Edge between two nodes. Accepts either the tuple shorthand
+ * `[source, target, handle?]` or the `{ from, to, handle? }` object form.
+ *
+ * Internal code should read edges via `edgeSource()` / `edgeTarget()` /
+ * `edgeHandle()` rather than indexing directly.
+ */
+export type PrimitiveEdge = [string, string] | [string, string, string] | PrimitiveEdgeObject;
+
+export function edgeSource(edge: PrimitiveEdge): string {
+  return Array.isArray(edge) ? edge[0] : edge.from;
+}
+export function edgeTarget(edge: PrimitiveEdge): string {
+  return Array.isArray(edge) ? edge[1] : edge.to;
+}
+export function edgeHandle(edge: PrimitiveEdge): string | undefined {
+  return Array.isArray(edge) ? edge[2] : edge.handle;
+}
 
 export interface PrimitiveFlowDefinition {
   nodes: PrimitiveNode[];

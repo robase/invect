@@ -167,7 +167,7 @@ export function agent(
       ...t,
     }));
   }
-  return makeNode('AGENT', referenceId, resolved, options);
+  return makeNode('core.agent', referenceId, resolved, options);
 }
 
 /**

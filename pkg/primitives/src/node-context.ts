@@ -1,11 +1,12 @@
 import type { PrimitiveEdge, NodeContext } from './types';
+import { edgeSource, edgeTarget } from './types';
 
 export function buildNodeContext(
   nodeRef: string,
   edges: PrimitiveEdge[],
   completedOutputs: Record<string, unknown>,
 ): NodeContext {
-  const directParents = edges.filter((e) => e[1] === nodeRef).map((e) => e[0]);
+  const directParents = edges.filter((e) => edgeTarget(e) === nodeRef).map((e) => edgeSource(e));
 
   const ctx: Record<string, unknown> = {};
 

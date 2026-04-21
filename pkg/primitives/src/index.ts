@@ -4,6 +4,7 @@ export type {
   ParamValue,
   PrimitiveNode,
   PrimitiveEdge,
+  PrimitiveEdgeObject,
   PrimitiveFlowDefinition,
   FlowRunResult,
   StepOptions,
@@ -11,7 +12,7 @@ export type {
   FlowRunnerConfig,
   FlowRunner,
 } from './types';
-export { WaitTimeoutError } from './types';
+export { WaitTimeoutError, edgeSource, edgeTarget, edgeHandle } from './types';
 
 // ─── Validation ───────────────────────────────────────────────────────────────
 export { validateFlow, FlowValidationError } from './validate';

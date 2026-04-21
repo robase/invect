@@ -20,7 +20,7 @@ export enum GraphNodeType {
   OUTPUT = 'OUTPUT',
   JQ = 'JQ',
   HTTP_REQUEST = 'HTTP_REQUEST',
-  AGENT = 'AGENT',
+  AGENT = 'core.agent',
   GMAIL = 'GMAIL',
 }
 

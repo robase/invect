@@ -98,9 +98,7 @@ export class ChatStreamSession {
       // Remove agent-node-specific tools when no AGENT node exists in the flow.
       // These 6 tools add ~900 tokens of schema noise that degrades tool selection.
       if (flowContext) {
-        const hasAgentNode = flowContext.nodes.some(
-          (n) => n.type === 'AGENT' || n.type === 'agent',
-        );
+        const hasAgentNode = flowContext.nodes.some((n) => n.type === 'core.agent');
         if (!hasAgentNode) {
           const agentToolIds = new Set([
             'list_agent_tools',

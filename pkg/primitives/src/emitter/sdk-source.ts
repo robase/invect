@@ -281,9 +281,9 @@ function emitEdge(edge: FlowEdge, nodes: FlowNodeDefinitions[]): string {
     );
   }
   if (edge.sourceHandle) {
-    return `[${JSON.stringify(sourceRef)}, ${JSON.stringify(targetRef)}, ${JSON.stringify(edge.sourceHandle)}]`;
+    return `{ from: ${JSON.stringify(sourceRef)}, to: ${JSON.stringify(targetRef)}, handle: ${JSON.stringify(edge.sourceHandle)} }`;
   }
-  return `[${JSON.stringify(sourceRef)}, ${JSON.stringify(targetRef)}]`;
+  return `{ from: ${JSON.stringify(sourceRef)}, to: ${JSON.stringify(targetRef)} }`;
 }
 
 // Build an arrow function from a DB-stored JS expression. Upstream referenceIds

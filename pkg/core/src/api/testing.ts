@@ -1,7 +1,6 @@
 import type { TestingAPI } from './types';
 import type { ServiceFactory } from '../services/service-factory';
 import type { ActionRegistry } from '../actions';
-import type { NodeExecutorRegistry } from '../nodes/executor-registry';
 import type { JsExpressionService, TemplateService } from '../services/templating';
 import type { Logger, InvectConfig } from '../schemas';
 import { GraphNodeType } from '../types.internal';
@@ -52,7 +51,6 @@ async function resolveTemplateParams(
 export function createTestingAPI(
   sf: ServiceFactory,
   actionRegistry: ActionRegistry,
-  nodeRegistry: NodeExecutorRegistry,
   jsExpressionService: JsExpressionService | null,
   templateService: TemplateService | null,
   config: InvectConfig,
@@ -89,34 +87,23 @@ export function createTestingAPI(
 
   return {
     async testNode(nodeType, params, inputData = {}) {
-      // Try legacy executor first (only AGENT remains), then action registry
-      const executor = nodeRegistry.get(nodeType as never);
-      const action = !executor ? actionRegistry.get(nodeType) : undefined;
-
-      if (!executor && !action) {
+      const action = actionRegistry.get(nodeType);
+      if (!action) {
         throw new Error(`Unknown node type: ${nodeType}`);
       }
 
-      // Merge default params
-      let defaultParams: Record<string, unknown> = {};
-      if (executor) {
-        defaultParams = executor.getDefinition().defaultParams ?? {};
-      } else if (action) {
-        defaultParams = Object.fromEntries(
-          (action.params.fields ?? [])
-            .filter((f) => f.defaultValue !== undefined)
-            .map((f) => [f.name, f.defaultValue]),
-        );
-      }
+      const defaultParams: Record<string, unknown> = Object.fromEntries(
+        (action.params.fields ?? [])
+          .filter((f) => f.defaultValue !== undefined)
+          .map((f) => [f.name, f.defaultValue]),
+      );
       const mergedParams = { ...defaultParams, ...params };
 
-      // Determine which param keys should NOT be resolved as templates
       const skipTemplateResolutionKeys: string[] = [];
       if (nodeType === GraphNodeType.TEMPLATE_STRING || nodeType === 'core.template_string') {
         skipTemplateResolutionKeys.push('template');
       }
 
-      // Resolve templates in params using inputData as context
       let resolvedParams = mergedParams;
       if (templateService) {
         resolvedParams = await resolveTemplateParams(
@@ -135,81 +122,10 @@ export function createTestingAPI(
       });
 
       try {
-        if (action) {
-          const { executeActionAsNode } = await import('../actions/action-executor');
+        const { executeActionAsNode } = await import('../actions/action-executor');
 
-          const mockContext: NodeExecutionContext = {
-            nodeId: `test-${Date.now()}`,
-            flowRunId: `test-run-${Date.now()}`,
-            logger,
-            globalConfig: {},
-            flowInputs: {},
-            flowParams: { useBatchProcessing: false },
-            incomingData: inputData,
-            functions: {
-              markDownstreamNodesAsSkipped: () => {
-                /* noop */
-              },
-              runTemplateReplacement: async (
-                template: string,
-                variables: Record<string, unknown>,
-              ) => {
-                if (!templateService) {
-                  return template;
-                }
-                const result = await templateService.render(template, variables);
-                if (result === null || result === undefined) {
-                  return '';
-                }
-                if (typeof result === 'object') {
-                  return JSON.stringify(result);
-                }
-                return String(result);
-              },
-              submitPrompt: async (request: SubmitPromptRequest) =>
-                baseAIClient.executePrompt(request),
-              getCredential: async (credentialId: string) =>
-                credentialsService.getDecryptedWithRefresh(credentialId),
-            },
-            allNodeOutputs: new Map(),
-          } as unknown as NodeExecutionContext;
-
-          const result = await executeActionAsNode(action, resolvedParams, mockContext);
-
-          if (result.state === NodeExecutionStatus.SUCCESS) {
-            let output: Record<string, unknown> | undefined;
-            if (result.output?.data?.variables) {
-              output = Object.fromEntries(
-                Object.entries(result.output.data.variables).map(([k, v]) => [
-                  k,
-                  (v as { value: unknown }).value,
-                ]),
-              );
-            } else if (result.output) {
-              output = result.output as unknown as Record<string, unknown>;
-            }
-            return { success: true, output };
-          } else if (result.state === NodeExecutionStatus.FAILED) {
-            return {
-              success: false,
-              error: result.errors?.join(', ') || 'Node execution failed',
-              ...(result.fieldErrors && { fieldErrors: result.fieldErrors }),
-            };
-          } else {
-            return { success: true, output: { status: 'pending' } };
-          }
-        }
-
-        // Legacy executor path (AGENT only)
-        const mockNode = {
-          id: `test-${Date.now()}`,
-          type: nodeType,
-          params: resolvedParams,
-          position: { x: 0, y: 0 },
-        };
-
-        const context = {
-          nodeId: mockNode.id,
+        const mockContext: NodeExecutionContext = {
+          nodeId: `test-${Date.now()}`,
           flowRunId: `test-run-${Date.now()}`,
           logger,
           globalConfig: {},
@@ -220,20 +136,31 @@ export function createTestingAPI(
             markDownstreamNodesAsSkipped: () => {
               /* noop */
             },
+            runTemplateReplacement: async (
+              template: string,
+              variables: Record<string, unknown>,
+            ) => {
+              if (!templateService) {
+                return template;
+              }
+              const result = await templateService.render(template, variables);
+              if (result === null || result === undefined) {
+                return '';
+              }
+              if (typeof result === 'object') {
+                return JSON.stringify(result);
+              }
+              return String(result);
+            },
             submitPrompt: async (request: SubmitPromptRequest) =>
               baseAIClient.executePrompt(request),
             getCredential: async (credentialId: string) =>
               credentialsService.getDecryptedWithRefresh(credentialId),
           },
           allNodeOutputs: new Map(),
-        };
+        } as unknown as NodeExecutionContext;
 
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        const result = await executor!.execute(
-          inputData as unknown as Record<string, unknown>,
-          mockNode as never,
-          context as unknown as NodeExecutionContext,
-        );
+        const result = await executeActionAsNode(action, resolvedParams, mockContext);
 
         if (result.state === NodeExecutionStatus.SUCCESS) {
           let output: Record<string, unknown> | undefined;
@@ -249,7 +176,11 @@ export function createTestingAPI(
           }
           return { success: true, output };
         } else if (result.state === NodeExecutionStatus.FAILED) {
-          return { success: false, error: result.errors?.join(', ') || 'Node execution failed' };
+          return {
+            success: false,
+            error: result.errors?.join(', ') || 'Node execution failed',
+            ...(result.fieldErrors && { fieldErrors: result.fieldErrors }),
+          };
         } else {
           return { success: true, output: { status: 'pending' } };
         }

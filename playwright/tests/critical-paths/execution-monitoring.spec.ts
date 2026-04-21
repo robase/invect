@@ -732,7 +732,7 @@ test.describe('Execution Monitoring', () => {
       nodes: [
         {
           id: 'agent-node',
-          type: 'AGENT',
+          type: 'core.agent',
           label: 'Math Agent',
           referenceId: 'agent_output',
           params: {

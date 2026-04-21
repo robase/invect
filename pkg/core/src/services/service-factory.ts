@@ -16,7 +16,6 @@ import { ChatStreamService } from './chat/chat-stream.service';
 import { ExecutionEventBus, getExecutionEventBus } from './execution-event-bus';
 import { DatabaseError } from 'src/types/common/errors.types';
 import { Logger, InvectConfig } from 'src/schemas';
-import { NodeExecutorRegistry } from 'src/nodes/executor-registry';
 import { FlowVersionsService } from './flow-versions/flow-versions.service';
 import { ReactFlowRendererService } from './react-flow-renderer.service';
 import type { PluginHookRunner } from 'src/types/plugin.types';
@@ -53,7 +52,6 @@ export class ServiceFactory {
 
   constructor(
     private readonly config: InvectConfig,
-    private readonly nodeRegistry: NodeExecutorRegistry,
     /** Action registry for chat system prompt context */
     private readonly actionRegistryRef?: unknown,
     /** Plugin hook runner for lifecycle hooks */
@@ -63,12 +61,7 @@ export class ServiceFactory {
     /** Template service for resolving {{ }} expressions in node params */
     private readonly templateServiceRef?: import('./templating/template.service').TemplateService,
   ) {
-    this.logger = config.logger; // Fallback to console if no logger provided
-    if (!this.nodeRegistry) {
-      throw new Error('Node registry is not provided, cannot initialize services without it');
-    } else {
-      this.logger.debug('Node registry provided, will register default executors');
-    }
+    this.logger = config.logger;
   }
 
   /**
@@ -147,7 +140,6 @@ export class ServiceFactory {
         flowsService,
         nodeDataService,
         graphService,
-        this.nodeRegistry,
         batchJobsService,
         credentialsService, // Add credentials service
         baseAIClient, // Add baseAIClient for agent prompt support

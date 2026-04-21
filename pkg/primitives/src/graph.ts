@@ -1,4 +1,5 @@
 import type { PrimitiveNode, PrimitiveEdge } from './types';
+import { edgeSource, edgeTarget } from './types';
 
 // Kahn's algorithm — ported from GraphService.topologicalSort
 export function topologicalSort(nodes: PrimitiveNode[], edges: PrimitiveEdge[]): string[] {
@@ -12,8 +13,8 @@ export function topologicalSort(nodes: PrimitiveNode[], edges: PrimitiveEdge[]):
   }
 
   for (const edge of edges) {
-    const from = edge[0];
-    const to = edge[1];
+    const from = edgeSource(edge);
+    const to = edgeTarget(edge);
 
     const fromList = adjList.get(from);
     if (fromList && adjList.has(to)) {

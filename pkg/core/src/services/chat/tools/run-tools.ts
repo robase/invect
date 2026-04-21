@@ -98,8 +98,8 @@ export const getNodeExecutionResultsTool: ChatToolDefinition = {
               : undefined,
           } as Record<string, unknown>;
 
-          // For AGENT nodes, fetch tool execution details per iteration
-          if (ex.nodeType === 'AGENT') {
+          // For agent nodes, fetch tool execution details per iteration
+          if (ex.nodeType === 'core.agent') {
             try {
               const toolExecs = await invect.runs.getToolExecutionsByNodeExecutionId(ex.id);
               if (toolExecs.length > 0) {

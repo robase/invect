@@ -147,8 +147,7 @@ export type FlowNodeDefinitions = z.infer<typeof flowNodeDefinitionsSchema>;
  *
  * With the move to action-based node types the schema is no longer a
  * discriminated union, so this resolves to the base FlowNodeDefinitions
- * for every `TNodeType`. Kept for API compatibility with the legacy
- * executor (`AgentNodeExecutor`).
+ * for every `TNodeType`.
  */
 export type FlowNodeForType<_TNodeType extends string> = FlowNodeDefinitions;
 

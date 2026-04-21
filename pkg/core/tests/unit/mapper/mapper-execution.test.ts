@@ -18,7 +18,6 @@ import type { BaseAIClient } from '../../../src/services/ai/base-client';
 import type { GraphService } from '../../../src/services/graph.service';
 import type { NodeDataService } from '../../../src/services/node-data.service';
 import type { NodeExecutionService } from '../../../src/services/node-executions/node-execution.service';
-import type { NodeExecutorRegistry } from '../../../src/nodes/executor-registry';
 
 // ── Module-level mocks (must come before import of coordinator) ──────────────
 
@@ -103,12 +102,10 @@ function createMockNodeExecutionService() {
 function buildCoordinator() {
   const logger = createMockLogger();
   const nodeExecutionService = createMockNodeExecutionService();
-  const nodeRegistry = { get: vi.fn(() => undefined) };
 
   const deps: NodeExecutionCoordinatorDeps = {
     logger,
     nodeExecutionService: nodeExecutionService as unknown as NodeExecutionService,
-    nodeRegistry: nodeRegistry as unknown as NodeExecutorRegistry,
     nodeDataService: {} as NodeDataService,
     graphService: {} as GraphService,
     jsExpressionService: jsService,

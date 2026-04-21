@@ -12,7 +12,6 @@ import { FlowRunStatus } from 'src/types/base';
 import { FlowRun } from './flow-runs/flow-runs.model';
 import { Flow } from './flows/flows.model';
 import { InvectDefinition } from './flow-versions/schemas-fresh';
-import { NodeExecutorRegistry } from 'src/nodes/executor-registry';
 import { NodeDataService } from './node-data.service';
 import { GraphService } from './graph.service';
 import { FlowVersion } from 'src/database';
@@ -42,7 +41,6 @@ export class FlowOrchestrationService {
     private readonly flowsService: FlowsService,
     private readonly nodeDataService: NodeDataService,
     private readonly graphService: GraphService,
-    private readonly nodeRegistry: NodeExecutorRegistry,
     private readonly batchJobsService: BatchJobsService,
     private readonly credentialsService?: CredentialsService, // Optional for now to avoid breaking changes
     private readonly baseAIClient?: BaseAIClient,
@@ -66,7 +64,6 @@ export class FlowOrchestrationService {
     this.nodeExecutionCoordinator = new NodeExecutionCoordinator({
       logger,
       nodeExecutionService,
-      nodeRegistry,
       nodeDataService,
       graphService,
       credentialsService,

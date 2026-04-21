@@ -6,7 +6,6 @@ import { generateNodeSlug } from 'src/utils/node-slug';
 import type { NodeExecution } from '../node-executions/node-executions.model';
 import type { NodeExecutionService } from '../node-executions/node-execution.service';
 import type { NodeDataService } from '../node-data.service';
-import type { NodeExecutorRegistry } from 'src/nodes/executor-registry';
 import type { Logger } from 'src/schemas';
 import type { GraphService } from '../graph.service';
 import type { CredentialsService } from '../credentials/credentials.service';
@@ -23,7 +22,6 @@ import { executeActionAsNode } from 'src/actions/action-executor';
 export type NodeExecutionCoordinatorDeps = {
   logger: Logger;
   nodeExecutionService: NodeExecutionService;
-  nodeRegistry: NodeExecutorRegistry;
   nodeDataService: NodeDataService;
   graphService: GraphService;
   credentialsService?: CredentialsService;
@@ -456,7 +454,6 @@ export class NodeExecutionCoordinator {
     const {
       logger,
       nodeExecutionService,
-      nodeRegistry,
       nodeDataService: _nodeDataService,
       graphService,
       credentialsService,
@@ -464,27 +461,18 @@ export class NodeExecutionCoordinator {
 
     const safeInputs = inputs || {};
 
-    // Look up executor / action for this node type.
-    // Legacy executors are only used for AGENT; all others go through the action registry.
-    const executor = nodeRegistry.get(node.type as GraphNodeType);
     const actionRegistry = getGlobalActionRegistry();
-    const action = !executor ? actionRegistry.get(node.type) : undefined;
+    const action = actionRegistry.get(node.type);
 
-    if (!executor && !action) {
-      throw new Error(`No executor or action found for node type: ${node.type}`);
+    if (!action) {
+      throw new Error(`No action found for node type: ${node.type}`);
     }
 
-    // Merge default params with node params (node params take precedence)
-    let defaultParams: Record<string, unknown> = {};
-    if (executor) {
-      defaultParams = executor.getDefinition().defaultParams ?? {};
-    } else if (action) {
-      defaultParams = Object.fromEntries(
-        (action.params.fields ?? [])
-          .filter((f) => f.defaultValue !== undefined)
-          .map((f) => [f.name, f.defaultValue]),
-      );
-    }
+    const defaultParams: Record<string, unknown> = Object.fromEntries(
+      (action.params.fields ?? [])
+        .filter((f) => f.defaultValue !== undefined)
+        .map((f) => [f.name, f.defaultValue]),
+    );
     const nodeParams = { ...defaultParams, ...((node.params ?? {}) as Record<string, unknown>) };
 
     // Determine which params should NOT be pre-resolved as templates
@@ -510,12 +498,6 @@ export class NodeExecutionCoordinator {
       resolvedParamKeys: Object.keys(resolvedParams),
       skippedKeys: skipTemplateResolutionKeys,
     });
-
-    // Create a node copy with resolved params for execution
-    const _nodeWithResolvedParams: FlowNodeDefinitions = {
-      ...node,
-      params: resolvedParams,
-    } as FlowNodeDefinitions;
 
     // Store incomingData in the trace (uses reference_id-based keys like "user_data")
     // This matches what users see in the config panel and use in templates
@@ -669,35 +651,10 @@ export class NodeExecutionCoordinator {
         }
       }
 
-      // Update nodeWithResolvedParams if hooks modified params
-      const finalNodeWithParams: FlowNodeDefinitions = {
-        ...node,
-        params: hookResolvedParams,
-      } as FlowNodeDefinitions;
-
-      // ── Dispatch: legacy executor vs action ──────────────────────────────
-      let executionResult: import('src/types/node-execution.types').NodeExecutionResult;
+      // ── Dispatch: action execution ───────────────────────────────────────
       const dispatchStartTime = Date.now();
-
-      if (executor) {
-        // Legacy path: use the BaseNodeExecutor
-        const inputValidation = executor.validateInputs(inputs);
-        if (!inputValidation.isValid) {
-          throw new Error(`Input validation failed: ${inputValidation.error}`);
-        }
-
-        executionResult = await executor.execute(
-          inputValidation.data,
-          finalNodeWithParams,
-          executionContext,
-        );
-      } else if (action) {
-        // Action path: use the action executor bridge
-        executionResult = await executeActionAsNode(action, hookResolvedParams, executionContext);
-      } else {
-        // Should be unreachable due to the guard above, but satisfies the compiler
-        throw new Error(`No executor or action found for node type: ${node.type}`);
-      }
+      const executionResult: import('src/types/node-execution.types').NodeExecutionResult =
+        await executeActionAsNode(action, hookResolvedParams, executionContext);
 
       const dispatchDuration = Date.now() - dispatchStartTime;
 

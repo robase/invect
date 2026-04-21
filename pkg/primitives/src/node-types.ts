@@ -22,13 +22,7 @@ export const JAVASCRIPT_TYPES: ReadonlySet<string> = new Set([
 ]);
 export const IF_ELSE_TYPES: ReadonlySet<string> = new Set(['core.if_else', 'primitives.if_else']);
 export const SWITCH_TYPES: ReadonlySet<string> = new Set(['core.switch', 'primitives.switch']);
-// Agent nodes have a third legacy alias `AGENT` (GraphNodeType enum value),
-// kept because chat/system prompts and older seed fixtures still emit it.
-export const AGENT_TYPES: ReadonlySet<string> = new Set([
-  'core.agent',
-  'primitives.agent',
-  'AGENT',
-]);
+export const AGENT_TYPES: ReadonlySet<string> = new Set(['core.agent', 'primitives.agent']);
 
 export const isInputType = (t: string): boolean => INPUT_TYPES.has(t);
 export const isOutputType = (t: string): boolean => OUTPUT_TYPES.has(t);

@@ -85,7 +85,7 @@ export const SEED_FLOWS = {
         },
         {
           id: 'n3',
-          type: 'AGENT',
+          type: 'core.agent',
           label: 'Research Agent',
           referenceId: 'research_agent',
           params: {
@@ -142,7 +142,7 @@ export const SEED_FLOWS = {
       nodes: [
         {
           id: 'n1',
-          type: 'AGENT',
+          type: 'core.agent',
           label: 'AI Agent',
           referenceId: 'ai_agent',
           params: {},
@@ -170,7 +170,7 @@ export const SEED_FLOWS = {
         },
         {
           id: 'n2',
-          type: 'AGENT',
+          type: 'core.agent',
           label: 'Data Agent',
           referenceId: 'data_agent',
           params: {

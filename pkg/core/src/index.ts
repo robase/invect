@@ -3,7 +3,6 @@
 
 // Legacy class (deprecated — use createInvect instead)
 export * from './invect-core';
-export * from './nodes';
 export * from './database';
 export * from './types.internal';
 

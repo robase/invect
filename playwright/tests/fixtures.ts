@@ -554,7 +554,7 @@ const TEST_FLOW_DEFINITIONS: Record<string, TestFlowDefinition> = {
       },
       {
         id: 'agent-linear',
-        type: 'AGENT',
+        type: 'core.agent',
         label: 'Linear Assistant Agent',
         referenceId: 'linear_agent',
         params: {

@@ -1,8 +1,9 @@
 import type { AgentAPI } from './types';
-import { getGlobalToolRegistry } from '../services/agent-tools';
+import { getGlobalActionRegistry } from '../actions';
 import type { ServiceFactory } from '../services/service-factory';
 import type { BatchProvider } from '../services/ai/base-client';
 import { detectProviderFromCredential } from '../utils/provider-detection';
+import type { AgentToolDefinition } from '../types/agent-tool.types';
 
 export function createAgentAPI(sf: ServiceFactory): AgentAPI {
   const baseAIClient = sf.getBaseAIClient();
@@ -38,7 +39,15 @@ export function createAgentAPI(sf: ServiceFactory): AgentAPI {
 
   return {
     getTools() {
-      return getGlobalToolRegistry().getDefinitions();
+      const registry = getGlobalActionRegistry();
+      const defs: AgentToolDefinition[] = [];
+      for (const action of registry.getAll()) {
+        const toolDef = registry.toAgentToolDefinition(action.id);
+        if (toolDef) {
+          defs.push(toolDef);
+        }
+      }
+      return defs;
     },
 
     async submitPrompt(request) {

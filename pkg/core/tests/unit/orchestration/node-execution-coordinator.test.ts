@@ -60,7 +60,6 @@ function makeCoordinator(): NodeExecutionCoordinator {
   return new NodeExecutionCoordinator({
     logger: mockLogger,
     nodeExecutionService: {} as never,
-    nodeRegistry: {} as never,
     nodeDataService: {} as never,
     graphService: {} as never,
     baseAIClient: {} as never,
@@ -327,7 +326,6 @@ describe('NodeExecutionCoordinator.resolveTemplateParams', () => {
     const coordinator = new NodeExecutionCoordinator({
       logger: mockLogger,
       nodeExecutionService: {} as never,
-      nodeRegistry: {} as never,
       nodeDataService: {} as never,
       graphService: {} as never,
       baseAIClient: {} as never,
@@ -349,7 +347,6 @@ describe('NodeExecutionCoordinator.resolveTemplateParams', () => {
     const coordinator = new NodeExecutionCoordinator({
       logger: mockLogger,
       nodeExecutionService: {} as never,
-      nodeRegistry: {} as never,
       nodeDataService: {} as never,
       graphService: {} as never,
       baseAIClient: {} as never,
@@ -374,7 +371,6 @@ describe('NodeExecutionCoordinator.resolveTemplateParams', () => {
     const coordinator = new NodeExecutionCoordinator({
       logger: mockLogger,
       nodeExecutionService: {} as never,
-      nodeRegistry: {} as never,
       nodeDataService: {} as never,
       graphService: {} as never,
       baseAIClient: {} as never,

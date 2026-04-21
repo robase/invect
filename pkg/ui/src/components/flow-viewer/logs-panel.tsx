@@ -186,8 +186,7 @@ export function LogsPanel({
                   const latestAttempt = node.attempts[node.attempts.length - 1];
                   const nodeSelected =
                     selectedAttempt?.nodeId === node.nodeId && !selectedAttempt?.toolCallId;
-                  const isAgentNode =
-                    node.nodeType === GraphNodeType.AGENT || node.nodeType === 'AGENT';
+                  const isAgentNode = node.nodeType === GraphNodeType.AGENT;
                   const toolCalls = latestAttempt.toolCalls ?? [];
                   return (
                     <div

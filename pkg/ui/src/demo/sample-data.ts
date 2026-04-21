@@ -224,7 +224,7 @@ export const sampleNodeDefinitions: NodeDefinition[] = [
     maxInstances: 1,
   },
   {
-    type: 'AGENT',
+    type: 'core.agent',
     label: 'AI Agent',
     description: 'Autonomous AI agent with iterative tool-calling loop.',
     icon: 'Bot',
@@ -574,11 +574,11 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
   },
   {
     id: 's-agent',
-    type: 'AGENT',
+    type: 'core.agent',
     position: { x: 280, y: 240 },
     data: {
       id: 's-agent',
-      type: 'AGENT',
+      type: 'core.agent',
       display_name: 'Investigation Agent',
       reference_id: 'investigation_agent',
       status: 'idle',
@@ -999,13 +999,13 @@ export const showcaseNodeExecutions = [
     id: 'nexec-agent',
     flowRunId: 'run-triage-1',
     nodeId: 's-agent',
-    nodeType: 'AGENT',
+    nodeType: 'core.agent',
     status: 'SUCCESS',
     inputs: {
       linear_webhook: linearWebhookPayload.data,
     },
     outputs: {
-      nodeType: 'AGENT',
+      nodeType: 'core.agent',
       data: {
         variables: {
           output: {
@@ -1412,13 +1412,13 @@ export const sampleChatMessages = [
     toolMeta: {
       toolName: 'add_node',
       args: {
-        type: 'AGENT',
+        type: 'core.agent',
         name: 'Investigation Agent',
         referenceId: 'investigation_agent',
       },
       result: {
         success: true,
-        data: { nodeId: 's-agent', type: 'AGENT', name: 'Investigation Agent' },
+        data: { nodeId: 's-agent', type: 'core.agent', name: 'Investigation Agent' },
       },
       status: 'done',
       startedAt: Date.parse(T(5)),
@@ -1435,7 +1435,7 @@ export const sampleChatMessages = [
     content: '',
     toolMeta: {
       toolName: 'find_credentials_for_action',
-      args: { actionId: 'AGENT' },
+      args: { actionId: 'core.agent' },
       result: {
         success: true,
         data: {

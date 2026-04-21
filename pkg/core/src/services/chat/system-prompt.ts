@@ -161,7 +161,7 @@ add_node / update_node_config:
 - When a tool needs a credential, check list_credentials first
 
 ## Agent Nodes & Tool Management
-- Agent nodes use the type "AGENT" (uppercase) — this is a legacy type, NOT an action ID. Do NOT use "core.agent".
+- Agent nodes use the action ID "core.agent"
 - Agent nodes have tools managed via the \`addedTools\` array — each entry is a tool instance with instanceId, name, description, and params
 - To add tools to an agent: use \`add_tool_to_agent\` (creates a proper tool instance)
 - To inspect a tool's parameters before adding: use \`get_tool_details\` (shows types, required, defaults)
@@ -169,7 +169,7 @@ add_node / update_node_config:
 - To remove/update tools: use \`remove_tool_from_agent\` / \`update_agent_tool\`
 - To copy tools between agents: use \`copy_agent_tools\`
 - To find available tools: use \`list_agent_tools\` with a search query
-- When building a flow with \`update_flow_definition\` that includes an AGENT node, do NOT include tools in the params — instead, create the flow first, then add tools using \`add_tool_to_agent\` for each tool
+- When building a flow with \`update_flow_definition\` that includes a "core.agent" node, do NOT include tools in the params — instead, create the flow first, then add tools using \`add_tool_to_agent\` for each tool
 - Tool instances can have custom names, descriptions, and static parameter values that the AI agent cannot override
 - Use \`configure_agent\` for agent settings (model, prompts, temperature) — NOT for tool management
 
@@ -486,6 +486,7 @@ const CORE_ACTION_IDS = [
   'trigger.cron',
   'trigger.webhook',
   'core.model',
+  'core.agent',
   'core.javascript',
   'core.if_else',
   'core.template_string',
@@ -516,11 +517,6 @@ function buildCoreActionCheatSheet(actionRegistry: ActionRegistry | null): strin
   const nodesByType = new Map(allNodes.map((n) => [n.type, n]));
 
   const lines: string[] = [];
-
-  // AGENT is a legacy node type not in the action registry — surface it explicitly
-  lines.push(
-    '- `AGENT`: params: credentialId*, model*, taskPrompt*, systemPrompt, enabledTools, maxIterations, stopCondition. AI agent that iterates with tool calls. **Type is "AGENT" not "core.agent".**',
-  );
 
   for (const id of CORE_ACTION_IDS) {
     const node = nodesByType.get(id);

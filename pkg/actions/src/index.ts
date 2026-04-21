@@ -41,6 +41,9 @@ export {
   ifElseAction,
   switchAction,
   modelAction,
+  agentAction,
+  agentNodeParamsSchema,
+  type AgentNodeParams,
 } from './core';
 
 export { asanaActions } from './asana';

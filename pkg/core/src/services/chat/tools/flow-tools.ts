@@ -76,7 +76,7 @@ export const updateFlowDefinitionTool: ChatToolDefinition = {
         type: z
           .string()
           .describe(
-            'Action ID (e.g. "trigger.manual", "core.model", "gmail.send_message"). For AI agent nodes use "AGENT" (not "core.agent").',
+            'Action ID (e.g. "trigger.manual", "core.model", "core.agent", "gmail.send_message").',
           ),
         label: z.string().describe('Human-readable node label'),
         referenceId: z
@@ -140,9 +140,6 @@ export const updateFlowDefinitionTool: ChatToolDefinition = {
       // Validate all node types exist in the action registry
       const availableNodes = invect.actions.getAvailableNodes();
       const validTypes = new Set(availableNodes.map((n) => n.type));
-      // Allow legacy AGENT type
-      validTypes.add('AGENT');
-      validTypes.add('agent');
       const invalidNodes = nodes.filter((n) => !validTypes.has(n.type));
       if (invalidNodes.length > 0) {
         return {

@@ -11,6 +11,8 @@ export { outputAction } from './output';
 export { ifElseAction } from './if-else';
 export { switchAction } from './switch';
 export { modelAction } from './model';
+export { agentAction, agentNodeParamsSchema, type AgentNodeParams } from './agent';
+export { mathEvalAction } from './math-eval';
 
 import type { ActionDefinition } from '@invect/action-kit';
 import { javascriptAction } from './javascript';
@@ -20,6 +22,8 @@ import { outputAction } from './output';
 import { ifElseAction } from './if-else';
 import { switchAction } from './switch';
 import { modelAction } from './model';
+import { agentAction } from './agent';
+import { mathEvalAction } from './math-eval';
 
 /** All core actions as an array (for bulk registration). */
 export const coreActions: ActionDefinition[] = [
@@ -30,4 +34,6 @@ export const coreActions: ActionDefinition[] = [
   ifElseAction,
   switchAction,
   modelAction,
+  agentAction,
+  mathEvalAction,
 ];

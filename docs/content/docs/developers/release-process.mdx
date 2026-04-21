@@ -1,0 +1,95 @@
+---
+title: Release Process
+description: How Invect packages are versioned, released, and published to npm.
+---
+
+Invect is a monorepo of `@invect/*` packages published to npm. Releases are automated via [Changesets](https://github.com/changesets/changesets) and GitHub Actions.
+
+## Branching strategy: trunk + `next` channel
+
+We run a **trunk-based** workflow with a single long-lived branch (`main`) and two npm dist-tags:
+
+| Dist-tag | Branch / mode                  | Install with                          | Audience                            |
+| -------- | ------------------------------ | ------------------------------------- | ----------------------------------- |
+| `next`   | `main` in pre-release mode     | `pnpm add @invect/core@next`          | Early adopters, internal dogfooding |
+| `latest` | `main` after `pre exit` + ship | `pnpm add @invect/core` (the default) | Stable users                        |
+
+While Invect is pre-1.0 and iterating quickly, `main` sits in **pre-release mode** (`pnpm changeset pre enter next`). Every merge to `main` cuts a `-next.N` version and publishes it under the `next` tag. `latest` is only updated when we deliberately `pre exit`, ship, and re-enter pre-release mode.
+
+This means:
+
+- Users who `pnpm add @invect/foo` get a stable, hand-reviewed release.
+- Users who opt in with `@next` get the bleeding edge and can preview changes before they ship.
+- We avoid the overhead of a separate `stable` branch while still protecting the default install path.
+
+## Day-to-day: shipping a change
+
+1. Branch off `main`, make changes.
+2. Run `pnpm changeset` and describe the user-facing change. Pick the bump level (`patch` / `minor` / `major`). The resulting `.changeset/*.md` file is committed with the PR.
+   - In pre-release mode, `minor` becomes a `-next.N` bump, not a real minor.
+3. Open a PR. CI enforces:
+   - Conventional-commit PR title (squash-merge only — the PR title becomes the commit on `main`).
+   - Build, lint, typecheck, tests pass.
+4. Squash-merge to `main`.
+5. The [Release workflow](https://github.com/robase/invect/blob/main/.github/workflows/release.yml) picks up the changeset, opens (or updates) a **"Version Packages"** PR that bumps versions and rolls entries into each package's `CHANGELOG.md`.
+6. Merging the Version Packages PR triggers:
+   - `pnpm publish -r` to npm under the `next` tag.
+   - Per-package git tags (`@invect/core@0.3.0-next.4`) and matching GitHub Releases.
+
+No manual `npm publish`. No manual tagging.
+
+### Conventional-commit scopes
+
+Commit scopes in `commitlint.config.mjs` map 1:1 to `@invect/*` packages (`core`, `express`, `nestjs`, `ui`, `cli`, ...). Use the scope that matches the package you're changing — this keeps changelogs focused and makes auto-generated release notes readable.
+
+## Cutting a stable release (`next` → `latest`)
+
+When a batch of `next` releases is ready to graduate:
+
+```bash
+git checkout main
+git pull
+
+# 1. Leave pre-release mode. This removes pre-release state and
+#    resolves the accumulated changesets into a real version bump.
+pnpm changeset pre exit
+
+# 2. Commit and push. The Release workflow will open a Version Packages PR
+#    with real versions (e.g. 0.3.0 instead of 0.3.0-next.4).
+git add .changeset/pre.json
+git commit -m "chore: exit pre-release mode"
+git push
+
+# 3. Review and merge the Version Packages PR.
+#    Publish goes out under `latest` — this is the new default install.
+
+# 4. Re-enter pre-release mode to resume daily work on `next`.
+pnpm changeset pre enter next
+git add .changeset/pre.json
+git commit -m "chore: enter next pre-release mode"
+git push
+```
+
+The common footgun with this workflow is **forgetting step 4**. If you merge new work onto `main` without re-entering pre-release mode, those changes will publish to `latest`, not `next`. If that happens, either revert the publish PR before merging, or treat that release as an intentional stable ship.
+
+## Release notes
+
+Each PR author writes a user-facing summary in their changeset file. Changesets concatenates these into:
+
+- Per-package `CHANGELOG.md` files (committed to `main`).
+- GitHub Releases (one per package, tagged `@invect/<name>@<version>`), linked to the PRs and commits via `@changesets/changelog-github`.
+
+No release notes are hand-written — the workflow is: **good changeset summary → good changelog → good release notes**, automatically.
+
+## What happens if a PR has no changeset?
+
+Today: nothing blocks it. If a PR touches `pkg/**` but adds no changeset file, its changes ship silently in the next release without a changelog entry.
+
+Planned: a CI check that fails the PR if `pnpm changeset status --since=origin/main` is empty for PRs touching publishable packages. Until then, treat adding a changeset as part of the PR definition of done.
+
+## Reference
+
+- Workflow: [.github/workflows/release.yml](https://github.com/robase/invect/blob/main/.github/workflows/release.yml)
+- Changesets config: [.changeset/config.json](https://github.com/robase/invect/blob/main/.changeset/config.json)
+- Commitlint scopes: [commitlint.config.mjs](https://github.com/robase/invect/blob/main/commitlint.config.mjs)
+- Changesets docs: [changesets/changesets](https://github.com/changesets/changesets)

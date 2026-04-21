@@ -6,7 +6,6 @@
  */
 
 import { ServiceFactory } from '../services/service-factory';
-import { DefaultNodeRegistryFactory, NodeExecutorRegistry } from '../nodes/executor-registry';
 import { InvectConfig, InvectConfigSchema } from '../schemas';
 import { DatabaseError } from '../types/common/errors.types';
 import { LoggerManager, type ScopedLoggingConfig } from '../utils/logger';
@@ -19,19 +18,7 @@ import {
 import { PluginManager } from '../services/plugin-manager';
 import type { InvectPlugin, InvectPluginDefinition } from '../types/plugin.types';
 import { AuthorizationService, createAuthorizationService } from '../services/auth';
-import {
-  ActionRegistry,
-  initializeGlobalActionRegistry,
-  createToolExecutorForAction,
-  registerBuiltinActions,
-} from '../actions';
-import {
-  AgentToolRegistry,
-  initializeGlobalToolRegistry,
-  getGlobalToolRegistry,
-} from '../services/agent-tools';
-import { AgentNodeExecutor } from '../nodes/agent-executor';
-import type { GraphNodeType } from '../types.internal';
+import { ActionRegistry, initializeGlobalActionRegistry, registerBuiltinActions } from '../actions';
 import type { CredentialAuthType } from '../database/schema-sqlite';
 
 import type { InvectInstance, InvectMaintenanceOptions, InvectMaintenanceResult } from './types';
@@ -66,25 +53,6 @@ function isBuildTime(): boolean {
     return true;
   }
   return false;
-}
-
-/**
- * Register all actions as agent tools in the global tool registry.
- */
-function registerActionsAsTools(actionRegistry: ActionRegistry): void {
-  let toolRegistry: AgentToolRegistry;
-  try {
-    toolRegistry = getGlobalToolRegistry();
-  } catch {
-    return;
-  }
-
-  for (const action of actionRegistry.getAll()) {
-    const toolDef = actionRegistry.toAgentToolDefinition(action.id);
-    if (toolDef && !toolRegistry.has(toolDef.id)) {
-      toolRegistry.register(toolDef, createToolExecutorForAction(action));
-    }
-  }
 }
 
 /**
@@ -268,18 +236,6 @@ export async function createInvect(config: InvectConfig): Promise<InvectInstance
       );
     }
 
-    // Initialize node registry
-    const nodeRegistry: NodeExecutorRegistry =
-      await DefaultNodeRegistryFactory.createDefault(logger);
-    const toolRegistry = await initializeGlobalToolRegistry(logger);
-    logger.debug(`Initialized agent tool registry with ${toolRegistry.size} tools`);
-
-    // Update agent executor with tool registry
-    const agentExecutor = nodeRegistry.get('AGENT' as GraphNodeType);
-    if (agentExecutor && 'setToolRegistry' in agentExecutor) {
-      (agentExecutor as unknown as AgentNodeExecutor).setToolRegistry(toolRegistry);
-    }
-
     // Initialize JS expression engine (sandboxed QuickJS runtime for data mapper)
     let jsExpressionService: JsExpressionServiceType | null = null;
     let templateService: TemplateService | null = null;
@@ -297,16 +253,11 @@ export async function createInvect(config: InvectConfig): Promise<InvectInstance
       );
     }
 
-    // Register action-based tools
-    registerActionsAsTools(actionRegistry);
-    logger.debug(`Actions registered as tools in ${Date.now() - initStart}ms`);
-
     // Initialize service factory
     logger.info('Initializing ServiceFactory (database connection)...');
     const sfStart = Date.now();
     const sf = new ServiceFactory(
       parsedConfig,
-      nodeRegistry,
       actionRegistry,
       pluginManager,
       jsExpressionService ?? undefined,
@@ -324,11 +275,10 @@ export async function createInvect(config: InvectConfig): Promise<InvectInstance
     const triggers = createTriggersAPI(sf, logger);
     const agent = createAgentAPI(sf);
     const chat = createChatAPI(sf);
-    const actions = createActionsAPI(actionRegistry, nodeRegistry, sf, logger);
+    const actions = createActionsAPI(actionRegistry, sf, logger);
     const testing = createTestingAPI(
       sf,
       actionRegistry,
-      nodeRegistry,
       jsExpressionService,
       templateService,
       parsedConfig,

@@ -73,7 +73,7 @@ describe('serializeToSDK — core helper mapping', () => {
     ['core.if_else', 'ifElse'],
     ['core.template_string', 'template'],
     ['http.request', 'httpRequest'],
-    ['AGENT', 'agent'],
+    ['core.agent', 'agent'],
   ])('maps node type %s to %s() helper', (type, helper) => {
     const out = serializeToSDK([node('n', type, {})], []);
     expect(out).toContain(`${helper}('n'`);
@@ -175,7 +175,7 @@ describe('serializeToSDK — full file mode', () => {
 // ─── Agent tools → tool() helper ───────────────────────────────────────────
 
 describe('serializeToSDK — agent addedTools', () => {
-  const agentWithTools = node('agt', 'AGENT', {
+  const agentWithTools = node('agt', 'core.agent', {
     model: 'claude-sonnet-4-6',
     credentialId: 'cred',
     taskPrompt: 'do stuff',
@@ -210,7 +210,7 @@ describe('serializeToSDK — agent addedTools', () => {
 
   it('does not import the tool helper when no agent has tools', () => {
     const out = serializeToSDK(
-      [node('agt', 'AGENT', { model: 'x', credentialId: 'y', taskPrompt: 'z' })],
+      [node('agt', 'core.agent', { model: 'x', credentialId: 'y', taskPrompt: 'z' })],
       [],
       { asFullFile: true },
     );
@@ -254,7 +254,7 @@ describe('serializeToSDK ↔ parseSDKText round-trip', () => {
   });
 
   it('rehydrates addedTools with fresh instanceIds and canonical fields', () => {
-    const agt = node('agt', 'AGENT', {
+    const agt = node('agt', 'core.agent', {
       model: 'x',
       credentialId: 'y',
       taskPrompt: 'z',

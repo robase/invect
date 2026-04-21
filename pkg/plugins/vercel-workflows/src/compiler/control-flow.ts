@@ -5,6 +5,9 @@ import {
   IF_ELSE_TYPES,
   SWITCH_TYPES,
   OUTPUT_TYPES,
+  edgeSource,
+  edgeTarget,
+  edgeHandle,
 } from '@invect/primitives';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -83,7 +86,9 @@ function buildAdjacency(edges: PrimitiveEdge[]): {
 } {
   const adj = new Map<string, string[]>();
   const reverseAdj = new Map<string, string[]>();
-  for (const [from, to] of edges) {
+  for (const edge of edges) {
+    const from = edgeSource(edge);
+    const to = edgeTarget(edge);
     let fromList = adj.get(from);
     if (!fromList) {
       fromList = [];
@@ -173,13 +178,9 @@ function armMembership(
 
 // ─── Branch arm extraction ───────────────────────────────────────────────────
 
-function edgeHandle(edge: PrimitiveEdge): string | undefined {
-  return edge[2];
-}
-
 function armStartFor(nodeRef: string, handle: string, edges: PrimitiveEdge[]): string | null {
-  const match = edges.find((e) => e[0] === nodeRef && edgeHandle(e) === handle);
-  return match?.[1] ?? null;
+  const match = edges.find((e) => edgeSource(e) === nodeRef && edgeHandle(e) === handle);
+  return match ? edgeTarget(match) : null;
 }
 
 function extractSwitchCases(node: PrimitiveNode): {
@@ -256,7 +257,7 @@ export function analyzeFlow(flow: PrimitiveFlowDefinition): AnalyzedFlow {
       const trueStart = armStartFor(nodeRef, trueHandle, flow.edges);
       const falseStart = armStartFor(nodeRef, falseHandle, flow.edges);
       const outgoingWithoutHandle = flow.edges.filter(
-        (e) => e[0] === nodeRef && edgeHandle(e) === undefined,
+        (e) => edgeSource(e) === nodeRef && edgeHandle(e) === undefined,
       );
       if (outgoingWithoutHandle.length > 0) {
         throw new CompileError(
@@ -309,7 +310,7 @@ export function analyzeFlow(flow: PrimitiveFlowDefinition): AnalyzedFlow {
     }
 
     // Linear / non-branching node: validate no unexpected fan-out.
-    const outgoing = flow.edges.filter((e) => e[0] === nodeRef);
+    const outgoing = flow.edges.filter((e) => edgeSource(e) === nodeRef);
     if (outgoing.length > 1) {
       throw new CompileError(
         `Node "${nodeRef}" (type "${node.type}") has ${outgoing.length} outgoing edges. ` +

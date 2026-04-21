@@ -10,7 +10,7 @@ import type {
   FlowRunner,
   FlowRunResult,
 } from './types';
-import { WaitTimeoutError } from './types';
+import { WaitTimeoutError, edgeSource, edgeTarget, edgeHandle } from './types';
 import { validateFlow } from './validate';
 import { topologicalSort } from './graph';
 import { resolveCallableParams, executeNodeAction } from './action-executor';
@@ -95,13 +95,13 @@ function handleBranchSkipping(
   const activeHandles = new Set(Object.keys(result.outputVariables));
 
   for (const edge of edges) {
-    if (edge[0] !== nodeRef) {
+    if (edgeSource(edge) !== nodeRef) {
       continue;
     }
-    const sourceHandle = edge[2];
+    const sourceHandle = edgeHandle(edge);
     // If this edge has a source handle that isn't in the active set, the target branch is inactive
     if (sourceHandle && !activeHandles.has(sourceHandle)) {
-      markSkipped(edge[1], edges, skipSet, true);
+      markSkipped(edgeTarget(edge), edges, skipSet, true);
     }
   }
 }
@@ -118,8 +118,8 @@ function markSkipped(
 
   if (!force) {
     // Only skip if ALL incoming edges come from already-skipped nodes
-    const incoming = edges.filter((e) => e[1] === nodeRef);
-    if (incoming.length === 0 || !incoming.every((e) => skipSet.has(e[0]))) {
+    const incoming = edges.filter((e) => edgeTarget(e) === nodeRef);
+    if (incoming.length === 0 || !incoming.every((e) => skipSet.has(edgeSource(e)))) {
       return;
     }
   }
@@ -128,8 +128,8 @@ function markSkipped(
 
   // Recursively check downstream nodes
   for (const edge of edges) {
-    if (edge[0] === nodeRef) {
-      markSkipped(edge[1], edges, skipSet, false);
+    if (edgeSource(edge) === nodeRef) {
+      markSkipped(edgeTarget(edge), edges, skipSet, false);
     }
   }
 }
