@@ -137,20 +137,29 @@ function stripComments(text: string): string {
  * Returns the text unchanged if no wrapper is present.
  */
 function unwrapFullFile(text: string): string {
-  let out = text.replace(/^\s*import[^;]*;/gm, '');
+  const out = text.replace(/^\s*import[^;]*;/gm, '');
 
-  const defineFlowMatch = out.match(
-    /(?:export\s+default\s+)?defineFlow\s*\(\s*(\{[\s\S]*\})\s*\)\s*;?\s*$/,
-  );
-  if (defineFlowMatch) {
-    const inner = defineFlowMatch[1].trim();
-    // Strip outer braces so the result is `nodes: [...], edges: [...]` — the
-    // same shape as the fragment format.
-    if (inner.startsWith('{') && inner.endsWith('}')) {
-      out = inner.slice(1, -1);
-    }
+  let body = out.trim();
+  if (body.startsWith('export default ')) {
+    body = body.slice('export default '.length).trimStart();
   }
-
+  if (!body.startsWith('defineFlow')) {
+    return out;
+  }
+  body = body.slice('defineFlow'.length).trimStart();
+  if (!body.startsWith('(')) {
+    return out;
+  }
+  body = body.slice(1).trim();
+  if (body.endsWith(';')) {
+    body = body.slice(0, -1).trimEnd();
+  }
+  if (body.endsWith(')')) {
+    body = body.slice(0, -1).trimEnd();
+  }
+  if (body.startsWith('{') && body.endsWith('}')) {
+    return body.slice(1, -1);
+  }
   return out;
 }
 

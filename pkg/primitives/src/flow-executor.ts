@@ -71,10 +71,10 @@ function buildRegistry(extraActions?: ActionDefinition[]): Map<string, ActionDef
 
 function extractPrimaryOutput(result: ActionResult): unknown {
   if (result.outputVariables) {
-    const vars = Object.values(result.outputVariables);
-    if (vars.length > 0) {
+    const [first] = Object.values(result.outputVariables);
+    if (first) {
       // Return the value from the first (and typically only) active variable
-      return vars[0]!.value;
+      return first.value;
     }
   }
   return result.output;
@@ -162,7 +162,10 @@ export function createFlowRunner(config: FlowRunnerConfig = {}): FlowRunner {
       const logger = new BaseLogger({ level: 'info' });
 
       for (const nodeRef of sortedIds) {
-        const node = nodeMap.get(nodeRef)!;
+        const node = nodeMap.get(nodeRef);
+        if (!node) {
+          throw new Error(`Internal: node "${nodeRef}" missing from nodeMap after topo sort`);
+        }
 
         // Skip nodes on inactive branches
         if (skipSet.has(nodeRef)) {

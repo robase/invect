@@ -115,18 +115,22 @@ export async function executeNodeAction(opts: ExecuteNodeOptions): Promise<Actio
       nodeId: node.referenceId,
     },
     functions: {
-      getCredential: config.resolveCredential
-        ? async (credentialId: string) => {
-            const raw = await config.resolveCredential!(credentialId);
-            return {
-              id: credentialId,
-              name: credentialId,
-              type: 'api_key',
-              authType: 'api_key',
-              config: raw,
-            };
-          }
-        : undefined,
+      getCredential: (() => {
+        const resolveCredential = config.resolveCredential;
+        if (!resolveCredential) {
+          return undefined;
+        }
+        return async (credentialId: string) => {
+          const raw = await resolveCredential(credentialId);
+          return {
+            id: credentialId,
+            name: credentialId,
+            type: 'api_key',
+            authType: 'api_key',
+            config: raw,
+          };
+        };
+      })(),
       submitPrompt: config.submitPrompt,
       submitAgentPrompt: config.submitAgentPrompt,
       evaluator: config.jsEvaluator,

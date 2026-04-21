@@ -236,7 +236,9 @@ function toCamelCase(input: string): string {
     return '';
   }
   const joined = segments
-    .map((s, i) => (i === 0 ? s[0]!.toLowerCase() + s.slice(1) : s[0]!.toUpperCase() + s.slice(1)))
+    .map((s, i) =>
+      i === 0 ? s.charAt(0).toLowerCase() + s.slice(1) : s.charAt(0).toUpperCase() + s.slice(1),
+    )
     .join('');
   return /^[0-9]/.test(joined) ? `_${joined}` : joined;
 }

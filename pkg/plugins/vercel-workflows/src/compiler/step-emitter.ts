@@ -1,5 +1,4 @@
 import type { ControlFlow } from './control-flow';
-import { OUTPUT_TYPES } from './control-flow';
 import type { PrimitiveFlowDefinition } from '@invect/primitives';
 import { ifElseAction } from '@invect/primitives';
 

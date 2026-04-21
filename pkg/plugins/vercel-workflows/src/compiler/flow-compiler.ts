@@ -41,10 +41,12 @@ function findIdentCollisions(refs: string[]): string[] {
   const byIdent = new Map<string, string[]>();
   for (const r of refs) {
     const ident = sanitizeIdent(r);
-    if (!byIdent.has(ident)) {
-      byIdent.set(ident, []);
+    let bucket = byIdent.get(ident);
+    if (!bucket) {
+      bucket = [];
+      byIdent.set(ident, bucket);
     }
-    byIdent.get(ident)!.push(r);
+    bucket.push(r);
   }
   const collisions: string[] = [];
   for (const [ident, originals] of byIdent) {

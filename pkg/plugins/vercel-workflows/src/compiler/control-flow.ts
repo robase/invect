@@ -48,15 +48,15 @@ export class CompileError extends Error {
 function descendantsOf(start: string, adj: Map<string, string[]>): Set<string> {
   const visited = new Set<string>();
   const stack = [start];
-  while (stack.length > 0) {
-    const n = stack.pop()!;
-    if (visited.has(n)) {
-      continue;
+  let n = stack.pop();
+  while (n !== undefined) {
+    if (!visited.has(n)) {
+      visited.add(n);
+      for (const next of adj.get(n) ?? []) {
+        stack.push(next);
+      }
     }
-    visited.add(n);
-    for (const next of adj.get(n) ?? []) {
-      stack.push(next);
-    }
+    n = stack.pop();
   }
   return visited;
 }
@@ -64,15 +64,15 @@ function descendantsOf(start: string, adj: Map<string, string[]>): Set<string> {
 function ancestorsOf(target: string, reverseAdj: Map<string, string[]>): Set<string> {
   const visited = new Set<string>();
   const stack = [target];
-  while (stack.length > 0) {
-    const n = stack.pop()!;
-    if (visited.has(n)) {
-      continue;
+  let n = stack.pop();
+  while (n !== undefined) {
+    if (!visited.has(n)) {
+      visited.add(n);
+      for (const prev of reverseAdj.get(n) ?? []) {
+        stack.push(prev);
+      }
     }
-    visited.add(n);
-    for (const prev of reverseAdj.get(n) ?? []) {
-      stack.push(prev);
-    }
+    n = stack.pop();
   }
   return visited;
 }
@@ -84,14 +84,19 @@ function buildAdjacency(edges: PrimitiveEdge[]): {
   const adj = new Map<string, string[]>();
   const reverseAdj = new Map<string, string[]>();
   for (const [from, to] of edges) {
-    if (!adj.has(from)) {
-      adj.set(from, []);
+    let fromList = adj.get(from);
+    if (!fromList) {
+      fromList = [];
+      adj.set(from, fromList);
     }
-    if (!reverseAdj.has(to)) {
-      reverseAdj.set(to, []);
+    fromList.push(to);
+
+    let toList = reverseAdj.get(to);
+    if (!toList) {
+      toList = [];
+      reverseAdj.set(to, toList);
     }
-    adj.get(from)!.push(to);
-    reverseAdj.get(to)!.push(from);
+    toList.push(from);
   }
   return { adj, reverseAdj };
 }
@@ -112,9 +117,13 @@ function findConvergence(
   }
 
   // Intersection in topological order — pick the earliest node reachable from all arms
-  let candidates = Array.from(reachabilities[0]!);
-  for (let i = 1; i < reachabilities.length; i++) {
-    candidates = candidates.filter((c) => reachabilities[i]!.has(c));
+  const [firstReach, ...restReach] = reachabilities;
+  if (!firstReach) {
+    return null;
+  }
+  let candidates = Array.from(firstReach);
+  for (const r of restReach) {
+    candidates = candidates.filter((c) => r.has(c));
   }
   if (candidates.length === 0) {
     return null;
@@ -221,13 +230,14 @@ export function analyzeFlow(flow: PrimitiveFlowDefinition): AnalyzedFlow {
   // Derive if/else handle IDs from the action definition, so a rename of
   // `true_output` / `false_output` only needs to happen in one place.
   const ifElseOutputs = ifElseAction.outputs ?? [];
-  if (ifElseOutputs.length !== 2) {
+  const [firstOut, secondOut] = ifElseOutputs;
+  if (ifElseOutputs.length !== 2 || !firstOut || !secondOut) {
     throw new CompileError(
       `primitives.if_else must declare exactly 2 output handles (found ${ifElseOutputs.length}).`,
     );
   }
-  const trueHandle = ifElseOutputs[0]!.id;
-  const falseHandle = ifElseOutputs[1]!.id;
+  const trueHandle = firstOut.id;
+  const falseHandle = secondOut.id;
 
   const placed = new Set<string>();
 

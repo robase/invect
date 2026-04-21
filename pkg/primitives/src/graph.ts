@@ -15,8 +15,9 @@ export function topologicalSort(nodes: PrimitiveNode[], edges: PrimitiveEdge[]):
     const from = edge[0];
     const to = edge[1];
 
-    if (adjList.has(from) && adjList.has(to)) {
-      adjList.get(from)!.push(to);
+    const fromList = adjList.get(from);
+    if (fromList && adjList.has(to)) {
+      fromList.push(to);
       inDegree.set(to, (inDegree.get(to) ?? 0) + 1);
     }
   }
@@ -29,8 +30,8 @@ export function topologicalSort(nodes: PrimitiveNode[], edges: PrimitiveEdge[]):
   }
 
   const result: string[] = [];
-  while (queue.length > 0) {
-    const current = queue.shift()!;
+  let current = queue.shift();
+  while (current !== undefined) {
     result.push(current);
 
     for (const neighbor of adjList.get(current) ?? []) {
@@ -40,6 +41,7 @@ export function topologicalSort(nodes: PrimitiveNode[], edges: PrimitiveEdge[]):
         queue.push(neighbor);
       }
     }
+    current = queue.shift();
   }
 
   if (result.length !== nodeIds.length) {
