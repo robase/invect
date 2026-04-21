@@ -186,11 +186,17 @@ export const httpRequestAction = defineAction({
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
+    const signals: AbortSignal[] = [controller.signal];
+    if (context.abortSignal) {
+      signals.push(context.abortSignal);
+    }
+    const signal = signals.length > 1 ? AbortSignal.any(signals) : controller.signal;
+
     try {
       const fetchOptions: RequestInit = {
         method,
         headers,
-        signal: controller.signal,
+        signal,
       };
 
       if (body && method !== 'GET') {
@@ -205,17 +211,18 @@ export const httpRequestAction = defineAction({
         responseHeaders[key] = value;
       });
 
-      let responseData: unknown;
+      // Read the body once as text so we can safely fall back when a server
+      // advertises Content-Type: application/json but sends a non-JSON payload.
+      const rawText = await response.text();
       const contentType = response.headers.get('content-type') || '';
 
-      if (contentType.includes('application/json')) {
+      let responseData: unknown = rawText;
+      if (contentType.includes('application/json') && rawText.length > 0) {
         try {
-          responseData = await response.json();
+          responseData = JSON.parse(rawText);
         } catch {
-          responseData = await response.text();
+          responseData = rawText;
         }
-      } else {
-        responseData = await response.text();
       }
 
       return {
@@ -237,7 +244,10 @@ export const httpRequestAction = defineAction({
       clearTimeout(timeoutId);
 
       if (error instanceof Error && error.name === 'AbortError') {
-        return { success: false, error: `Request timed out after ${timeout}ms` };
+        if (controller.signal.aborted) {
+          return { success: false, error: `Request timed out after ${timeout}ms` };
+        }
+        return { success: false, error: 'HTTP request cancelled' };
       }
 
       const msg = error instanceof Error ? error.message : String(error);

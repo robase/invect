@@ -262,6 +262,7 @@ export async function executeActionAsTool(
       nodeId: toolContext.nodeContext.nodeId,
       traceId: toolContext.nodeContext.traceId,
     },
+    abortSignal: toolContext.abortSignal,
   };
 
   try {

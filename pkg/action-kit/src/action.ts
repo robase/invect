@@ -141,6 +141,7 @@ export interface ActionExecutionContext {
     flowParams?: Record<string, unknown>;
     globalConfig?: Record<string, unknown>;
   };
+  abortSignal?: AbortSignal;
 }
 
 // Re-export for consumers that want the type at this module path.
