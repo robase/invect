@@ -26,7 +26,20 @@ export { javascriptAction } from './actions/javascript';
 export { outputAction } from './actions/output';
 
 // ─── Helpers / builders ───────────────────────────────────────────────────────
-export { defineFlow, input, output, model, ifElse, switchNode, agent, code, edge } from './helpers';
+export {
+  defineFlow,
+  input,
+  output,
+  model,
+  ifElse,
+  switchNode,
+  agent,
+  tool,
+  code,
+  node,
+  edge,
+} from './helpers';
+export type { ToolInstance } from './helpers';
 
 // ─── Executor ─────────────────────────────────────────────────────────────────
 export { createFlowRunner, InMemoryAdapter } from './flow-executor';

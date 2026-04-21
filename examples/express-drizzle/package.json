@@ -33,6 +33,7 @@
     "@invect/mcp": "workspace:*",
     "@invect/rbac": "workspace:*",
     "@invect/user-auth": "workspace:*",
+    "@invect/vercel-workflows": "workspace:*",
     "@invect/version-control": "workspace:*",
     "@invect/webhooks": "workspace:*",
     "@types/cors": "^2.8.19",

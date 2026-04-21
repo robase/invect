@@ -24,6 +24,10 @@ export default defineConfig({
       { find: /^@invect\/rbac$/, replacement: pkg('plugins/rbac/src/browser.ts') },
       { find: /^@invect\/webhooks$/, replacement: pkg('plugins/webhooks/src/browser.ts') },
       { find: /^@invect\/mcp$/, replacement: pkg('plugins/mcp/src/browser.ts') },
+      {
+        find: /^@invect\/vercel-workflows$/,
+        replacement: pkg('plugins/vercel-workflows/src/browser.ts'),
+      },
       { find: /^@invect\/layouts$/, replacement: pkg('layouts/src/index.ts') },
       { find: /^@invect\/ui$/, replacement: pkg('ui/src/index.ts') },
     ],

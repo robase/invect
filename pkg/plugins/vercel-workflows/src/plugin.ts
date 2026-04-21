@@ -1,4 +1,4 @@
-import type { InvectPlugin } from '@invect/core';
+import type { InvectPluginDefinition } from '@invect/core';
 import { buildBackendPlugin, type VercelWorkflowsBackendOptions } from './backend/endpoints';
 
 export interface VercelWorkflowsPluginOptions extends VercelWorkflowsBackendOptions {
@@ -9,18 +9,24 @@ export interface VercelWorkflowsPluginOptions extends VercelWorkflowsBackendOpti
 // Server plugin for the Vercel Workflows integration. Exposes a Deploy preview
 // endpoint that returns both the compiled `'use workflow'` source and the
 // SDK-source file it imports, ready for copy-paste into the user's Next.js app.
-export function vercelWorkflowsPlugin(options: VercelWorkflowsPluginOptions = {}): InvectPlugin {
+export function vercelWorkflowsPlugin(
+  options: VercelWorkflowsPluginOptions = {},
+): InvectPluginDefinition {
   const backend = buildBackendPlugin(options);
   return {
-    ...backend,
-    schema: {},
-    actions: [],
-    async init(ctx) {
-      ctx.logger.info('[vercel-workflows] Plugin initialised', {
-        deploymentUrl: options.deploymentUrl ?? '(not set)',
-        endpoints: backend.endpoints?.length ?? 0,
-      });
-      return {};
+    id: 'vercel-workflows',
+    name: 'Vercel Workflows',
+    backend: {
+      ...backend,
+      schema: {},
+      actions: [],
+      async init(ctx) {
+        ctx.logger.info('[vercel-workflows] Plugin initialised', {
+          deploymentUrl: options.deploymentUrl ?? '(not set)',
+          endpoints: backend.endpoints?.length ?? 0,
+        });
+        return {};
+      },
     },
   };
 }

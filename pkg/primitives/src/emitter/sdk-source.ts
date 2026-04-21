@@ -48,10 +48,11 @@ export class SdkEmitError extends Error {
 
 const VALID_JS_IDENT = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
 
-type BuilderName = 'input' | 'output' | 'code' | 'ifElse' | 'switchNode';
+type BuilderName = 'input' | 'output' | 'code' | 'ifElse' | 'switchNode' | 'node';
 
-// Maps DB action types to primitive SDK builders. Every supported node
-// type appears here; anything else causes an emit error.
+// Maps DB action types to primitive SDK builders. Types that aren't listed
+// fall through to the generic `node()` builder, which preserves the type +
+// params verbatim so the runtime registry can still execute them.
 const TYPE_TO_BUILDER: Record<string, BuilderName> = {
   'core.input': 'input',
   'primitives.input': 'input',
@@ -92,7 +93,7 @@ export function emitSdkSource(
 
   const importedBuilders: BuilderName[] = [
     'defineFlow' as BuilderName,
-    ...(['input', 'output', 'code', 'ifElse', 'switchNode'] as const).filter((b) =>
+    ...(['input', 'output', 'code', 'ifElse', 'switchNode', 'node'] as const).filter((b) =>
       usedBuilders.has(b),
     ),
   ];
@@ -117,16 +118,7 @@ export function emitSdkSource(
 // ─── Internals ────────────────────────────────────────────────────────────────
 
 function resolveBuilder(node: FlowNodeDefinitions): BuilderName {
-  const builder = TYPE_TO_BUILDER[node.type];
-  if (!builder) {
-    throw new SdkEmitError(
-      `Node type "${node.type}" has no SDK builder and cannot be emitted as primitives ` +
-        `source. Only core/primitives input, output, javascript, if_else, and switch ` +
-        `are supported. Remove the node or replace it with a supported type.`,
-      node.id,
-    );
-  }
-  return builder;
+  return TYPE_TO_BUILDER[node.type] ?? 'node';
 }
 
 function buildUpstreamMap(nodes: FlowNodeDefinitions[], edges: FlowEdge[]): Map<string, string[]> {
@@ -255,7 +247,28 @@ function emitNode(
       ];
       return lines.join('\n');
     }
+
+    case 'node': {
+      const typeLit = JSON.stringify(node.type);
+      const paramsLit = stringifyParams(node.params ?? {});
+      return paramsLit === '{}'
+        ? `node(${refLit}, ${typeLit}),`
+        : `node(${refLit}, ${typeLit}, ${paramsLit}),`;
+    }
   }
+}
+
+// Serialize a node's params to a JS object literal. Plain JSON for now —
+// DB-origin params are already JSON-compatible.
+function stringifyParams(params: Record<string, unknown>): string {
+  const entries = Object.entries(params);
+  if (entries.length === 0) {
+    return '{}';
+  }
+  const lines = entries.map(
+    ([k, v]) => `  ${JSON.stringify(k)}: ${JSON.stringify(v, null, 2).replace(/\n/g, '\n  ')},`,
+  );
+  return ['{', ...lines, '}'].join('\n');
 }
 
 function emitEdge(edge: FlowEdge, nodes: FlowNodeDefinitions[]): string {

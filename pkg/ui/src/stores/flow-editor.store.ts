@@ -40,7 +40,6 @@ export interface FlowEditorState {
   // Flow identity
   flowId: string | null;
   flowVersion: string | null;
-  flowName: string;
 
   // Local working copy (derived from React Query, modified locally)
   // Using Node[] for React Flow compatibility, but data should be ReactFlowNodeData
@@ -83,10 +82,6 @@ export interface FlowEditorState {
   layoutDirection: LayoutDirection;
   initialLayoutApplied: boolean; // Track if we've applied initial layout for this flow
 
-  // Loading states
-  isLoading: boolean;
-  error: string | null;
-
   // Execution tracking - for showing running state in editor
   activeFlowRunId: string | null;
 }
@@ -94,7 +89,6 @@ export interface FlowEditorState {
 export interface FlowEditorActions {
   // Flow identity
   setFlowId: (flowId: string | null, version?: string | null) => void;
-  setFlowName: (name: string) => void;
 
   // Node operations
   setNodes: (nodes: Node[]) => void;
@@ -135,7 +129,7 @@ export interface FlowEditorActions {
   setConfigPanelToolInstanceId: (id: string | null) => void;
 
   // Sync with server data
-  syncFromServer: (nodes: Node[], edges: Edge[], versionId: string, flowName?: string) => void;
+  syncFromServer: (nodes: Node[], edges: Edge[], versionId: string) => void;
   markSaved: (versionId: string) => void;
   markDirty: () => void;
   resetDirty: (savedVersionId?: string) => void;
@@ -147,10 +141,6 @@ export interface FlowEditorActions {
 
   // Computed helpers
   needsInitialLayout: () => boolean;
-
-  // Loading states
-  setLoading: (loading: boolean) => void;
-  setError: (error: string | null) => void;
 
   // Execution tracking
   setActiveFlowRunId: (flowRunId: string | null) => void;
@@ -176,7 +166,6 @@ export type FlowEditorStore = FlowEditorState & FlowEditorActions;
 const initialState: FlowEditorState = {
   flowId: null,
   flowVersion: null,
-  flowName: 'Untitled Flow',
   nodes: [],
   edges: [],
   edgesReady: false,
@@ -199,8 +188,6 @@ const initialState: FlowEditorState = {
   currentLayout: 'elkjs',
   layoutDirection: 'LR',
   initialLayoutApplied: false,
-  isLoading: false,
-  error: null,
   activeFlowRunId: null,
 };
 
@@ -221,11 +208,6 @@ export const useFlowEditorStore: UseBoundStore<StoreApi<FlowEditorStore>> =
               }
               state.flowId = flowId;
               state.flowVersion = version;
-            }),
-
-          setFlowName: (name) =>
-            set((state) => {
-              state.flowName = name;
             }),
 
           // Node operations
@@ -468,7 +450,7 @@ export const useFlowEditorStore: UseBoundStore<StoreApi<FlowEditorStore>> =
             }),
 
           // Sync with server data - called when React Query fetches new data
-          syncFromServer: (nodes, edges, versionId, flowName) =>
+          syncFromServer: (nodes, edges, versionId) =>
             set((state) => {
               const incomingSnapshot = computeSnapshot(nodes, edges);
 
@@ -488,9 +470,6 @@ export const useFlowEditorStore: UseBoundStore<StoreApi<FlowEditorStore>> =
                 state.lastSavedSnapshot = incomingSnapshot;
                 state.lastSavedVersionId = versionId;
                 state.initialDataLoaded = true;
-                if (flowName) {
-                  state.flowName = flowName;
-                }
               }
             }),
 
@@ -548,17 +527,6 @@ export const useFlowEditorStore: UseBoundStore<StoreApi<FlowEditorStore>> =
             // Check if all nodes are at (0, 0)
             return state.nodes.every((node) => node.position.x === 0 && node.position.y === 0);
           },
-
-          // Loading states
-          setLoading: (loading) =>
-            set((state) => {
-              state.isLoading = loading;
-            }),
-
-          setError: (error) =>
-            set((state) => {
-              state.error = error;
-            }),
 
           // Execution tracking
           setActiveFlowRunId: (flowRunId) =>
@@ -658,12 +626,9 @@ export const useToolPanelNodeId = () => useFlowEditorStore((s) => s.toolPanelNod
 export const useSelectedToolInstanceId = () => useFlowEditorStore((s) => s.selectedToolInstanceId);
 export const useConfigPanelToolInstanceId = () =>
   useFlowEditorStore((s) => s.configPanelToolInstanceId);
-export const useFlowName = () => useFlowEditorStore((s) => s.flowName);
 export const useCurrentLayout = () => useFlowEditorStore((s) => s.currentLayout);
 export const useLayoutDirection = () => useFlowEditorStore((s) => s.layoutDirection);
 export const useInitialLayoutApplied = () => useFlowEditorStore((s) => s.initialLayoutApplied);
-export const useIsLoading = () => useFlowEditorStore((s) => s.isLoading);
-export const useFlowError = () => useFlowEditorStore((s) => s.error);
 
 // Combined selectors for common use cases (useShallow prevents re-renders when
 // the returned object is structurally equal)
@@ -745,6 +710,5 @@ export const useFlowStats = () =>
       nodeCount: s.nodes.length,
       edgeCount: s.edges.length,
       isDirty: s.currentSnapshot !== null && s.currentSnapshot !== s.lastSavedSnapshot,
-      isLoading: s.isLoading,
     })),
   );

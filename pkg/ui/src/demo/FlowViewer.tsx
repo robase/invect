@@ -119,7 +119,7 @@ function FlowViewerCanvas({
 
   useEffect(() => {
     setFlowId('demo-flow', undefined);
-    syncFromServer(nodes, edges, 'demo-flow:1', 'Demo Flow');
+    syncFromServer(nodes, edges, 'demo-flow:1');
   }, [nodes, edges, syncFromServer, setFlowId]);
 
   // Build nodeTypes mapping from definitions

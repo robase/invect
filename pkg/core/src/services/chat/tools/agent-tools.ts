@@ -11,6 +11,7 @@
  */
 
 import { z } from 'zod/v4';
+import { newToolInstanceId } from '@invect/action-kit';
 import type { ChatToolDefinition, ChatToolContext, ChatToolResult } from '../chat-types';
 import type { InvectInstance } from 'src/api/types';
 import type { AddedToolInstance } from 'src/types/agent-tool.types';
@@ -87,13 +88,6 @@ function unwrapAgentNode(
   }
   // After the error check, node is guaranteed to exist by the discriminated union
   return { node: result.node as FlowNodeDefinitions };
-}
-
-/**
- * Helper: Generate a short ID for tool instances.
- */
-function genInstanceId(): string {
-  return 'tool_' + Math.random().toString(36).slice(2, 10);
 }
 
 // =====================================
@@ -391,7 +385,7 @@ export const addToolToAgentTool: ChatToolDefinition = {
         }
       }
 
-      const instanceId = genInstanceId();
+      const instanceId = newToolInstanceId();
       const toolInstance: AddedToolInstance = {
         instanceId,
         toolId,

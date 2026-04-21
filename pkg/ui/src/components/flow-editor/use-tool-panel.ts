@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef } from 'react';
-import { nanoid } from 'nanoid';
+import { newToolInstanceId } from '@invect/core/types';
 import { useFlowEditorStore } from './flow-editor.store';
 import { useAgentTools } from '~/api/agent-tools.api';
 import type { ToolDefinition, AddedToolInstance } from '../nodes/ToolSelectorModal';
@@ -128,7 +128,7 @@ export function useToolPanel() {
         return '';
       }
 
-      const instanceId = nanoid();
+      const instanceId = newToolInstanceId();
       const newInstance: AddedToolInstance = {
         instanceId,
         toolId: toolId,

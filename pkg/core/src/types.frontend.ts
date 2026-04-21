@@ -125,6 +125,7 @@ export type {
   AddedToolInstance,
   ConfiguredToolDefinition,
 } from './types/agent-tool.types';
+export { newToolInstanceId } from './types/agent-tool.types';
 
 // Node config update types
 export type {

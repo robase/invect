@@ -9,6 +9,7 @@ import { auth } from '@invect/user-auth';
 import { rbac } from '@invect/rbac';
 import { webhooks } from '@invect/webhooks';
 import { mcp } from '@invect/mcp';
+import { vercelWorkflowsPlugin } from '@invect/vercel-workflows';
 import { versionControl } from '@invect/version-control';
 import { githubProvider } from '@invect/version-control/providers/github';
 import { defineConfig } from '@invect/core';
@@ -123,5 +124,8 @@ export const invectConfig = defineConfig({
       syncDirection: 'push',
     }),
     mcp(),
+    vercelWorkflowsPlugin({
+      deploymentUrl: process.env.VERCEL_DEPLOYMENT_URL,
+    }),
   ],
 });

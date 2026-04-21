@@ -17,6 +17,7 @@
     "@invect/rbac": "workspace:*",
     "@invect/ui": "workspace:*",
     "@invect/user-auth": "workspace:*",
+    "@invect/vercel-workflows": "workspace:*",
     "@invect/version-control": "workspace:*",
     "@invect/webhooks": "workspace:*",
     "@tanstack/react-query": "^5.83.0",

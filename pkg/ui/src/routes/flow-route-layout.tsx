@@ -4,7 +4,9 @@ import { FlowHeader } from '../components/flow-editor/FlowHeader';
 import { useFlowEditor } from '../components/flow-editor/use-flow-editor';
 import { useUpdateFlow } from '../api/flows.api';
 import { ReactFlowProvider } from '@xyflow/react';
-import { useFlowEditorStore } from '../components/flow-editor/flow-editor.store';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../api/query-keys';
+import type { ReactFlowData } from '@invect/core/types';
 
 interface FlowRouteLayoutProps {
   basePath?: string;
@@ -51,6 +53,8 @@ export function FlowRouteLayout({ basePath = '' }: FlowRouteLayoutProps) {
 
   // Toggle flow active state
   const updateFlowMutation = useUpdateFlow();
+  const queryClient = useQueryClient();
+
   const handleToggleActive = useCallback(() => {
     if (!flowId || isActive === undefined) {
       return;
@@ -58,8 +62,20 @@ export function FlowRouteLayout({ basePath = '' }: FlowRouteLayoutProps) {
     updateFlowMutation.mutate({ id: flowId, data: { isActive: !isActive } });
   }, [flowId, isActive, updateFlowMutation]);
 
-  // Get setFlowName from store for header updates
-  const setFlowName = useFlowEditorStore((s) => s.setFlowName);
+  const handleFlowNameChange = useCallback(
+    (name: string) => {
+      if (!flowId) {
+        return;
+      }
+      // Optimistically update the React Query cache so the header reflects the
+      // change immediately without waiting for the server round-trip.
+      queryClient.setQueryData<ReactFlowData>(queryKeys.reactFlow(flowId, version), (old) =>
+        old ? { ...old, name } : old,
+      );
+      updateFlowMutation.mutate({ id: flowId, data: { name } });
+    },
+    [flowId, version, queryClient, updateFlowMutation],
+  );
 
   // Context value — always provided for Run + Active/Inactive; save fields only in edit view
   const flowActionsValue = useMemo<FlowActionsContextType>(
@@ -96,7 +112,7 @@ export function FlowRouteLayout({ basePath = '' }: FlowRouteLayoutProps) {
         <div className="imp-page flex flex-col flex-1 min-h-0 bg-imp-background">
           <FlowHeader
             flowName={flowName}
-            onFlowNameChange={setFlowName}
+            onFlowNameChange={handleFlowNameChange}
             isDirty={flowActionsValue?.isDirty}
             onSave={flowActionsValue?.onSave}
             isSaving={flowActionsValue?.isSaving}

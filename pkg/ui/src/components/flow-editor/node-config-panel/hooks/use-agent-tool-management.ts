@@ -1,6 +1,5 @@
 import { useMemo, useCallback } from 'react';
-import { nanoid } from 'nanoid';
-import { GraphNodeType, type ReactFlowNodeData } from '@invect/core/types';
+import { GraphNodeType, newToolInstanceId, type ReactFlowNodeData } from '@invect/core/types';
 import type { ToolDefinition, AddedToolInstance } from '../../../nodes/ToolSelectorModal';
 import type { Node } from '@xyflow/react';
 
@@ -39,7 +38,7 @@ export function useAgentToolManagement({
         return '';
       }
 
-      const instanceId = nanoid();
+      const instanceId = newToolInstanceId();
       const newInstance: AddedToolInstance = {
         instanceId,
         toolId,

@@ -2,7 +2,7 @@
  * DeployButton — Header action that compiles the current flow into a
  * Vercel Workflows source pair and shows it in a copy-paste modal.
  *
- * The button calls `GET /plugins/vercel-workflows/vercel-workflows/preview/:flowId`
+ * The button calls `GET /plugins/vercel-workflows/preview/:flowId`
  * which returns:
  *   - workflowSource: `'use workflow'` file the user drops into their Next.js app
  *   - sdkSource:      `@invect/primitives` flow definition the workflow imports
@@ -62,7 +62,7 @@ function DeployButtonInner({ flowId }: { flowId: string }) {
     setError(null);
     try {
       const res = await fetch(
-        `${apiBaseUrl}/plugins/vercel-workflows/vercel-workflows/preview/${encodeURIComponent(flowId)}`,
+        `${apiBaseUrl}/plugins/vercel-workflows/preview/${encodeURIComponent(flowId)}`,
         { credentials: 'include' },
       );
       const json = (await res.json()) as PreviewResponse | { error: string };

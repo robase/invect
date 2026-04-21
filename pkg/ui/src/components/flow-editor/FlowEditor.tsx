@@ -27,7 +27,8 @@ import { NodeConfigPanel } from './node-config-panel/NodeConfigPanel';
 import { ToolConfigPanel } from './ToolConfigPanel';
 import { ChatPanel, ChatToggleButton, ChatPromptOverlay } from '~/components/chat';
 import { useNodeRegistry } from '~/contexts/NodeRegistryContext';
-import { useFlowEditorStore, useIsLoading } from './flow-editor.store';
+import { useFlowEditorStore } from './flow-editor.store';
+import { useFlowReactFlowData } from '../../api/flows.api';
 import { useFlowActions } from '../../routes/flow-route-layout';
 import { useUIStore } from '~/stores/uiStore';
 import { useTheme } from '~/contexts/ThemeProvider';
@@ -68,8 +69,9 @@ export function FlowEditor({ flowId, flowVersion, basePath = '' }: FlowEditorPro
   const [showValidation] = useState(false);
   const [layoutSelector, setLayoutSelector] = useState<React.ReactNode>(null);
 
-  // Use Zustand store for loading state
-  const loading = useIsLoading();
+  const { isLoading: loading, error: queryError } = useFlowReactFlowData(flowId, {
+    version: flowVersion,
+  });
 
   // Sidebar visibility (persisted)
   const nodeSidebarOpen = useUIStore((s) => s.nodeSidebarOpen);
@@ -101,6 +103,16 @@ export function FlowEditor({ flowId, flowVersion, basePath = '' }: FlowEditorPro
 
   if (loading) {
     return <InvectLoader className="w-full h-full" iconClassName="h-16" label="Loading flow..." />;
+  }
+
+  if (queryError) {
+    return (
+      <div className="flex items-center justify-center w-full h-full">
+        <div className="p-4 text-red-800 border border-red-200 rounded bg-red-50">
+          Error: {queryError.message}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -175,8 +187,6 @@ export function FlowWorkbenchView({
   const storeNodes = useFlowEditorStore((s) => s.nodes);
   const storeEdges = useFlowEditorStore((s) => s.edges);
   const edgesReady = useFlowEditorStore((s) => s.edgesReady);
-  const loading = useFlowEditorStore((s) => s.isLoading);
-  const queryError = useFlowEditorStore((s) => s.error);
   const currentLayout = useFlowEditorStore((s) => s.currentLayout);
   const currentDirection = useFlowEditorStore((s) => s.layoutDirection);
   const configNodeId = useFlowEditorStore((s) => s.selectedNodeId);
@@ -492,20 +502,6 @@ export function FlowWorkbenchView({
   }, [nodeDefinitions]);
 
   // --- Render ---
-  if (loading) {
-    return <InvectLoader className="w-full h-full" iconClassName="h-16" label="Loading flow..." />;
-  }
-
-  if (queryError) {
-    return (
-      <div className="flex items-center justify-center w-full h-full">
-        <div className="p-4 text-red-800 border border-red-200 rounded bg-red-50">
-          Error: {queryError}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <>
       <div

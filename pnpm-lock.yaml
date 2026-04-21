@@ -309,6 +309,9 @@ importers:
       '@invect/user-auth':
         specifier: workspace:*
         version: link:../../pkg/plugins/auth
+      '@invect/vercel-workflows':
+        specifier: workspace:*
+        version: link:../../pkg/plugins/vercel-workflows
       '@invect/version-control':
         specifier: workspace:*
         version: link:../../pkg/plugins/version-control
@@ -601,6 +604,9 @@ importers:
       '@invect/user-auth':
         specifier: workspace:*
         version: link:../../pkg/plugins/auth
+      '@invect/vercel-workflows':
+        specifier: workspace:*
+        version: link:../../pkg/plugins/vercel-workflows
       '@invect/version-control':
         specifier: workspace:*
         version: link:../../pkg/plugins/version-control

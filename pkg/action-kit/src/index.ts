@@ -65,6 +65,7 @@ export {
   TOKENS_PER_CHAR_BY_PROVIDER,
   DEFAULT_TOKENS_PER_CHAR,
   APPROX_TOKENS_PER_CHAR,
+  newToolInstanceId,
 } from './agent-tool';
 
 // Flow graph (structural)

@@ -56,14 +56,14 @@ export function useFlowEditor({ flowId, version, basePath = '' }: UseFlowEditorO
   // Zustand - client state (individual selectors for fine-grained re-renders)
   const nodes = useFlowEditorStore((s) => s.nodes);
   const edges = useFlowEditorStore((s) => s.edges);
-  const flowName = useFlowEditorStore((s) => s.flowName);
   const currentLayout = useFlowEditorStore((s) => s.currentLayout);
   const layoutDirection = useFlowEditorStore((s) => s.layoutDirection);
   const syncFromServer = useFlowEditorStore((s) => s.syncFromServer);
   const markSaved = useFlowEditorStore((s) => s.markSaved);
   const setFlowId = useFlowEditorStore((s) => s.setFlowId);
-  const setLoading = useFlowEditorStore((s) => s.setLoading);
-  const setError = useFlowEditorStore((s) => s.setError);
+
+  // flowName lives in React Query cache, not Zustand
+  const flowName = flowData?.name ?? 'Untitled Flow';
 
   // Content-based dirty detection (derived from snapshot comparison)
   const isDirty = useIsDirty();
@@ -72,16 +72,6 @@ export function useFlowEditor({ flowId, version, basePath = '' }: UseFlowEditorO
   useEffect(() => {
     setFlowId(flowId, version);
   }, [flowId, version, setFlowId]);
-
-  // Sync loading state
-  useEffect(() => {
-    setLoading(isLoading);
-  }, [isLoading, setLoading]);
-
-  // Sync error state
-  useEffect(() => {
-    setError(queryError?.message ?? null);
-  }, [queryError, setError]);
 
   // Sync server data to Zustand when React Query fetches new data
   useEffect(() => {
@@ -92,7 +82,7 @@ export function useFlowEditor({ flowId, version, basePath = '' }: UseFlowEditorO
         : `${flowId}:unknown`;
 
       // Server returns ReactFlowNode[] which is compatible with Node[]
-      syncFromServer(flowData.nodes as Node[], flowData.edges as Edge[], versionId, flowData.name);
+      syncFromServer(flowData.nodes as Node[], flowData.edges as Edge[], versionId);
     }
   }, [flowData, flowId, syncFromServer]);
 

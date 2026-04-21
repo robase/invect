@@ -8,6 +8,7 @@ import { rbac } from '@invect/rbac';
 import { webhooks } from '@invect/webhooks';
 import { versionControl } from '@invect/version-control';
 import { mcp } from '@invect/mcp';
+import { vercelWorkflowsPlugin } from '@invect/vercel-workflows';
 
 import './app.css';
 
@@ -25,7 +26,14 @@ export const App = () => {
                   apiPath: 'http://localhost:3000/invect',
                   frontendPath: '/invect',
                   theme: 'dark',
-                  plugins: [auth(), rbac(), webhooks(), versionControl(), mcp()],
+                  plugins: [
+                    auth(),
+                    rbac(),
+                    webhooks(),
+                    versionControl(),
+                    mcp(),
+                    vercelWorkflowsPlugin(),
+                  ],
                 }}
               />
             </div>

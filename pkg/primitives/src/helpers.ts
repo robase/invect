@@ -1,3 +1,4 @@
+import { newToolInstanceId } from '@invect/action-kit';
 import type {
   PrimitiveNode,
   PrimitiveEdge,
@@ -111,6 +112,58 @@ export function switchNode(
   };
 }
 
+export interface ToolInstance {
+  toolId: string;
+  name: string;
+  description: string;
+  params: Record<string, unknown>;
+}
+
+/**
+ * Declare a tool instance for an agent's `tools` array. The runtime-level
+ * `instanceId` is assigned automatically by `agent()` (duplicates of the same
+ * `toolId` within one agent get `_2`, `_3` suffixes).
+ *
+ * @example
+ * agent('triage', {
+ *   credentialId: '{{ env.ANTHROPIC }}',
+ *   model: 'claude-sonnet-4-6',
+ *   tools: [
+ *     tool('github.search_issues', {
+ *       description: 'Look for existing issues before filing new ones',
+ *       params: { perPage: 10 },
+ *     }),
+ *   ],
+ * });
+ */
+export function tool(
+  toolId: string,
+  options?: {
+    /** Display name surfaced to the LLM. Defaults to `toolId`. */
+    name?: string;
+    /** Tool description surfaced to the LLM. Defaults to empty string. */
+    description?: string;
+    /** Static params bound to every call of this tool instance. */
+    params?: Record<string, unknown>;
+  },
+): ToolInstance {
+  return {
+    toolId,
+    name: options?.name ?? toolId,
+    description: options?.description ?? '',
+    params: options?.params ?? {},
+  };
+}
+
+// Assign runtime-level `instanceId`s using the canonical `tool_XXXXXXXX`
+// format shared with the chat agent tools, the editor tool panel, and seed
+// fixtures — see `newToolInstanceId` in `@invect/action-kit`.
+function assignToolInstanceIds(
+  tools: ToolInstance[],
+): Array<ToolInstance & { instanceId: string }> {
+  return tools.map((t) => ({ instanceId: newToolInstanceId(), ...t }));
+}
+
 export function agent(
   referenceId: string,
   params: {
@@ -118,18 +171,22 @@ export function agent(
     model: ParamValue<string>;
     systemPrompt?: ParamValue<string>;
     messages?: ParamValue<unknown>;
-    tools?: ParamValue<unknown>;
+    tools?: ToolInstance[];
     temperature?: ParamValue<number>;
     maxTokens?: ParamValue<number>;
     maxIterations?: ParamValue<number>;
     mapper?: (ctx: NodeContext) => NodeContext | Promise<NodeContext>;
   },
 ): PrimitiveNode {
-  const { mapper, ...rest } = params;
+  const { mapper, tools, ...rest } = params;
+  const resolved: Record<string, ParamValue<unknown>> = {
+    ...(rest as Record<string, ParamValue<unknown>>),
+    ...(tools ? { tools: assignToolInstanceIds(tools) } : {}),
+  };
   return {
     referenceId,
     type: 'core.agent',
-    params: rest as Record<string, ParamValue<unknown>>,
+    params: resolved,
     ...(mapper ? { mapper } : {}),
   };
 }
@@ -148,6 +205,24 @@ export function code(
     // The executor resolves callable params — so `result` is the resolved return value of code(ctx)
     params: { result: rest.code as ParamValue<unknown> },
     ...(mapper ? { mapper } : {}),
+  };
+}
+
+// Generic node builder for action types without a dedicated helper (e.g.
+// integration providers or legacy types like "AGENT"). The returned node is
+// a plain `PrimitiveNode` whose params are stored as-is; runtime execution
+// relies on the action with the same id being registered in the flow runner.
+export function node(
+  referenceId: string,
+  type: string,
+  params: Record<string, ParamValue<unknown>> = {},
+  options?: { mapper?: (ctx: NodeContext) => NodeContext | Promise<NodeContext> },
+): PrimitiveNode {
+  return {
+    referenceId,
+    type,
+    params,
+    ...(options?.mapper ? { mapper: options.mapper } : {}),
   };
 }
 

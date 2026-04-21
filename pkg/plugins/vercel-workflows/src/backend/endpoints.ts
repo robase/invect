@@ -12,9 +12,60 @@
  *
  * No state is persisted — compilation is deterministic from the flow version.
  */
-import type { InvectPlugin } from '@invect/core';
+import type { InvectPlugin, InvectDefinition, FlowNodeDefinitions } from '@invect/core';
 import { emitSdkSource } from '@invect/primitives';
 import { compile } from '../compiler/flow-compiler';
+
+const OUTPUT_TYPES = new Set(['core.output', 'primitives.output']);
+
+function isTriggerNode(node: FlowNodeDefinitions): boolean {
+  return node.type.startsWith('trigger.');
+}
+
+function isOutputNode(node: FlowNodeDefinitions): boolean {
+  return OUTPUT_TYPES.has(node.type);
+}
+
+// Vercel workflows treat trigger nodes as implicit (their role is fulfilled by
+// the workflow function's `__inputs` arg) and output nodes as implicit (their
+// role is fulfilled by the returned `flowOutputs` object). Strip both from the
+// primitives flow so the SDK/compile passes don't see unsupported types, and
+// return the output assignments separately so the workflow compiler can inject
+// `flowOutputs[name] = completedOutputs[upstream]` at the tail of the
+// orchestrator.
+function stripTriggersAndOutputs(def: InvectDefinition): {
+  filtered: InvectDefinition;
+  outputAssignments: Array<{ outputName: string; upstreamRef: string }>;
+} {
+  const refById = new Map(def.nodes.map((n) => [n.id, n.referenceId ?? n.id]));
+  const triggerIds = new Set(def.nodes.filter(isTriggerNode).map((n) => n.id));
+  const outputNodes = def.nodes.filter(isOutputNode);
+  const outputIds = new Set(outputNodes.map((n) => n.id));
+  const skipIds = new Set([...triggerIds, ...outputIds]);
+
+  const outputAssignments = outputNodes
+    .map((outNode) => {
+      const incoming = def.edges.find((e) => e.target === outNode.id);
+      const upstreamRef = incoming ? refById.get(incoming.source) : undefined;
+      const outputName =
+        typeof outNode.params.outputName === 'string' && outNode.params.outputName.length > 0
+          ? (outNode.params.outputName as string)
+          : (outNode.referenceId ?? outNode.id);
+      if (!upstreamRef) {
+        return null;
+      }
+      return { outputName, upstreamRef };
+    })
+    .filter((x): x is { outputName: string; upstreamRef: string } => x !== null);
+
+  const filtered: InvectDefinition = {
+    nodes: def.nodes.filter((n) => !skipIds.has(n.id)),
+    edges: def.edges.filter((e) => !skipIds.has(e.source) && !skipIds.has(e.target)),
+    metadata: def.metadata,
+  };
+
+  return { filtered, outputAssignments };
+}
 
 export interface VercelWorkflowsBackendOptions {
   /** Import path the generated workflow file will use to reach the SDK flow. */
@@ -53,12 +104,20 @@ export function buildBackendPlugin(options: VercelWorkflowsBackendOptions = {}):
             return { status: 404, body: { error: `Flow version not found` } };
           }
 
-          const workflowName = sanitizeIdent(flow.name || 'myWorkflow');
-          const flowExport = sanitizeIdent(`${flow.name || 'my'}Flow`, { initialLower: true });
+          // Derive both identifiers from a single camelCased base. Strip a
+          // trailing "Flow" from the flow name (e.g. "Untitled Flow") so the
+          // export doesn't become "untitledFlowFlow" when we add the suffix.
+          const base = stripTrailingFlow(toCamelCase(flow.name || 'my'));
+          const workflowName = `${base || 'my'}Workflow`;
+          const flowExport = `${base || 'my'}Flow`;
+
+          const { filtered, outputAssignments } = stripTriggersAndOutputs(
+            flowVersion.invectDefinition,
+          );
 
           let sdkSource: string;
           try {
-            const sdkResult = emitSdkSource(flowVersion.invectDefinition, {
+            const sdkResult = emitSdkSource(filtered, {
               flowName: flowExport,
             });
             sdkSource = sdkResult.code;
@@ -76,22 +135,19 @@ export function buildBackendPlugin(options: VercelWorkflowsBackendOptions = {}):
           try {
             const compileResult = compile(
               {
-                nodes: flowVersion.invectDefinition.nodes.map((n) => ({
+                nodes: filtered.nodes.map((n) => ({
                   referenceId: n.referenceId ?? n.id,
                   type: n.type,
                   params: n.params as Record<string, unknown>,
                 })),
-                edges: flowVersion.invectDefinition.edges.map((e) =>
+                edges: filtered.edges.map((e) =>
                   e.sourceHandle
                     ? [
-                        edgeRef(flowVersion.invectDefinition.nodes, e.source),
-                        edgeRef(flowVersion.invectDefinition.nodes, e.target),
+                        edgeRef(filtered.nodes, e.source),
+                        edgeRef(filtered.nodes, e.target),
                         e.sourceHandle,
                       ]
-                    : [
-                        edgeRef(flowVersion.invectDefinition.nodes, e.source),
-                        edgeRef(flowVersion.invectDefinition.nodes, e.target),
-                      ],
+                    : [edgeRef(filtered.nodes, e.source), edgeRef(filtered.nodes, e.target)],
                 ),
               },
               {
@@ -100,6 +156,11 @@ export function buildBackendPlugin(options: VercelWorkflowsBackendOptions = {}):
                 flowExport,
                 configImport: ctx.query.configImport ?? defaultConfigImport,
                 configExport: 'getFlowConfig',
+                // Inject flow-output assignments sourced from upstream step results.
+                orchestratorTail: outputAssignments.map(
+                  ({ outputName, upstreamRef }) =>
+                    `  flowOutputs[${JSON.stringify(outputName)}] = completedOutputs[${JSON.stringify(upstreamRef)}];`,
+                ),
               },
             );
 
@@ -166,16 +227,22 @@ function edgeRef(nodes: ReadonlyArray<{ id: string; referenceId?: string }>, id:
   return match?.referenceId ?? match?.id ?? id;
 }
 
-function sanitizeIdent(input: string, opts?: { initialLower?: boolean }): string {
-  let cleaned = input.replace(/[^a-zA-Z0-9_$]/g, '_');
-  if (/^[0-9]/.test(cleaned)) {
-    cleaned = `_${cleaned}`;
+// Split on anything non-alphanumeric, lowercase the first segment, title-case
+// the rest, then join. Drops punctuation/whitespace so user-entered names like
+// "My Flow!" come out as "myFlow".
+function toCamelCase(input: string): string {
+  const segments = input.split(/[^a-zA-Z0-9]+/).filter(Boolean);
+  if (segments.length === 0) {
+    return '';
   }
-  if (cleaned.length === 0) {
-    cleaned = 'myFlow';
-  }
-  if (opts?.initialLower && /^[A-Z]/.test(cleaned)) {
-    cleaned = cleaned[0]!.toLowerCase() + cleaned.slice(1);
-  }
-  return cleaned;
+  const joined = segments
+    .map((s, i) => (i === 0 ? s[0]!.toLowerCase() + s.slice(1) : s[0]!.toUpperCase() + s.slice(1)))
+    .join('');
+  return /^[0-9]/.test(joined) ? `_${joined}` : joined;
+}
+
+// Remove a trailing "Flow" (case-insensitive) so the generated flow export
+// name doesn't double up when we re-append the "Flow" / "Workflow" suffix.
+function stripTrailingFlow(input: string): string {
+  return input.replace(/Flow$/i, '');
 }

@@ -3,6 +3,7 @@ import { defineConfig } from 'tsdown';
 export default defineConfig({
   entry: {
     index: 'src/index.ts',
+    browser: 'src/browser.ts',
     'runtime/index': 'src/runtime/index.ts',
     'compiler/index': 'src/compiler/index.ts',
     'frontend/index': 'src/frontend/index.ts',

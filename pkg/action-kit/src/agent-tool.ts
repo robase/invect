@@ -55,6 +55,16 @@ export interface AddedToolInstance {
   };
 }
 
+/**
+ * Generate a tool instance ID in the canonical `tool_XXXXXXXX` format used by
+ * seeds, the chat-driven agent config, and the editor's tool panel. Centralized
+ * so every entry point that creates an `AddedToolInstance` produces the same
+ * shape — makes grep-across-logs and test fixtures interchangeable.
+ */
+export function newToolInstanceId(): string {
+  return 'tool_' + Math.random().toString(36).slice(2, 10);
+}
+
 export interface ConfiguredToolDefinition extends AgentToolDefinition {
   instanceId: string;
   staticParams: Record<string, unknown>;

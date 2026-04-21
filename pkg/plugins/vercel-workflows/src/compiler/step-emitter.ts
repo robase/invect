@@ -36,17 +36,17 @@ function emitStepCallAndCollect(nodeRef: string, ctx: EmitContext): string {
   const { indent } = ctx;
   const lines: string[] = [];
   lines.push(
-    `${indent}const r_${ident} = await step_${ident}({ inputs: __inputs, completedOutputs, flowRunId: __flowRunId });`,
+    `${indent}const r_${ident} = await step_${ident}({ inputs, completedOutputs, flowRunId });`,
   );
   lines.push(`${indent}if (!r_${ident}.success) {`);
   lines.push(
     `${indent}  throw new Error(\`Node ${quote(nodeRef).slice(1, -1)} failed: \${r_${ident}.error ?? 'unknown'}\`);`,
   );
   lines.push(`${indent}}`);
-  lines.push(`${indent}completedOutputs[${quote(nodeRef)}] = __extractPrimary(r_${ident});`);
+  lines.push(`${indent}completedOutputs[${quote(nodeRef)}] = extractPrimary(r_${ident});`);
   if (ctx.outputNodeSet.has(nodeRef)) {
     lines.push(
-      `${indent}flowOutputs[(r_${ident}.metadata?.outputName as string | undefined) ?? ${quote(nodeRef)}] = __extractPrimary(r_${ident});`,
+      `${indent}flowOutputs[(r_${ident}.metadata?.outputName as string | undefined) ?? ${quote(nodeRef)}] = extractPrimary(r_${ident});`,
     );
   }
   return lines.join('\n');
@@ -148,12 +148,12 @@ export function emitStepFunctions(nodeRefs: string[]): string {
         `}): Promise<ActionResult> {`,
         `  'use step';`,
         `  return executeStep({`,
-        `    flow: __flow,`,
+        `    flow,`,
         `    nodeRef: ${quote(nodeRef)},`,
         `    completedOutputs: args.completedOutputs,`,
         `    inputs: args.inputs,`,
         `    flowRunId: args.flowRunId,`,
-        `    config: __getConfig(),`,
+        `    config: getFlowConfig(),`,
         `  });`,
         `}`,
       ].join('\n');
