@@ -72,6 +72,42 @@ function formatPosition(pos: { x: number; y: number }): string {
 }
 
 /**
+ * Render a single `addedTools` entry as a `tool(toolId, {...})` call.
+ * Drops the auto-generated `instanceId` since `agent()` regenerates it on parse.
+ */
+function formatToolCall(toolEntry: Record<string, unknown>, baseIndent: number): string {
+  const { toolId, instanceId: _instanceId, ...rest } = toolEntry;
+  const quotedId = JSON.stringify(toolId ?? '');
+  const entries = Object.entries(rest).filter(([, v]) => v !== undefined);
+  if (entries.length === 0) {
+    return `tool(${quotedId})`;
+  }
+  const pad = ' '.repeat(baseIndent);
+  const lines = entries.map(([k, v]) => {
+    const formatted = formatValue(v, baseIndent + 2);
+    return `${pad}  ${k}: ${formatted},`;
+  });
+  return `tool(${quotedId}, {\n${lines.join('\n')}\n${pad}})`;
+}
+
+/**
+ * Render an `addedTools` array as a multi-line array of `tool(...)` calls.
+ */
+function formatAddedTools(arr: unknown[], baseIndent: number): string {
+  if (arr.length === 0) {
+    return '[]';
+  }
+  const pad = ' '.repeat(baseIndent);
+  const lines = arr.map((item) => {
+    if (typeof item === 'object' && item !== null && 'toolId' in item) {
+      return `${pad}  ${formatToolCall(item as Record<string, unknown>, baseIndent + 2)},`;
+    }
+    return `${pad}  ${formatValue(item, baseIndent + 2)},`;
+  });
+  return `[\n${lines.join('\n')}\n${pad}]`;
+}
+
+/**
  * Render a params object as formatted key-value pairs inside `{ }`.
  * Omits empty objects. Inlines small objects on one line.
  */
@@ -94,6 +130,9 @@ function formatParams(params: Record<string, unknown>, baseIndent: number): stri
 
   const pad = ' '.repeat(baseIndent);
   const lines = entries.map(([key, val]) => {
+    if (key === 'addedTools' && Array.isArray(val)) {
+      return `${pad}  ${key}: ${formatAddedTools(val, baseIndent + 2)},`;
+    }
     const formatted = formatValue(val, baseIndent + 2);
     return `${pad}  ${key}: ${formatted},`;
   });
@@ -149,8 +188,52 @@ function serializeEdge(edge: ClipboardEdge, nodeIdToRef: Map<string, string>): s
 }
 
 // ---------------------------------------------------------------------------
+// Import collection
+// ---------------------------------------------------------------------------
+
+function collectImports(nodes: ClipboardNode[]): {
+  coreHelpers: Set<string>;
+  providerNamespaces: Set<string>;
+} {
+  const coreHelpers = new Set<string>();
+  const providerNamespaces = new Set<string>();
+
+  for (const n of nodes) {
+    const core = CORE_HELPERS[n.type];
+    const provider = PROVIDER_HELPERS[n.type];
+    if (core) {
+      coreHelpers.add(core);
+    } else if (provider) {
+      providerNamespaces.add(provider.split('.')[0]);
+    } else {
+      coreHelpers.add('node');
+    }
+
+    // `addedTools` entries serialize as `tool(...)` calls — pull in the helper.
+    const added = (n.data.params as Record<string, unknown>)?.addedTools;
+    if (Array.isArray(added) && added.length > 0) {
+      coreHelpers.add('tool');
+    }
+  }
+
+  return { coreHelpers, providerNamespaces };
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
+
+export interface SerializeOptions {
+  /**
+   * When true, emit a full runnable `.flow.ts` file — imports + a
+   * `defineFlow({...})` default export wrapping the nodes/edges. When
+   * false (default), emit just the `nodes: [...]` / `edges: [...]`
+   * fragment used for partial-selection copy-paste.
+   */
+  asFullFile?: boolean;
+  /** Optional `name` property for the defineFlow call. */
+  flowName?: string;
+}
 
 /**
  * Convert clipboard nodes and edges into SDK source code text.
@@ -170,7 +253,11 @@ function serializeEdge(edge: ClipboardEdge, nodeIdToRef: Map<string, string>): s
  * ],
  * ```
  */
-export function serializeToSDK(nodes: ClipboardNode[], edges: ClipboardEdge[]): string {
+export function serializeToSDK(
+  nodes: ClipboardNode[],
+  edges: ClipboardEdge[],
+  options: SerializeOptions = {},
+): string {
   // Build ID → referenceId lookup for edge resolution
   const nodeIdToRef = new Map<string, string>();
   for (const n of nodes) {
@@ -201,5 +288,29 @@ export function serializeToSDK(nodes: ClipboardNode[], edges: ClipboardEdge[]): 
     parts.push('],');
   }
 
-  return parts.join('\n').trimEnd();
+  const body = parts.join('\n').trimEnd();
+
+  if (!options.asFullFile) {
+    return body;
+  }
+
+  const { coreHelpers, providerNamespaces } = collectImports(nodes);
+  const allImports = ['defineFlow', ...[...coreHelpers].sort(), ...[...providerNamespaces].sort()];
+  const importLines = [`import { ${allImports.join(', ')} } from '@invect/core/sdk';`];
+
+  const indentedBody = body
+    .split('\n')
+    .map((line) => (line.length > 0 ? '  ' + line : line))
+    .join('\n');
+
+  const flowMeta = options.flowName ? `  name: ${JSON.stringify(options.flowName)},\n` : '';
+
+  return [
+    importLines.join('\n'),
+    '',
+    'export default defineFlow({',
+    flowMeta + indentedBody,
+    '});',
+    '',
+  ].join('\n');
 }

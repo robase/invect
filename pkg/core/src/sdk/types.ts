@@ -194,9 +194,9 @@ export type GenericParams = Record<string, unknown>;
 export interface AddedToolInstance {
   toolId: string;
   instanceId?: string;
-  customName?: string;
-  customDescription?: string;
-  customParams?: Record<string, unknown>;
+  name: string;
+  description: string;
+  params: Record<string, unknown>;
 }
 
 export interface AgentParams {

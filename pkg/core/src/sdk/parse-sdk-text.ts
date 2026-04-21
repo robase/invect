@@ -43,6 +43,7 @@ import {
   httpRequest,
   agent,
   node,
+  tool,
 } from './nodes';
 import { gmail, slack, github, provider } from './providers';
 
@@ -65,11 +66,18 @@ const SDK_HELPERS: Record<string, unknown> = {
   output,
   model,
   javascript,
+  code: javascript,
   ifElse,
   template,
   httpRequest,
   agent,
   node,
+  tool,
+
+  // defineFlow — identity passthrough so a full-file paste unwraps cleanly.
+  // The real `defineFlow` runs validation and wraps in metadata; inside the
+  // parser we just want the object back.
+  defineFlow: (def: unknown) => def,
 
   // Provider namespaces
   gmail,
@@ -122,6 +130,30 @@ function stripComments(text: string): string {
     .replace(/\/\*[\s\S]*?\*\//g, ''); // block comments
 }
 
+/**
+ * Unwrap a full `.flow.ts` file into the nodes/edges fragment format the
+ * evaluator expects. Strips `import` statements and unwraps
+ * `export default defineFlow({ ... });` down to the inner body.
+ * Returns the text unchanged if no wrapper is present.
+ */
+function unwrapFullFile(text: string): string {
+  let out = text.replace(/^\s*import[^;]*;/gm, '');
+
+  const defineFlowMatch = out.match(
+    /(?:export\s+default\s+)?defineFlow\s*\(\s*(\{[\s\S]*\})\s*\)\s*;?\s*$/,
+  );
+  if (defineFlowMatch) {
+    const inner = defineFlowMatch[1].trim();
+    // Strip outer braces so the result is `nodes: [...], edges: [...]` — the
+    // same shape as the fragment format.
+    if (inner.startsWith('{') && inner.endsWith('}')) {
+      out = inner.slice(1, -1);
+    }
+  }
+
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -135,7 +167,7 @@ function stripComments(text: string): string {
  * Throws if the text contains syntax errors or produces unexpected values.
  */
 export function parseSDKText(text: string): ParsedSDK {
-  const cleaned = stripComments(text).trim();
+  const cleaned = unwrapFullFile(stripComments(text)).trim();
   if (!cleaned) {
     return { nodes: [], edges: [] };
   }

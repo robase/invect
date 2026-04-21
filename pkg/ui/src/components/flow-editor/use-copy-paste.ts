@@ -171,12 +171,17 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
   // -------------------------------------------------------------------------
   // Serialize selection into ClipboardData
   // -------------------------------------------------------------------------
-  const serializeSelection = useCallback((): ClipboardData | null => {
+  const serializeSelection = useCallback((): {
+    data: ClipboardData;
+    isFullGraph: boolean;
+  } | null => {
     const { nodes, edges } = useFlowEditorStore.getState();
     const selectedNodes = nodes.filter((n) => n.selected);
     if (selectedNodes.length === 0) {
       return null;
     }
+
+    const isFullGraph = selectedNodes.length === nodes.length;
 
     const selectedIdSet = new Set(selectedNodes.map((n) => n.id));
 
@@ -223,10 +228,13 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
     }));
 
     return {
-      sourceFlowId: flowId,
-      nodes: clipboardNodes,
-      edges: clipboardEdges,
-      copyTime: Date.now(),
+      data: {
+        sourceFlowId: flowId,
+        nodes: clipboardNodes,
+        edges: clipboardEdges,
+        copyTime: Date.now(),
+      },
+      isFullGraph,
     };
   }, [flowId]);
 
@@ -397,13 +405,18 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
   // -------------------------------------------------------------------------
   // Write to clipboard (system + in-memory)
   // -------------------------------------------------------------------------
-  const writeClipboard = useCallback(async (data: ClipboardData) => {
+  const writeClipboard = useCallback(async (data: ClipboardData, isFullGraph: boolean) => {
     clipboardRef.current = data;
     try {
       // Write SDK code to the system clipboard so pasting into a text editor
       // (VS Code, etc.) produces importable TypeScript helper calls.
       // Internal paste always reads from clipboardRef (in-memory).
-      const sdkText = serializeToSDK(data.nodes, data.edges);
+      // When the full graph is selected, emit a complete runnable .flow.ts
+      // (imports + `export default defineFlow({...})`); otherwise emit the
+      // nodes/edges fragment suitable for partial paste into an existing file.
+      const sdkText = serializeToSDK(data.nodes, data.edges, {
+        asFullFile: isFullGraph,
+      });
       await navigator.clipboard.writeText(sdkText);
     } catch {
       // System clipboard write failed — in-memory ref is still set
@@ -415,11 +428,11 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
   // -------------------------------------------------------------------------
 
   const copy = useCallback(async () => {
-    const data = serializeSelection();
-    if (!data) {
+    const selection = serializeSelection();
+    if (!selection) {
       return;
     }
-    await writeClipboard(data);
+    await writeClipboard(selection.data, selection.isFullGraph);
   }, [serializeSelection, writeClipboard]);
 
   const paste = useCallback(async () => {
@@ -432,11 +445,11 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
   }, [readClipboard, getPasteAnchor, materializePaste]);
 
   const cut = useCallback(async () => {
-    const data = serializeSelection();
-    if (!data) {
+    const selection = serializeSelection();
+    if (!selection) {
       return;
     }
-    await writeClipboard(data);
+    await writeClipboard(selection.data, selection.isFullGraph);
 
     const selectedIds = useFlowEditorStore
       .getState()
@@ -449,13 +462,13 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
   }, [serializeSelection, writeClipboard]);
 
   const duplicate = useCallback(() => {
-    const data = serializeSelection();
-    if (!data) {
+    const selection = serializeSelection();
+    if (!selection) {
       return;
     }
 
     // Don't write to system clipboard — duplicate is internal
-    clipboardRef.current = data;
+    clipboardRef.current = selection.data;
 
     // Compute offset from original positions
     const { nodes } = useFlowEditorStore.getState();
@@ -467,7 +480,7 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
     const minX = Math.min(...selectedNodes.map((n) => n.position.x));
     const minY = Math.min(...selectedNodes.map((n) => n.position.y));
 
-    materializePaste(data, { x: minX + 50, y: minY + 50 });
+    materializePaste(selection.data, { x: minX + 50, y: minY + 50 });
   }, [serializeSelection, materializePaste]);
 
   const deleteSelection = useCallback(() => {

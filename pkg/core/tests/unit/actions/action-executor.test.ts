@@ -20,14 +20,21 @@ import type { NodeExecutionContext } from 'src/types.internal';
 // ---------------------------------------------------------------------------
 
 describe('coerceJsonStringParams', () => {
-  it('should parse a JSON array string into a real array', () => {
+  it('should parse a JSON object string into a real object', () => {
     const result = coerceJsonStringParams({
-      inputDefinitions: '[{ "name": "email" }, { "name": "topic" }]',
+      defaultInputs: '{ "email": "test@example.com", "topic": "general" }',
     });
-    expect(result.inputDefinitions).toEqual([{ name: 'email' }, { name: 'topic' }]);
+    expect(result.defaultInputs).toEqual({ email: 'test@example.com', topic: 'general' });
   });
 
-  it('should parse a JSON object string into a real object', () => {
+  it('should parse a JSON array string into a real array', () => {
+    const result = coerceJsonStringParams({
+      config: '[1, 2, 3]',
+    });
+    expect(result.config).toEqual([1, 2, 3]);
+  });
+
+  it('should parse a JSON object string into a real object (generic)', () => {
     const result = coerceJsonStringParams({
       config: '{ "retries": 3, "timeout": 5000 }',
     });
@@ -35,13 +42,13 @@ describe('coerceJsonStringParams', () => {
   });
 
   it('should convert an empty string to undefined', () => {
-    const result = coerceJsonStringParams({ inputDefinitions: '' });
-    expect(result.inputDefinitions).toBeUndefined();
+    const result = coerceJsonStringParams({ defaultInputs: '' });
+    expect(result.defaultInputs).toBeUndefined();
   });
 
   it('should convert a whitespace-only string to undefined', () => {
-    const result = coerceJsonStringParams({ inputDefinitions: '   ' });
-    expect(result.inputDefinitions).toBeUndefined();
+    const result = coerceJsonStringParams({ defaultInputs: '   ' });
+    expect(result.defaultInputs).toBeUndefined();
   });
 
   it('should leave template expressions as strings', () => {
@@ -87,15 +94,12 @@ describe('coerceJsonStringParams', () => {
   });
 
   it('should handle pretty-printed JSON (multiline)', () => {
-    const json = `[
-  { "name": "email" },
-  { "name": "topic", "defaultValue": "hello" }
-]`;
-    const result = coerceJsonStringParams({ inputDefinitions: json });
-    expect(result.inputDefinitions).toEqual([
-      { name: 'email' },
-      { name: 'topic', defaultValue: 'hello' },
-    ]);
+    const json = `{
+  "email": "test@example.com",
+  "topic": "hello"
+}`;
+    const result = coerceJsonStringParams({ defaultInputs: json });
+    expect(result.defaultInputs).toEqual({ email: 'test@example.com', topic: 'hello' });
   });
 
   it('should not parse strings containing {{ even if they look like JSON', () => {
@@ -129,40 +133,45 @@ function makeContext(overrides: Partial<ActionExecutionContext> = {}): ActionExe
 }
 
 describe('trigger.manual with coerced params', () => {
-  it('should accept inputDefinitions as a real array', async () => {
+  it('should use defaultInputs when no flowInputs are provided (manual run)', async () => {
+    const ctx = makeContext({ flowInputs: {} });
+    const result = await manualTriggerAction.execute(
+      { defaultInputs: { topic: 'general', severity: 'medium' } },
+      ctx,
+    );
+    expect(result.success).toBe(true);
+    expect(result.output).toEqual({ topic: 'general', severity: 'medium' });
+  });
+
+  it('should use flowInputs when provided, overriding defaults (code-triggered run)', async () => {
     const ctx = makeContext({
       flowInputs: { email: 'test@example.com', topic: 'bug' },
     });
     const result = await manualTriggerAction.execute(
-      { inputDefinitions: [{ name: 'email' }, { name: 'topic' }] },
+      { defaultInputs: { topic: 'general', severity: 'medium' } },
       ctx,
     );
     expect(result.success).toBe(true);
-    expect(result.output).toEqual({ email: 'test@example.com', topic: 'bug' });
+    // flowInputs override defaults; severity falls back to default
+    expect(result.output).toEqual({ email: 'test@example.com', topic: 'bug', severity: 'medium' });
   });
 
-  it('should accept inputDefinitions after JSON string coercion', async () => {
-    const ctx = makeContext({
-      flowInputs: { email: 'test@example.com', topic: 'bug' },
-    });
-    // Simulate what happens after coerceJsonStringParams
+  it('should accept defaultInputs as a JSON string after coercion', async () => {
+    const ctx = makeContext({ flowInputs: {} });
     const coerced = coerceJsonStringParams({
-      inputDefinitions: '[{ "name": "email" }, { "name": "topic" }]',
+      defaultInputs: '{ "topic": "general", "count": 5 }',
     });
-    // Validate with the action's Zod schema
     const parsed = manualTriggerAction.params.schema.safeParse(coerced);
     expect(parsed.success).toBe(true);
 
     const result = await manualTriggerAction.execute(parsed.data!, ctx);
     expect(result.success).toBe(true);
-    expect(result.output).toEqual({ email: 'test@example.com', topic: 'bug' });
+    expect(result.output).toEqual({ topic: 'general', count: 5 });
   });
 
-  it('should pass through all inputs when inputDefinitions is empty string (coerced to undefined)', async () => {
-    const ctx = makeContext({
-      flowInputs: { anything: 'goes' },
-    });
-    const coerced = coerceJsonStringParams({ inputDefinitions: '' });
+  it('should pass through all flowInputs when no defaultInputs are configured', async () => {
+    const ctx = makeContext({ flowInputs: { anything: 'goes' } });
+    const coerced = coerceJsonStringParams({ defaultInputs: '' });
     const parsed = manualTriggerAction.params.schema.safeParse(coerced);
     expect(parsed.success).toBe(true);
 
@@ -171,54 +180,22 @@ describe('trigger.manual with coerced params', () => {
     expect(result.output).toEqual({ anything: 'goes' });
   });
 
-  it('should apply default values from inputDefinitions', async () => {
+  it('should return empty output when no defaults and no flowInputs', async () => {
     const ctx = makeContext({ flowInputs: {} });
-    const coerced = coerceJsonStringParams({
-      inputDefinitions: '[{ "name": "topic", "defaultValue": "general" }]',
-    });
-    const parsed = manualTriggerAction.params.schema.safeParse(coerced);
-    expect(parsed.success).toBe(true);
-
-    const result = await manualTriggerAction.execute(parsed.data!, ctx);
+    const result = await manualTriggerAction.execute({}, ctx);
     expect(result.success).toBe(true);
-    expect(result.output).toEqual({ topic: 'general' });
+    expect(result.output).toEqual({});
   });
 
-  it('should report missing required inputs', async () => {
-    const ctx = makeContext({ flowInputs: {} });
-    const coerced = coerceJsonStringParams({
-      inputDefinitions: '[{ "name": "email" }]',
-    });
-    const parsed = manualTriggerAction.params.schema.safeParse(coerced);
-    expect(parsed.success).toBe(true);
-
-    const result = await manualTriggerAction.execute(parsed.data!, ctx);
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('Missing required input(s): email');
-  });
-
-  it('should strip extra fields from inputDefinitions objects (label, type, required)', async () => {
+  it('should strip internal trigger keys from flowInputs', async () => {
     const ctx = makeContext({
-      flowInputs: { email: 'test@example.com' },
+      flowInputs: { email: 'test@example.com', __triggerData: 'internal', __triggerNodeId: 'n1' },
     });
-    // Chat assistant often includes extra fields — Zod should strip them
-    const coerced = coerceJsonStringParams({
-      inputDefinitions: JSON.stringify([
-        {
-          name: 'email',
-          label: 'Email Address',
-          type: 'text',
-          required: true,
-          description: 'User email',
-        },
-      ]),
-    });
-    const parsed = manualTriggerAction.params.schema.safeParse(coerced);
-    expect(parsed.success).toBe(true);
-
-    const result = await manualTriggerAction.execute(parsed.data!, ctx);
+    const result = await manualTriggerAction.execute({ defaultInputs: { severity: 'low' } }, ctx);
     expect(result.success).toBe(true);
-    expect(result.output).toEqual({ email: 'test@example.com' });
+    expect(result.output).toEqual({ severity: 'low', email: 'test@example.com' });
+    expect(result.output).not.toHaveProperty('__triggerData');
+    expect(result.output).not.toHaveProperty('__triggerNodeId');
   });
 });
 

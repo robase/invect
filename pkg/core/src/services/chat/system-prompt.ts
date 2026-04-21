@@ -291,12 +291,9 @@ interface FlowContextData {
     flowNotes: string[];
     workspaceNotes: string[];
   };
-  /** Input fields from the manual trigger node (if any) */
+  /** Input fields derived from the manual trigger's defaultInputs (if any) */
   inputFields?: Array<{
     name: string;
-    type?: string;
-    label?: string;
-    description?: string;
     defaultValue?: unknown;
   }>;
 }
@@ -370,19 +367,15 @@ No flow is currently open. The user is on the home/dashboard page.`;
 
   // Surface trigger input fields so the LLM knows what inputs the flow expects
   if (flow.inputFields && flow.inputFields.length > 0) {
-    parts.push(`\nFlow Input Fields (from trigger node):`);
+    parts.push(`\nFlow Default Inputs (from trigger node):`);
     for (const field of flow.inputFields) {
-      const label = field.label ? ` (${field.label})` : '';
-      const desc = field.description ? ` — ${field.description}` : '';
       const def =
-        field.defaultValue !== undefined
-          ? ` [default: ${JSON.stringify(field.defaultValue)}]`
-          : ' [required]';
-      parts.push(`- \`${field.name}\`${label}${desc}${def}`);
+        field.defaultValue !== undefined ? ` [default: ${JSON.stringify(field.defaultValue)}]` : '';
+      parts.push(`- \`${field.name}\`${def}`);
     }
     parts.push(
-      'When running this flow with run_flow, provide values for these input fields. ' +
-        'Fields with defaults can be omitted.',
+      'When running this flow with run_flow, you can provide values for these inputs. ' +
+        'Any omitted inputs will use their defaults.',
     );
   }
 

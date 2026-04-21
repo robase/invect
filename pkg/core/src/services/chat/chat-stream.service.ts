@@ -404,16 +404,11 @@ export class ChatStreamService {
       const triggerParams = (triggerNode?.params ?? triggerNode?.data?.params) as
         | Record<string, unknown>
         | undefined;
-      const rawInputDefs = triggerParams?.inputDefinitions as
-        | Array<{
-            name: string;
-            type?: string;
-            label?: string;
-            description?: string;
-            defaultValue?: unknown;
-          }>
-        | undefined;
-      const inputFields = rawInputDefs?.length ? rawInputDefs : undefined;
+      const defaultInputs = triggerParams?.defaultInputs as Record<string, unknown> | undefined;
+      const inputFields =
+        defaultInputs && Object.keys(defaultInputs).length > 0
+          ? Object.entries(defaultInputs).map(([name, defaultValue]) => ({ name, defaultValue }))
+          : undefined;
 
       // When a run is selected (runs view), load its error context
       let runContext: FlowContextData['runContext'];

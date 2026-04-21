@@ -294,8 +294,10 @@ export class ReactFlowRendererService {
 
       // Compute per-node height: switch nodes grow taller with more outputs
       let nodeHeight = 60;
+      // Matches both DB-origin `core.switch` and SDK-origin `primitives.switch`.
+      // See `@invect/primitives`' SWITCH_TYPES for the canonical alias set.
       if (
-        node.type === 'core.switch' &&
+        (node.type === 'core.switch' || node.type === 'primitives.switch') &&
         node.params &&
         Array.isArray((node.params as Record<string, unknown>).cases)
       ) {

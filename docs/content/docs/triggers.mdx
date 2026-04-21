@@ -11,9 +11,9 @@ Triggers define how a flow starts. Invect includes three built-in trigger types,
 
 The default trigger type. Flows with a manual trigger are started from the UI "Run" button, the REST API, or programmatically.
 
-| Param              | Description                                |
-| ------------------ | ------------------------------------------ |
-| `inputDefinitions` | Named inputs with types and default values |
+| Param           | Description                                                                                                                                                           |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `defaultInputs` | JSON object of default key/value pairs used when the flow is run manually. When triggered from code, the caller's inputs take precedence (merged on top of defaults). |
 
 Downstream nodes access trigger outputs via `{{ manual_trigger.variableName }}`.
 

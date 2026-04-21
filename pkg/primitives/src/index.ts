@@ -36,6 +36,7 @@ export {
   agent,
   tool,
   code,
+  javascript,
   node,
   edge,
 } from './helpers';
@@ -53,3 +54,22 @@ export type { FetchPromptClientOptions } from './fetch-prompt';
 // ─── SDK source emitter (DB InvectDefinition → TS source) ────────────────────
 export { emitSdkSource, SdkEmitError } from './emitter/sdk-source';
 export type { EmitSdkSourceOptions, EmitSdkSourceResult } from './emitter/sdk-source';
+
+// ─── Node-type aliases (core.X ⇄ primitives.X) ────────────────────────────────
+export {
+  INPUT_TYPES,
+  OUTPUT_TYPES,
+  MODEL_TYPES,
+  JAVASCRIPT_TYPES,
+  IF_ELSE_TYPES,
+  SWITCH_TYPES,
+  AGENT_TYPES,
+  ALL_PRIMITIVE_TYPES,
+  isInputType,
+  isOutputType,
+  isModelType,
+  isJavascriptType,
+  isIfElseType,
+  isSwitchType,
+  isAgentType,
+} from './node-types';

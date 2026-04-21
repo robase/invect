@@ -38,11 +38,13 @@ export {
   output,
   model,
   javascript,
+  code,
   ifElse,
   template,
   httpRequest,
   agent,
   node,
+  tool,
 } from './nodes';
 
 // Provider namespaces

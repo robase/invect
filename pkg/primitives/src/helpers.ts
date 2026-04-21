@@ -208,6 +208,9 @@ export function code(
   };
 }
 
+/** Alias of `code()` — matches the `javascript()` name used in `@invect/core/sdk`. */
+export const javascript = code;
+
 // Generic node builder for action types without a dedicated helper (e.g.
 // integration providers or legacy types like "AGENT"). The returned node is
 // a plain `PrimitiveNode` whose params are stored as-is; runtime execution

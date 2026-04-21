@@ -33,7 +33,7 @@ import {
 /**
  * Coerce JSON-encoded string params into real objects/arrays.
  *
- * The UI config panel stores JSON-type fields (like `inputDefinitions`) as
+ * The UI config panel stores JSON-type fields (like `defaultInputs`) as
  * stringified JSON from the code editor textarea.  Before Zod validation we
  * attempt to parse any string value that looks like a JSON array or object so
  * that the schema receives the expected types.
@@ -86,7 +86,7 @@ export async function executeActionAsNode(
   // Try the params as-is first — this preserves JSON-encoded strings for
   // actions whose schema expects a string (e.g. core.input.defaultValue).
   // Only fall back to JSON coercion when the raw shape fails validation,
-  // which is what UI-stored JSON fields (e.g. triggers.manual.inputDefinitions)
+  // which is what UI-stored JSON fields (e.g. triggers.manual.defaultInputs)
   // need.
   let parseResult = action.params.schema.safeParse(params);
   if (!parseResult.success) {

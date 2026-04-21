@@ -1953,11 +1953,11 @@ function buildTriggeredLinearAgentFlow(aiCredentialId: string): InvectDefinition
         label: 'Linear Event (Manual)',
         referenceId: 'linear_event',
         params: {
-          inputDefinitions: [
-            { name: 'source', defaultValue: 'manual' },
-            { name: 'issue_id', defaultValue: 'ISSUE-123' },
-            { name: 'issue_title', defaultValue: 'Sample Linear issue for testing' },
-          ],
+          defaultInputs: {
+            source: 'manual',
+            issue_id: 'ISSUE-123',
+            issue_title: 'Sample Linear issue for testing',
+          },
         },
         position: { x: 100, y: 100 },
       },

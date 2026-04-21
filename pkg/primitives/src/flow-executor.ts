@@ -19,6 +19,7 @@ import { ifElseAction } from './actions/if-else';
 import { switchAction } from './actions/switch';
 import { javascriptAction } from './actions/javascript';
 import { outputAction } from './actions/output';
+import { OUTPUT_TYPES as OUTPUT_NODE_TYPES } from './node-types';
 
 // ─── InMemoryAdapter ──────────────────────────────────────────────────────────
 
@@ -134,8 +135,6 @@ function markSkipped(
 }
 
 // ─── Output node detection ────────────────────────────────────────────────────
-
-const OUTPUT_NODE_TYPES = new Set(['core.output', 'primitives.output']);
 
 // ─── Flow runner ──────────────────────────────────────────────────────────────
 

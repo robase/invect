@@ -394,11 +394,11 @@ describe('agent node', () => {
       addedTools: [
         {
           toolId: 'gmail.send_message',
-          customName: 'send_reply',
-          customDescription: 'Send a reply email',
-          customParams: { credentialId: 'gmail-cred' },
+          name: 'send_reply',
+          description: 'Send a reply email',
+          params: { credentialId: 'gmail-cred' },
         },
-        { toolId: 'core.javascript' },
+        { toolId: 'core.javascript', name: '', description: '', params: {} },
       ],
     });
     const tools = n.params.addedTools as unknown[];

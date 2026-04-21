@@ -5,11 +5,10 @@
  * one Manual Trigger.  It is invoked when the flow is started from the UI
  * "Run" button, the REST API, or programmatically via `startFlowRun()`.
  *
- * Optionally accepts **input definitions** — a JSON array of expected input
- * fields with names and default values.  When input definitions are provided
- * the node validates that each expected variable exists in `flowInputs` and
- * falls back to the configured default.  When no definitions are provided the
- * node simply passes through all `flowInputs` unchanged.
+ * Accepts an optional **defaultInputs** JSON object — key/value pairs that
+ * are used as the output when the flow is triggered manually (with no
+ * external inputs).  When the flow is triggered from code, the caller's
+ * inputs take precedence and are merged on top of the defaults.
  *
  * Downstream nodes can reference values via
  * `{{ manual_trigger.variableName }}`.
@@ -19,24 +18,14 @@ import { defineAction } from '@invect/action-kit';
 import { TRIGGERS_PROVIDER } from '../providers';
 import { z } from 'zod/v4';
 
-/**
- * Schema for a single expected input field.
- */
-const inputFieldSchema = z.object({
-  /** Variable name — must match the key callers pass in `flowInputs`. */
-  name: z.string().min(1),
-  /** Optional default value used when the caller omits this variable. */
-  defaultValue: z.union([z.string(), z.number(), z.boolean(), z.null()]).optional(),
-});
-
 const paramsSchema = z.object({
   /**
-   * Optional list of expected input fields.
-   * When provided the node extracts only these variables (applying defaults),
-   * giving downstream nodes a predictable, documented shape.
-   * When omitted ALL flowInputs are passed through.
+   * Default input values used when the flow is triggered manually.
+   * A plain JSON object like `{ "topic": "hello world", "count": 5 }`.
+   * When the flow is triggered from code, the caller's inputs override
+   * these defaults (missing keys fall back to the defaults here).
    */
-  inputDefinitions: z.array(inputFieldSchema).optional(),
+  defaultInputs: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const manualTriggerAction = defineAction({
@@ -44,12 +33,12 @@ export const manualTriggerAction = defineAction({
   name: 'Manual Trigger',
   description:
     'Start this flow manually from the UI, REST API, or programmatically via startFlowRun(). ' +
-    "Optionally define expected input fields (name + defaultValue) to validate and document the flow's interface. " +
-    'When input definitions are set, only those variables are extracted from flowInputs (with defaults applied); otherwise all flowInputs pass through. ' +
+    'Optionally set Default Inputs — a JSON object of key/value pairs used when the flow is triggered manually. ' +
+    "When triggered from code, the caller's values are used instead (merged on top of defaults). " +
     'This is a flow entry-point node — AI agents should not invoke it directly.\n\n' +
-    'Output shape (passthrough mode):\n' +
+    'Example default inputs:\n' +
     '```json\n' +
-    '{"topic": "hello world", "count": 5}\n' +
+    '{ "topic": "hello world", "severity": "medium" }\n' +
     '```',
   provider: TRIGGERS_PROVIDER,
   icon: 'Play',
@@ -73,15 +62,15 @@ export const manualTriggerAction = defineAction({
     schema: paramsSchema,
     fields: [
       {
-        name: 'inputDefinitions',
-        label: 'Input Fields',
+        name: 'defaultInputs',
+        label: 'Default Inputs',
         type: 'json',
         aiProvided: false,
         description:
-          'Optional list of expected inputs. ' +
-          'Each entry should have a "name" and an optional "defaultValue". ' +
-          'When defined, only these variables are extracted from the flow inputs.',
-        placeholder: '[{ "name": "topic", "defaultValue": "hello world" }, { "name": "count" }]',
+          'Default input values used when running the flow manually. ' +
+          'A plain JSON object — e.g. { "topic": "hello world" }. ' +
+          "When triggered from code, the caller's values take precedence.",
+        placeholder: '{ "topic": "hello world", "severity": "medium" }',
       },
     ],
   },
@@ -92,53 +81,21 @@ export const manualTriggerAction = defineAction({
     delete flowInputs.__triggerData;
     delete flowInputs.__triggerNodeId;
 
-    const { inputDefinitions } = params;
+    const { defaultInputs } = params;
 
     context.logger.debug('Manual trigger fired', {
       inputKeys: Object.keys(flowInputs),
-      hasInputDefinitions: !!inputDefinitions?.length,
+      hasDefaults: !!defaultInputs && Object.keys(defaultInputs).length > 0,
     });
 
-    // When no input definitions are configured, pass everything through.
-    if (!inputDefinitions || inputDefinitions.length === 0) {
-      return {
-        success: true,
-        output: flowInputs,
-        metadata: { triggerType: 'manual' },
-      };
-    }
-
-    // Build output from defined inputs, applying defaults for missing values.
-    const output: Record<string, unknown> = {};
-    const missing: string[] = [];
-
-    for (const field of inputDefinitions) {
-      const value = flowInputs[field.name];
-      if (value !== undefined && value !== null) {
-        output[field.name] = value;
-      } else if (field.defaultValue !== undefined && field.defaultValue !== null) {
-        output[field.name] = field.defaultValue;
-      } else {
-        missing.push(field.name);
-      }
-    }
-
-    if (missing.length > 0) {
-      return {
-        success: false,
-        error:
-          `Missing required input(s): ${missing.join(', ')}. ` +
-          `Available inputs: ${Object.keys(flowInputs).join(', ') || '(none)'}`,
-      };
-    }
+    // Merge: defaultInputs provides fallbacks, flowInputs (from code) takes precedence.
+    // When run manually (no external inputs), output is just the defaults.
+    const output = { ...defaultInputs, ...flowInputs };
 
     return {
       success: true,
       output,
-      metadata: {
-        triggerType: 'manual',
-        definedInputs: inputDefinitions.map((d) => d.name),
-      },
+      metadata: { triggerType: 'manual' },
     };
   },
 });

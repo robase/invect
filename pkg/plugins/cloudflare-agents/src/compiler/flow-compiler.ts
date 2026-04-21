@@ -11,6 +11,13 @@ import type {
   FlowEdge,
   InvectDefinition,
 } from '@invect/core/types';
+import {
+  isIfElseType,
+  isInputType,
+  isOutputType,
+  isModelType,
+  isAgentType,
+} from '@invect/primitives';
 import type { CompileResult, CompileMetadata, GeneratedFile, CompileTarget } from '../shared/types';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -414,7 +421,7 @@ function getBranchGuard(
     return null;
   }
   const parentNode = nodeMap.get(incomingEdge.source);
-  if (!parentNode || parentNode.type !== 'core.if_else') {
+  if (!parentNode || !isIfElseType(parentNode.type)) {
     return null;
   }
 
@@ -504,39 +511,31 @@ export function compileFlow(input: CompileInput): CompileResult {
 
     let result: StepCodeResult;
 
-    switch (node.type) {
-      case 'core.input':
-        result = compileInputNode(node, slug);
-        break;
-      case 'core.output':
-        result = compileOutputNode(node, upstreamSlugs);
-        break;
-      case 'core.model':
-        result = compileModelNode(node, slug, upstreamSlugs);
-        break;
-      case 'core.jq':
-        result = compileJqNode(node, slug, upstreamSlugs);
-        break;
-      case 'core.if_else':
-        hasBranching = true;
-        result = compileIfElseNode(node, slug, upstreamSlugs, edges, nodeMap, order);
-        break;
-      case 'core.template_string':
-      case 'core.text':
-        result = compileTemplateStringNode(node, slug, upstreamSlugs);
-        break;
-      case 'http.request':
-        result = compileHttpRequestNode(node, slug, upstreamSlugs);
-        break;
-      case 'AGENT':
-        result = compileAgentNode(node, slug, upstreamSlugs);
-        break;
-      default:
-        warnings.push(
-          `Action "${node.type}" (node "${node.label ?? node.id}") has no native compiler — emitting passthrough`,
-        );
-        result = compileGenericActionNode(node, slug, upstreamSlugs);
-        break;
+    // Dispatch via predicate helpers so both `core.X` and `primitives.X`
+    // variants are handled. Fixed-string types (`core.jq`, `http.request`,
+    // text) stay as direct comparisons since they have no SDK alias.
+    if (isInputType(node.type)) {
+      result = compileInputNode(node, slug);
+    } else if (isOutputType(node.type)) {
+      result = compileOutputNode(node, upstreamSlugs);
+    } else if (isModelType(node.type)) {
+      result = compileModelNode(node, slug, upstreamSlugs);
+    } else if (isIfElseType(node.type)) {
+      hasBranching = true;
+      result = compileIfElseNode(node, slug, upstreamSlugs, edges, nodeMap, order);
+    } else if (isAgentType(node.type)) {
+      result = compileAgentNode(node, slug, upstreamSlugs);
+    } else if (node.type === 'core.jq') {
+      result = compileJqNode(node, slug, upstreamSlugs);
+    } else if (node.type === 'core.template_string' || node.type === 'core.text') {
+      result = compileTemplateStringNode(node, slug, upstreamSlugs);
+    } else if (node.type === 'http.request') {
+      result = compileHttpRequestNode(node, slug, upstreamSlugs);
+    } else {
+      warnings.push(
+        `Action "${node.type}" (node "${node.label ?? node.id}") has no native compiler — emitting passthrough`,
+      );
+      result = compileGenericActionNode(node, slug, upstreamSlugs);
     }
 
     if (result.needsAI) {

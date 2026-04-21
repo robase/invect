@@ -1,14 +1,20 @@
 import type { PrimitiveFlowDefinition, PrimitiveEdge, PrimitiveNode } from '@invect/primitives';
-import { ifElseAction, switchAction, topologicalSort } from '@invect/primitives';
+import {
+  ifElseAction,
+  topologicalSort,
+  IF_ELSE_TYPES,
+  SWITCH_TYPES,
+  OUTPUT_TYPES,
+} from '@invect/primitives';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export const BRANCH_TYPES = {
-  ifElse: ifElseAction.id,
-  switch: switchAction.id,
+  ifElse: IF_ELSE_TYPES,
+  switch: SWITCH_TYPES,
 } as const;
 
-export const OUTPUT_TYPES = new Set(['core.output', 'primitives.output']);
+export { OUTPUT_TYPES };
 
 // Slug used for the switch "no case matched" branch — re-exported so the emitter
 // stays in lockstep with the analyzer.
@@ -236,7 +242,7 @@ export function analyzeFlow(flow: PrimitiveFlowDefinition): AnalyzedFlow {
       throw new CompileError(`Unknown node referenceId: "${nodeRef}"`);
     }
 
-    if (node.type === BRANCH_TYPES.ifElse) {
+    if (BRANCH_TYPES.ifElse.has(node.type)) {
       const trueStart = armStartFor(nodeRef, trueHandle, flow.edges);
       const falseStart = armStartFor(nodeRef, falseHandle, flow.edges);
       const outgoingWithoutHandle = flow.edges.filter(
@@ -260,7 +266,7 @@ export function analyzeFlow(flow: PrimitiveFlowDefinition): AnalyzedFlow {
       return;
     }
 
-    if (node.type === BRANCH_TYPES.switch) {
+    if (BRANCH_TYPES.switch.has(node.type)) {
       const { matchMode, slugs } = extractSwitchCases(node);
       if (matchMode === 'all') {
         throw new CompileError(

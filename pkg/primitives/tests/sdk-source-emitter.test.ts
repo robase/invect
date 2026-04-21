@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as ts from 'typescript';
 import type { InvectDefinition } from '@invect/core';
-import { emitSdkSource, SdkEmitError } from '../src/emitter/sdk-source';
+import { emitSdkSource } from '../src/emitter/sdk-source';
 
 function assertParsesWithoutErrors(source: string): void {
   const sourceFile = ts.createSourceFile(
@@ -125,14 +125,17 @@ describe('emitSdkSource — DB InvectDefinition → primitives SDK source', () =
     expect(code).toContain(`return (kind === "b");`);
   });
 
-  it('throws SdkEmitError for unsupported action types', () => {
+  it('emits a generic node() fallback for action types without a dedicated SDK helper', () => {
     const def: InvectDefinition = {
       nodes: [{ id: 'n1', type: 'gmail.send_message', referenceId: 'email', params: {} }],
       edges: [],
     };
 
-    expect(() => emitSdkSource(def)).toThrow(SdkEmitError);
-    expect(() => emitSdkSource(def)).toThrow(/has no SDK builder/);
+    const { code, importedBuilders } = emitSdkSource(def);
+    assertParsesWithoutErrors(code);
+    // The generic `node()` builder preserves the original type string verbatim.
+    expect(code).toContain(`node("email", "gmail.send_message"`);
+    expect(importedBuilders).toContain('node');
   });
 
   it('throws for invalid flowName identifier', () => {

@@ -6,6 +6,7 @@
  * typed params, returning a node definition ready for `defineFlow()`.
  */
 
+import { newToolInstanceId } from '@invect/action-kit';
 import type { FlowNodeDefinitions, MapperConfig } from 'src/services/flow-versions/schemas-fresh';
 import type {
   InputParams,
@@ -16,6 +17,7 @@ import type {
   TemplateParams,
   HttpRequestParams,
   AgentParams,
+  AddedToolInstance,
   MapperOptions,
 } from './types';
 
@@ -105,6 +107,9 @@ export function javascript(
   return makeNode('core.javascript', referenceId, params, options);
 }
 
+/** Alias of `javascript()` — matches the `code()` name used in `@invect/primitives`. */
+export const code = javascript;
+
 export function ifElse(
   referenceId: string,
   params: IfElseParams = {},
@@ -135,13 +140,19 @@ export function httpRequest(
  * The agent sends a task prompt to the LLM with a set of enabled tools,
  * executes tool calls, and iterates until a stop condition is met.
  *
+ * Mirrors the `agent()` helper in `@invect/primitives`: tool instances are
+ * declared via the `tool()` helper and `instanceId`s missing from each entry
+ * are assigned automatically here (canonical `tool_XXXXXXXX` format, shared
+ * with the chat agent tools and the editor tool panel).
+ *
  * @example
  * agent('researcher', {
  *   credentialId: '{{env.OPENAI_CREDENTIAL}}',
  *   model: 'gpt-4o',
  *   taskPrompt: 'Research {{ topic }} and write a summary',
- *   maxIterations: 15,
- *   stopCondition: 'explicit_stop',
+ *   addedTools: [
+ *     tool('github.search_issues', { description: 'Find existing issues' }),
+ *   ],
  * })
  */
 export function agent(
@@ -149,7 +160,14 @@ export function agent(
   params: AgentParams,
   options?: NodeOptions,
 ): FlowNodeDefinitions {
-  return makeNode('AGENT', referenceId, params, options);
+  const resolved: AgentParams = { ...params };
+  if (Array.isArray(resolved.addedTools)) {
+    resolved.addedTools = resolved.addedTools.map((t) => ({
+      instanceId: t.instanceId ?? newToolInstanceId(),
+      ...t,
+    }));
+  }
+  return makeNode('AGENT', referenceId, resolved, options);
 }
 
 /**
@@ -166,4 +184,45 @@ export function node<T extends object>(
   options?: NodeOptions,
 ): FlowNodeDefinitions {
   return makeNode(type, referenceId, params, options);
+}
+
+// ── Agent tool helper ───────────────────────────────────────────────────
+
+/**
+ * Declare a tool instance for an agent's `addedTools` array. The runtime-level
+ * `instanceId` is assigned automatically by `agent()`.
+ *
+ * Signature mirrors `tool()` in `@invect/primitives` so the same call works in
+ * both SDKs.
+ *
+ * @example
+ * agent('triage', {
+ *   credentialId: '{{ env.ANTHROPIC }}',
+ *   model: 'claude-sonnet-4-6',
+ *   taskPrompt: '...',
+ *   addedTools: [
+ *     tool('github.search_issues', {
+ *       description: 'Look for existing issues before filing new ones',
+ *       params: { perPage: 10 },
+ *     }),
+ *   ],
+ * });
+ */
+export function tool(
+  toolId: string,
+  options?: {
+    /** Display name surfaced to the LLM. Defaults to `toolId`. */
+    name?: string;
+    /** Tool description surfaced to the LLM. Defaults to empty string. */
+    description?: string;
+    /** Static params bound to every call of this tool instance. */
+    params?: Record<string, unknown>;
+  },
+): Omit<AddedToolInstance, 'instanceId'> {
+  return {
+    toolId,
+    name: options?.name ?? toolId,
+    description: options?.description ?? '',
+    params: options?.params ?? {},
+  };
 }
