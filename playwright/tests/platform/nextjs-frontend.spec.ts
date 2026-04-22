@@ -53,12 +53,12 @@ test.describe('Next.js Invect Frontend Rendering', () => {
       timeout: 10_000,
     });
 
-    // 4. Click the Executions nav link
-    const execLink = page.getByRole('link', { name: /executions/i }).first();
+    // 4. Click the Flow Runs nav link
+    const execLink = page.getByRole('link', { name: /flow runs/i }).first();
     await execLink.click();
 
-    // 5. Verify the Executions page renders
-    await expect(page.getByRole('heading', { level: 1, name: 'Executions' })).toBeVisible({
+    // 5. Verify the Flow Runs page renders
+    await expect(page.getByRole('heading', { level: 1, name: 'Flow Runs' })).toBeVisible({
       timeout: 10_000,
     });
   });

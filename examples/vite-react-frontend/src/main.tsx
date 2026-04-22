@@ -23,7 +23,7 @@ export const App = () => {
             <div className="h-screen">
               <Invect
                 config={{
-                  apiPath: 'http://localhost:3000/invect',
+                  apiPath: '/api/invect',
                   frontendPath: '/invect',
                   theme: 'dark',
                   plugins: [

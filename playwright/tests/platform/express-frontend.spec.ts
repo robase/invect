@@ -39,11 +39,11 @@ test.describe('Express + Vite Frontend Integration', () => {
   });
 
   test('executions page loads and shows run history', async ({ page }) => {
-    // 1. Navigate to the executions page
-    await page.goto(`${VITE_URL}/invect/executions`);
+    // 1. Navigate to the flow runs page
+    await page.goto(`${VITE_URL}/invect/flow-runs`);
 
-    // 2. Executions heading appears
-    await expect(page.getByRole('heading', { level: 1, name: 'Executions' })).toBeVisible({
+    // 2. Flow Runs heading appears
+    await expect(page.getByRole('heading', { level: 1, name: 'Flow Runs' })).toBeVisible({
       timeout: 15_000,
     });
   });

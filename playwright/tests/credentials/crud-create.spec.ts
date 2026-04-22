@@ -3,6 +3,20 @@
 
 import { test, expect } from '../fixtures';
 
+/** Helper: select a Radix Select value by the trigger id and the option label/value */
+async function selectRadixOption(
+  page: import('@playwright/test').Page,
+  triggerId: string,
+  optionMatcher: string | RegExp,
+) {
+  await page.locator(`#${triggerId}`).click();
+  const option =
+    typeof optionMatcher === 'string'
+      ? page.getByRole('option', { name: optionMatcher, exact: true })
+      : page.getByRole('option', { name: optionMatcher });
+  await option.click();
+}
+
 /** Helper: navigate to /invect/credentials and wait for the page to load */
 async function goToCredentials(page: import('@playwright/test').Page) {
   await page.goto('/invect/credentials');
@@ -57,8 +71,13 @@ test.describe('Credential CRUD — Create', () => {
     // 4. Type token into the Token field
     const tokenField = page.getByLabel('Token*');
     await tokenField.fill('sk-test-12345');
-    // Verify it's a password field (masked)
-    await expect(tokenField).toHaveAttribute('type', 'password');
+    // Verify the token is visually masked (via CSS -webkit-text-security: disc)
+    const textSecurity = await tokenField.evaluate(
+      (el) =>
+        (el as HTMLElement).style.webkitTextSecurity ||
+        getComputedStyle(el as Element).getPropertyValue('-webkit-text-security'),
+    );
+    expect(textSecurity).toBe('disc');
 
     // 5. Click 'Create Credential' button
     await page.getByRole('button', { name: 'Create Credential' }).click();
@@ -87,7 +106,7 @@ test.describe('Credential CRUD — Create', () => {
 
     // 2. Fill Name and select auth type 'API Key'
     await page.getByLabel('Name*').fill(credName);
-    await page.locator('#authType').selectOption('apiKey');
+    await selectRadixOption(page, 'authType', 'API Key');
 
     // API Key field, Location dropdown, and Parameter Name field should appear
     await expect(page.getByLabel('API Key*')).toBeVisible();
@@ -122,7 +141,7 @@ test.describe('Credential CRUD — Create', () => {
 
     // 2. Fill Name and select auth type 'Basic Auth'
     await page.getByLabel('Name*').fill(credName);
-    await page.locator('#authType').selectOption('basic');
+    await selectRadixOption(page, 'authType', 'Basic Auth');
 
     // Username and Password fields should appear
     await expect(page.getByLabel('Username*')).toBeVisible();
@@ -152,20 +171,16 @@ test.describe('Credential CRUD — Create', () => {
     await openCreateModal(page);
 
     // 2. Select 'Database' for Credential Type
-    await page.locator('#type').selectOption('database');
+    await selectRadixOption(page, 'type', 'Database');
 
-    // Auth Type should now show only basic and connectionString options
-    const authSelect = page.locator('#authType');
-    const options = authSelect.locator('option');
-    const optionValues = await options.evaluateAll((els) =>
-      els.map((el) => (el as HTMLOptionElement).value),
-    );
-    expect(optionValues).toContain('basic');
-    expect(optionValues).toContain('connectionString');
-    expect(optionValues).not.toContain('bearer');
+    // Auth Type should now show basic and connectionString options, but not bearer
+    await page.locator('#authType').click();
+    await expect(page.getByRole('option', { name: /^Basic Auth$/ })).toBeVisible();
+    await expect(page.getByRole('option', { name: /^Connection String$/ })).toBeVisible();
+    await expect(page.getByRole('option', { name: /^Bearer Token$/ })).not.toBeVisible();
+    await page.getByRole('option', { name: /^Connection String$/ }).click();
 
-    // 3. Select 'Connection String', fill name
-    await authSelect.selectOption('connectionString');
+    // 3. Fill name
     await page.getByLabel('Name*').fill(credName);
 
     // Connection String field should appear

@@ -247,14 +247,20 @@ test.describe('Flow Editor — Node Operations', () => {
         timeout: 10_000,
       });
 
-      // 5. Move the seeded node slightly so the editor becomes dirty.
+      // 5. Dirty the editor by dragging the node. ReactFlow uses pointer events;
+      // a three-step move with intermediate positions is more reliable than a
+      // single move.
       const firstNode = page.locator('.react-flow__node').first();
       await expect(firstNode).toBeVisible({ timeout: 10_000 });
       const before = await firstNode.boundingBox();
       expect(before).not.toBeNull();
-      await firstNode.hover();
+      const startX = (before?.x ?? 0) + (before?.width ?? 0) / 2;
+      const startY = (before?.y ?? 0) + (before?.height ?? 0) / 2;
+      await page.mouse.move(startX, startY);
       await page.mouse.down();
-      await page.mouse.move((before?.x ?? 0) + 40, (before?.y ?? 0) + 20);
+      await page.mouse.move(startX + 20, startY + 10);
+      await page.mouse.move(startX + 40, startY + 20);
+      await page.mouse.move(startX + 80, startY + 40);
       await page.mouse.up();
 
       await expect(page.getByText('Unsaved Changes')).toBeVisible({ timeout: 5_000 });

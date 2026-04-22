@@ -222,6 +222,7 @@ export function ChatToggleButton({ className }: { className?: string }) {
           variant="ghost"
           size="sm"
           onClick={togglePanel}
+          aria-label={isOpen ? 'Close Assistant' : 'Open Assistant'}
           title={collapsed ? undefined : isOpen ? 'Close Assistant' : 'Open Assistant'}
           className={cn(
             'gap-1.5 hover:bg-accent',

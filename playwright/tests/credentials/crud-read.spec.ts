@@ -55,7 +55,7 @@ test.describe('Credential CRUD — Read & Detail View', () => {
     await expect(page.getByText('Linear OAuth2')).toBeVisible();
 
     // 2. Type 'Anthropic' into the search field
-    const searchField = page.getByPlaceholder('Search credentials...');
+    const searchField = page.getByPlaceholder('Search credentials…');
     await searchField.fill('Anthropic');
 
     // Only 'Anthropic API Key' is visible

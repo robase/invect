@@ -47,7 +47,7 @@ function getSidebarToggle(page: Page) {
 async function ensureSidebarExpanded(page: Page) {
   const executionsLabel = page
     .locator('.imp-sidebar-shell nav span')
-    .filter({ hasText: 'Executions' });
+    .filter({ hasText: 'Flow Runs' });
   const isAlreadyExpanded = await executionsLabel.isVisible().catch(() => false);
   if (!isAlreadyExpanded) {
     await getSidebarToggle(page).click();
@@ -173,12 +173,12 @@ test.describe('Navigation & App Shell', () => {
     // 2. Click the Executions sidebar link
     //    Each nav Link renders with aria-label={label}, so getByRole works even
     //    in collapsed (icon-only) mode — no need to expand the sidebar first.
-    await page.locator('.imp-sidebar-shell').getByRole('link', { name: 'Executions' }).click();
+    await page.locator('.imp-sidebar-shell').getByRole('link', { name: 'Flow Runs' }).click();
 
     // Assert URL contains /executions
-    await expect(page).toHaveURL(/\/executions/);
+    await expect(page).toHaveURL(/\/flow-runs/);
     // Assert "Executions" heading is visible
-    await expect(page.getByRole('heading', { level: 1, name: 'Executions' })).toBeVisible({
+    await expect(page.getByRole('heading', { level: 1, name: 'Flow Runs' })).toBeVisible({
       timeout: 15_000,
     });
     // Assert the sidebar persists on the Executions page
@@ -225,7 +225,7 @@ test.describe('Navigation & App Shell', () => {
 
     // 3. Assert nav labels are now visible (expanded state)
     await expect(
-      page.locator('.imp-sidebar-shell nav span').filter({ hasText: 'Executions' }),
+      page.locator('.imp-sidebar-shell nav span').filter({ hasText: 'Flow Runs' }),
     ).toBeVisible({ timeout: 3_000 });
     await expect(
       page.locator('.imp-sidebar-shell nav span').filter({ hasText: 'Credentials' }),
@@ -236,7 +236,7 @@ test.describe('Navigation & App Shell', () => {
 
     // 5. Wait for the CSS transition and assert nav labels are NOT in the DOM
     await expect(
-      page.locator('.imp-sidebar-shell nav span').filter({ hasText: 'Executions' }),
+      page.locator('.imp-sidebar-shell nav span').filter({ hasText: 'Flow Runs' }),
     ).not.toBeVisible({ timeout: 3_000 });
     await expect(
       page.locator('.imp-sidebar-shell nav span').filter({ hasText: 'Credentials' }),
@@ -247,7 +247,7 @@ test.describe('Navigation & App Shell', () => {
 
     // 7. Assert nav labels are visible again (restored expanded state)
     await expect(
-      page.locator('.imp-sidebar-shell nav span').filter({ hasText: 'Executions' }),
+      page.locator('.imp-sidebar-shell nav span').filter({ hasText: 'Flow Runs' }),
     ).toBeVisible({ timeout: 3_000 });
     await expect(
       page.locator('.imp-sidebar-shell nav span').filter({ hasText: 'Credentials' }),
@@ -289,9 +289,9 @@ test.describe('Navigation & App Shell', () => {
       await expect(invectEl).toHaveClass(/\bdark\b/, { timeout: 3_000 });
     }
 
-    // 7. Navigate to /invect/executions via the sidebar link
-    await page.locator('.imp-sidebar-shell').getByRole('link', { name: 'Executions' }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Executions' })).toBeVisible({
+    // 7. Navigate to /invect/flow-runs via the sidebar link
+    await page.locator('.imp-sidebar-shell').getByRole('link', { name: 'Flow Runs' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Flow Runs' })).toBeVisible({
       timeout: 15_000,
     });
 
@@ -353,18 +353,18 @@ test.describe('Navigation & App Shell', () => {
 
   // ─── Test 5 — Medium ───────────────────────────────────────────────────────
   test('deep link to executions page loads cleanly from cold start', async ({ page, apiBase }) => {
-    // 1. Navigate directly to /invect/executions — cold start, no prior navigation
-    await page.goto('/invect/executions');
+    // 1. Navigate directly to /invect/flow-runs — cold start, no prior navigation
+    await page.goto('/invect/flow-runs');
 
     // 2. Assert the "Executions" h1 heading is visible within 15s
-    await expect(page.getByRole('heading', { level: 1, name: 'Executions' })).toBeVisible({
+    await expect(page.getByRole('heading', { level: 1, name: 'Flow Runs' })).toBeVisible({
       timeout: 15_000,
     });
 
     // 3. Assert the sidebar shell rendered correctly
     await expect(page.locator('.imp-sidebar-shell')).toBeVisible({ timeout: 10_000 });
     // Nav links carry aria-labels and are present in the DOM even when collapsed
-    await expect(page.getByRole('link', { name: 'Executions' })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole('link', { name: 'Flow Runs' })).toBeVisible({ timeout: 5_000 });
 
     // 4. Assert no JS error banner is visible
     //    Vite dev-mode error overlay uses a <vite-error-overlay> custom element
@@ -412,9 +412,9 @@ test.describe('Navigation & App Shell', () => {
   test('page reload on sub-routes stays on the same route', async ({ page, apiBase }) => {
     // ── Executions sub-route ──────────────────────────────────────────────────
 
-    // 1. Navigate to /invect/executions and wait for the Executions heading
-    await page.goto('/invect/executions');
-    await expect(page.getByRole('heading', { level: 1, name: 'Executions' })).toBeVisible({
+    // 1. Navigate to /invect/flow-runs and wait for the Executions heading
+    await page.goto('/invect/flow-runs');
+    await expect(page.getByRole('heading', { level: 1, name: 'Flow Runs' })).toBeVisible({
       timeout: 15_000,
     });
 
@@ -422,12 +422,12 @@ test.describe('Navigation & App Shell', () => {
     await page.reload();
 
     // 3. Wait for the Executions heading to reappear after reload
-    await expect(page.getByRole('heading', { level: 1, name: 'Executions' })).toBeVisible({
+    await expect(page.getByRole('heading', { level: 1, name: 'Flow Runs' })).toBeVisible({
       timeout: 15_000,
     });
 
-    // 4. Assert the URL is still /invect/executions
-    await expect(page).toHaveURL(/\/invect\/executions$/);
+    // 4. Assert the URL is still /invect/flow-runs
+    await expect(page).toHaveURL(/\/invect\/flow-runs$/);
 
     // ── Credentials sub-route ─────────────────────────────────────────────────
 

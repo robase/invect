@@ -1,7 +1,5 @@
 import type React from 'react';
-import { Plus } from 'lucide-react';
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '../ui/tooltip';
-import { ToolbarCollapsedProvider } from './toolbar-context';
+import { FlowBottomToolbar } from './FlowBottomToolbar';
 
 interface FlowLayoutProps {
   sidebar: React.ReactNode;
@@ -23,6 +21,13 @@ interface FlowLayoutProps {
   sidebarOpen?: boolean;
   /** Called to toggle sidebar visibility */
   onToggleSidebar?: () => void;
+  /**
+   * Suppress the floating bottom toolbar rendered by the layout. Callers that
+   * need to anchor the toolbar inside their own viewport container (e.g. the
+   * runs view, which splits its viewport with a resize divider) can render
+   * their own `FlowBottomToolbar` and set this to true.
+   */
+  hideToolbar?: boolean;
 }
 
 export function FlowLayout({
@@ -38,9 +43,8 @@ export function FlowLayout({
   toolbarExtra,
   sidebarOpen = true,
   onToggleSidebar,
+  hideToolbar = false,
 }: FlowLayoutProps) {
-  const collapsed = true;
-
   return (
     <div className="flex flex-1 min-h-0">
       {sidebarOpen && sidebar}
@@ -54,37 +58,14 @@ export function FlowLayout({
         {viewport}
         {chatOverlay}
 
-        {/* Bottom toolbar - Figma-style */}
-        {(onToggleSidebar || layoutSelector || chatToggle || toolbarExtra) && (
-          <TooltipProvider>
-            <ToolbarCollapsedProvider value={collapsed}>
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 rounded-xl border border-border bg-card/90 backdrop-blur-sm shadow-md p-1.5">
-                {onToggleSidebar && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={onToggleSidebar}
-                        className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium rounded-md text-card-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
-                        title={sidebarOpen ? 'Close node panel' : 'Open node panel'}
-                      >
-                        <Plus className="w-4 h-4" />
-                        {!collapsed && 'Add nodes'}
-                      </button>
-                    </TooltipTrigger>
-                    {collapsed && <TooltipContent side="top">Add nodes</TooltipContent>}
-                  </Tooltip>
-                )}
-                {layoutSelector}
-                {chatToggle}
-                {toolbarExtra && (
-                  <>
-                    <div className="w-px h-5 bg-border mx-1" />
-                    {toolbarExtra}
-                  </>
-                )}
-              </div>
-            </ToolbarCollapsedProvider>
-          </TooltipProvider>
+        {!hideToolbar && (
+          <FlowBottomToolbar
+            layoutSelector={layoutSelector}
+            chatToggle={chatToggle}
+            toolbarExtra={toolbarExtra}
+            sidebarOpen={sidebarOpen}
+            onToggleSidebar={onToggleSidebar}
+          />
         )}
       </div>
       {rightPanel}

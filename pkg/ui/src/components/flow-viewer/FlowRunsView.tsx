@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { FlowLayout } from '../flow-editor/FlowLayout';
+import { FlowBottomToolbar } from '../flow-editor/FlowBottomToolbar';
 import { ModeSwitcher } from '../flow-editor/ModeSwitcher';
 import { RunControls } from '../flow-editor/RunControls';
 import { FlowStatusView } from './FlowStatusView';
@@ -187,17 +188,8 @@ export function FlowRunsView({ flowId, flowVersion, basePath }: FlowRunsViewProp
             viewMode="runs"
           />
         }
-        toolbarExtra={
-          <RunControls
-            onExecute={flowActions?.onExecute}
-            isExecuting={flowActions?.isExecuting}
-            isActive={flowActions?.isActive}
-            isTogglingActive={flowActions?.isTogglingActive}
-            onToggleActive={flowActions?.onToggleActive}
-          />
-        }
-        chatToggle={<ChatToggleButton />}
         sidebar={<></>}
+        hideToolbar
         viewport={
           <ResizablePanelGroup direction="vertical" className="h-full min-h-0">
             <ResizablePanel defaultSize={55} minSize={20}>
@@ -215,6 +207,18 @@ export function FlowRunsView({ flowId, flowVersion, basePath }: FlowRunsViewProp
                   onFocusComplete={() => setFocusNodeId(null)}
                   recenterTrigger={recenterTrigger}
                   selectedNodeId={selectedAttempt?.nodeId}
+                />
+                <FlowBottomToolbar
+                  chatToggle={<ChatToggleButton />}
+                  toolbarExtra={
+                    <RunControls
+                      onExecute={flowActions?.onExecute}
+                      isExecuting={flowActions?.isExecuting}
+                      isActive={flowActions?.isActive}
+                      isTogglingActive={flowActions?.isTogglingActive}
+                      onToggleActive={flowActions?.onToggleActive}
+                    />
+                  }
                 />
               </div>
             </ResizablePanel>

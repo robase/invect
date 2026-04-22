@@ -53,6 +53,7 @@ export function RunControls({
           <Tooltip>
             <TooltipTrigger asChild>
               <button
+                aria-label="Active"
                 onClick={() => {
                   if (!isActive) {
                     onToggleActive();
@@ -79,6 +80,7 @@ export function RunControls({
           <Tooltip>
             <TooltipTrigger asChild>
               <button
+                aria-label="Inactive"
                 onClick={() => {
                   if (isActive) {
                     onToggleActive();

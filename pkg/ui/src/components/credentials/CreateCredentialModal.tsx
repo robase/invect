@@ -245,7 +245,7 @@ export const CreateCredentialModal: React.FC<CreateCredentialModalProps> = ({
                 }
               }}
             >
-              <SelectTrigger size="sm" className="w-full text-xs">
+              <SelectTrigger id="type" size="sm" className="w-full text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -268,7 +268,7 @@ export const CreateCredentialModal: React.FC<CreateCredentialModalProps> = ({
                   setFormData({ ...formData, authType: value as CredentialAuthType })
                 }
               >
-                <SelectTrigger size="sm" className="w-full text-xs">
+                <SelectTrigger id="authType" size="sm" className="w-full text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

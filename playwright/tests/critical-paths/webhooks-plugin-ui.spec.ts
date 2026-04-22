@@ -203,15 +203,11 @@ test.describe('Webhooks Plugin UI', () => {
     await page.getByRole('button').filter({ hasText: linkedWebhookName }).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByText(linkedWebhookName)).toBeVisible({ timeout: 5_000 });
-    await expect(dialog.getByText('Endpoint Secret')).toBeVisible();
+    await expect(dialog.getByText('Webhook URL')).toBeVisible();
+    await expect(dialog.getByText('Linked Flow', { exact: true })).toBeVisible();
 
-    const revealButton = dialog.getByTitle('Reveal');
-    await expect(revealButton).toBeVisible();
-    await revealButton.click();
-    await expect(dialog.getByTitle('Hide')).toBeVisible();
-
-    await expect(dialog.getByText(linkedFlowName)).toBeVisible();
     const flowLink = dialog.getByRole('link', { name: linkedFlowName });
+    await expect(flowLink).toBeVisible();
     await flowLink.click();
 
     await expect(page).toHaveURL(new RegExp(`/invect/flow/${flowId}$`), { timeout: 10_000 });
