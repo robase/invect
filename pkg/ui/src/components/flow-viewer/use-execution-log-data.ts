@@ -50,6 +50,7 @@ export interface ExecutionLogAttempt {
   inputs?: Record<string, unknown>;
   outputs?: NodeExecution['outputs'];
   error?: string;
+  errorDetails?: import('@invect/core/types').NodeErrorDetails;
   nodeExecutionId?: string;
   /** Tool calls for agent nodes */
   toolCalls?: ExecutionLogToolCall[];
@@ -262,6 +263,9 @@ export function useExecutionLogData({ nodes, nodeExecutions }: UseExecutionLogDa
         inputs: execution.inputs,
         outputs: execution.outputs,
         error: execution.error,
+        errorDetails: (
+          execution as { errorDetails?: import('@invect/core/types').NodeErrorDetails }
+        ).errorDetails,
         nodeExecutionId: execution.id,
         startedAtMs: toTimestamp(execution.startedAt),
         isPlaceholder: false,

@@ -589,9 +589,15 @@ export class FlowOrchestrationService {
         throw new DatabaseError(`Cannot cancel execution in ${execution.status} state`);
       }
 
+      // Fire the per-run AbortController so in-flight SDK calls on this
+      // process are aborted synchronously. This is best-effort — in a
+      // multi-process deploy, the run may be executing on another server,
+      // in which case the DB flag + stale-run reaper handle cleanup.
+      const aborted = this.flowRunCoordinator.abortRun(flowRunId, 'cancelled by user');
+
       await this.flowRunsService.updateRunStatus(flowRunId, 'CANCELLED' as FlowRunStatus);
 
-      this.logger.info('Execution cancelled', { flowRunId });
+      this.logger.info('Execution cancelled', { flowRunId, abortedInProcess: aborted });
     } catch (error) {
       this.logger.error('Failed to cancel execution', { flowRunId, error });
       throw error;

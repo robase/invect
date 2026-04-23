@@ -31,10 +31,10 @@ export interface LayoutOptions {
 const defaultLayoutOptions = {
   nodeWidth: 200,
   nodeHeight: 60,
-  nodeSpacing: 70, // Default for dagre nodesep - increased for more vertical spacing
-  rankSpacing: 100, // Default for dagre ranksep
+  nodeSpacing: 0, // Default for dagre nodesep - increased for more vertical spacing
+  rankSpacing: 0, // Default for dagre ranksep
   maxWidth: 2000, // Wrap to new row if layout exceeds this width
-  rowSpacing: 150, // Vertical spacing between wrapped rows
+  rowSpacing: 0, // Vertical spacing between wrapped rows
 };
 
 /**
@@ -68,6 +68,27 @@ function deriveSourceHandles(
 }
 
 /**
+ * Agent tools appendix is absolute-positioned (see `NodeAppendix`), so it
+ * doesn't contribute to ReactFlow's `measured.height`. Report an effective
+ * height that includes the appendix so ELK reserves enough vertical space
+ * and neighboring ranks don't overlap the tools box.
+ */
+const AGENT_TOOLS_HEIGHT = 170;
+const AGENT_TOOLS_GAP = 16;
+
+function effectiveMeasuredHeight(node: Node): number | undefined {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = node.data as Record<string, any> | undefined;
+  const nodeType = data?.type ?? node.type;
+  const isAgent = nodeType === 'core.agent' || nodeType === 'primitives.agent';
+  if (!isAgent) {
+    return node.measured?.height;
+  }
+  const cardHeight = node.measured?.height ?? defaultLayoutOptions.nodeHeight;
+  return cardHeight + AGENT_TOOLS_GAP + AGENT_TOOLS_HEIGHT;
+}
+
+/**
  * Main layout function that applies the selected algorithm
  */
 export const applyLayout = async (
@@ -94,12 +115,25 @@ export const applyLayout = async (
     case 'elkjs': {
       // Enrich branching nodes with explicit source handle ordering so ELK
       // places ports in the correct top-to-bottom order (matching the rendered handles).
+      // Also inflate agent node heights so ELK reserves space for the tools
+      // appendix (which is absolute-positioned and otherwise invisible to ELK).
       const enrichedNodes = nodes.map((node) => {
         const sourceHandles = deriveSourceHandles(node);
+        const effectiveHeight = effectiveMeasuredHeight(node);
+        const withHeight: Node =
+          effectiveHeight !== undefined && effectiveHeight !== node.measured?.height
+            ? {
+                ...node,
+                measured: {
+                  ...node.measured,
+                  height: effectiveHeight,
+                },
+              }
+            : node;
         if (sourceHandles) {
-          return { ...node, sourceHandles } as ElkLayoutNode;
+          return { ...withHeight, sourceHandles } as ElkLayoutNode;
         }
-        return node;
+        return withHeight;
       }) as ElkLayoutNode[];
 
       // Use ElkJS layout with port/handle support for better edge routing
@@ -121,7 +155,7 @@ export const applyLayout = async (
       return { nodes: layoutedNodes as Node[], edges };
     }
     case 'invect': {
-      const layoutedNodes = applyInvectLayoutFromPackage(nodes, edges, {
+      const layoutedNodes = await applyInvectLayoutFromPackage(nodes, edges, {
         direction,
         nodeSpacing: options?.nodeSpacing ?? defaultLayoutOptions.nodeSpacing,
         rankSpacing: options?.rankSpacing ?? defaultLayoutOptions.rankSpacing,

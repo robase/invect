@@ -981,7 +981,10 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
 
       // GET /chat/stream/:sessionId - Reattach to an in-flight chat session.
       if (method === 'GET' && path.match(/^chat\/stream\/[^/]+$/)) {
-        const sessionId = path.split('/')[2]!;
+        const sessionId = path.split('/')[2];
+        if (!sessionId) {
+          return Response.json({ error: 'Session ID required' }, { status: 400 });
+        }
         const abortController = new AbortController();
         request.signal.addEventListener('abort', () => abortController.abort());
 

@@ -236,12 +236,4 @@ export abstract class BaseProviderAdapter implements ProviderAdapter {
       toolCalls,
     };
   }
-
-  /**
-   * Wrap errors with provider context
-   */
-  protected wrapError(error: unknown, operation: string): Error {
-    const message = error instanceof Error ? error.message : String(error);
-    return new Error(`${this.providerId} ${operation} failed: ${message}`);
-  }
 }

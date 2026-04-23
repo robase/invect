@@ -13,13 +13,17 @@
  */
 
 import {
+  DEFAULT_RETRYABLE_ERROR_CODES,
   NodeExecutionStatus,
+  classifyError,
   type ActionCredential,
   type ActionDefinition,
   type ActionExecutionContext,
   type ActionResult,
+  type ActionRetryConfig,
   type AgentToolExecutionContext,
   type AgentToolResult,
+  type NodeErrorDetails,
   type NodeExecutionContext,
   type NodeExecutionFailedResult,
   type NodeExecutionPendingResult,
@@ -67,6 +71,54 @@ export function coerceJsonStringParams(params: Record<string, unknown>): Record<
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// RETRY HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function clamp(n: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, n));
+}
+
+function computeBackoff(
+  cfg: ActionRetryConfig,
+  attempt: number,
+  retryAfterMs: number | undefined,
+): number {
+  const base = cfg.initialDelayMs ?? 500;
+  const multiplier = cfg.backoffMultiplier ?? 2;
+  const cap = cfg.maxDelayMs ?? 30_000;
+  let delay = Math.min(base * Math.pow(multiplier, attempt - 1), cap);
+  if (cfg.jitter !== false) {
+    const jitter = delay * 0.25;
+    delay = delay + (Math.random() * 2 - 1) * jitter;
+  }
+  // Honour a server-side Retry-After floor when the classifier captured one.
+  if (typeof retryAfterMs === 'number' && retryAfterMs > delay) {
+    delay = retryAfterMs;
+  }
+  return Math.max(0, Math.round(delay));
+}
+
+async function abortableSleep(ms: number, signal?: AbortSignal): Promise<void> {
+  if (ms <= 0) {
+    return;
+  }
+  if (signal?.aborted) {
+    throw new Error('aborted');
+  }
+  return new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(new Error('aborted'));
+    };
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // PUBLIC API
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -105,10 +157,17 @@ export async function executeActionAsNode(
         }
       }
 
+      const prettyMessage = prettifyError(coercedResult.error);
       return {
         state: NodeExecutionStatus.FAILED,
-        errors: [prettifyError(coercedResult.error)],
+        errors: [prettyMessage],
         ...(Object.keys(fieldErrors).length > 0 && { fieldErrors }),
+        errorDetails: {
+          code: 'VALIDATION',
+          message: prettyMessage,
+          retryable: false,
+          ...(Object.keys(fieldErrors).length > 0 && { fieldErrors }),
+        },
       } satisfies NodeExecutionFailedResult;
     }
   }
@@ -119,14 +178,22 @@ export async function executeActionAsNode(
     try {
       credential = await nodeContext.functions.getCredential(credentialId);
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
       logger.error('Failed to fetch credential for action', {
         actionId: action.id,
         credentialId,
         error: err,
       });
+      const isRefresh =
+        msg.toLowerCase().includes('refresh') || msg.toLowerCase().includes('token');
       return {
         state: NodeExecutionStatus.FAILED,
-        errors: [`Failed to fetch credential: ${err instanceof Error ? err.message : String(err)}`],
+        errors: [`Failed to fetch credential: ${msg}`],
+        errorDetails: {
+          code: isRefresh ? 'CREDENTIAL_REFRESH' : 'AUTH',
+          message: msg,
+          retryable: false,
+        },
       } satisfies NodeExecutionFailedResult;
     }
   }
@@ -150,26 +217,132 @@ export async function executeActionAsNode(
       flowParams: nodeContext.flowParams,
       globalConfig: nodeContext.globalConfig,
     },
+    abortSignal: nodeContext.abortSignal,
   };
 
-  let result: ActionResult;
-  try {
-    result = await action.execute(parseResult.data, context);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    logger.error('Action execution threw', { actionId: action.id, error: msg });
+  // ── Retry loop ─────────────────────────────────────────────────────────
+  // Attempts >1 only apply when action.retry.maxAttempts > 1 and the failure
+  // is classified as retryable. Batch submissions are skipped (they have
+  // their own failure path; retrying risks duplicate batch jobs).
+  const isBatchRequest = (params as { useBatchProcessing?: boolean }).useBatchProcessing === true;
+  const retryCfg = isBatchRequest ? { maxAttempts: 1 } : (action.retry ?? {});
+  const maxAttempts = clamp(retryCfg.maxAttempts ?? 1, 1, 5);
+  const retryOn = retryCfg.retryOn ?? DEFAULT_RETRYABLE_ERROR_CODES;
+
+  let result: ActionResult | undefined;
+  let lastDetails: NodeErrorDetails | undefined;
+  let lastThrownError: unknown;
+  let attempts = 0;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    attempts = attempt;
+    let thrown: unknown;
+    try {
+      result = await action.execute(parseResult.data, context);
+      if (result.success) {
+        break;
+      }
+      lastDetails =
+        (result.metadata?.__errorDetails as NodeErrorDetails | undefined) ??
+        classifyError(new Error(result.error ?? 'Action failed'));
+    } catch (err) {
+      thrown = err;
+      lastThrownError = err;
+      lastDetails = classifyError(err);
+    }
+
+    const shouldRetry =
+      attempt < maxAttempts &&
+      lastDetails?.retryable === true &&
+      retryOn.includes(lastDetails.code) &&
+      context.abortSignal?.aborted !== true;
+
+    if (!shouldRetry) {
+      if (thrown) {
+        const msg = thrown instanceof Error ? thrown.message : String(thrown);
+        logger.error('Action execution threw', { actionId: action.id, error: msg, attempts });
+        return {
+          state: NodeExecutionStatus.FAILED,
+          errors: [msg],
+          errorDetails: { ...(lastDetails ?? classifyError(thrown)), attempts },
+        } satisfies NodeExecutionFailedResult;
+      }
+      if (result && !result.success) {
+        return {
+          state: NodeExecutionStatus.FAILED,
+          errors: [result.error ?? 'Action failed without error message'],
+          metadata: result.metadata,
+          errorDetails: { ...(lastDetails as NodeErrorDetails), attempts },
+        } satisfies NodeExecutionFailedResult;
+      }
+      break;
+    }
+
+    // Sleep before next attempt, honouring abort.
+    const delay = computeBackoff(retryCfg, attempt, lastDetails?.retryAfterMs);
+    logger.debug('Retrying action after classified failure', {
+      actionId: action.id,
+      attempt,
+      maxAttempts,
+      code: lastDetails?.code,
+      delayMs: delay,
+    });
+    try {
+      await abortableSleep(delay, context.abortSignal);
+    } catch {
+      // Aborted during backoff — bail out.
+      return {
+        state: NodeExecutionStatus.FAILED,
+        errors: [lastDetails?.message ?? 'Cancelled during retry backoff'],
+        errorDetails: {
+          code: 'CANCELLED',
+          message: 'Cancelled during retry backoff',
+          retryable: false,
+          attempts,
+        },
+      } satisfies NodeExecutionFailedResult;
+    }
+
+    // Increment the persisted retry count so the UI / metrics see progress.
+    if (nodeContext.traceId) {
+      try {
+        await nodeContext.functions.incrementRetryCount?.(nodeContext.traceId);
+      } catch (bumpErr) {
+        logger.debug('Failed to increment retry count (non-fatal)', {
+          traceId: nodeContext.traceId,
+          error: bumpErr instanceof Error ? bumpErr.message : String(bumpErr),
+        });
+      }
+    }
+  }
+
+  if (!result) {
+    // The throw path short-circuits above; defensive fallback.
+    const details = lastDetails ?? classifyError(lastThrownError);
     return {
       state: NodeExecutionStatus.FAILED,
-      errors: [msg],
+      errors: [details.message],
+      errorDetails: { ...details, attempts },
     } satisfies NodeExecutionFailedResult;
   }
 
   if (!result.success) {
+    // Retries exhausted without success.
+    const details: NodeErrorDetails =
+      (result.metadata?.__errorDetails as NodeErrorDetails | undefined) ??
+      lastDetails ??
+      classifyError(new Error(result.error ?? 'Action failed'));
     return {
       state: NodeExecutionStatus.FAILED,
       errors: [result.error ?? 'Action failed without error message'],
       metadata: result.metadata,
+      errorDetails: { ...details, attempts },
     } satisfies NodeExecutionFailedResult;
+  }
+
+  if (attempts > 1) {
+    // Annotate success with attempt count for observability.
+    result.metadata = { ...result.metadata, __attempts: attempts };
   }
 
   if (result.metadata?.__batchSubmitted === true) {

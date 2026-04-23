@@ -199,7 +199,7 @@ export class OpenRouterAdapter extends OpenAIAdapter {
       return models;
     } catch (error) {
       this.logger.error('Failed to fetch OpenRouter models:', error);
-      throw this.wrapError(error, 'model listing');
+      throw error;
     }
   }
 

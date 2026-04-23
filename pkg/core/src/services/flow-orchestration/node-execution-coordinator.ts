@@ -18,6 +18,7 @@ import type { JsExpressionService } from '../templating/js-expression.service';
 import type { MapperConfig } from '../flow-versions/schemas-fresh';
 import { getGlobalActionRegistry } from 'src/actions/action-registry';
 import { executeActionAsNode } from 'src/actions/action-executor';
+import { classifyError } from '@invect/action-kit';
 
 export type NodeExecutionCoordinatorDeps = {
   logger: Logger;
@@ -399,6 +400,7 @@ export class NodeExecutionCoordinator {
     skippedNodeIds?: Set<string>,
     useBatchProcessing?: boolean,
     incomingData?: NodeIncomingDataObject,
+    abortSignal?: AbortSignal,
   ): Promise<NodeExecution> {
     const { logger } = this.deps;
 
@@ -422,6 +424,7 @@ export class NodeExecutionCoordinator {
         useBatchProcessing,
         incomingData ?? {},
         mapperConfig,
+        abortSignal,
       );
     }
 
@@ -435,6 +438,7 @@ export class NodeExecutionCoordinator {
       skippedNodeIds,
       useBatchProcessing,
       incomingData,
+      abortSignal,
     );
   }
 
@@ -450,6 +454,7 @@ export class NodeExecutionCoordinator {
     skippedNodeIds?: Set<string>,
     useBatchProcessing?: boolean,
     incomingData?: NodeIncomingDataObject,
+    abortSignal?: AbortSignal,
   ): Promise<NodeExecution> {
     const {
       logger,
@@ -596,6 +601,16 @@ export class NodeExecutionCoordinator {
               return null;
             }
           },
+          incrementRetryCount: async (traceId: string) => {
+            try {
+              await nodeExecutionService.incrementRetryCount(traceId);
+            } catch (error) {
+              logger.debug('Failed to increment retry count (non-fatal)', {
+                traceId,
+                error: error instanceof Error ? error.message : String(error),
+              });
+            }
+          },
         },
         nodes: definition?.nodes || [],
         edges: definition?.edges || [],
@@ -612,6 +627,9 @@ export class NodeExecutionCoordinator {
         // Incoming data from upstream nodes, keyed by reference ID
         // Available for nodes that do their own template processing
         incomingData: incomingData || {},
+        // Per-run abort signal — fires when the user cancels the run (see
+        // FlowRunCoordinator.abortRun). Actions propagate this into SDK calls.
+        abortSignal,
       };
 
       // ── Plugin hook: beforeNodeExecute ───────────────────────────────────
@@ -683,6 +701,10 @@ export class NodeExecutionCoordinator {
               executionResult.state === NodeExecutionStatus.FAILED
                 ? executionResult.errors.join(', ')
                 : undefined,
+            errorDetails:
+              executionResult.state === NodeExecutionStatus.FAILED
+                ? executionResult.errorDetails
+                : undefined,
             duration: dispatchDuration,
           });
 
@@ -703,6 +725,7 @@ export class NodeExecutionCoordinator {
           flowRunId: flowRunId,
           nodeId: node.id,
           error: errorMessage,
+          errorCode: executionResult.errorDetails?.code,
         });
 
         return await nodeExecutionService.updateNodeExecutionStatus(
@@ -710,6 +733,8 @@ export class NodeExecutionCoordinator {
           NodeExecutionStatus.FAILED,
           {
             error: errorMessage,
+            errorDetails: executionResult.errorDetails,
+            fieldErrors: executionResult.fieldErrors,
           },
         );
       } else if (executionResult.state === NodeExecutionStatus.PENDING) {
@@ -740,10 +765,12 @@ export class NodeExecutionCoordinator {
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
+      const details = classifyError(error);
       logger.error('Node execution failed', {
         flowRunId: flowRunId,
         nodeId: node.id,
         error: errorMessage,
+        errorCode: details.code,
       });
 
       return await nodeExecutionService.updateNodeExecutionStatus(
@@ -751,6 +778,7 @@ export class NodeExecutionCoordinator {
         NodeExecutionStatus.FAILED,
         {
           error: errorMessage,
+          errorDetails: details,
         },
       );
     }
@@ -778,6 +806,7 @@ export class NodeExecutionCoordinator {
     useBatchProcessing: boolean | undefined,
     incomingData: NodeIncomingDataObject,
     mapperConfig: MapperConfig,
+    _abortSignal?: AbortSignal,
   ): Promise<NodeExecution> {
     const { logger, nodeExecutionService } = this.deps;
     const jsService = this.deps.jsExpressionService;
@@ -807,7 +836,14 @@ export class NodeExecutionCoordinator {
       return await nodeExecutionService.updateNodeExecutionStatus(
         trace.id,
         NodeExecutionStatus.FAILED,
-        { error: errorMessage },
+        {
+          error: errorMessage,
+          errorDetails: {
+            code: 'BAD_REQUEST',
+            message: errorMessage,
+            retryable: false,
+          },
+        },
       );
     }
 
@@ -825,7 +861,10 @@ export class NodeExecutionCoordinator {
       return await nodeExecutionService.updateNodeExecutionStatus(
         trace.id,
         NodeExecutionStatus.FAILED,
-        { error: errorMessage },
+        {
+          error: errorMessage,
+          errorDetails: { code: 'VALIDATION', message: errorMessage, retryable: false },
+        },
       );
     }
 
@@ -1028,11 +1067,12 @@ export class NodeExecutionCoordinator {
       );
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
+      const details = classifyError(error);
       logger.error('Mapper iteration failed', { flowRunId, nodeId: node.id, error: errorMessage });
       return await nodeExecutionService.updateNodeExecutionStatus(
         trace.id,
         NodeExecutionStatus.FAILED,
-        { error: errorMessage },
+        { error: errorMessage, errorDetails: details },
       );
     }
   }

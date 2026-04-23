@@ -184,7 +184,9 @@ export function useChat(options: UseChatOptions = {}) {
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) {break;}
+        if (done) {
+          break;
+        }
 
         buffer += decoder.decode(value, { stream: true });
 
@@ -363,9 +365,13 @@ export function useChat(options: UseChatOptions = {}) {
   const reattachIfPending = useCallback(
     async (flowId: string | undefined) => {
       const store = useChatStore.getState();
-      if (store.isStreaming) {return;} // Already streaming — don't double up.
+      if (store.isStreaming) {
+        return;
+      } // Already streaming — don't double up.
       const sessionId = store.getActiveSessionId(flowId);
-      if (!sessionId) {return;}
+      if (!sessionId) {
+        return;
+      }
 
       // Restore the pending user message that kicked off this session, if any,
       // so the conversation reads correctly while we replay events.
@@ -425,10 +431,14 @@ export function useChat(options: UseChatOptions = {}) {
   // top of the persisted conversation, not a blank slate.
   const hasAttemptedReattachRef = useRef<string | null>(null);
   useEffect(() => {
-    if (isLoadingHistory) {return;}
+    if (isLoadingHistory) {
+      return;
+    }
     const flowId = options.flowId;
     const key = flowId ?? '__no_flow__';
-    if (hasAttemptedReattachRef.current === key) {return;}
+    if (hasAttemptedReattachRef.current === key) {
+      return;
+    }
     hasAttemptedReattachRef.current = key;
     // Fire-and-forget — any errors surface through the chat error path.
     void reattachIfPending(flowId);

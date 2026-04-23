@@ -300,20 +300,25 @@ describe('LLM rate-limit + transient-error handling', () => {
     );
 
     it(
-      'fails cleanly when rate-limits persist past the SDK retry budget',
+      'fails cleanly when rate-limits persist past the retry budget',
       async () => {
-        // SDK has maxRetries=3 → 4 total attempts. Queue 6 just to be safe.
+        // SDK retries are disabled for flow-node callers; core.model retries
+        // at the action layer with maxAttempts=3 → 3 total attempts.
         responseQueue = Array.from({ length: 6 }, rateLimit);
 
         const result = await runFlow({ nodes: [modelNode()], edges: [] });
 
         expect(result.status).toBe(FlowRunStatus.FAILED);
-        // Exactly 4 attempts: initial + 3 retries.
-        expect(requestCount).toBe(4);
+        // Exactly 3 attempts: action-level maxAttempts=3, no SDK retries.
+        expect(requestCount).toBe(3);
 
+        console.error('DEBUG traces:', JSON.stringify(result.traces ?? [], null, 2));
         const trace = result.traces?.find((t) => t.nodeId === 'model');
         expect(trace?.status).toBe('FAILED');
         expect(trace?.error ?? '').toMatch(/429|rate/i);
+        expect(trace?.errorDetails?.code).toBe('RATE_LIMIT');
+        expect(trace?.errorDetails?.providerStatusCode).toBe(429);
+        expect(trace?.errorDetails?.attempts).toBe(3);
       },
       testTimeout,
     );
@@ -326,7 +331,9 @@ describe('LLM rate-limit + transient-error handling', () => {
         const result = await runFlow({ nodes: [modelNode()], edges: [] });
 
         expect(result.status).toBe(FlowRunStatus.FAILED);
-        expect(requestCount).toBe(4);
+        expect(requestCount).toBe(3);
+        const trace = result.traces?.find((t) => t.nodeId === 'model');
+        expect(trace?.errorDetails?.code).toBe('UPSTREAM_5XX');
       },
       testTimeout,
     );
@@ -365,8 +372,8 @@ describe('LLM rate-limit + transient-error handling', () => {
         const result = await runFlow({ nodes: [baseAgent()], edges: [] });
 
         expect(result.status).toBe(FlowRunStatus.FAILED);
-        // 1 successful tool-call response + 4 attempts on iter 2 = 5.
-        expect(requestCount).toBe(5);
+        // 1 successful tool-call + 3 attempts on iter 2 (iterationRetries=3) = 4.
+        expect(requestCount).toBe(4);
       },
       testTimeout,
     );

@@ -24,7 +24,7 @@ import { evaluateSdkSource } from '@invect/sdk/evaluator';
 import { transformArrowsToStrings } from '@invect/sdk/transform';
 import { mergeParsedIntoDefinition } from '@invect/sdk';
 import type { DbFlowDefinition } from '@invect/sdk';
-import type { ChatToolContext, ChatToolDefinition, ChatToolResult } from '../chat-types';
+import type { ChatToolDefinition, ChatToolResult } from '../chat-types';
 import type { InvectInstance } from 'src/api/types';
 
 // ═══════════════════════════════════════════════════════════════════════════

@@ -20,6 +20,10 @@ type BasePromptRequest = {
 
 export interface PromptRequest extends BasePromptRequest {
   useBatchProcessing?: false;
+  /** Abort signal plumbed through to the SDK call. */
+  signal?: AbortSignal;
+  /** Per-call timeout in ms. Passed to the SDK as its `timeout` option. */
+  timeoutMs?: number;
 }
 
 export interface BatchRequest extends BasePromptRequest {
@@ -44,6 +48,10 @@ export interface SubmitAgentPromptRequest {
   useBatchProcessing?: boolean;
   nodeId?: string;
   flowRunId?: string;
+  /** Abort signal plumbed through to the SDK call. */
+  signal?: AbortSignal;
+  /** Per-call timeout in ms. Passed to the SDK as its `timeout` option. */
+  timeoutMs?: number;
 }
 
 export type SubmitPromptResult =

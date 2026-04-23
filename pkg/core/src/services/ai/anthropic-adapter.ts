@@ -200,7 +200,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       return await this.parseStreamingResponse(stream, request);
     } catch (error) {
       this.logger.error('Anthropic agent prompt failed:', error);
-      throw this.wrapError(error, 'agent prompt');
+      throw error;
     }
   }
 
@@ -317,10 +317,18 @@ export class AnthropicAdapter extends BaseProviderAdapter {
     this.logger.debug(`Submitting prompt to Anthropic`);
 
     try {
-      const stream = await this.client.messages.create({
-        ...messageRequest,
-        stream: true,
-      });
+      const stream = await this.client.messages.create(
+        {
+          ...messageRequest,
+          stream: true,
+        },
+        {
+          signal: request.signal,
+          ...(request.timeoutMs ? { timeout: request.timeoutMs } : {}),
+          // Flow-node callers own their own retry budget — see openai-adapter.
+          maxRetries: 0,
+        },
+      );
 
       let fullContent = '';
       let toolUse: string | null = null;
@@ -344,16 +352,25 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       if (toolUse) {
         try {
           return { value: JSON.parse(toolUse) as object, type: 'object' };
-        } catch (error) {
-          this.logger.warn(`Failed to parse streamed tool output: ${error}`);
-          return { value: toolUse, type: 'string' };
+        } catch (parseErr) {
+          // Hard-fail — same reasoning as openai-adapter's schema-parse branch.
+          const err = Object.assign(
+            new Error('Model returned non-JSON tool_use despite outputJsonSchema'),
+            {
+              name: 'SchemaParseError',
+              schemaParse: true as const,
+              rawContent: toolUse,
+              cause: parseErr,
+            },
+          );
+          throw err;
         }
       }
 
       return { value: fullContent, type: 'string' };
     } catch (error) {
       this.logger.error('Anthropic API call failed:', error);
-      throw this.wrapError(error, 'prompt execution');
+      throw error;
     }
   }
 
@@ -415,7 +432,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       return { externalBatchId: result.id };
     } catch (error) {
       this.logger.error('Anthropic batch submission failed:', error);
-      throw this.wrapError(error, 'batch submission');
+      throw error;
     }
   }
 
@@ -466,7 +483,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       }
     } catch (error) {
       this.logger.error('Failed to poll Anthropic batch status:', error);
-      throw this.wrapError(error, 'batch polling');
+      throw error;
     }
   }
 
@@ -521,7 +538,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       return batchResults;
     } catch (error) {
       this.logger.error('Failed to download Anthropic batch results:', error);
-      throw this.wrapError(error, 'batch results download');
+      throw error;
     }
   }
 
@@ -566,7 +583,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       }));
     } catch (error) {
       this.logger.error('Failed to fetch Anthropic models:', error);
-      throw this.wrapError(error, 'model listing');
+      throw error;
     }
   }
 

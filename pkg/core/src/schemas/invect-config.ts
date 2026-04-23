@@ -47,9 +47,23 @@ export const ExecutionConfigSchema = z.object({
   /**
    * Maximum time (in ms) a flow run is allowed to stay in RUNNING state
    * before being considered stale and marked as FAILED.
+   * This is a HEARTBEAT-STALENESS threshold, not a wall-clock budget — as
+   * long as the coordinator keeps writing heartbeats, the reaper won't fire.
    * @default 600_000 (10 minutes)
    */
   flowTimeoutMs: z.number().positive().default(600_000),
+  /**
+   * Per-node timeout (in ms) for `core.model` unless overridden by the node's
+   * own `timeoutMs` param. Governs the SDK call wall-clock.
+   * @default 300_000 (5 minutes)
+   */
+  modelNodeTimeoutMs: z.number().positive().default(300_000),
+  /**
+   * Per-node timeout (in ms) for `core.agent` unless overridden by the node's
+   * own `timeoutMs` param. Governs the total wall-clock of the agent loop.
+   * @default 900_000 (15 minutes)
+   */
+  agentNodeTimeoutMs: z.number().positive().default(900_000),
   /**
    * Interval (in ms) at which the heartbeat is updated during flow execution.
    * @default 30_000 (30 seconds)

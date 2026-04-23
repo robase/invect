@@ -40,7 +40,59 @@ export class FlowRunCoordinator {
   /** Active heartbeat timers keyed by flowRunId */
   private heartbeatTimers = new Map<string, NodeJS.Timeout>();
 
+  /**
+   * Active AbortControllers keyed by flowRunId. Used to propagate user-initiated
+   * cancellation into in-flight SDK calls on this process. Process-death
+   * cancellation is handled by the stale-run detector instead.
+   */
+  private abortControllers = new Map<string, AbortController>();
+
   constructor(private readonly deps: FlowRunCoordinatorDeps) {}
+
+  /**
+   * Return the AbortSignal for an active run, or undefined if the run is
+   * not currently executing on this process.
+   */
+  getRunAbortSignal(flowRunId: string): AbortSignal | undefined {
+    return this.abortControllers.get(flowRunId)?.signal;
+  }
+
+  /**
+   * Abort an in-flight run on this process. Returns true if the run was
+   * active (signal fired); false otherwise.
+   */
+  abortRun(flowRunId: string, reason: string): boolean {
+    const ctrl = this.abortControllers.get(flowRunId);
+    if (!ctrl || ctrl.signal.aborted) {
+      return false;
+    }
+    ctrl.abort(new Error(reason));
+    return true;
+  }
+
+  private startAbortController(flowRunId: string): AbortController {
+    const existing = this.abortControllers.get(flowRunId);
+    if (existing && !existing.signal.aborted) {
+      return existing;
+    }
+    const ctrl = new AbortController();
+    this.abortControllers.set(flowRunId, ctrl);
+    return ctrl;
+  }
+
+  private clearAbortController(flowRunId: string): void {
+    this.abortControllers.delete(flowRunId);
+  }
+
+  /** Clear all abort controllers (used during shutdown). */
+  clearAllAbortControllers(): void {
+    for (const ctrl of this.abortControllers.values()) {
+      if (!ctrl.signal.aborted) {
+        ctrl.abort(new Error('shutdown'));
+      }
+    }
+    this.abortControllers.clear();
+  }
 
   /**
    * Start a periodic heartbeat for a flow run.
@@ -248,6 +300,7 @@ export class FlowRunCoordinator {
           skippedNodeIds,
           useBatchProcessing,
           incomingData,
+          this.getRunAbortSignal(execution.id),
         );
         nodeExecutions.push(trace);
 
@@ -547,6 +600,7 @@ export class FlowRunCoordinator {
           skippedNodeIds,
           true,
           incomingData,
+          this.getRunAbortSignal(flowRunId),
         );
 
         newTraces.push(trace);
@@ -702,6 +756,7 @@ export class FlowRunCoordinator {
   private async pauseFlowForBatch(flowRunId: string): Promise<void> {
     const { logger, flowRunsService } = this.deps;
     this.stopHeartbeat(flowRunId);
+    this.clearAbortController(flowRunId);
     logger.debug('Pausing flow for batch processing', { flowRunId });
     await flowRunsService.updateRunStatus(flowRunId, FlowRunStatus.PAUSED_FOR_BATCH);
     logger.debug('Flow paused for batch processing', { flowRunId });
@@ -731,6 +786,7 @@ export class FlowRunCoordinator {
     logger.debug('Marking execution as running', { flowRunId });
     await flowRunsService.updateRunStatus(flowRunId, FlowRunStatus.RUNNING);
     this.startHeartbeat(flowRunId);
+    this.startAbortController(flowRunId);
   }
 
   private async markExecutionSuccess(
@@ -739,6 +795,7 @@ export class FlowRunCoordinator {
   ): Promise<void> {
     const { logger, flowRunsService } = this.deps;
     this.stopHeartbeat(flowRunId);
+    this.clearAbortController(flowRunId);
     logger.debug('Marking execution as successful', { flowRunId });
     await flowRunsService.updateRunStatus(flowRunId, FlowRunStatus.SUCCESS, { outputs });
   }
@@ -746,6 +803,7 @@ export class FlowRunCoordinator {
   private async markExecutionFailed(flowRunId: string, error: string): Promise<void> {
     const { logger, flowRunsService } = this.deps;
     this.stopHeartbeat(flowRunId);
+    this.clearAbortController(flowRunId);
     logger.debug('Marking execution as failed', { flowRunId, error });
     await flowRunsService.updateRunStatus(flowRunId, FlowRunStatus.FAILED, { error });
   }
@@ -856,6 +914,7 @@ export class FlowRunCoordinator {
           skippedNodeIds,
           useBatchProcessing,
           incomingData,
+          this.getRunAbortSignal(execution.id),
         );
         nodeExecutions.push(trace);
 

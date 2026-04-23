@@ -26,6 +26,8 @@ const DATABASE_URL =
         maxConcurrentExecutions: 10,
         enableTracing: true,
         flowTimeoutMs: 600_000,
+        modelNodeTimeoutMs: 300_000,
+        agentNodeTimeoutMs: 900_000,
         heartbeatIntervalMs: 30_000,
         staleRunCheckIntervalMs: 60_000,
       },

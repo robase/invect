@@ -177,8 +177,12 @@ export function sdkResultToClipboard(
 
   const clipboardNodes: ClipboardNode[] = nodes.map((n, i) => {
     const pos = positions[i];
+    const originalId = refToOriginalId.get(n.referenceId);
+    if (!originalId) {
+      throw new Error(`Missing originalId mapping for referenceId: ${n.referenceId}`);
+    }
     return {
-      originalId: refToOriginalId.get(n.referenceId)!,
+      originalId,
       type: n.type,
       relativePosition: { x: pos.x - minX, y: pos.y - minY },
       absolutePosition: pos,

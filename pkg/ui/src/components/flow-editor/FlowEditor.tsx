@@ -396,11 +396,7 @@ export function FlowWorkbenchView({
   React.useEffect(() => {
     if (onLayoutSelectorRender) {
       onLayoutSelectorRender(
-        <LayoutSelector
-          currentLayout={currentLayout}
-          currentDirection={currentDirection}
-          onLayoutChange={handleLayoutChange}
-        />,
+        <LayoutSelector onRealign={() => handleLayoutChange(currentLayout, currentDirection)} />,
       );
     }
   }, [currentLayout, currentDirection, handleLayoutChange, onLayoutSelectorRender]);

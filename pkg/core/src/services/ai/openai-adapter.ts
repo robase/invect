@@ -200,12 +200,15 @@ export class OpenAIAdapter extends BaseProviderAdapter {
       const stream = await this.client.chat.completions.create(params, {
         signal: request.signal,
         timeout: request.timeoutMs ?? this.defaultAgentTimeoutMs,
+        // Disable SDK retries for flow-node callers — the action-level retry
+        // loop owns retry semantics and needs predictable request counts.
+        maxRetries: 0,
       });
 
       return await this.parseStreamingAgentResponse(stream, request);
     } catch (error) {
       this.logger.error(`${this.providerId} agent prompt failed:`, error);
-      throw this.wrapError(error, 'agent prompt');
+      throw error;
     }
   }
 
@@ -396,7 +399,13 @@ export class OpenAIAdapter extends BaseProviderAdapter {
     }
 
     try {
-      const response = await this.client.chat.completions.create(requestOptions);
+      const response = await this.client.chat.completions.create(requestOptions, {
+        signal: request.signal,
+        // OpenAI SDK rejects `timeout: undefined`; only pass when positive.
+        ...(request.timeoutMs ? { timeout: request.timeoutMs } : {}),
+        // See executeAgentPrompt: flow-node callers own their own retry budget.
+        maxRetries: 0,
+      });
 
       const content = response.choices[0]?.message?.content;
       if (!content) {
@@ -406,14 +415,24 @@ export class OpenAIAdapter extends BaseProviderAdapter {
       if (request.outputJsonSchema) {
         try {
           return { value: JSON.parse(content), type: 'object' };
-        } catch {
-          return { value: content, type: 'string' };
+        } catch (parseErr) {
+          // Hard-fail rather than silently downgrading to a string — downstream
+          // nodes that typed against the schema would otherwise receive the
+          // wrong shape with no visible failure. The classifier maps
+          // `schemaParse === true` to NodeErrorCode SCHEMA_PARSE.
+          const err = Object.assign(new Error('Model returned non-JSON despite outputJsonSchema'), {
+            name: 'SchemaParseError',
+            schemaParse: true as const,
+            rawContent: content,
+            cause: parseErr,
+          });
+          throw err;
         }
       }
       return { value: content, type: 'string' };
     } catch (error) {
       this.logger.error('OpenAI API call failed:', error);
-      throw this.wrapError(error, 'prompt execution');
+      throw error;
     }
   }
 
@@ -466,7 +485,7 @@ export class OpenAIAdapter extends BaseProviderAdapter {
       return { externalBatchId: batch.id };
     } catch (error) {
       this.logger.error(`Failed to submit batch ${batchJobId}:`, error);
-      throw this.wrapError(error, 'batch submission');
+      throw error;
     }
   }
 
@@ -519,51 +538,49 @@ export class OpenAIAdapter extends BaseProviderAdapter {
    * Poll OpenAI batch status
    */
   async pollBatch(externalBatchId: string): Promise<BatchPollResult> {
-    try {
-      const batch = await this.client.batches.retrieve(externalBatchId);
+    const batch = await this.client.batches.retrieve(externalBatchId);
 
-      switch (batch.status) {
-        case 'completed': {
-          if (
-            batch.request_counts?.failed &&
-            batch.request_counts.failed > 0 &&
-            batch.error_file_id
-          ) {
-            const errorMessage = await this.logBatchErrors(batch.error_file_id, externalBatchId);
-            if (batch.request_counts.completed === 0) {
-              return { status: BatchStatus.FAILED, error: errorMessage };
-            }
+    switch (batch.status) {
+      case 'completed': {
+        if (
+          batch.request_counts?.failed &&
+          batch.request_counts.failed > 0 &&
+          batch.error_file_id
+        ) {
+          const errorMessage = await this.logBatchErrors(batch.error_file_id, externalBatchId);
+          if (batch.request_counts.completed === 0) {
+            return { status: BatchStatus.FAILED, error: errorMessage };
           }
-
-          if (!batch.output_file_id) {
-            return { status: BatchStatus.PROCESSING };
-          }
-
-          const results = await this.downloadResults(batch);
-          return { status: BatchStatus.COMPLETED, result: results };
         }
-        case 'failed':
-        case 'expired':
-        case 'cancelled':
-          return { status: BatchStatus.FAILED, error: `Batch ${batch.status}` };
-        default: {
-          // Client-side timeout: OpenAI's completion_window is 24h.
-          // If a batch is still processing after 25h, fail it.
-          if (batch.created_at) {
-            const createdAt = new Date(batch.created_at * 1000); // Unix timestamp
-            const processingTimeHours = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60);
-            if (processingTimeHours > 25) {
-              return {
-                status: BatchStatus.FAILED,
-                error: `Batch processing timeout: ${processingTimeHours.toFixed(1)} hours (exceeds 24h completion window)`,
-              };
-            }
-          }
+
+        if (!batch.output_file_id) {
           return { status: BatchStatus.PROCESSING };
         }
+
+        const results = await this.downloadResults(batch);
+        return { status: BatchStatus.COMPLETED, result: results };
       }
-    } catch (error) {
-      throw this.wrapError(error, 'batch polling');
+      case 'failed':
+      case 'expired':
+      case 'cancelled':
+        return { status: BatchStatus.FAILED, error: `Batch ${batch.status}` };
+      default: {
+        // Client-side timeout: OpenAI's completion_window is 24h.
+        // If a batch is still processing after 25h, fail it.
+        if (batch.created_at) {
+          const createdAt = new Date(batch.created_at * 1000); // Unix timestamp
+          const processingTimeHours = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60);
+          if (processingTimeHours > 25) {
+            return {
+              status: BatchStatus.FAILED,
+              error: `Batch processing timeout: ${processingTimeHours.toFixed(
+                1,
+              )} hours (exceeds 24h completion window)`,
+            };
+          }
+        }
+        return { status: BatchStatus.PROCESSING };
+      }
     }
   }
 
@@ -609,57 +626,53 @@ export class OpenAIAdapter extends BaseProviderAdapter {
       throw new Error('Batch output file ID not available');
     }
 
-    try {
-      const fileContent = await this.client.files.content(batch.output_file_id);
-      const resultsText = await fileContent.text();
+    const fileContent = await this.client.files.content(batch.output_file_id);
+    const resultsText = await fileContent.text();
 
-      const jsonlLines = resultsText
-        .trim()
-        .split('\n')
-        .filter((line) => line.trim());
+    const jsonlLines = resultsText
+      .trim()
+      .split('\n')
+      .filter((line) => line.trim());
 
-      const batchResults: BatchResult[] = [];
+    const batchResults: BatchResult[] = [];
 
-      for (const line of jsonlLines) {
-        try {
-          const result = JSON.parse(line);
-          const batchId = result.custom_id;
+    for (const line of jsonlLines) {
+      try {
+        const result = JSON.parse(line);
+        const batchId = result.custom_id;
 
-          if (result.error) {
-            batchResults.push({
-              batchId,
-              status: BatchStatus.FAILED,
-              error: typeof result.error === 'string' ? result.error : JSON.stringify(result.error),
-            });
-          } else if (result.response?.body?.choices?.[0]?.message?.content) {
-            const content = result.response.body.choices[0].message.content;
-            let promptResult: PromptResult;
-            try {
-              promptResult = { value: JSON.parse(content), type: 'object' };
-            } catch {
-              promptResult = { value: content, type: 'string' };
-            }
-            batchResults.push({ batchId, status: BatchStatus.COMPLETED, content: promptResult });
-          } else {
-            batchResults.push({
-              batchId,
-              status: BatchStatus.FAILED,
-              error: 'Unexpected response format: no content found',
-            });
-          }
-        } catch (parseError) {
+        if (result.error) {
           batchResults.push({
-            batchId: 'unknown',
+            batchId,
             status: BatchStatus.FAILED,
-            error: `Failed to parse result: ${(parseError as Error).message}`,
+            error: typeof result.error === 'string' ? result.error : JSON.stringify(result.error),
+          });
+        } else if (result.response?.body?.choices?.[0]?.message?.content) {
+          const content = result.response.body.choices[0].message.content;
+          let promptResult: PromptResult;
+          try {
+            promptResult = { value: JSON.parse(content), type: 'object' };
+          } catch {
+            promptResult = { value: content, type: 'string' };
+          }
+          batchResults.push({ batchId, status: BatchStatus.COMPLETED, content: promptResult });
+        } else {
+          batchResults.push({
+            batchId,
+            status: BatchStatus.FAILED,
+            error: 'Unexpected response format: no content found',
           });
         }
+      } catch (parseError) {
+        batchResults.push({
+          batchId: 'unknown',
+          status: BatchStatus.FAILED,
+          error: `Failed to parse result: ${(parseError as Error).message}`,
+        });
       }
-
-      return batchResults;
-    } catch (error) {
-      throw this.wrapError(error, 'batch results download');
     }
+
+    return batchResults;
   }
 
   /**
@@ -696,7 +709,7 @@ export class OpenAIAdapter extends BaseProviderAdapter {
         }));
     } catch (error) {
       this.logger.error('Failed to fetch OpenAI models:', error);
-      throw this.wrapError(error, 'model listing');
+      throw error;
     }
   }
 

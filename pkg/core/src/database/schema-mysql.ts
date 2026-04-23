@@ -128,6 +128,8 @@ export const actionTraces = mysqlTable('invect_action_traces', {
   inputs: json('inputs').$type<JSONValue>().notNull(),
   outputs: json('outputs').$type<JSONValue>(),
   error: text('error'),
+  errorDetails: json('error_details').$type<JSONValue>(),
+  fieldErrors: json('field_errors').$type<JSONValue>(),
   startedAt: timestamp('started_at')
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

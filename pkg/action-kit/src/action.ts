@@ -192,6 +192,29 @@ export interface ActionResult {
 
 export type ActionCategory = 'read' | 'write' | 'delete' | 'manage';
 
+/**
+ * Declarative retry policy for an action. The retry loop lives in
+ * `executeActionAsNode`; actions opt in by setting `retry.maxAttempts > 1`.
+ * Default policy (when omitted) is `maxAttempts: 1` — no retry.
+ */
+export interface ActionRetryConfig {
+  /** Maximum attempts (including the first). 1 = no retry. Capped at 5. */
+  maxAttempts?: number;
+  /** Base delay before the 1st retry (ms). Default 500. */
+  initialDelayMs?: number;
+  /** Upper bound on any single delay (ms). Default 30_000. */
+  maxDelayMs?: number;
+  /** Exponential backoff multiplier. Default 2. */
+  backoffMultiplier?: number;
+  /** Apply ±25% jitter to delays. Default true. */
+  jitter?: boolean;
+  /**
+   * Which NodeErrorCodes are eligible for retry. Defaults to
+   * ['RATE_LIMIT', 'NETWORK', 'UPSTREAM_5XX', 'TIMEOUT'].
+   */
+  retryOn?: readonly import('./node-execution').NodeErrorCode[];
+}
+
 export interface ActionDefinition<TParams = unknown> {
   id: string;
   name: string;
@@ -211,6 +234,8 @@ export interface ActionDefinition<TParams = unknown> {
   tags?: string[];
   icon?: string;
   actionCategory?: ActionCategory;
+  /** Optional declarative retry policy — see ActionRetryConfig. */
+  retry?: ActionRetryConfig;
   execute(params: TParams, context: ActionExecutionContext): Promise<ActionResult>;
   onConfigUpdate?(
     event: ActionConfigUpdateEvent,

@@ -10,6 +10,7 @@
 import {
   defineAction,
   BatchProvider,
+  classifyError,
   type ActionConfigUpdateContext,
   type ActionConfigUpdateEvent,
   type ActionConfigUpdateResponse,
@@ -80,6 +81,13 @@ export const agentNodeParamsSchema = z.object({
   maxConversationTokens: z.number().positive().optional().default(DEFAULT_MAX_CONVERSATION_TOKENS),
   enableParallelTools: z.boolean().optional().default(true),
   useBatchProcessing: z.boolean().optional().default(false),
+  iterationRetries: z.number().int().min(1).max(5).optional().default(3),
+  timeoutMs: z
+    .number()
+    .int()
+    .positive()
+    .max(60 * 60 * 1000)
+    .optional(),
 });
 
 export type AgentNodeParams = z.infer<typeof agentNodeParamsSchema>;
@@ -325,12 +333,32 @@ export const agentAction = defineAction({
 
       const credential = await getCredential(params.credentialId);
       if (!credential) {
-        return { success: false, error: 'Selected credential was not found or is inaccessible' };
+        return {
+          success: false,
+          error: 'Selected credential was not found or is inaccessible',
+          metadata: {
+            __errorDetails: {
+              code: 'CREDENTIAL_MISSING',
+              message: 'Selected credential was not found or is inaccessible',
+              retryable: false,
+            },
+          },
+        };
       }
 
       provider = detectProviderFromCredential(credential) ?? undefined;
       if (!provider) {
-        return { success: false, error: 'Unable to detect provider from credential.' };
+        return {
+          success: false,
+          error: 'Unable to detect provider from credential.',
+          metadata: {
+            __errorDetails: {
+              code: 'BAD_REQUEST',
+              message: 'Unable to detect provider from credential.',
+              retryable: false,
+            },
+          },
+        };
       }
     }
 
@@ -381,6 +409,7 @@ export const agentAction = defineAction({
           toolTimeoutMs: params.toolTimeoutMs,
           maxConversationTokens: params.maxConversationTokens,
           enableParallelTools: params.enableParallelTools,
+          iterationRetries: params.iterationRetries,
         },
         nodeId,
         flowRunId,
@@ -413,9 +442,13 @@ export const agentAction = defineAction({
         },
       };
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      context.logger.error(`Agent ${nodeId} - Execution failed`, { error: msg });
-      return { success: false, error: `Agent execution failed: ${msg}` };
+      const details = classifyError(error);
+      context.logger.error(`Agent ${nodeId} - Execution failed`, { error: details.message });
+      return {
+        success: false,
+        error: `Agent execution failed: ${details.message}`,
+        metadata: { __errorDetails: details },
+      };
     }
   },
 });
@@ -564,6 +597,69 @@ function buildConfiguredTools(
 // HELPERS — agent loop
 // ═══════════════════════════════════════════════════════════════════════════
 
+/**
+ * Retry a single LLM round-trip on classified-transient failures. Only the
+ * round-trip is retried — tool results already accumulated in the outer loop
+ * are preserved. Default retryable codes: RATE_LIMIT, NETWORK, UPSTREAM_5XX,
+ * TIMEOUT. Respects the caller's AbortSignal during backoff.
+ */
+async function submitWithIterationRetry<T>(
+  fn: () => Promise<T>,
+  ctx: {
+    maxAttempts: number;
+    signal?: AbortSignal;
+    logger: Logger;
+    nodeId: string;
+    iteration: number;
+  },
+): Promise<T> {
+  const maxAttempts = Math.max(1, Math.min(5, ctx.maxAttempts));
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      const details = classifyError(err);
+      const shouldRetry =
+        attempt < maxAttempts &&
+        details.retryable &&
+        (details.code === 'RATE_LIMIT' ||
+          details.code === 'NETWORK' ||
+          details.code === 'UPSTREAM_5XX' ||
+          details.code === 'TIMEOUT') &&
+        ctx.signal?.aborted !== true;
+      if (!shouldRetry) {
+        throw err;
+      }
+
+      const base = 500;
+      const cap = 30_000;
+      const delay = Math.min(base * Math.pow(2, attempt - 1), cap);
+      const jittered = Math.round(delay * (0.75 + Math.random() * 0.5));
+      const floor =
+        details.retryAfterMs && details.retryAfterMs > jittered ? details.retryAfterMs : jittered;
+
+      ctx.logger.debug(
+        `Agent ${ctx.nodeId} iter ${ctx.iteration} — retrying after transient ${details.code}`,
+        { attempt, maxAttempts, delayMs: floor },
+      );
+      await new Promise<void>((resolve, reject) => {
+        const t = setTimeout(() => {
+          ctx.signal?.removeEventListener('abort', onAbort);
+          resolve();
+        }, floor);
+        const onAbort = () => {
+          clearTimeout(t);
+          reject(new Error('aborted'));
+        };
+        ctx.signal?.addEventListener('abort', onAbort, { once: true });
+      });
+    }
+  }
+  throw lastErr;
+}
+
 type BatchSubmittedResult = {
   type: 'batch_submitted';
   batchJobId: string;
@@ -597,6 +693,7 @@ async function runAgentLoop(
     toolTimeoutMs: number;
     maxConversationTokens: number;
     enableParallelTools: boolean;
+    iterationRetries: number;
   },
   nodeId: string,
   flowRunId: string,
@@ -644,18 +741,33 @@ async function runAgentLoop(
     // continue its tool-calling loop without pausing.
     const useBatch = iteration === 1 && params.useBatchProcessing === true;
 
-    const response = await submitAgentPrompt({
-      model: params.model,
-      messages,
-      tools,
-      systemPrompt: systemPromptWithTools,
-      temperature: params.temperature,
-      maxTokens: params.maxTokens,
-      provider,
-      credentialId: params.credentialId,
-      parallelToolCalls: config.enableParallelTools,
-      ...(useBatch ? { useBatchProcessing: true, nodeId, flowRunId } : {}),
-    });
+    // Per-iteration retry: the whole agent loop is not safely retryable
+    // (partial tool results would be discarded), but a single LLM round-trip
+    // absolutely is. We retry just this submitAgentPrompt call on classified
+    // transient failures before propagating to the outer action loop.
+    const response = await submitWithIterationRetry(
+      () =>
+        submitAgentPrompt({
+          model: params.model,
+          messages,
+          tools,
+          systemPrompt: systemPromptWithTools,
+          temperature: params.temperature,
+          maxTokens: params.maxTokens,
+          provider,
+          credentialId: params.credentialId,
+          parallelToolCalls: config.enableParallelTools,
+          signal: context.abortSignal,
+          ...(useBatch ? { useBatchProcessing: true, nodeId, flowRunId } : {}),
+        }),
+      {
+        maxAttempts: config.iterationRetries,
+        signal: context.abortSignal,
+        logger: context.logger,
+        nodeId,
+        iteration,
+      },
+    );
 
     // Handle batch submission — propagate up to action result
     if ('type' in response && response.type === 'batch_submitted') {

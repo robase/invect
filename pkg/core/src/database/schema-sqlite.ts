@@ -102,6 +102,7 @@ export const actionTraces = sqliteTable('invect_action_traces', {
     .default(NodeExecutionStatus.PENDING),
   inputs: text('inputs', { mode: 'json' }).$type<JSONValue>().notNull(),
   outputs: text('outputs', { mode: 'json' }).$type<JSONValue>(),
+  // `error` stores a JSON-serialized `NodeErrorDetails` object.
   error: text('error'),
   startedAt: text('started_at')
     .notNull()

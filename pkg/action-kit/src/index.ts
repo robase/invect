@@ -12,6 +12,7 @@ export type {
   ActionExecutionContext,
   ActionResult,
   ActionCategory,
+  ActionRetryConfig,
   ProviderDef,
   ProviderCategory,
   CredentialRequirement,
@@ -82,8 +83,13 @@ export type {
   StructuredOutput,
   OutputVariable,
   OutputVariables,
+  NodeErrorCode,
+  NodeErrorDetails,
 } from './node-execution';
 export type { NodeExecutionContext } from './node-executor-context';
+
+// Error classifier
+export { classifyError, DEFAULT_RETRYABLE_ERROR_CODES } from './error-classifier';
 
 // AI types (enums + request/result shapes)
 export { BatchProvider, AIProvider, BatchStatus } from './ai-types';

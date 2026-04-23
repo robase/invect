@@ -111,6 +111,11 @@ export type {
 
 export type { NodeExecutionResult as ExecutionResult } from './types/node-execution.types';
 
+// Error classification — safe type-only re-exports from @invect/action-kit.
+// The runtime `classifyError` function lives in action-kit; frontend only
+// needs the typed discriminant.
+export type { NodeErrorCode, NodeErrorDetails } from '@invect/action-kit';
+
 // Agent tool types
 export type {
   AgentToolDefinition,

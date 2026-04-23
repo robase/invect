@@ -155,6 +155,9 @@ export const CORE_SCHEMA: InvectPluginSchema = {
       },
       inputs: { type: 'json', required: true, typeAnnotation: 'JSONValue' },
       outputs: { type: 'json', required: false, typeAnnotation: 'JSONValue' },
+      // `error` stores a JSON-serialized `NodeErrorDetails` object (classifier output +
+      // human-readable message). For back-compat with pre-hardening rows, readers also
+      // accept a plain string and wrap it as `{ code: 'UNKNOWN', message }`.
       error: { type: 'text', required: false },
       startedAt: { type: 'date', required: true, defaultValue: 'now()' },
       completedAt: { type: 'date', required: false },

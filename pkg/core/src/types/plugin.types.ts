@@ -412,6 +412,7 @@ export interface InvectPluginHooks {
       status: 'SUCCESS' | 'FAILED' | 'SKIPPED';
       output?: unknown;
       error?: string;
+      errorDetails?: import('@invect/action-kit').NodeErrorDetails;
       duration?: number;
     },
   ) => Promise<void | NodeExecutionHookResult>;
@@ -769,6 +770,7 @@ export interface PluginHookRunner {
       status: 'SUCCESS' | 'FAILED' | 'SKIPPED';
       output?: unknown;
       error?: string;
+      errorDetails?: import('@invect/action-kit').NodeErrorDetails;
       duration?: number;
     },
   ) => Promise<{ output?: unknown }>;

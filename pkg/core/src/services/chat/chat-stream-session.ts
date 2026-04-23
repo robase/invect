@@ -30,6 +30,7 @@ import type { ChatToolkit } from './chat-toolkit';
 import type { FlowContextData } from './system-prompt';
 import { buildSystemPrompt } from './system-prompt';
 import type { ActionRegistry } from 'src/actions';
+import { classifyError } from '@invect/action-kit';
 
 /**
  * Dependencies injected into the session from the ChatStreamService.
@@ -48,66 +49,23 @@ export interface ChatStreamSessionDeps {
 
 /** Check if an error is a rate-limit (429) error */
 function isRateLimitError(error: unknown): boolean {
-  if (error instanceof Error) {
-    return error.message.includes('429') || error.message.includes('rate_limit');
-  }
-  return false;
+  return classifyError(error).code === 'RATE_LIMIT';
 }
 
 /**
  * Check if an error is a transient network failure worth retrying.
  *
- * Matches the classic undici/socket teardown shapes we see during long
- * agent turns — upstream CDN or provider closes an idle socket before the
- * full response arrives. These are indistinguishable from recoverable
- * transport hiccups, so a bounded retry is the right move.
+ * Delegates to the shared classifier. Includes rate-limit, 5xx, connection
+ * timeouts, and undici socket teardowns.
  */
 function isTransientNetworkError(error: unknown): boolean {
-  if (!(error instanceof Error)) {
-    return false;
-  }
-  const msg = error.message.toLowerCase();
-  if (
-    msg.includes('terminated') ||
-    msg.includes('econnreset') ||
-    msg.includes('etimedout') ||
-    msg.includes('econnrefused') ||
-    msg.includes('und_err_socket') ||
-    msg.includes('und_err_connect_timeout') ||
-    msg.includes('socket hang up') ||
-    msg.includes('premature close') ||
-    msg.includes('network error') ||
-    msg.includes('fetch failed')
-  ) {
-    return true;
-  }
-  // OpenAI / Anthropic SDKs surface 5xx and connection errors via named classes;
-  // fall back to checking a `status` field if present.
-  const status = (error as { status?: number }).status;
-  if (typeof status === 'number' && status >= 500 && status < 600) {
-    return true;
-  }
-  // Common cause name for undici socket errors
-  const cause = (error as { cause?: { code?: string } }).cause;
-  if (cause?.code) {
-    const code = cause.code.toLowerCase();
-    if (code.includes('econnreset') || code.includes('etimedout') || code.includes('und_err_')) {
-      return true;
-    }
-  }
-  return false;
+  const code = classifyError(error).code;
+  return code === 'NETWORK' || code === 'UPSTREAM_5XX' || code === 'TIMEOUT';
 }
 
 /** Check if an error was triggered by the caller aborting the request. */
 function isAbortError(error: unknown): boolean {
-  if (!(error instanceof Error)) {
-    return false;
-  }
-  return (
-    error.name === 'AbortError' ||
-    error.message.toLowerCase().includes('aborted') ||
-    error.message.toLowerCase().includes('request was aborted')
-  );
+  return classifyError(error).code === 'CANCELLED';
 }
 
 /**

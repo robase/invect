@@ -25,10 +25,9 @@ export function useFlowSyncStatus(flowId: string | undefined) {
   return useQuery<VcFlowSyncStatus>({
     queryKey: vcQueryKeys.syncStatus(flowId ?? ''),
     queryFn: async () => {
-      const response = await fetch(
-        `${api.getBaseURL()}/plugins/vc/flows/${flowId}/status`,
-        { credentials: 'include' },
-      );
+      const response = await fetch(`${api.getBaseURL()}/plugins/vc/flows/${flowId}/status`, {
+        credentials: 'include',
+      });
       if (!response.ok) {
         throw new Error(`Failed to fetch sync status: ${response.status}`);
       }
@@ -83,10 +82,10 @@ export function usePushFlow(flowId: string) {
 
   return useMutation<VcSyncResult>({
     mutationFn: async () => {
-      const response = await fetch(
-        `${api.getBaseURL()}/plugins/vc/flows/${flowId}/push`,
-        { method: 'POST', credentials: 'include' },
-      );
+      const response = await fetch(`${api.getBaseURL()}/plugins/vc/flows/${flowId}/push`, {
+        method: 'POST',
+        credentials: 'include',
+      });
       if (!response.ok && response.status !== 409) {
         throw new Error(`Push failed: ${response.status}`);
       }
@@ -106,10 +105,10 @@ export function usePullFlow(flowId: string) {
 
   return useMutation<VcSyncResult>({
     mutationFn: async () => {
-      const response = await fetch(
-        `${api.getBaseURL()}/plugins/vc/flows/${flowId}/pull`,
-        { method: 'POST', credentials: 'include' },
-      );
+      const response = await fetch(`${api.getBaseURL()}/plugins/vc/flows/${flowId}/pull`, {
+        method: 'POST',
+        credentials: 'include',
+      });
       if (!response.ok) {
         throw new Error(`Pull failed: ${response.status}`);
       }
@@ -129,10 +128,10 @@ export function useForcePushFlow(flowId: string) {
 
   return useMutation<VcSyncResult>({
     mutationFn: async () => {
-      const response = await fetch(
-        `${api.getBaseURL()}/plugins/vc/flows/${flowId}/force-push`,
-        { method: 'POST', credentials: 'include' },
-      );
+      const response = await fetch(`${api.getBaseURL()}/plugins/vc/flows/${flowId}/force-push`, {
+        method: 'POST',
+        credentials: 'include',
+      });
       if (!response.ok) {
         throw new Error(`Force push failed: ${response.status}`);
       }
@@ -152,10 +151,10 @@ export function useForcePullFlow(flowId: string) {
 
   return useMutation<VcSyncResult>({
     mutationFn: async () => {
-      const response = await fetch(
-        `${api.getBaseURL()}/plugins/vc/flows/${flowId}/force-pull`,
-        { method: 'POST', credentials: 'include' },
-      );
+      const response = await fetch(`${api.getBaseURL()}/plugins/vc/flows/${flowId}/force-pull`, {
+        method: 'POST',
+        credentials: 'include',
+      });
       if (!response.ok) {
         throw new Error(`Force pull failed: ${response.status}`);
       }
@@ -175,10 +174,10 @@ export function usePublishFlow(flowId: string) {
 
   return useMutation<VcSyncResult>({
     mutationFn: async () => {
-      const response = await fetch(
-        `${api.getBaseURL()}/plugins/vc/flows/${flowId}/publish`,
-        { method: 'POST', credentials: 'include' },
-      );
+      const response = await fetch(`${api.getBaseURL()}/plugins/vc/flows/${flowId}/publish`, {
+        method: 'POST',
+        credentials: 'include',
+      });
       if (!response.ok) {
         throw new Error(`Publish failed: ${response.status}`);
       }
@@ -198,15 +197,12 @@ export function useConfigureSync(flowId: string) {
 
   return useMutation<VcSyncConfig, Error, ConfigureSyncInput>({
     mutationFn: async (input) => {
-      const response = await fetch(
-        `${api.getBaseURL()}/plugins/vc/flows/${flowId}/configure`,
-        {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(input),
-        },
-      );
+      const response = await fetch(`${api.getBaseURL()}/plugins/vc/flows/${flowId}/configure`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      });
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
         throw new Error(err.error || `Configure failed: ${response.status}`);
@@ -227,10 +223,10 @@ export function useDisconnectSync(flowId: string) {
 
   return useMutation({
     mutationFn: async () => {
-      const response = await fetch(
-        `${api.getBaseURL()}/plugins/vc/flows/${flowId}/disconnect`,
-        { method: 'DELETE', credentials: 'include' },
-      );
+      const response = await fetch(`${api.getBaseURL()}/plugins/vc/flows/${flowId}/disconnect`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
       if (!response.ok) {
         throw new Error(`Disconnect failed: ${response.status}`);
       }

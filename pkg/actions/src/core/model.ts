@@ -8,6 +8,7 @@
 import {
   defineAction,
   BatchProvider,
+  classifyError,
   type Model,
   type SubmitPromptRequest,
   type ActionConfigUpdateEvent,
@@ -32,7 +33,16 @@ const paramsSchema = z.object({
   maxTokens: z.number().positive().optional(),
   outputJsonSchema: z.string().optional(),
   useBatchProcessing: z.boolean().optional().default(false),
+  timeoutMs: z
+    .number()
+    .int()
+    .positive()
+    .max(30 * 60 * 1000)
+    .optional(),
 });
+
+/** Default per-node timeout for `core.model`. Overridden by `params.timeoutMs`. */
+const DEFAULT_MODEL_TIMEOUT_MS = 300_000;
 
 export const modelAction = defineAction({
   id: 'core.model',
@@ -61,6 +71,13 @@ export const modelAction = defineAction({
     required: true,
     type: 'llm',
     description: 'API credential for OpenAI or Anthropic',
+  },
+
+  // Retry default: 3 attempts for transient upstream failures. SDK-level
+  // retries are disabled for flow-node calls (see adapter maxRetries: 0)
+  // so this is the single source of retry truth for model nodes.
+  retry: {
+    maxAttempts: 3,
   },
 
   params: {
@@ -135,6 +152,14 @@ export const modelAction = defineAction({
         extended: true,
         hidden: true,
       },
+      {
+        name: 'timeoutMs',
+        label: 'Timeout (ms)',
+        type: 'number',
+        description:
+          'Per-node timeout in milliseconds. When exceeded, the SDK call is aborted and the node fails with TIMEOUT. Leave blank to use the framework default (5 minutes).',
+        extended: true,
+      },
     ],
   },
 
@@ -205,7 +230,17 @@ export const modelAction = defineAction({
 
       const credential = await getCredential(params.credentialId);
       if (!credential) {
-        return { success: false, error: 'Selected credential was not found or is inaccessible' };
+        return {
+          success: false,
+          error: 'Selected credential was not found or is inaccessible',
+          metadata: {
+            __errorDetails: {
+              code: 'CREDENTIAL_MISSING',
+              message: 'Selected credential was not found or is inaccessible',
+              retryable: false,
+            },
+          },
+        };
       }
 
       provider = detectProviderFromCredential(credential) ?? undefined;
@@ -214,11 +249,45 @@ export const modelAction = defineAction({
           success: false,
           error:
             'Unable to detect provider from credential. Ensure the credential includes an API URL or provider metadata.',
+          metadata: {
+            __errorDetails: {
+              code: 'BAD_REQUEST',
+              message: 'Unable to detect provider from credential.',
+              retryable: false,
+            },
+          },
         };
       }
     }
 
     const useBatchProcessing = params.useBatchProcessing === true;
+
+    // ── Build an abort controller that cascades from the run-level signal
+    // and also fires on the local per-node timeout. Batch submissions skip
+    // this wiring — they have their own provider-side 24h completion window.
+    const timeoutMs = params.timeoutMs ?? DEFAULT_MODEL_TIMEOUT_MS;
+    const abortCtrl = useBatchProcessing ? null : new AbortController();
+    let timedOut = false;
+    const timer =
+      abortCtrl !== null
+        ? setTimeout(() => {
+            timedOut = true;
+            abortCtrl.abort(new Error(`timeout after ${timeoutMs}ms`));
+          }, timeoutMs)
+        : null;
+
+    const onRunAbort = () => {
+      if (abortCtrl && !abortCtrl.signal.aborted) {
+        abortCtrl.abort(context.abortSignal?.reason ?? new Error('cancelled'));
+      }
+    };
+    if (abortCtrl && context.abortSignal) {
+      if (context.abortSignal.aborted) {
+        onRunAbort();
+      } else {
+        context.abortSignal.addEventListener('abort', onRunAbort, { once: true });
+      }
+    }
 
     const baseRequest = {
       systemPrompt: params.systemPrompt,
@@ -238,9 +307,13 @@ export const modelAction = defineAction({
           nodeId: context.flowContext?.nodeId ?? '',
           flowRunId: context.flowContext?.flowRunId ?? '',
         }
-      : baseRequest;
+      : {
+          ...baseRequest,
+          signal: abortCtrl?.signal,
+          timeoutMs,
+        };
 
-    context.logger.debug('Submitting AI request', { model: params.model, provider });
+    context.logger.debug('Submitting AI request', { model: params.model, provider, timeoutMs });
 
     try {
       const aiResult = await submitPrompt(submitRequest);
@@ -274,8 +347,20 @@ export const modelAction = defineAction({
         },
       };
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      return { success: false, error: `Model execution failed: ${msg}` };
+      const cancelled = context.abortSignal?.aborted === true && !timedOut;
+      const details = classifyError(error, { timedOut, cancelled });
+      return {
+        success: false,
+        error: `Model execution failed: ${details.message}`,
+        metadata: { __errorDetails: details },
+      };
+    } finally {
+      if (timer) {
+        clearTimeout(timer);
+      }
+      if (context.abortSignal) {
+        context.abortSignal.removeEventListener('abort', onRunAbort);
+      }
     }
   },
 });

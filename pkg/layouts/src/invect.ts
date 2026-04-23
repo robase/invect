@@ -1,40 +1,41 @@
 /**
  * Invect Layout Implementation
  *
- * An opinionated hierarchical layout tailored to Invect flows. Inspired by
- * n8n's canvas layout algorithm but adapted to Invect's graph shape:
- *   - No sub-nodes (agent tools live inside node params, not as separate graph nodes)
- *   - No sticky notes
- *   - Multi-output branching via `if_else` / `switch` source handles
+ * An opinionated hierarchical layout tailored to Invect flows. Uses ELK's
+ * `layered` algorithm as the base placer with Invect-specific pre/post-processing:
  *
- * Pipeline:
- *   1. Decompose into disconnected components.
- *   2. Lay out each component LR with dagre (dimension-aware).
- *   3. Post-process each component:
- *        a. Center multi-output branch targets around the branch source.
- *        b. Straighten linear chains (source with single child, target with single parent).
- *        c. Separate nodes that lie on a skip-edge path.
- *   4. Stack components vertically with a configurable gap.
- *   5. Snap everything to the grid.
+ *   1. Compute each node's "reserved" footprint (card + any attached appendix
+ *      like the agent tools box) so ELK allocates space for the appendix.
+ *   2. Attach source ports in the node's declared handle order (switch cases
+ *      by slug, if-else as [true_output, false_output]) so FIXED_ORDER port
+ *      constraints keep branch targets stacked in the order the card renders.
+ *   3. Run ELK — it handles component stacking, crossing minimization, port
+ *      ordering, and edge routing natively.
+ *   4. Translate ELK's reserved-box positions back to card top-left positions.
+ *   5. Optional: straighten linear chains (1-in / 1-out edges) so they're
+ *      visually aligned across layers.
+ *   6. Snap to grid.
  */
 
-import dagre from '@dagrejs/dagre';
-import type { LayoutNode, LayoutEdge } from './types';
+import type { LayoutNode, LayoutEdge, LayoutHandle, ElkLayoutNode } from './types';
+import { applyElkLayout, type ElkJsLayoutOptions } from './elk';
 
 export interface InvectLayoutOptions {
   direction?: 'TB' | 'BT' | 'LR' | 'RL';
+  /** Within-layer (perpendicular to flow) spacing between nodes. */
   nodeSpacing?: number;
+  /** Between-layer (parallel to flow) spacing between ranks. */
   rankSpacing?: number;
+  /** Default node width when `measured.width` is absent. */
   nodeWidth?: number;
+  /** Default node height when `measured.height` is absent. */
   nodeHeight?: number;
-  /** Vertical gap between disconnected components. */
+  /** Spacing between disconnected components. */
   componentSpacing?: number;
   /** Grid size for final snapping. 0 disables snapping. */
   gridSize?: number;
-  /** Attempt to straighten linear chains (single-parent/single-child runs). */
+  /** Post-pass: align linear (1-in / 1-out) chains to their source's center. */
   straightenChains?: boolean;
-  /** Nudge intermediate nodes sitting on a skip-edge path. */
-  separateSkipEdges?: boolean;
 }
 
 const DEFAULTS: Required<InvectLayoutOptions> = {
@@ -46,61 +47,38 @@ const DEFAULTS: Required<InvectLayoutOptions> = {
   componentSpacing: 120,
   gridSize: 20,
   straightenChains: true,
-  separateSkipEdges: true,
 };
 
 // ---------------------------------------------------------------------------
-// Helpers: graph traversal
+// Effective node dimensions (card + appendix)
 // ---------------------------------------------------------------------------
-
-interface LaidOutNode {
-  id: string;
-  /** Top-left X of the rendered node card. This is the position ReactFlow expects. */
-  x: number;
-  /** Top-left Y of the rendered node card. */
-  y: number;
-  /** Card width (what the node's DOM element reports). */
-  width: number;
-  /** Card height. */
-  height: number;
-  /** Full reserved bounding width including any attached appendix (tools box). */
-  reservedWidth: number;
-  /** Full reserved bounding height including any attached appendix. */
-  reservedHeight: number;
-  /** Card's top-left relative to the reserved box's top-left. */
-  cardOffsetX: number;
-  cardOffsetY: number;
-}
-
-interface BoundingBox {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
 
 /**
  * Agent tools appendix dimensions. The tools box is a fixed-size visual panel
  * rendered adjacent to agent nodes via `NodeAppendix` (absolute-positioned, so
- * it doesn't contribute to ReactFlow's `measured` dimensions). We reserve space
- * for it here so dagre doesn't overlap it with neighboring nodes.
+ * it doesn't contribute to ReactFlow's `measured` dimensions). We reserve
+ * space for it here so ELK doesn't overlap it with neighboring nodes.
  */
 const AGENT_TOOLS_WIDTH = 220;
 const AGENT_TOOLS_HEIGHT = 170;
 const AGENT_TOOLS_GAP = 16;
 
-type EffectiveDims = Omit<LaidOutNode, 'id' | 'x' | 'y'>;
+interface EffectiveDims {
+  /** Rendered card width. */
+  width: number;
+  /** Rendered card height. */
+  height: number;
+  /** Full bounding width (card + appendix). */
+  reservedWidth: number;
+  /** Full bounding height (card + appendix). */
+  reservedHeight: number;
+  /** Card's top-left X relative to the reserved box's top-left. */
+  cardOffsetX: number;
+  /** Card's top-left Y relative to the reserved box's top-left. */
+  cardOffsetY: number;
+}
 
-/**
- * Compute the full visual footprint of a node (card + any appendix), plus the
- * card's offset within that footprint. Non-agent nodes have reserved dims equal
- * to card dims.
- */
-function effectiveNodeDims(
-  node: LayoutNode,
-  fallbackW: number,
-  fallbackH: number,
-): EffectiveDims {
+function effectiveNodeDims(node: LayoutNode, fallbackW: number, fallbackH: number): EffectiveDims {
   const cardWidth = node.measured?.width ?? node.width ?? fallbackW;
   const cardHeight = node.measured?.height ?? node.height ?? fallbackH;
 
@@ -174,123 +152,8 @@ function effectiveNodeDims(
   }
 }
 
-function findComponents<N extends LayoutNode, E extends LayoutEdge>(
-  nodes: N[],
-  edges: E[],
-): Array<Set<string>> {
-  const parent = new Map<string, string>();
-  nodes.forEach((n) => parent.set(n.id, n.id));
-
-  const find = (id: string): string => {
-    let root = id;
-    while (parent.get(root) !== root) {
-      root = parent.get(root) as string;
-    }
-    // Path compression
-    let cursor = id;
-    while (parent.get(cursor) !== root) {
-      const next = parent.get(cursor) as string;
-      parent.set(cursor, root);
-      cursor = next;
-    }
-    return root;
-  };
-
-  const union = (a: string, b: string): void => {
-    const ra = find(a);
-    const rb = find(b);
-    if (ra !== rb) {
-      parent.set(ra, rb);
-    }
-  };
-
-  for (const edge of edges) {
-    if (parent.has(edge.source) && parent.has(edge.target)) {
-      union(edge.source, edge.target);
-    }
-  }
-
-  const groups = new Map<string, Set<string>>();
-  for (const id of parent.keys()) {
-    const root = find(id);
-    let set = groups.get(root);
-    if (!set) {
-      set = new Set();
-      groups.set(root, set);
-    }
-    set.add(id);
-  }
-
-  return Array.from(groups.values());
-}
-
-function layoutComponent<N extends LayoutNode, E extends LayoutEdge>(
-  componentIds: Set<string>,
-  nodes: N[],
-  edges: E[],
-  opts: Required<InvectLayoutOptions>,
-): LaidOutNode[] {
-  const g = new dagre.graphlib.Graph();
-  g.setGraph({
-    rankdir: opts.direction,
-    nodesep: opts.nodeSpacing,
-    ranksep: opts.rankSpacing,
-    align: 'UL',
-  });
-  g.setDefaultEdgeLabel(() => ({}));
-
-  const dims = new Map<string, EffectiveDims>();
-  for (const node of nodes) {
-    if (!componentIds.has(node.id)) {
-      continue;
-    }
-    const d = effectiveNodeDims(node, opts.nodeWidth, opts.nodeHeight);
-    dims.set(node.id, d);
-    // Feed dagre the reserved footprint so it allocates enough space for the
-    // tools appendix — otherwise neighboring ranks can visually overlap it.
-    g.setNode(node.id, { width: d.reservedWidth, height: d.reservedHeight });
-  }
-
-  for (const edge of edges) {
-    if (!componentIds.has(edge.source) || !componentIds.has(edge.target)) {
-      continue;
-    }
-    g.setEdge(edge.source, edge.target, {});
-  }
-
-  dagre.layout(g);
-
-  const laidOut: LaidOutNode[] = [];
-  for (const id of componentIds) {
-    const dagreNode = g.node(id);
-    if (!dagreNode) {
-      continue;
-    }
-    const d = dims.get(id);
-    if (!d) {
-      continue;
-    }
-    // dagre returns the CENTER of the reserved box; translate to card top-left.
-    const reservedLeft = dagreNode.x - d.reservedWidth / 2;
-    const reservedTop = dagreNode.y - d.reservedHeight / 2;
-    laidOut.push({
-      id,
-      x: reservedLeft + d.cardOffsetX,
-      y: reservedTop + d.cardOffsetY,
-      width: d.width,
-      height: d.height,
-      reservedWidth: d.reservedWidth,
-      reservedHeight: d.reservedHeight,
-      cardOffsetX: d.cardOffsetX,
-      cardOffsetY: d.cardOffsetY,
-    });
-  }
-
-  return laidOut;
-}
-
 // ---------------------------------------------------------------------------
-// Post-processing passes
+// Declared handle order
 // ---------------------------------------------------------------------------
 
 /**
@@ -302,12 +165,9 @@ function layoutComponent<N extends LayoutNode, E extends LayoutEdge>(
  *
  * For `core.if_else` / `primitives.if_else`: `["true_output", "false_output"]`.
  *
- * Returns `undefined` for other nodes (caller falls back to edge-insertion order).
+ * Returns `undefined` for other nodes (ELK will infer handle order from edges).
  */
-function resolveDeclaredHandleOrder(node: LayoutNode | undefined): string[] | undefined {
-  if (!node) {
-    return undefined;
-  }
+function resolveDeclaredHandleOrder(node: LayoutNode): string[] | undefined {
   const nodeType = node.data?.type ?? node.type;
 
   if (nodeType === 'core.switch' || nodeType === 'primitives.switch') {
@@ -330,107 +190,55 @@ function resolveDeclaredHandleOrder(node: LayoutNode | undefined): string[] | un
   return undefined;
 }
 
-function centerMultiOutputBranches<N extends LayoutNode, E extends LayoutEdge>(
-  laidOut: LaidOutNode[],
-  nodes: N[],
-  edges: E[],
-): void {
-  const byId = new Map(laidOut.map((n) => [n.id, n]));
-  const nodeById = new Map(nodes.map((n) => [n.id, n]));
-
-  // Group edges by source, then by source handle — handle keys preserve
-  // first-seen order via Map insertion.
-  const bySource = new Map<string, Map<string, string[]>>();
-  for (const edge of edges) {
-    const src = edge.source;
-    const handle = edge.sourceHandle ?? '__default__';
-    if (!bySource.has(src)) {
-      bySource.set(src, new Map());
-    }
-    const handleMap = bySource.get(src) as Map<string, string[]>;
-    if (!handleMap.has(handle)) {
-      handleMap.set(handle, []);
-    }
-    (handleMap.get(handle) as string[]).push(edge.target);
-  }
-
-  // Minimum per-slot height — short nodes still get reasonable breathing room.
-  const MIN_SLOT_HEIGHT = 60;
-  // Gap between adjacent slot reserved boxes.
-  const SLOT_GAP = 30;
-
-  for (const [sourceId, handleMap] of bySource) {
-    if (handleMap.size < 2) {
-      continue;
-    } // Not a multi-handle branch
-    const source = byId.get(sourceId);
-    if (!source) {
-      continue;
-    }
-
-    // Prefer the node's declared handle order (matches how handles render on
-    // the card). Fall back to edge-insertion order if the node type is unknown.
-    const declared = resolveDeclaredHandleOrder(nodeById.get(sourceId));
-    const liveKeys = Array.from(handleMap.keys());
-    let handles: string[];
-    if (declared) {
-      const declaredSet = new Set(declared);
-      handles = declared.filter((h) => handleMap.has(h));
-      // Append any live handles not in the declared list (legacy data, renamed
-      // slugs, etc.) so nothing is silently dropped.
-      for (const k of liveKeys) {
-        if (!declaredSet.has(k)) {
-          handles.push(k);
-        }
-      }
-    } else {
-      handles = liveKeys;
-    }
-
-    // Fix #3: per-slot spacing based on target reserved heights. A slot's
-    // height is the max reserved height across all targets sharing that handle
-    // (clamped to MIN_SLOT_HEIGHT). This keeps short nodes tight while
-    // reserving enough room for tall targets (e.g. agent + tools appendix).
-    const slotHeights = handles.map((handle) => {
-      const targetIds = handleMap.get(handle) ?? [];
-      let maxH = 0;
-      for (const tid of targetIds) {
-        const t = byId.get(tid);
-        if (t && t.reservedHeight > maxH) {
-          maxH = t.reservedHeight;
-        }
-      }
-      return Math.max(maxH, MIN_SLOT_HEIGHT);
-    });
-
-    const totalSpan =
-      slotHeights.reduce((sum, h) => sum + h, 0) + (handles.length - 1) * SLOT_GAP;
-    const sourceCardCenterY = source.y + source.height / 2;
-    let cursor = sourceCardCenterY - totalSpan / 2;
-
-    handles.forEach((handle, idx) => {
-      const targets = handleMap.get(handle) ?? [];
-      const slotH = slotHeights[idx];
-      const slotTop = cursor;
-      for (const targetId of targets) {
-        const target = byId.get(targetId);
-        if (!target) {
-          continue;
-        }
-        // Center the target's reserved box within the slot (handles the case
-        // where multiple targets share a handle but have different heights).
-        const reservedTop = slotTop + (slotH - target.reservedHeight) / 2;
-        // Card top-left = reserved top-left + card offset within reserved box.
-        target.y = reservedTop + target.cardOffsetY;
-      }
-      cursor += slotH + SLOT_GAP;
-    });
+function portSideForDirection(
+  direction: InvectLayoutOptions['direction'],
+): LayoutHandle['position'] {
+  switch (direction) {
+    case 'RL':
+      return 'left';
+    case 'TB':
+      return 'bottom';
+    case 'BT':
+      return 'top';
+    case 'LR':
+    default:
+      return 'right';
   }
 }
 
-function straightenLinearChains<E extends LayoutEdge>(laidOut: LaidOutNode[], edges: E[]): void {
-  const byId = new Map(laidOut.map((n) => [n.id, n]));
+function directionToElk(
+  direction: InvectLayoutOptions['direction'],
+): ElkJsLayoutOptions['direction'] {
+  switch (direction) {
+    case 'RL':
+      return 'LEFT';
+    case 'TB':
+      return 'DOWN';
+    case 'BT':
+      return 'UP';
+    case 'LR':
+    default:
+      return 'RIGHT';
+  }
+}
 
+// ---------------------------------------------------------------------------
+// Post-pass: straighten linear chains
+// ---------------------------------------------------------------------------
+
+/**
+ * Align the Y of any target that forms a 1-in / 1-out edge with its source —
+ * snaps linear runs to a horizontal baseline so they read as a single flow
+ * line even across tall/short node boundaries.
+ *
+ * Operates on the position + effective-dims maps directly so it doesn't have
+ * to reconstruct ELK's internal layout.
+ */
+function straightenLinearChains<E extends LayoutEdge>(
+  positioned: Map<string, { x: number; y: number }>,
+  dimsById: Map<string, EffectiveDims>,
+  edges: E[],
+): void {
   const outCount = new Map<string, number>();
   const inCount = new Map<string, number>();
   for (const edge of edges) {
@@ -438,247 +246,26 @@ function straightenLinearChains<E extends LayoutEdge>(laidOut: LaidOutNode[], ed
     inCount.set(edge.target, (inCount.get(edge.target) ?? 0) + 1);
   }
 
-  // For every edge where the source has exactly one outgoing and the target
-  // has exactly one incoming, align the target's vertical center to the source's.
-  // Sorted by source X so upstream alignments cascade downstream.
+  // Process in source-X order so upstream adjustments cascade downstream.
   const candidates = edges
     .filter((e) => (outCount.get(e.source) ?? 0) === 1 && (inCount.get(e.target) ?? 0) === 1)
-    .map((e) => ({ edge: e, sourceX: byId.get(e.source)?.x ?? 0 }))
+    .map((e) => ({ edge: e, sourceX: positioned.get(e.source)?.x ?? 0 }))
     .sort((a, b) => a.sourceX - b.sourceX);
 
   for (const { edge } of candidates) {
-    const source = byId.get(edge.source);
-    const target = byId.get(edge.target);
-    if (!source || !target) {
+    const sourcePos = positioned.get(edge.source);
+    const targetPos = positioned.get(edge.target);
+    const sourceDims = dimsById.get(edge.source);
+    const targetDims = dimsById.get(edge.target);
+    if (!sourcePos || !targetPos || !sourceDims || !targetDims) {
       continue;
     }
-    const sourceCenterY = source.y + source.height / 2;
-    target.y = sourceCenterY - target.height / 2;
-  }
-}
-
-/**
- * When a branch source has multiple outgoing paths that eventually merge,
- * and one path is shorter than another, dagre clusters the short path's nodes
- * near the source — leaving a visible X gap before the merge point.
- *
- * This pass detects those "diamond" patterns and redistributes the chain's X
- * coordinates evenly across the span between the fork and the merge. For the
- * longest branch this is a no-op; for shorter branches it spreads them out so
- * they visually balance the longer path.
- */
-function distributeShortBranches<E extends LayoutEdge>(laidOut: LaidOutNode[], edges: E[]): void {
-  const byId = new Map(laidOut.map((n) => [n.id, n]));
-
-  const outAdj = new Map<string, string[]>();
-  const inAdj = new Map<string, string[]>();
-  for (const edge of edges) {
-    if (!outAdj.has(edge.source)) {
-      outAdj.set(edge.source, []);
-    }
-    (outAdj.get(edge.source) as string[]).push(edge.target);
-    if (!inAdj.has(edge.target)) {
-      inAdj.set(edge.target, []);
-    }
-    (inAdj.get(edge.target) as string[]).push(edge.source);
-  }
-
-  for (const [sourceId, children] of outAdj) {
-    if (children.length < 2) {
-      continue;
-    }
-    const source = byId.get(sourceId);
-    if (!source) {
-      continue;
-    }
-
-    for (const childId of children) {
-      if ((inAdj.get(childId)?.length ?? 0) !== 1) {
-        continue;
-      }
-
-      // Walk a linear chain (1-in, 1-out) from the branch child forward,
-      // stopping at the first merge point (node with >1 incoming) or dead-end.
-      const chain: string[] = [childId];
-      const visited = new Set<string>([childId]);
-      let cursor = childId;
-      let mergeId: string | null = null;
-
-      while (true) {
-        const out = outAdj.get(cursor) ?? [];
-        if (out.length !== 1) {
-          break;
-        }
-        const next = out[0];
-        if (visited.has(next)) {
-          break;
-        }
-        const nextIn = inAdj.get(next)?.length ?? 0;
-        if (nextIn !== 1) {
-          mergeId = next;
-          break;
-        }
-        chain.push(next);
-        visited.add(next);
-        cursor = next;
-      }
-
-      if (!mergeId) {
-        continue;
-      }
-      const merge = byId.get(mergeId);
-      if (!merge) {
-        continue;
-      }
-
-      const sourceCx = source.x + source.width / 2;
-      const mergeCx = merge.x + merge.width / 2;
-      const span = mergeCx - sourceCx;
-      if (span <= 0) {
-        continue;
-      }
-
-      const k = chain.length;
-      for (let i = 0; i < k; i++) {
-        const node = byId.get(chain[i]);
-        if (!node) {
-          continue;
-        }
-        const newCx = sourceCx + ((i + 1) / (k + 1)) * span;
-        node.x = newCx - node.width / 2;
-      }
-    }
-  }
-}
-
-function separateSkipEdges<E extends LayoutEdge>(laidOut: LaidOutNode[], edges: E[]): void {
-  const byId = new Map(laidOut.map((n) => [n.id, n]));
-
-  // Build outgoing adjacency for reachability check
-  const outgoing = new Map<string, Set<string>>();
-  for (const edge of edges) {
-    if (!outgoing.has(edge.source)) {
-      outgoing.set(edge.source, new Set());
-    }
-    (outgoing.get(edge.source) as Set<string>).add(edge.target);
-  }
-
-  const reaches = (start: string, goal: string, visited: Set<string>): boolean => {
-    if (start === goal) {
-      return true;
-    }
-    if (visited.has(start)) {
-      return false;
-    }
-    visited.add(start);
-    const out = outgoing.get(start);
-    if (!out) {
-      return false;
-    }
-    for (const next of out) {
-      if (reaches(next, goal, visited)) {
-        return true;
-      }
-    }
-    return false;
-  };
-
-  // Identify skip edges: A -> C exists AND A -> (X -> ...) -> C exists
-  const skipEdges = new Set<E>();
-  for (const edge of edges) {
-    const out = outgoing.get(edge.source);
-    if (!out || out.size < 2) {
-      continue;
-    }
-    for (const intermediate of out) {
-      if (intermediate === edge.target) {
-        continue;
-      }
-      if (reaches(intermediate, edge.target, new Set([edge.source]))) {
-        skipEdges.add(edge);
-        break;
-      }
-    }
-  }
-
-  if (skipEdges.size === 0) {
-    return;
-  }
-
-  const verticalOffset = 60;
-  const yTolerance = 30;
-  const processed = new Set<string>();
-
-  for (const edge of skipEdges) {
-    const source = byId.get(edge.source);
-    const target = byId.get(edge.target);
-    if (!source || !target) {
-      continue;
-    }
-
-    const minX = Math.min(source.x, target.x);
-    const maxX = Math.max(source.x, target.x);
-    const avgY = (source.y + target.y + source.height / 2 + target.height / 2) / 2;
-
-    for (const node of laidOut) {
-      if (node.id === edge.source || node.id === edge.target) {
-        continue;
-      }
-      if (processed.has(node.id)) {
-        continue;
-      }
-      const nodeCenterY = node.y + node.height / 2;
-      if (node.x > minX && node.x < maxX && Math.abs(nodeCenterY - avgY) < yTolerance) {
-        // Push away from the skip-edge path based on which side the node sits
-        // on. Nodes exactly on avgY break the tie downward (matches the old
-        // always-down behavior for that edge case).
-        const direction = nodeCenterY < avgY ? -1 : 1;
-        node.y += direction * verticalOffset;
-        processed.add(node.id);
-      }
-    }
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Bounding box & stacking
-// ---------------------------------------------------------------------------
-
-function computeBoundingBox(laidOut: LaidOutNode[]): BoundingBox {
-  if (laidOut.length === 0) {
-    return { x: 0, y: 0, width: 0, height: 0 };
-  }
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  for (const n of laidOut) {
-    // Use reserved extents so vertical component stacking leaves room for any
-    // attached appendix (tools box) that extends past the card.
-    const reservedLeft = n.x - n.cardOffsetX;
-    const reservedTop = n.y - n.cardOffsetY;
-    const reservedRight = reservedLeft + n.reservedWidth;
-    const reservedBottom = reservedTop + n.reservedHeight;
-    if (reservedLeft < minX) {
-      minX = reservedLeft;
-    }
-    if (reservedTop < minY) {
-      minY = reservedTop;
-    }
-    if (reservedRight > maxX) {
-      maxX = reservedRight;
-    }
-    if (reservedBottom > maxY) {
-      maxY = reservedBottom;
-    }
-  }
-  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
-}
-
-function translate(laidOut: LaidOutNode[], dx: number, dy: number): void {
-  for (const n of laidOut) {
-    n.x += dx;
-    n.y += dy;
+    // Align target card center to source card center.
+    const sourceCardCenterY = sourcePos.y + sourceDims.height / 2;
+    positioned.set(edge.target, {
+      x: targetPos.x,
+      y: sourceCardCenterY - targetDims.height / 2,
+    });
   }
 }
 
@@ -687,77 +274,97 @@ function translate(laidOut: LaidOutNode[], dx: number, dy: number): void {
 // ---------------------------------------------------------------------------
 
 /**
- * Apply the Invect-specific layout: dagre LR per-component, with post-processing
- * passes for branch centering, chain straightening, skip-edge separation, and
- * grid snapping, then vertical stacking of disconnected components.
+ * Apply the Invect layout: ELK `layered` with reserved-footprint sizing for
+ * agent appendices and declared-order source ports for branching nodes,
+ * followed by optional linear-chain straightening and grid snapping.
  */
-export function applyInvectLayout<N extends LayoutNode, E extends LayoutEdge>(
+export async function applyInvectLayout<N extends LayoutNode, E extends LayoutEdge>(
   nodes: N[],
   edges: E[],
   options: InvectLayoutOptions = {},
-): N[] {
+): Promise<N[]> {
   if (nodes.length === 0) {
     return nodes;
   }
 
   const opts: Required<InvectLayoutOptions> = { ...DEFAULTS, ...options };
 
-  const components = findComponents(nodes, edges);
-  // Sort so larger / earlier components render first (stable visual ordering)
-  components.sort((a, b) => b.size - a.size);
+  // 1. Compute effective dims per node.
+  const dimsById = new Map<string, EffectiveDims>();
+  for (const node of nodes) {
+    dimsById.set(node.id, effectiveNodeDims(node, opts.nodeWidth, opts.nodeHeight));
+  }
 
-  // Post-processing passes only make sense for horizontal flow (LR/RL);
-  // for TB/BT, dagre's default vertical layout is already reasonable.
-  const isHorizontal = opts.direction === 'LR' || opts.direction === 'RL';
+  // 2. Build ELK input: inflate measured dims to the reserved footprint and
+  //    attach source ports in the node's declared handle order.
+  const portPosition = portSideForDirection(opts.direction);
+  const enrichedForElk: ElkLayoutNode[] = nodes.map((node) => {
+    const d = dimsById.get(node.id) as EffectiveDims;
+    const declared = resolveDeclaredHandleOrder(node);
+    const sourceHandles: LayoutHandle[] | undefined = declared?.map((id) => ({
+      id,
+      type: 'source' as const,
+      position: portPosition,
+    }));
 
-  const componentLayouts: LaidOutNode[][] = components.map((componentIds) => {
-    const laid = layoutComponent(componentIds, nodes, edges, opts);
-    if (isHorizontal) {
-      // Order matters: center branch targets first so they anchor new Y values,
-      // then straighten chains so those Ys cascade to descendants,
-      // then redistribute X for branches that dagre clustered near the fork.
-      centerMultiOutputBranches(laid, nodes, edges);
-      if (opts.straightenChains) {
-        straightenLinearChains(laid, edges);
-      }
-      distributeShortBranches(laid, edges);
-      if (opts.separateSkipEdges) {
-        separateSkipEdges(laid, edges);
-      }
-    }
-    return laid;
+    return {
+      id: node.id,
+      position: node.position,
+      type: node.type,
+      data: node.data,
+      measured: { width: d.reservedWidth, height: d.reservedHeight },
+      sourceHandles,
+    } as ElkLayoutNode;
   });
 
-  // Stack components vertically
-  let cursorY = 0;
-  const byId = new Map<string, LaidOutNode>();
-  for (const laid of componentLayouts) {
-    if (laid.length === 0) {
+  // 3. Run ELK.
+  const elkOptions: ElkJsLayoutOptions = {
+    direction: directionToElk(opts.direction),
+    nodeSpacing: opts.nodeSpacing,
+    nodeNodeBetweenLayersSpacing: opts.rankSpacing,
+    componentSpacing: opts.componentSpacing,
+    nodeWidth: opts.nodeWidth,
+    nodeHeight: opts.nodeHeight,
+  };
+  const laidOut = await applyElkLayout(enrichedForElk, edges, elkOptions);
+
+  // 4. ELK returns the reserved box's top-left; shift to card top-left using
+  //    the cardOffset we computed earlier.
+  const positioned = new Map<string, { x: number; y: number }>();
+  for (const n of laidOut) {
+    const d = dimsById.get(n.id);
+    if (!d) {
       continue;
     }
-    const bbox = computeBoundingBox(laid);
-    // Normalize: top-left of each component starts at (0, cursorY)
-    translate(laid, -bbox.x, cursorY - bbox.y);
-    cursorY += bbox.height + opts.componentSpacing;
-    for (const n of laid) {
-      byId.set(n.id, n);
-    }
+    positioned.set(n.id, {
+      x: n.position.x + d.cardOffsetX,
+      y: n.position.y + d.cardOffsetY,
+    });
   }
 
-  // Snap to grid
+  // 5. Optional post-pass: straighten linear chains.
+  if (opts.straightenChains) {
+    straightenLinearChains(positioned, dimsById, edges);
+  }
+
+  // 6. Grid snap.
   if (opts.gridSize > 0) {
     const g = opts.gridSize;
-    for (const n of byId.values()) {
-      n.x = Math.round(n.x / g) * g;
-      n.y = Math.round(n.y / g) * g;
+    for (const [id, pos] of positioned) {
+      positioned.set(id, {
+        x: Math.round(pos.x / g) * g,
+        y: Math.round(pos.y / g) * g,
+      });
     }
   }
 
+  // 7. Apply positions back to the original nodes, preserving every other
+  //    property (measured, data, etc.) untouched.
   return nodes.map((node) => {
-    const laid = byId.get(node.id);
-    if (!laid) {
+    const pos = positioned.get(node.id);
+    if (!pos) {
       return node;
     }
-    return { ...node, position: { x: laid.x, y: laid.y } };
+    return { ...node, position: pos };
   });
 }

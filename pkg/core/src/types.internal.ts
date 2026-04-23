@@ -105,6 +105,10 @@ export interface FlowRunContext {
     // Record tool execution for agent nodes
     recordToolExecution?: (input: RecordToolExecutionInput) => Promise<{ id: string } | null>;
 
+    // Increment retryCount on the current trace (used by the retry loop
+    // inside executeActionAsNode so the UI / metrics see per-attempt progress).
+    incrementRetryCount?: (traceId: string) => Promise<void>;
+
     // JS expression evaluator (QuickJS-backed on Node, direct on edge runtimes).
     // Used by core.javascript, core.if_else, core.switch.
     evaluator?: JsExpressionEvaluator;
@@ -115,6 +119,12 @@ export interface FlowRunContext {
 export interface NodeExecutionContext extends FlowRunContext {
   nodeId: string;
   traceId?: string;
+  /**
+   * Per-run abort signal cascaded from the FlowRunCoordinator's controller.
+   * Actions making long-running calls (model, agent, http) should respect
+   * this and propagate to the SDK / fetch they invoke.
+   */
+  abortSignal?: AbortSignal;
 }
 
 export const metadataSchema = z.record(z.string(), z.unknown()).optional();

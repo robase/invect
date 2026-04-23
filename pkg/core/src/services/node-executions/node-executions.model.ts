@@ -5,6 +5,7 @@ import { NodeExecutionStatus } from 'src/types/base';
 import { DatabaseError } from 'src/types/common/errors.types';
 import { Logger, PaginatedResponse, QueryOptions } from 'src/schemas';
 import type { NodeOutput } from 'src/types/node-io-types';
+import type { NodeErrorDetails } from '@invect/action-kit';
 
 /**
  * Execution Trace entity (node-level trace, parentNodeExecutionId is null)
@@ -22,6 +23,8 @@ export interface NodeExecution {
   inputs: Record<string, unknown>;
   outputs?: NodeOutput;
   error?: string;
+  errorDetails?: NodeErrorDetails;
+  fieldErrors?: Record<string, string>;
   startedAt: Date | string;
   completedAt?: Date | string;
   duration?: number;
@@ -83,6 +86,8 @@ export interface UpdateNodeExecutionInput {
   status?: NodeExecutionStatus;
   outputs?: NodeOutput;
   error?: string;
+  errorDetails?: NodeErrorDetails;
+  fieldErrors?: Record<string, string>;
   completedAt?: Date | string;
   duration?: number;
   retryCount?: number;
@@ -211,6 +216,12 @@ export class NodeExecutionsModel {
       if (input.error !== undefined) {
         updateData.error = input.error;
       }
+      if (input.errorDetails !== undefined) {
+        updateData.error_details = input.errorDetails;
+      }
+      if (input.fieldErrors !== undefined) {
+        updateData.field_errors = input.fieldErrors;
+      }
       if (input.completedAt !== undefined) {
         updateData.completed_at = new Date(input.completedAt as string);
       }
@@ -303,6 +314,8 @@ export class NodeExecutionsModel {
     data?: {
       outputs?: NodeOutput;
       error?: string;
+      errorDetails?: NodeErrorDetails;
+      fieldErrors?: Record<string, string>;
       reason?: string;
     },
   ): Promise<NodeExecution> {
@@ -393,6 +406,8 @@ export class NodeExecutionsModel {
       inputs: (raw.inputs || {}) as Record<string, unknown>,
       outputs: raw.outputs as NodeOutput | undefined,
       error: raw.error ? String(raw.error) : undefined,
+      errorDetails: (raw.error_details ?? raw.errorDetails) as NodeErrorDetails | undefined,
+      fieldErrors: (raw.field_errors ?? raw.fieldErrors) as Record<string, string> | undefined,
       startedAt: (raw.started_at ?? raw.startedAt ?? new Date()) as Date | string,
       completedAt: (raw.completed_at ?? raw.completedAt ?? undefined) as Date | string | undefined,
       duration: raw.duration ? Number(raw.duration) : undefined,
@@ -427,6 +442,8 @@ export class NodeExecutionsModel {
       parentNodeExecutionId: 'parent_node_execution_id',
       toolId: 'tool_id',
       toolName: 'tool_name',
+      errorDetails: 'error_details',
+      fieldErrors: 'field_errors',
     };
     return map[field] ?? field;
   }

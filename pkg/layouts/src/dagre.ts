@@ -19,12 +19,12 @@ export interface DagreLayoutOptions {
 
 const DEFAULT_OPTIONS: Required<DagreLayoutOptions> = {
   direction: 'LR',
-  nodeSpacing: 70,
-  rankSpacing: 100,
+  nodeSpacing: 0,
+  rankSpacing: 0,
   nodeWidth: 200,
   nodeHeight: 60,
   maxWidth: 0, // 0 means no wrapping
-  rowSpacing: 150,
+  rowSpacing: 0,
 };
 
 /**

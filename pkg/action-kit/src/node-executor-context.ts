@@ -40,6 +40,13 @@ export interface NodeExecutionContext {
 
   skippedNodeIds: Set<string>;
 
+  /**
+   * Abort signal cascaded from the run-level AbortController.
+   * Actions that make long-running calls should respect this and propagate
+   * it to the SDK / fetch they call.
+   */
+  abortSignal?: AbortSignal;
+
   functions: {
     runTemplateReplacement: (
       template: string,
@@ -65,6 +72,12 @@ export interface NodeExecutionContext {
     >;
 
     recordToolExecution?: (input: RecordToolExecutionInput) => Promise<{ id: string } | null>;
+
+    /**
+     * Increment the retry count on the current node execution trace.
+     * Called by the retry loop; no-op if the trace hasn't been created yet.
+     */
+    incrementRetryCount?: (traceId: string) => Promise<void>;
 
     evaluator?: JsExpressionEvaluator;
   };

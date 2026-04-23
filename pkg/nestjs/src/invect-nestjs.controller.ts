@@ -1056,7 +1056,9 @@ export class InvectController {
     try {
       const stream = this.invect.chat.subscribeToSession(sessionId, abortController.signal);
       for await (const event of stream) {
-        if (res.destroyed) {break;}
+        if (res.destroyed) {
+          break;
+        }
         res.write(`event: ${(event as ChatStreamEvent).type}\ndata: ${JSON.stringify(event)}\n\n`);
       }
     } catch (error: unknown) {

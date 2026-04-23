@@ -1483,7 +1483,9 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
       try {
         const stream = invect.chat.subscribeToSession(sessionId, abortController.signal);
         for await (const event of stream) {
-          if (res.destroyed) {break;}
+          if (res.destroyed) {
+            break;
+          }
           res.write(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`);
         }
       } catch (error: unknown) {

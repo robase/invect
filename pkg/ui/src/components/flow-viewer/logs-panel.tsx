@@ -23,6 +23,7 @@ import {
   ExecutionLogToolCall,
   SelectedExecutionAttempt,
 } from './use-execution-log-data';
+import { NodeErrorBadge } from '../flow-editor/NodeErrorBadge';
 import { NodeExecutionStatus } from '@invect/core/types';
 import { CodeMirrorJsonEditor } from '../ui/codemirror-json-editor';
 import { RunSelector, RunSelectorItem } from './RunSelector';
@@ -554,7 +555,10 @@ function NodeAttemptDetailView({
 
         {attempt.error && (
           <div>
-            <div className="mb-2 text-sm font-semibold text-red-500">Error</div>
+            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-red-500">
+              <span>Error</span>
+              {attempt.errorDetails ? <NodeErrorBadge details={attempt.errorDetails} /> : null}
+            </div>
             <pre className="p-3 text-sm font-mono text-red-500 border rounded-md bg-red-500/10 border-red-500/20 whitespace-pre-wrap break-words max-h-60 overflow-auto">
               {attempt.error}
             </pre>

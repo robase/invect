@@ -96,7 +96,9 @@ export class ActiveChatSessions {
    */
   push(id: string, event: ChatStreamEvent): void {
     const session = this.sessions.get(id);
-    if (!session || session.done) {return;}
+    if (!session || session.done) {
+      return;
+    }
 
     session.events.push(event);
     if (session.events.length > MAX_BUFFERED_EVENTS) {
@@ -119,10 +121,14 @@ export class ActiveChatSessions {
    */
   close(id: string, error?: string): void {
     const session = this.sessions.get(id);
-    if (!session || session.done) {return;}
+    if (!session || session.done) {
+      return;
+    }
 
     session.done = true;
-    if (error) {session.error = error;}
+    if (error) {
+      session.error = error;
+    }
 
     for (const subscriber of session.subscribers) {
       try {
@@ -159,14 +165,18 @@ export class ActiveChatSessions {
     // up to the live edge before it can meaningfully tail.
     const replay = session.events.slice();
     for (const event of replay) {
-      if (signal?.aborted) {return;}
+      if (signal?.aborted) {
+        return;
+      }
       yield event;
     }
 
     // Tail — register a subscriber that pushes into a local queue, then yield
     // each queued item in order. If the session is already done, we've already
     // replayed everything and can just return.
-    if (session.done) {return;}
+    if (session.done) {
+      return;
+    }
 
     const queue: (ChatStreamEvent | null)[] = [];
     let waiter: ((v: void) => void) | null = null;
@@ -200,21 +210,29 @@ export class ActiveChatSessions {
         }
         while (queue.length > 0) {
           const next = queue.shift();
-          if (next === null || next === undefined) {return;}
-          if (signal?.aborted) {return;}
+          if (next === null || next === undefined) {
+            return;
+          }
+          if (signal?.aborted) {
+            return;
+          }
           yield next;
         }
       }
     } finally {
       session.subscribers.delete(subscriber);
-      if (signal) {signal.removeEventListener('abort', onAbort);}
+      if (signal) {
+        signal.removeEventListener('abort', onAbort);
+      }
     }
   }
 
   /** Evict every session — called on shutdown. */
   shutdown(): void {
     for (const session of this.sessions.values()) {
-      if (session.evictTimer) {clearTimeout(session.evictTimer);}
+      if (session.evictTimer) {
+        clearTimeout(session.evictTimer);
+      }
       for (const subscriber of session.subscribers) {
         try {
           subscriber(null);

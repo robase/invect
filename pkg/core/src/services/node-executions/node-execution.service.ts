@@ -10,6 +10,7 @@ import {
 } from './node-executions.model';
 import type { NodeOutput } from 'src/types/node-io-types';
 import type { ExecutionEventBus } from '../execution-event-bus';
+import type { NodeErrorDetails } from '@invect/action-kit';
 
 /**
  * Core Execution Trace Service implementation using database models
@@ -97,6 +98,8 @@ export class NodeExecutionService {
         status: updates.status,
         outputs: updates.outputs,
         error: updates.error,
+        errorDetails: updates.errorDetails,
+        fieldErrors: updates.fieldErrors,
         completedAt: updates.completedAt,
         duration: updates.duration,
         retryCount: updates.retryCount,
@@ -169,6 +172,8 @@ export class NodeExecutionService {
     data?: {
       outputs?: NodeOutput;
       error?: string;
+      errorDetails?: NodeErrorDetails;
+      fieldErrors?: Record<string, string>;
       reason?: string;
     },
   ): Promise<NodeExecution> {

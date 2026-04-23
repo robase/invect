@@ -179,9 +179,10 @@ function mergeParams(
     return parsedParams;
   }
 
-  const priorTools = Array.isArray(priorParams?.addedTools)
-    ? (priorParams!.addedTools as AddedTool[])
-    : [];
+  const priorTools =
+    priorParams && Array.isArray(priorParams.addedTools)
+      ? (priorParams.addedTools as AddedTool[])
+      : [];
 
   const merged = { ...parsedParams };
   merged.addedTools = matchToolInstanceIds(parsedTools, priorTools, opts.newToolInstanceId);

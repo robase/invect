@@ -50,9 +50,14 @@ export function createFlowRunsAPI(sf: ServiceFactory, logger: Logger): FlowRunsA
       return flowRunsService.getRunById(flowRunId);
     },
 
-    cancel(flowRunId) {
+    async cancel(flowRunId) {
       logger.debug('cancelFlowRun called', { flowRunId });
-      return flowRunsService.cancelRun(flowRunId);
+      // Orchestration.cancelExecution fires the in-process AbortController
+      // (if the run is active here) AND writes the CANCELLED status; keep
+      // that path authoritative so multi-process deploys fall back to the
+      // stale-run reaper consistently.
+      await orchestration.cancelExecution(flowRunId);
+      return { message: 'Execution cancelled', timestamp: new Date().toISOString() };
     },
 
     pause(flowRunId, reason) {
