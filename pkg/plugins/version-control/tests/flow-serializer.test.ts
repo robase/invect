@@ -1,8 +1,17 @@
-import { describe, it, expect } from 'vitest';
-import { serializeFlowToTs } from '../src/backend/flow-serializer';
+/**
+ * Tests for the sync-plugin flow serialisation path.
+ *
+ * The plugin no longer owns a bespoke serializer — it uses `emitSdkSource`
+ * from `@invect/sdk` with `includeJsonFooter: true`. These tests exercise
+ * the emitter output shape as the sync plugin invokes it, plus the
+ * round-trip through the plugin's JSON-footer parser.
+ */
 
-describe('serializeFlowToTs', () => {
-  it('serializes a simple input → model → output flow', () => {
+import { describe, it, expect } from 'vitest';
+import { emitSdkSource } from '@invect/sdk';
+
+describe('sync plugin flow serialisation (via @invect/sdk emitter)', () => {
+  it('emits a simple input → model → output flow with the JSON footer', () => {
     const definition = {
       nodes: [
         {
@@ -40,30 +49,31 @@ describe('serializeFlowToTs', () => {
       ],
     };
 
-    const result = serializeFlowToTs(definition, {
-      name: 'Question Answering',
-      description: 'A simple Q&A flow',
+    const { code } = emitSdkSource(definition, {
+      flowName: 'questionAnsweringFlow',
+      includeJsonFooter: true,
+      metadata: { name: 'Question Answering', description: 'A simple Q&A flow' },
     });
 
-    // Verify it contains the expected structure
-    expect(result).toContain('import {');
-    expect(result).toContain("from '@invect/core/sdk'");
-    expect(result).toContain('defineFlow');
-    expect(result).toContain('name: "Question Answering"');
-    expect(result).toContain('description: "A simple Q&A flow"');
-    expect(result).toContain('input(');
-    expect(result).toContain('model(');
-    expect(result).toContain('output(');
-    expect(result).toContain('edges:');
-    expect(result).toContain('["query", "answer"]');
-    expect(result).toContain('["answer", "result"]');
-
-    // Verify embedded JSON block for round-tripping
-    expect(result).toContain('/* @invect-definition');
-    expect(result).toContain('*/');
+    // Top-level structure.
+    expect(code).toContain(`import {`);
+    expect(code).toContain(`from "@invect/sdk"`);
+    expect(code).toContain(`export const questionAnsweringFlow = defineFlow({`);
+    expect(code).toContain(`name: "Question Answering"`);
+    expect(code).toContain(`description: "A simple Q&A flow"`);
+    // Core helpers rather than namespace objects.
+    expect(code).toContain(`input("query"`);
+    expect(code).toContain(`model("answer"`);
+    expect(code).toContain(`output("result"`);
+    // Edges use object form with preserved referenceIds.
+    expect(code).toContain(`{ from: "query", to: "answer" }`);
+    expect(code).toContain(`{ from: "answer", to: "result" }`);
+    // Footer carries the authoritative JSON for reliable round-trip.
+    expect(code).toContain('/* @invect-definition');
+    expect(code).toContain('*/');
   });
 
-  it('serializes provider actions with namespaced helpers', () => {
+  it('emits provider actions as direct action-callable imports', () => {
     const definition = {
       nodes: [
         {
@@ -72,19 +82,30 @@ describe('serializeFlowToTs', () => {
           label: 'Send Email',
           referenceId: 'send',
           position: { x: 0, y: 0 },
-          params: { to: 'test@example.com', subject: 'Hello', body: 'World' },
+          params: {
+            credentialId: 'cred',
+            to: 'test@example.com',
+            subject: 'Hello',
+            body: 'World',
+          },
         },
       ],
       edges: [],
     };
 
-    const result = serializeFlowToTs(definition, { name: 'Email Flow' });
+    const { code } = emitSdkSource(definition, {
+      flowName: 'emailFlow',
+      includeJsonFooter: true,
+      metadata: { name: 'Email Flow' },
+    });
 
-    expect(result).toContain('gmail');
-    expect(result).toContain('gmail.sendMessage(');
+    // Unified emitter pulls in the action callable directly from the
+    // provider package, no namespace aliasing.
+    expect(code).toContain(`import { gmailSendMessageAction } from "@invect/actions/gmail"`);
+    expect(code).toContain(`gmailSendMessageAction("send"`);
   });
 
-  it('handles edges with sourceHandle', () => {
+  it('preserves sourceHandle on edges in object form', () => {
     const definition = {
       nodes: [
         {
@@ -92,7 +113,7 @@ describe('serializeFlowToTs', () => {
           type: 'core.if_else',
           referenceId: 'check',
           position: { x: 0, y: 0 },
-          params: { condition: '{{ value > 10 }}' },
+          params: { expression: 'value > 10' },
         },
         {
           id: 'node-yes',
@@ -105,34 +126,16 @@ describe('serializeFlowToTs', () => {
       edges: [{ id: 'e1', source: 'node-check', target: 'node-yes', sourceHandle: 'true_output' }],
     };
 
-    const result = serializeFlowToTs(definition, { name: 'Branch' });
+    const { code } = emitSdkSource(definition, {
+      flowName: 'branchFlow',
+      includeJsonFooter: true,
+      metadata: { name: 'Branch' },
+    });
 
-    expect(result).toContain('["check", "yes", "true_output"]');
+    expect(code).toContain(`{ from: "check", to: "yes", handle: "true_output" }`);
   });
 
-  it('replaces credential IDs with env references', () => {
-    const definition = {
-      nodes: [
-        {
-          id: 'node-ai',
-          type: 'core.model',
-          referenceId: 'ai',
-          position: { x: 0, y: 0 },
-          params: { credentialId: 'cred_openai_abc', model: 'gpt-4o', prompt: 'test' },
-        },
-      ],
-      edges: [],
-    };
-
-    const result = serializeFlowToTs(definition, { name: 'Cred Test' });
-
-    expect(result).toContain('OPENAI_ABC_CREDENTIAL');
-    // The embedded JSON block at the end preserves raw IDs for round-tripping
-    const humanReadable = result.split('/* @invect-definition')[0];
-    expect(humanReadable).not.toContain('cred_openai_abc');
-  });
-
-  it('includes tags when present', () => {
+  it('includes tags in metadata when present', () => {
     const definition = {
       nodes: [
         {
@@ -146,40 +149,54 @@ describe('serializeFlowToTs', () => {
       edges: [],
     };
 
-    const result = serializeFlowToTs(definition, {
-      name: 'Tagged',
-      tags: ['production', 'v2'],
+    const { code } = emitSdkSource(definition, {
+      flowName: 'taggedFlow',
+      includeJsonFooter: true,
+      metadata: { name: 'Tagged', tags: ['production', 'v2'] },
     });
 
-    expect(result).toContain('tags: ["production","v2"]');
+    expect(code).toContain(`tags: ["production","v2"]`);
   });
 
-  it('resolves node IDs back to referenceIds in edges', () => {
-    const definition = {
+  it('JSON footer faithfully preserves the full definition for round-trip', () => {
+    const original = {
       nodes: [
         {
-          id: 'node-a',
+          id: 'node_abc',
           type: 'core.input',
-          referenceId: 'a',
-          position: { x: 0, y: 0 },
-          params: {},
+          referenceId: 'q',
+          label: 'Query',
+          position: { x: 100, y: 50 },
+          params: { variableName: 'q' },
         },
         {
-          id: 'node-b',
+          id: 'node_def',
           type: 'core.output',
-          referenceId: 'b',
-          position: { x: 200, y: 0 },
-          params: {},
+          referenceId: 'out',
+          params: { outputValue: '{{ q }}' },
         },
       ],
-      edges: [{ id: 'e1', source: 'node-a', target: 'node-b' }],
+      edges: [{ id: 'e1', source: 'node_abc', target: 'node_def' }],
+      metadata: { name: 'Round-trip test' },
     };
 
-    const result = serializeFlowToTs(definition, { name: 'Test' });
+    const { code } = emitSdkSource(original, {
+      flowName: 'roundTripFlow',
+      includeJsonFooter: true,
+    });
 
-    expect(result).toContain('["a", "b"]');
-    // The embedded JSON block at the end preserves raw node IDs for round-tripping
-    const humanReadable = result.split('/* @invect-definition')[0];
-    expect(humanReadable).not.toContain('node-a');
+    // Extract footer the same way the plugin's parseFlowTsContent does.
+    const match = code.match(/\/\*\s*@invect-definition\s+([\s\S]*?)\s*\*\//);
+    expect(match).not.toBeNull();
+    const parsed = JSON.parse(match![1]);
+
+    // Everything the authoring source discards (opaque ids, positions,
+    // labels) is preserved in the footer for the pull path.
+    expect(parsed.nodes[0].id).toBe('node_abc');
+    expect(parsed.nodes[0].position).toEqual({ x: 100, y: 50 });
+    expect(parsed.nodes[0].label).toBe('Query');
+    expect(parsed.edges[0].source).toBe('node_abc');
+    expect(parsed.edges[0].target).toBe('node_def');
+    expect(parsed.metadata.name).toBe('Round-trip test');
   });
 });

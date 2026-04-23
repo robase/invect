@@ -1,0 +1,212 @@
+/**
+ * Browser-safe fragment parser — evaluates authored SDK text via `new Function`
+ * with the SDK helpers injected into scope. Complements the Node-only
+ * `@invect/sdk/evaluator` subpath for contexts that can't run jiti:
+ *
+ *   - The flow editor's clipboard paste (copy-paste in the browser).
+ *   - Light server-side round-trip checks where the full module-eval overhead
+ *     is unwanted.
+ *
+ * Accepts three input shapes:
+ *
+ *   1. Fragment-structured — `nodes: [...], edges: [...]` (the shape
+ *      `serializeToSDK`'s copy-paste output produces without the full-file
+ *      wrapper).
+ *   2. Fragment-flat — a bare sequence of node calls + edge tuples, legacy
+ *      shape that predates the structured form.
+ *   3. Full file — `import ... from '...'; export default defineFlow({...})`
+ *      gets unwrapped to the body, with `defineFlow` stubbed as identity
+ *      during evaluation.
+ *
+ * Returns `{ nodes, edges }` in `@invect/sdk` shape — `SdkFlowNode` with
+ * optional `id`/`label`/`position`, plus edges in the canonical
+ * `{ from, to, handle? }` or tuple form.
+ *
+ * This is user-initiated evaluation (clipboard paste or test context), so the
+ * `new Function` approach is acceptable — the user is the trust boundary.
+ * Anything server-initiated (chat, sync-pull) should use the Node-only
+ * `evaluateSdkSource` with import-scan enforcement.
+ */
+
+import { input, output, code, javascript, ifElse, switchNode, model, agent } from './nodes/core';
+import { template } from './nodes/template';
+import { httpRequest } from './nodes/http';
+import { trigger } from './nodes/trigger';
+import { node } from './nodes/generic';
+import { tool } from './tool';
+import type { SdkFlowNode, SdkEdge } from './types';
+
+export interface ParsedFragment {
+  nodes: SdkFlowNode[];
+  edges: SdkEdge[];
+}
+
+/**
+ * Helper names injected into the fragment evaluation scope. Matches the
+ * public `@invect/sdk` surface one-to-one.
+ */
+const SDK_HELPERS: Record<string, unknown> = {
+  input,
+  output,
+  code,
+  javascript,
+  ifElse,
+  switchNode,
+  model,
+  agent,
+  template,
+  httpRequest,
+  trigger,
+  node,
+  tool,
+  // defineFlow is an identity passthrough here — the parser wants the raw
+  // { nodes, edges } fragment, not the normalised DefinedFlow.
+  defineFlow: (def: unknown) => def,
+};
+
+const HELPER_NAMES = Object.keys(SDK_HELPERS);
+const HELPER_VALUES = HELPER_NAMES.map((k) => SDK_HELPERS[k]);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Shape detection
+// ═══════════════════════════════════════════════════════════════════════════
+
+function isSdkFlowNode(item: unknown): item is SdkFlowNode {
+  return (
+    typeof item === 'object' &&
+    item !== null &&
+    !Array.isArray(item) &&
+    typeof (item as Record<string, unknown>).type === 'string' &&
+    typeof (item as Record<string, unknown>).referenceId === 'string'
+  );
+}
+
+function isSdkEdge(item: unknown): item is SdkEdge {
+  if (Array.isArray(item)) {
+    if (item.length < 2 || item.length > 3) {
+      return false;
+    }
+    return item.every((el) => typeof el === 'string');
+  }
+  if (typeof item === 'object' && item !== null) {
+    const obj = item as Record<string, unknown>;
+    return (
+      typeof obj.from === 'string' &&
+      typeof obj.to === 'string' &&
+      (obj.handle === undefined || typeof obj.handle === 'string')
+    );
+  }
+  return false;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Source pre-processing
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Strip `//` single-line and block comments from the source. */
+function stripComments(text: string): string {
+  return text.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
+}
+
+/**
+ * If the input is a full `.flow.ts` file, unwrap it down to the body of the
+ * `defineFlow({...})` call so `new Function` can see an object literal.
+ * Strips `import` statements and unwraps `export default defineFlow({...})`
+ * plus `export const name = defineFlow({...})` variants. Returns the text
+ * unchanged when no wrapper is detected.
+ */
+function unwrapFullFile(text: string): string {
+  const out = text.replace(/^\s*import[^;]*;/gm, '');
+
+  let body = out.trim();
+
+  // `export default defineFlow({...})` or `export default defineFlow({...});`
+  if (body.startsWith('export default ')) {
+    body = body.slice('export default '.length).trimStart();
+  } else {
+    // `export const name = defineFlow({...})` — unwrap to the defineFlow call.
+    const namedExport = body.match(/^export\s+const\s+\w+\s*=\s*(defineFlow\s*\([\s\S]*)$/);
+    if (namedExport) {
+      body = namedExport[1].trimStart();
+    }
+  }
+
+  if (!body.startsWith('defineFlow')) {
+    return out;
+  }
+  body = body.slice('defineFlow'.length).trimStart();
+  if (!body.startsWith('(')) {
+    return out;
+  }
+  body = body.slice(1).trim();
+  if (body.endsWith(';')) {
+    body = body.slice(0, -1).trimEnd();
+  }
+  if (body.endsWith(')')) {
+    body = body.slice(0, -1).trimEnd();
+  }
+  if (body.startsWith('{') && body.endsWith('}')) {
+    return body.slice(1, -1);
+  }
+  return out;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Public API
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Parse SDK source text into node definitions + edge tuples.
+ *
+ * The parser is permissive: accepts the structured `nodes: [...], edges: [...]`
+ * fragment form, the flat bare-call form, or a full file that will be
+ * unwrapped. Missing edges are returned as an empty array.
+ *
+ * Throws `Error` if the text is syntactically broken — callers that want to
+ * surface this to users should wrap the call.
+ */
+export function parseSDKText(text: string): ParsedFragment {
+  const cleaned = unwrapFullFile(stripComments(text)).trim();
+  if (!cleaned) {
+    return { nodes: [], edges: [] };
+  }
+
+  // Wrap the body in an object literal so `nodes:` and `edges:` become keys.
+  const wrapped = `"use strict"; return ({\n${cleaned}\n})`;
+
+  let result: unknown;
+  try {
+    // eslint-disable-next-line no-new-func
+    const fn = new Function(...HELPER_NAMES, wrapped);
+    result = fn(...HELPER_VALUES);
+  } catch (err) {
+    throw new Error(
+      `Failed to parse SDK text: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+
+  if (typeof result !== 'object' || result === null) {
+    throw new Error('SDK text evaluation did not produce an object');
+  }
+
+  const obj = result as Record<string, unknown>;
+  const rawNodes = Array.isArray(obj.nodes) ? obj.nodes : [];
+  const rawEdges = Array.isArray(obj.edges) ? obj.edges : [];
+
+  const nodes: SdkFlowNode[] = [];
+  const edges: SdkEdge[] = [];
+
+  for (const item of rawNodes) {
+    if (item !== null && item !== undefined && isSdkFlowNode(item)) {
+      nodes.push(item);
+    }
+  }
+
+  for (const item of rawEdges) {
+    if (item !== null && item !== undefined && isSdkEdge(item)) {
+      edges.push(item);
+    }
+  }
+
+  return { nodes, edges };
+}

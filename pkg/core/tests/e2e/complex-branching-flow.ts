@@ -22,7 +22,7 @@
  */
 import { strict as assert } from 'node:assert';
 import { FlowRunStatus, type NodeOutput } from '../../src';
-import { defineFlow, input, javascript, ifElse, template } from '../../src/sdk';
+import { defineFlow, input, javascript, ifElse, template } from '@invect/sdk';
 import type { FlowExample } from './example-types';
 
 /**

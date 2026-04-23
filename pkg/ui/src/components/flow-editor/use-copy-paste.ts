@@ -5,8 +5,8 @@ import { useFlowEditorStore } from './flow-editor.store';
 import { useNodeRegistry } from '~/contexts/NodeRegistryContext';
 import { generateUniqueDisplayName, generateUniqueReferenceId } from '~/utils/nodeReferenceUtils';
 import type { ClipboardData, ClipboardNode, ClipboardEdge } from './use-copy-paste.types';
-import { serializeToSDK } from './serialize-to-sdk';
-import { parseSDKText, type ParsedSDK } from '@invect/core/sdk';
+import { emitSdkSource, parseSDKText, type ParsedFragment } from '@invect/sdk';
+import type { DbFlowNode, DbFlowEdge } from '@invect/sdk';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -83,56 +83,125 @@ function regenToolInstanceIds(params: Record<string, unknown>): Record<string, u
 }
 
 /**
- * Convert parseSDKText output into a ClipboardData structure that
- * materializePaste can consume. Maps FlowNodeDefinitions → ClipboardNode
- * and edge tuples → ClipboardEdge.
+ * Render a clipboard selection as SDK source text.
+ *
+ * Bridges the copy path (React-Flow node/edge state) to the unified emitter
+ * in `@invect/sdk`. For full-graph selections the result is the emitter's
+ * complete output (imports + `export const ... = defineFlow({...})`);
+ * for partial selections we strip the imports + defineFlow wrapper so the
+ * pasted text plugs into an existing flow file.
  */
-function sdkResultToClipboard({ nodes, edges }: ParsedSDK, flowId: string): ClipboardData {
-  // Compute absolute positions for each node (use parsed position or default horizontal layout)
+export function clipboardToSdkText(data: ClipboardData, isFullGraph: boolean): string {
+  const dbNodes: DbFlowNode[] = data.nodes.map((cn) => ({
+    id: cn.originalId,
+    type: cn.type,
+    referenceId: cn.data.reference_id,
+    label: cn.data.display_name,
+    params: (cn.data.params as Record<string, unknown>) ?? {},
+    position: cn.absolutePosition ?? cn.relativePosition,
+    ...(cn.data.mapper !== undefined ? { mapper: cn.data.mapper as Record<string, unknown> } : {}),
+  }));
+
+  const dbEdges: DbFlowEdge[] = data.edges.map((ce) => ({
+    id: ce.originalId,
+    source: ce.source,
+    target: ce.target,
+    ...(ce.sourceHandle ? { sourceHandle: ce.sourceHandle } : {}),
+    ...(ce.targetHandle ? { targetHandle: ce.targetHandle } : {}),
+  }));
+
+  const { code } = emitSdkSource({ nodes: dbNodes, edges: dbEdges }, { flowName: 'copiedFlow' });
+  if (isFullGraph) {
+    return code;
+  }
+
+  // Partial selection → strip imports + defineFlow wrapper, keep just the
+  // nodes/edges fragment so the user can paste into an existing file.
+  return extractFragment(code);
+}
+
+/**
+ * Extract the `nodes: [...], edges: [...]` fragment from a full emitter
+ * output. Relies on the emitter's deterministic output shape — the wrapping
+ * `export const ... = defineFlow({\n...\n});` always bookends the fragment.
+ */
+function extractFragment(fullSource: string): string {
+  const startMatch = fullSource.match(/defineFlow\s*\(\s*\{\s*\n/);
+  if (!startMatch || startMatch.index === undefined) {
+    return fullSource;
+  }
+  const start = startMatch.index + startMatch[0].length;
+  // Walk back from the closing `});` of the defineFlow call to find the end
+  // of the fragment.
+  const endIdx = fullSource.lastIndexOf('});', fullSource.lastIndexOf('});'));
+  if (endIdx === -1) {
+    return fullSource;
+  }
+  const inner = fullSource.slice(start, endIdx).trimEnd();
+  // Strip the emitter's 2-space indent so fragments paste unindented.
+  return inner
+    .split('\n')
+    .map((line) => (line.startsWith('  ') ? line.slice(2) : line))
+    .join('\n');
+}
+
+/**
+ * Convert `parseSDKText` output into a ClipboardData structure that
+ * materializePaste can consume.
+ *
+ * Parsed nodes come in primitives shape (`referenceId` + `type` + `params`,
+ * optional `position` / `label` / `mapper`). The clipboard format needs a
+ * stable `originalId` per node for edge correlation — we synthesise one from
+ * the referenceId since the SDK source doesn't carry opaque DB ids.
+ */
+export function sdkResultToClipboard(
+  { nodes, edges }: ParsedFragment,
+  flowId: string,
+): ClipboardData {
+  // Compute absolute positions for each node (use parsed position or default horizontal layout).
   const positions = nodes.map((n, i) => n.position ?? { x: i * 250, y: 0 });
 
-  // Compute bounding box origin for relative positioning
   const minX = positions.length > 0 ? Math.min(...positions.map((p) => p.x)) : 0;
   const minY = positions.length > 0 ? Math.min(...positions.map((p) => p.y)) : 0;
 
+  // Stable mapping: referenceId → synthetic originalId used for edge lookup.
+  const refToOriginalId = new Map<string, string>();
+  for (const n of nodes) {
+    refToOriginalId.set(n.referenceId, `paste-${n.referenceId}-${nanoid(6)}`);
+  }
+
   const clipboardNodes: ClipboardNode[] = nodes.map((n, i) => {
-    const ref = n.referenceId ?? n.id;
     const pos = positions[i];
     return {
-      originalId: n.id,
+      originalId: refToOriginalId.get(n.referenceId)!,
       type: n.type,
       relativePosition: { x: pos.x - minX, y: pos.y - minY },
       absolutePosition: pos,
       data: {
-        display_name: n.label ?? ref,
-        reference_id: ref,
-        params: n.params ?? {},
+        display_name: n.label ?? n.referenceId,
+        reference_id: n.referenceId,
+        params: (n.params as Record<string, unknown>) ?? {},
         ...(n.mapper !== undefined && { mapper: n.mapper }),
       },
     };
   });
 
-  // Build referenceId → node id mapping for edge resolution
-  const refToId = new Map<string, string>();
-  for (const n of nodes) {
-    const ref = n.referenceId ?? n.id;
-    refToId.set(ref, n.id);
-  }
-
   const clipboardEdges: ClipboardEdge[] = [];
   for (const e of edges) {
     if (Array.isArray(e)) {
-      const sourceId = refToId.get(e[0]) ?? `node-${e[0]}`;
-      const targetId = refToId.get(e[1]) ?? `node-${e[1]}`;
+      const sourceId = refToOriginalId.get(e[0]);
+      const targetId = refToOriginalId.get(e[1]);
+      if (!sourceId || !targetId) {continue;}
       clipboardEdges.push({
         originalId: `edge-${nanoid()}`,
         source: sourceId,
         target: targetId,
-        ...(e[2] ? { sourceHandle: e[2] } : {}),
+        ...(e.length === 3 && e[2] ? { sourceHandle: e[2] } : {}),
       });
     } else {
-      const sourceId = refToId.get(e.from) ?? `node-${e.from}`;
-      const targetId = refToId.get(e.to) ?? `node-${e.to}`;
+      const sourceId = refToOriginalId.get(e.from);
+      const targetId = refToOriginalId.get(e.to);
+      if (!sourceId || !targetId) {continue;}
       clipboardEdges.push({
         originalId: `edge-${nanoid()}`,
         source: sourceId,
@@ -411,12 +480,11 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
       // Write SDK code to the system clipboard so pasting into a text editor
       // (VS Code, etc.) produces importable TypeScript helper calls.
       // Internal paste always reads from clipboardRef (in-memory).
-      // When the full graph is selected, emit a complete runnable .flow.ts
-      // (imports + `export default defineFlow({...})`); otherwise emit the
-      // nodes/edges fragment suitable for partial paste into an existing file.
-      const sdkText = serializeToSDK(data.nodes, data.edges, {
-        asFullFile: isFullGraph,
-      });
+      //
+      // Full-graph selections emit a complete runnable `.flow.ts`. Partial
+      // selections emit just the nodes/edges fragment so the user can paste
+      // into an existing flow file.
+      const sdkText = clipboardToSdkText(data, isFullGraph);
       await navigator.clipboard.writeText(sdkText);
     } catch {
       // System clipboard write failed — in-memory ref is still set

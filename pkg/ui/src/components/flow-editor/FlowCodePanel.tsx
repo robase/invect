@@ -19,7 +19,7 @@ import { useUIStore } from '~/stores/uiStore';
 import { useFlow, useFlowVersions } from '~/api/flows.api';
 import type { InvectDefinition } from '@invect/core/types';
 import { transformToInvectDefinition } from '~/utils/flowTransformations';
-import { emitSdkSource, SdkEmitError } from '~/utils/emit-sdk-source';
+import { emitSdkSource, SdkEmitError } from '@invect/sdk';
 import {
   CODEMIRROR_IOSEVKA_FONT_STACK,
   useCodeMirrorVscodePalette,

@@ -4,6 +4,7 @@ const nextConfig = {
   typescript: { ignoreBuildErrors: true },
   transpilePackages: [
     '@invect/core',
+    '@invect/sdk',
     '@invect/ui',
     '@invect/nextjs',
     '@invect/user-auth',

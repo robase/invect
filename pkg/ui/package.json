@@ -77,6 +77,7 @@
     "@fsegurai/codemirror-theme-vscode-dark": "^6.2.4",
     "@fsegurai/codemirror-theme-vscode-light": "^6.2.4",
     "@invect/layouts": "workspace:*",
+    "@invect/sdk": "workspace:*",
     "@lezer/highlight": "^1.2.3",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",

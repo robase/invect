@@ -44,7 +44,7 @@ import {
   ifElse,
   template,
   httpRequest,
-} from '../../src/sdk';
+} from '@invect/sdk';
 import type { InvectInstance } from '../../src/api/types';
 import type { FlowExample } from './example-types';
 

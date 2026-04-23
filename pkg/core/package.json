@@ -54,11 +54,6 @@
       "import": "./dist/database/schema-mysql.js",
       "require": "./dist/database/schema-mysql.cjs"
     },
-    "./sdk": {
-      "types": "./dist/sdk/index.d.ts",
-      "import": "./dist/sdk/index.js",
-      "require": "./dist/sdk/index.cjs"
-    },
     "./actions": {
       "types": "./dist/actions/index.d.ts",
       "import": "./dist/actions/index.js",
@@ -94,6 +89,7 @@
     "@invect/action-kit": "workspace:*",
     "@invect/actions": "workspace:*",
     "@invect/layouts": "workspace:*",
+    "@invect/sdk": "workspace:*",
     "@secure-exec/core": "^0.1.0",
     "@secure-exec/node": "^0.1.0",
     "croner": "^10.0.1",

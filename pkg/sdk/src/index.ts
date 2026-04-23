@@ -73,3 +73,15 @@ export type { ActionDefinition, ActionHelper } from '@invect/action-kit';
 // deploy preview, chat assistant, git sync).
 export { emitSdkSource, SdkEmitError } from './emitter';
 export type { EmitOptions, EmitResult, DbFlowDefinition, DbFlowNode, DbFlowEdge } from './emitter';
+
+// Merge — parsed SDK flow → canonical DB definition, preserving node ids,
+// positions, labels, and agent-tool instanceIds against a prior version.
+export { mergeParsedIntoDefinition } from './merge';
+export type { MergeInput, MergeOptions } from './merge';
+
+// Browser-safe fragment parser — for clipboard paste in the flow editor and
+// light server-side round-trip checks where jiti eval is unnecessary. The
+// Node-only evaluator at `@invect/sdk/evaluator` is the preferred path for
+// LLM-generated source or anywhere an import allowlist is required.
+export { parseSDKText } from './parse-fragment';
+export type { ParsedFragment } from './parse-fragment';

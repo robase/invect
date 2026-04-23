@@ -25,12 +25,16 @@ export function needsAutoReturn(code: string): boolean {
   while (i < code.length) {
     if (code[i] === '/' && code[i + 1] === '/') {
       i += 2;
-      while (i < code.length && code[i] !== '\n') {i++;}
+      while (i < code.length && code[i] !== '\n') {
+        i++;
+      }
       continue;
     }
     if (code[i] === '/' && code[i + 1] === '*') {
       i += 2;
-      while (i < code.length && !(code[i] === '*' && code[i + 1] === '/')) {i++;}
+      while (i < code.length && !(code[i] === '*' && code[i + 1] === '/')) {
+        i++;
+      }
       i += 2;
       continue;
     }
@@ -38,7 +42,9 @@ export function needsAutoReturn(code: string): boolean {
       const quote = code[i];
       i++;
       while (i < code.length && code[i] !== quote) {
-        if (code[i] === '\\') {i++;}
+        if (code[i] === '\\') {
+          i++;
+        }
         i++;
       }
       i++;
@@ -76,7 +82,9 @@ function arrowFromBody(body: string, upstream: string[], includePreviousNodes: b
   }
 
   const lines: string[] = ['(ctx) => {'];
-  if (destructure) {lines.push(`  ${destructure}`);}
+  if (destructure) {
+    lines.push(`  ${destructure}`);
+  }
   for (const l of body.split('\n')) {
     lines.push(`  ${l}`);
   }

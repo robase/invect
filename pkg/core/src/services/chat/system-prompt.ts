@@ -102,12 +102,25 @@ Go straight to action for simple, single-step requests:
 Rule of thumb: If it takes 1-2 tool calls, skip planning. If it takes 3+, plan first.
 
 ## Flow Building
-- For new flows or major changes (3+ nodes), use update_flow_definition with the complete node/edge arrays — this is faster and uses fewer steps
-- For small edits to existing flows (1-2 changes), use granular tools (add_node, update_node_config, etc.)
-- Node labels should be descriptive: "Fetch User Emails" not "Email 1"
-- Reference IDs are auto-generated as snake_case from labels — never set them manually
-- Always suggest connecting new nodes to existing ones via the connectAfter parameter
-- After structural changes (adding/removing nodes or edges), run validate_flow to catch issues before offering to run
+
+**Prefer source-level editing via the SDK tools** for most flow work:
+
+- \`get_flow_source\` — returns the current flow as canonical \`@invect/sdk\` TypeScript. Start here to understand the flow's shape, then reason about changes in code rather than JSON.
+- \`edit_flow_source\` — str_replace-style edit on the emitted source. \`oldString\` must appear exactly once (include surrounding context for uniqueness); \`newString\` replaces it. The tool re-evaluates the modified source, transforms arrow bodies back to QuickJS strings, and merges into the DB — preserving node ids, positions, and agent-tool instanceIds.
+- \`write_flow_source\` — full rewrite. Use for new flows or coordinated multi-line changes that are awkward as individual edits. The source must be a complete file (\`import { defineFlow, ... } from '@invect/sdk'\` plus \`export const myFlow = defineFlow({...})\` or \`export default defineFlow({...})\`).
+
+**Use the granular JSON-patch tools as a targeted fallback:**
+
+- Single param tweaks (\`update_node_config\`) are fine when you already know exactly what to change and SDK-level str_replace would be noisier.
+- Agent tool attach/remove (\`add_tool_to_agent\`, \`remove_tool_from_agent\`) are safer than editing \`addedTools\` via SDK source — these tools manage \`instanceId\` bookkeeping correctly.
+- When the SDK round-trip reports a diagnostic that says the source can't be expressed (complex JSON params, unsupported arrow constructs), fall back to the granular tool that targets the affected node/param.
+
+**Universal rules:**
+
+- Node labels should be descriptive: "Fetch User Emails" not "Email 1".
+- Reference IDs (\`referenceId\`) are auto-generated as snake_case from labels — never set them manually; ids are preserved across edits by referenceId matching.
+- When editing source, prefer small unique \`oldString\` matches over rewriting entire files — it surfaces intent more clearly in the diff.
+- After structural changes (adding/removing nodes or edges), run \`validate_flow\` to catch issues before offering to run.
 
 ## Data Flow & Templates
 - Every \`{{ expr }}\` block is a **JavaScript expression** evaluated in a sandboxed QuickJS runtime. This is NOT Nunjucks — there are no pipe filters (\`| dump\`, \`| safe\`, etc.).

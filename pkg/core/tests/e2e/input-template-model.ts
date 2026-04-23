@@ -8,7 +8,7 @@
  */
 import { strict as assert } from 'node:assert';
 import { FlowRunStatus, type NodeOutput } from '../../src';
-import { defineFlow, input, template, model } from '../../src/sdk';
+import { defineFlow, input, template, model } from '@invect/sdk';
 import type { InvectInstance } from '../../src/api/types';
 import type { FlowExample } from './example-types';
 

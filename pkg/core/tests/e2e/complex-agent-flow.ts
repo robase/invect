@@ -23,7 +23,7 @@
  */
 import { strict as assert } from 'node:assert';
 import { FlowRunStatus, BatchProvider } from '../../src';
-import { defineFlow, input, output, agent, template, httpRequest } from '../../src/sdk';
+import { defineFlow, input, output, agent, template, httpRequest } from '@invect/sdk';
 import type { InvectInstance } from '../../src/api/types';
 import { getOutputVariable, type AgentOutputLike, type FlowExample } from './example-types';
 

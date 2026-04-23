@@ -8,7 +8,6 @@ export default defineConfig({
     'src/database/schema-postgres.ts',
     'src/database/schema-mysql.ts',
     'src/types.frontend.ts',
-    'src/sdk/index.ts',
     'src/actions/index.ts',
   ],
   format: ['cjs', 'esm'],

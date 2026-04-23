@@ -30,6 +30,16 @@
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
+    },
+    "./transform": {
+      "types": "./dist/transform/index.d.mts",
+      "import": "./dist/transform/index.mjs",
+      "require": "./dist/transform/index.cjs"
+    },
+    "./evaluator": {
+      "types": "./dist/evaluator/index.d.mts",
+      "import": "./dist/evaluator/index.mjs",
+      "require": "./dist/evaluator/index.cjs"
     }
   },
   "publishConfig": {
@@ -47,12 +57,13 @@
   "dependencies": {
     "@invect/action-kit": "workspace:*",
     "@invect/actions": "workspace:*",
+    "jiti": "^2.4.2",
+    "typescript": "^5.8.3",
     "zod": "^3.25.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
-    "tsdown": "^0.21.1",
-    "typescript": "^5.9.3",
+    "tsdown": "0.21.9",
     "vitest": "^4.1.4"
   }
 }

@@ -98,8 +98,12 @@ export function emitSdkSource(def: DbFlowDefinition, options: EmitOptions = {}):
   const importLines: string[] = [];
   const sortedSdkImports = [...sdkImports].sort((a, b) => {
     // `defineFlow` always first for readability.
-    if (a === 'defineFlow') {return -1;}
-    if (b === 'defineFlow') {return 1;}
+    if (a === 'defineFlow') {
+      return -1;
+    }
+    if (b === 'defineFlow') {
+      return 1;
+    }
     return a.localeCompare(b);
   });
   importLines.push(`import { ${sortedSdkImports.join(', ')} } from ${JSON.stringify(sdkImport)};`);
@@ -113,11 +117,15 @@ export function emitSdkSource(def: DbFlowDefinition, options: EmitOptions = {}):
   // Metadata.
   const metadata = options.metadata ?? def.metadata ?? {};
   const metadataLines: string[] = [];
-  if (metadata.name !== undefined) {metadataLines.push(`  name: ${JSON.stringify(metadata.name)},`);}
-  if (metadata.description !== undefined)
-    {metadataLines.push(`  description: ${JSON.stringify(metadata.description)},`);}
-  if (metadata.tags !== undefined && metadata.tags.length > 0)
-    {metadataLines.push(`  tags: ${JSON.stringify(metadata.tags)},`);}
+  if (metadata.name !== undefined) {
+    metadataLines.push(`  name: ${JSON.stringify(metadata.name)},`);
+  }
+  if (metadata.description !== undefined) {
+    metadataLines.push(`  description: ${JSON.stringify(metadata.description)},`);
+  }
+  if (metadata.tags !== undefined && metadata.tags.length > 0) {
+    metadataLines.push(`  tags: ${JSON.stringify(metadata.tags)},`);
+  }
 
   const body: string[] = [
     importLines.join('\n'),
@@ -169,7 +177,9 @@ function emitNode(node: DbFlowNode, ctx: EmitCtx): string {
   const sdkHelper = SDK_HELPERS[node.type];
   if (sdkHelper) {
     const importName = SDK_IMPORT_NAMES[node.type];
-    if (importName) {ctx.sdkImports.add(importName);}
+    if (importName) {
+      ctx.sdkImports.add(importName);
+    }
     return emitKnownNode(node, sdkHelper, refLit, upstream, nodeOptions, ctx);
   }
 
@@ -195,8 +205,12 @@ function emitNode(node: DbFlowNode, ctx: EmitCtx): string {
   const paramsLit = toTsLiteral(node.params ?? {});
   const typeLit = JSON.stringify(node.type);
   const parts = [`node(${refLit}, ${typeLit}`];
-  if (paramsLit !== '{}') {parts.push(paramsLit);}
-  if (nodeOptions !== null) {parts.push(nodeOptions);}
+  if (paramsLit !== '{}') {
+    parts.push(paramsLit);
+  }
+  if (nodeOptions !== null) {
+    parts.push(nodeOptions);
+  }
   return `${parts.join(', ')}),`;
 }
 
@@ -227,7 +241,9 @@ function emitKnownNode(
       if (typeof defaultValue === 'string' && defaultValue !== '') {
         p.push(`defaultValue: ${JSON.stringify(defaultValue)}`);
       }
-      if (p.length === 0 && !nodeOptions) {return `input(${refLit}),`;}
+      if (p.length === 0 && !nodeOptions) {
+        return `input(${refLit}),`;
+      }
       const paramsLit = p.length === 0 ? '{}' : `{ ${p.join(', ')} }`;
       return `input(${refLit}, ${paramsLit}${optionsSuffix}),`;
     }
@@ -280,10 +296,12 @@ function emitKnownNode(
       const matchMode = params.matchMode === 'all' ? 'all' : 'first';
       const caseLines = rawCases.map((c, i) => {
         const rec = c as { slug?: unknown; label?: unknown; expression?: unknown };
-        if (typeof rec.slug !== 'string' || typeof rec.label !== 'string')
-          {throw new SdkEmitError(`switch "${refLit}" case[${i}] missing slug/label`, node.id);}
-        if (typeof rec.expression !== 'string')
-          {throw new SdkEmitError(`switch "${refLit}" case[${i}] missing expression`, node.id);}
+        if (typeof rec.slug !== 'string' || typeof rec.label !== 'string') {
+          throw new SdkEmitError(`switch "${refLit}" case[${i}] missing slug/label`, node.id);
+        }
+        if (typeof rec.expression !== 'string') {
+          throw new SdkEmitError(`switch "${refLit}" case[${i}] missing expression`, node.id);
+        }
         const cond = arrowFromExpression(rec.expression, upstream);
         return `    { slug: ${JSON.stringify(rec.slug)}, label: ${JSON.stringify(rec.label)}, expression: ${cond} },`;
       });
@@ -379,7 +397,9 @@ function emitAgent(
   ctx: EmitCtx,
 ): string {
   const addedTools = Array.isArray(params.addedTools) ? (params.addedTools as AddedToolLike[]) : [];
-  if (addedTools.length > 0) {ctx.sdkImports.add('tool');}
+  if (addedTools.length > 0) {
+    ctx.sdkImports.add('tool');
+  }
 
   const lines: string[] = [];
   lines.push(`agent(${refLit}, {`);
@@ -400,12 +420,20 @@ function emitAgent(
     'maxIterations',
   ] as const;
   for (const key of orderedSdkKeys) {
-    if (params[key] !== undefined) {emitField(key, params[key]);}
+    if (params[key] !== undefined) {
+      emitField(key, params[key]);
+    }
   }
   for (const [key, value] of Object.entries(params)) {
-    if (AGENT_SDK_FIELDS.has(key)) {continue;}
-    if (key === 'addedTools') {continue;}
-    if (value === undefined) {continue;}
+    if (AGENT_SDK_FIELDS.has(key)) {
+      continue;
+    }
+    if (key === 'addedTools') {
+      continue;
+    }
+    if (value === undefined) {
+      continue;
+    }
     emitField(key, value);
   }
 
@@ -436,9 +464,15 @@ function emitToolCall(t: AddedToolLike): string {
   } & Record<string, unknown>;
 
   const options: Record<string, unknown> = {};
-  if (name && name !== toolId) {options.name = name;}
-  if (description.length > 0) {options.description = description;}
-  if (Object.keys(cleanParams).length > 0) {options.params = cleanParams;}
+  if (name && name !== toolId) {
+    options.name = name;
+  }
+  if (description.length > 0) {
+    options.description = description;
+  }
+  if (Object.keys(cleanParams).length > 0) {
+    options.params = cleanParams;
+  }
 
   const idLit = JSON.stringify(toolId);
   if (TOOL_OPTION_KEYS.every((k) => options[k] === undefined)) {
@@ -469,16 +503,24 @@ function emitActionCall(
 
 function buildNodeOptions(node: DbFlowNode): string | null {
   const opts: Record<string, unknown> = {};
-  if (node.position) {opts.position = node.position;}
-  if (node.label !== undefined) {opts.label = node.label;}
+  if (node.position) {
+    opts.position = node.position;
+  }
+  if (node.label !== undefined) {
+    opts.label = node.label;
+  }
   if (node.mapper && typeof node.mapper === 'object') {
     const m = node.mapper as Record<string, unknown>;
     // Skip disabled / empty mappers.
     const enabled = m.enabled !== false;
     const expr = typeof m.expression === 'string' ? m.expression : '';
-    if (enabled && expr.length > 0) {opts.mapper = node.mapper;}
+    if (enabled && expr.length > 0) {
+      opts.mapper = node.mapper;
+    }
   }
-  if (Object.keys(opts).length === 0) {return null;}
+  if (Object.keys(opts).length === 0) {
+    return null;
+  }
   return toTsLiteral(opts);
 }
 
@@ -515,11 +557,17 @@ function buildUpstreamMap(nodes: DbFlowNode[], edges: DbFlowEdge[]): Map<string,
   for (const edge of edges) {
     const sourceRef = refById.get(edge.source);
     const targetRef = refById.get(edge.target);
-    if (!sourceRef || !targetRef) {continue;}
-    if (!isValidJsIdent(sourceRef)) {continue;}
+    if (!sourceRef || !targetRef) {
+      continue;
+    }
+    if (!isValidJsIdent(sourceRef)) {
+      continue;
+    }
     const existing = upstream.get(targetRef);
     if (existing) {
-      if (!existing.includes(sourceRef)) {existing.push(sourceRef);}
+      if (!existing.includes(sourceRef)) {
+        existing.push(sourceRef);
+      }
     } else {
       upstream.set(targetRef, [sourceRef]);
     }

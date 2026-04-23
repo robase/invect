@@ -21,9 +21,15 @@ export function node<TParams extends Record<string, unknown>>(
     type,
     params: params as Record<string, unknown>,
   };
-  if (options?.label !== undefined) {n.label = options.label;}
-  if (options?.position !== undefined) {n.position = options.position;}
-  if (options?.id !== undefined) {n.id = options.id;}
+  if (options?.label !== undefined) {
+    n.label = options.label;
+  }
+  if (options?.position !== undefined) {
+    n.position = options.position;
+  }
+  if (options?.id !== undefined) {
+    n.id = options.id;
+  }
   if (options?.mapper !== undefined) {
     n.mapper = {
       enabled: options.mapper.enabled ?? true,

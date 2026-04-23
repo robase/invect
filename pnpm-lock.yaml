@@ -601,6 +601,9 @@ importers:
       '@invect/rbac':
         specifier: workspace:*
         version: link:../../pkg/plugins/rbac
+      '@invect/sdk':
+        specifier: workspace:*
+        version: link:../../pkg/sdk
       '@invect/ui':
         specifier: workspace:*
         version: link:../../pkg/ui
@@ -777,6 +780,9 @@ importers:
       '@invect/layouts':
         specifier: workspace:*
         version: link:../layouts
+      '@invect/sdk':
+        specifier: workspace:*
+        version: link:../sdk
       '@secure-exec/core':
         specifier: ^0.1.0
         version: 0.1.0
@@ -1220,6 +1226,9 @@ importers:
       '@invect/core':
         specifier: workspace:*
         version: link:../../core
+      '@invect/sdk':
+        specifier: workspace:*
+        version: link:../../sdk
       zod:
         specifier: ^3.25.0
         version: 3.25.76
@@ -1328,6 +1337,12 @@ importers:
       '@invect/actions':
         specifier: workspace:*
         version: link:../actions
+      jiti:
+        specifier: ^2.4.2
+        version: 2.6.1
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
       zod:
         specifier: ^3.25.1
         version: 3.25.76
@@ -1336,11 +1351,8 @@ importers:
         specifier: ^22.10.2
         version: 22.19.15
       tsdown:
-        specifier: ^0.21.1
-        version: 0.21.10(oxc-resolver@11.19.1)(synckit@0.11.12)(typescript@5.9.3)
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
+        specifier: 0.21.9
+        version: 0.21.9(oxc-resolver@11.19.1)(synckit@0.11.12)(typescript@5.9.3)
       vitest:
         specifier: ^4.1.4
         version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@22.19.15)(@vitest/coverage-v8@4.1.4)(@vitest/ui@4.1.4)(msw@2.12.10(@types/node@22.19.15)(typescript@5.9.3))(vite@8.0.8(@types/node@22.19.15)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.3))
@@ -1380,6 +1392,9 @@ importers:
       '@invect/layouts':
         specifier: workspace:*
         version: link:../layouts
+      '@invect/sdk':
+        specifier: workspace:*
+        version: link:../sdk
       '@lezer/highlight':
         specifier: ^1.2.3
         version: 1.2.3
@@ -12081,16 +12096,6 @@ packages:
       synckit:
         optional: true
 
-  unrun@0.2.36:
-    resolution: {integrity: sha512-ICAGv44LHSKjCdI4B4rk99lJLHXBweutO4MUwu3cavMlYtXID0Tn5e1Kwe/Uj6BSAuHHXfi1JheFVCYhcXHfAg==}
-    engines: {node: '>=20.19.0'}
-    hasBin: true
-    peerDependencies:
-      synckit: ^0.11.11
-    peerDependenciesMeta:
-      synckit:
-        optional: true
-
   unrun@0.2.37:
     resolution: {integrity: sha512-AA7vDuYsgeSYVzJMm16UKA+aXFKhy7nFqW9z5l7q44K4ppFWZAMqYS58ePRZbugMLPH0fwwMzD5A8nP0avxwZQ==}
     engines: {node: '>=20.19.0'}
@@ -17526,7 +17531,7 @@ snapshots:
       obug: 2.1.1
       std-env: 4.0.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@22.19.15)(@vitest/coverage-v8@4.1.4)(@vitest/ui@4.1.4)(msw@2.12.10(@types/node@22.19.15)(typescript@5.9.3))(vite@8.0.8(@types/node@22.19.15)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.3))
+      vitest: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@20.19.37)(@vitest/coverage-v8@4.1.4)(@vitest/ui@4.1.4)(msw@2.12.10(@types/node@20.19.37)(typescript@5.9.3))(vite@8.0.8(@types/node@20.19.37)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.3))
 
   '@vitest/expect@4.1.4':
     dependencies:
@@ -17591,7 +17596,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.1.0
-      vitest: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@22.19.15)(@vitest/coverage-v8@4.1.4)(@vitest/ui@4.1.4)(msw@2.12.10(@types/node@22.19.15)(typescript@5.9.3))(vite@8.0.8(@types/node@22.19.15)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.3))
+      vitest: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@20.19.37)(@vitest/coverage-v8@4.1.4)(@vitest/ui@4.1.4)(msw@2.12.10(@types/node@20.19.37)(typescript@5.9.3))(vite@8.0.8(@types/node@20.19.37)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.3))
 
   '@vitest/utils@4.1.4':
     dependencies:
@@ -24871,7 +24876,7 @@ snapshots:
       tinyglobby: 0.2.16
       tree-kill: 1.2.2
       unconfig-core: 7.5.0
-      unrun: 0.2.36(synckit@0.11.12)
+      unrun: 0.2.37(synckit@0.11.12)
     optionalDependencies:
       typescript: 5.9.3
     transitivePeerDependencies:
@@ -25104,12 +25109,6 @@ snapshots:
   unrun@0.2.31(synckit@0.11.12):
     dependencies:
       rolldown: 1.0.0-rc.8
-    optionalDependencies:
-      synckit: 0.11.12
-
-  unrun@0.2.36(synckit@0.11.12):
-    dependencies:
-      rolldown: 1.0.0-rc.16
     optionalDependencies:
       synckit: 0.11.12
 

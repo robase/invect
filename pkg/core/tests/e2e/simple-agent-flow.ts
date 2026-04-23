@@ -18,7 +18,7 @@
  */
 import { strict as assert } from 'node:assert';
 import { FlowRunStatus } from '../../src';
-import { defineFlow, input, output, agent } from '../../src/sdk';
+import { defineFlow, input, output, agent } from '@invect/sdk';
 import type { InvectInstance } from '../../src/api/types';
 import { getOutputVariable, type AgentOutputLike, type FlowExample } from './example-types';
 

@@ -1,0 +1,154 @@
+import { describe, it, expect } from 'vitest';
+import { parseSDKText } from '../src/parse-fragment';
+
+describe('parseSDKText', () => {
+  describe('fragment form (structured)', () => {
+    it('parses nodes + edges fragments', () => {
+      const { nodes, edges } = parseSDKText(`
+        nodes: [
+          input('query'),
+          output('result', { value: '{{ query }}' }),
+        ],
+        edges: [
+          ['query', 'result'],
+        ],
+      `);
+
+      expect(nodes).toHaveLength(2);
+      expect(nodes[0].referenceId).toBe('query');
+      expect(nodes[0].type).toBe('core.input');
+      expect(nodes[1].referenceId).toBe('result');
+      expect(edges).toEqual([['query', 'result']]);
+    });
+
+    it('accepts object-form edges with handles', () => {
+      const { edges } = parseSDKText(`
+        nodes: [
+          ifElse('check', { condition: 'x > 0' }),
+          output('yes', { value: 'yes' }),
+        ],
+        edges: [
+          { from: 'check', to: 'yes', handle: 'true_output' },
+        ],
+      `);
+
+      expect(edges).toEqual([{ from: 'check', to: 'yes', handle: 'true_output' }]);
+    });
+
+    it('accepts tuple-form edges with sourceHandle', () => {
+      const { edges } = parseSDKText(`
+        nodes: [
+          ifElse('check', { condition: 'x > 0' }),
+          output('no', { value: 'no' }),
+        ],
+        edges: [
+          ['check', 'no', 'false_output'],
+        ],
+      `);
+      expect(edges).toEqual([['check', 'no', 'false_output']]);
+    });
+  });
+
+  describe('full-file form (emitter output)', () => {
+    it('unwraps `export const ... = defineFlow(...)` (emitter default)', () => {
+      const source = `
+import { defineFlow, input, output } from '@invect/sdk';
+import { gmailSendMessageAction } from '@invect/actions/gmail';
+
+export const myFlow = defineFlow({
+  name: 'My Flow',
+  nodes: [
+    input('query'),
+    output('result', { value: '{{ query }}' }),
+  ],
+  edges: [
+    { from: 'query', to: 'result' },
+  ],
+});
+      `;
+      const { nodes, edges } = parseSDKText(source);
+      expect(nodes).toHaveLength(2);
+      expect(nodes[0].referenceId).toBe('query');
+      expect(edges).toEqual([{ from: 'query', to: 'result' }]);
+    });
+
+    it('unwraps `export default defineFlow(...)`', () => {
+      const source = `
+import { defineFlow, input } from '@invect/sdk';
+export default defineFlow({
+  nodes: [input('q')],
+  edges: [],
+});
+      `;
+      const { nodes } = parseSDKText(source);
+      expect(nodes).toHaveLength(1);
+      expect(nodes[0].referenceId).toBe('q');
+    });
+
+    it('strips single-line + block comments', () => {
+      const source = `
+import { defineFlow, input } from '@invect/sdk';
+export default defineFlow({
+  // this is a comment
+  /* block comment */
+  nodes: [input('q')],
+  edges: [],
+});
+      `;
+      const { nodes } = parseSDKText(source);
+      expect(nodes).toHaveLength(1);
+    });
+  });
+
+  describe('error handling', () => {
+    it('returns empty result for empty input', () => {
+      expect(parseSDKText('')).toEqual({ nodes: [], edges: [] });
+    });
+
+    it('throws on syntax errors with a helpful message', () => {
+      expect(() => parseSDKText('nodes: [ oops not JS ,,, ],')).toThrow(/Failed to parse/);
+    });
+
+    it('skips items that do not look like nodes or edges', () => {
+      // Mixed valid and garbage — valid items pass through, garbage drops.
+      const { nodes, edges } = parseSDKText(`
+        nodes: [
+          input('x'),
+          { notANode: true },
+          42,
+        ],
+        edges: [
+          ['x', 'y'],
+          'not an edge',
+        ],
+      `);
+      expect(nodes).toHaveLength(1);
+      expect(edges).toEqual([['x', 'y']]);
+    });
+  });
+
+  describe('round-trip via emitSdkSource', () => {
+    it('emit → parse preserves nodes and edges', async () => {
+      // Use a dynamic import to reach the sibling emitter module.
+      const { emitSdkSource } = await import('../src/emitter');
+      const definition = {
+        nodes: [
+          { id: 'n1', type: 'core.input', referenceId: 'name', params: { variableName: 'name' } },
+          {
+            id: 'n2',
+            type: 'core.output',
+            referenceId: 'greeting',
+            params: { outputValue: 'Hello {{ name }}!' },
+          },
+        ],
+        edges: [{ id: 'e1', source: 'n1', target: 'n2' }],
+      };
+      const { code } = emitSdkSource(definition, { flowName: 'roundTripFlow' });
+
+      const { nodes, edges } = parseSDKText(code);
+      expect(nodes).toHaveLength(2);
+      expect(nodes.map((n) => n.referenceId).sort()).toEqual(['greeting', 'name']);
+      expect(edges).toHaveLength(1);
+    });
+  });
+});

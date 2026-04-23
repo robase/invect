@@ -31,6 +31,16 @@ export default defineConfig({
       { find: /^@invect\/layouts$/, replacement: pkg('layouts/src/index.ts') },
       { find: /^@invect\/ui$/, replacement: pkg('ui/src/index.ts') },
       { find: /^@invect\/action-kit$/, replacement: pkg('action-kit/src/index.ts') },
+      { find: /^@invect\/sdk$/, replacement: pkg('sdk/src/index.ts') },
+      // @invect/actions/<provider> subpath resolution — the SDK's node
+      // helpers import from these (`@invect/actions/core`, `.../http`, etc.).
+      // Capture the subpath and map to the matching provider directory in
+      // pkg/actions/src.
+      {
+        find: /^@invect\/actions\/([^/]+)$/,
+        replacement: pkg('actions/src/$1/index.ts'),
+      },
+      { find: /^@invect\/actions$/, replacement: pkg('actions/src/index.ts') },
     ],
   },
   optimizeDeps: {

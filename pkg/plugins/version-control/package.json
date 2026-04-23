@@ -51,6 +51,7 @@
   },
   "dependencies": {
     "@invect/core": "workspace:*",
+    "@invect/sdk": "workspace:*",
     "zod": "^3.25.0"
   },
   "devDependencies": {

@@ -16,6 +16,7 @@
     "@invect/action-kit": "workspace:*",
     "@invect/mcp": "workspace:*",
     "@invect/rbac": "workspace:*",
+    "@invect/sdk": "workspace:*",
     "@invect/ui": "workspace:*",
     "@invect/user-auth": "workspace:*",
     "@invect/vercel-workflows": "workspace:*",

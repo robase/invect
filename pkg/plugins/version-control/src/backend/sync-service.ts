@@ -14,7 +14,7 @@ import type {
   VcSyncStatus,
   ConfigureSyncInput,
 } from '../shared/types';
-import { serializeFlowToTs } from './flow-serializer';
+import { emitSdkSource } from '@invect/sdk';
 
 interface FlowRow {
   id: string;
@@ -623,13 +623,22 @@ export class VcSyncService {
       }
     }
 
-    const content = serializeFlowToTs(definition, {
-      name: flow.name,
-      description: flow.description ?? undefined,
-      tags,
+    // Flow name may contain spaces / punctuation; derive a JS-safe export
+    // identifier for the emitter. Adds a `Flow` suffix only when the name
+    // doesn't already end with one so exports read naturally.
+    const flowName = toFlowExportName(flow.name);
+
+    const { code } = emitSdkSource(definition, {
+      flowName,
+      includeJsonFooter: true,
+      metadata: {
+        name: flow.name,
+        ...(flow.description ? { description: flow.description } : {}),
+        ...(tags && tags.length > 0 ? { tags } : {}),
+      },
     });
 
-    return { content, version: fv.version };
+    return { content: code, version: fv.version };
   }
 
   private async importFlowContent(
@@ -801,6 +810,24 @@ interface VcSyncHistoryRow {
   created_by: string | null;
 }
 
+/**
+ * Convert a human-authored flow name into a JS-safe export identifier for the
+ * emitter. Non-alphanumeric runs collapse to camelCase boundaries; a leading
+ * digit gets an `_` prefix; empty strings fall back to `myFlow`. Adds a
+ * trailing `Flow` only when the name doesn't already end in one.
+ */
+function toFlowExportName(raw: string): string {
+  const segments = raw.split(/[^a-zA-Z0-9]+/).filter(Boolean);
+  if (segments.length === 0) {return 'myFlow';}
+  const camel = segments
+    .map((s, i) =>
+      i === 0 ? s.charAt(0).toLowerCase() + s.slice(1) : s.charAt(0).toUpperCase() + s.slice(1),
+    )
+    .join('');
+  const base = /^[0-9]/.test(camel) ? `_${camel}` : camel;
+  return /[Ff]low$/.test(base) ? base : `${base}Flow`;
+}
+
 function mapSyncConfigRow(r: VcSyncConfigRow): VcSyncConfig {
   return {
     id: r.id,
@@ -849,7 +876,9 @@ function mapHistoryRow(r: VcSyncHistoryRow): VcSyncHistoryRecord {
  * Falls back to extracting raw `nodes` and `edges` arrays if defineFlow
  * wrapper is not found.
  */
-function parseFlowTsContent(content: string): { nodes: unknown[]; edges: unknown[] } | null {
+export function parseFlowTsContent(
+  content: string,
+): { nodes: unknown[]; edges: unknown[] } | null {
   // Strategy 1 (preferred): Look for the embedded JSON block comment.
   // The serializer embeds `/* @invect-definition {...} */` for reliable round-tripping.
   const jsonCommentMatch = content.match(/\/\*\s*@invect-definition\s+([\s\S]*?)\s*\*\//);
