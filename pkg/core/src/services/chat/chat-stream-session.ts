@@ -55,6 +55,109 @@ function isRateLimitError(error: unknown): boolean {
 }
 
 /**
+ * Check if an error is a transient network failure worth retrying.
+ *
+ * Matches the classic undici/socket teardown shapes we see during long
+ * agent turns — upstream CDN or provider closes an idle socket before the
+ * full response arrives. These are indistinguishable from recoverable
+ * transport hiccups, so a bounded retry is the right move.
+ */
+function isTransientNetworkError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  const msg = error.message.toLowerCase();
+  if (
+    msg.includes('terminated') ||
+    msg.includes('econnreset') ||
+    msg.includes('etimedout') ||
+    msg.includes('econnrefused') ||
+    msg.includes('und_err_socket') ||
+    msg.includes('und_err_connect_timeout') ||
+    msg.includes('socket hang up') ||
+    msg.includes('premature close') ||
+    msg.includes('network error') ||
+    msg.includes('fetch failed')
+  ) {
+    return true;
+  }
+  // OpenAI / Anthropic SDKs surface 5xx and connection errors via named classes;
+  // fall back to checking a `status` field if present.
+  const status = (error as { status?: number }).status;
+  if (typeof status === 'number' && status >= 500 && status < 600) {
+    return true;
+  }
+  // Common cause name for undici socket errors
+  const cause = (error as { cause?: { code?: string } }).cause;
+  if (cause?.code) {
+    const code = cause.code.toLowerCase();
+    if (code.includes('econnreset') || code.includes('etimedout') || code.includes('und_err_')) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Check if an error was triggered by the caller aborting the request. */
+function isAbortError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  return (
+    error.name === 'AbortError' ||
+    error.message.toLowerCase().includes('aborted') ||
+    error.message.toLowerCase().includes('request was aborted')
+  );
+}
+
+/**
+ * Minimal producer/consumer queue to bridge the adapter's callback-driven
+ * streaming with the session's async generator. The adapter pushes delta
+ * events from its stream callbacks; the generator loop pulls them out in
+ * order and yields them to the SSE framework adapter.
+ */
+class StreamEventQueue {
+  private events: ChatStreamEvent[] = [];
+  private waiter: ((e: ChatStreamEvent | null) => void) | null = null;
+  private closed = false;
+
+  push(event: ChatStreamEvent): void {
+    if (this.closed) {
+      return;
+    }
+    if (this.waiter) {
+      const w = this.waiter;
+      this.waiter = null;
+      w(event);
+    } else {
+      this.events.push(event);
+    }
+  }
+
+  close(): void {
+    this.closed = true;
+    if (this.waiter) {
+      const w = this.waiter;
+      this.waiter = null;
+      w(null);
+    }
+  }
+
+  next(): Promise<ChatStreamEvent | null> {
+    const pending = this.events.shift();
+    if (pending) {
+      return Promise.resolve(pending);
+    }
+    if (this.closed) {
+      return Promise.resolve(null);
+    }
+    return new Promise<ChatStreamEvent | null>((resolve) => {
+      this.waiter = resolve;
+    });
+  }
+}
+
+/**
  * A single chat streaming session (one per user message).
  */
 export class ChatStreamSession {
@@ -107,37 +210,76 @@ export class ChatStreamSession {
           toolCount: toolDefs.length,
         });
 
-        // 5. Call the LLM via the existing adapter (with retry on rate-limit)
+        // 5. Call the LLM via the existing adapter (with retry on transient
+        //    network errors and rate-limits). The adapter streams text and
+        //    reasoning deltas into `queue` as they arrive; we drain the queue
+        //    concurrently with the adapter promise and yield each delta out
+        //    to the SSE framework so the UI updates token-by-token.
+        //    AbortError short-circuits the retry loop since it means the
+        //    caller asked us to stop.
         let response: AgentPromptResult | undefined;
         const MAX_RETRIES = 3;
         let lastError: unknown;
 
         for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-          try {
-            response = await adapter.executeAgentPrompt({
+          const queue = new StreamEventQueue();
+          const promise = adapter
+            .executeAgentPrompt({
               model: config.model,
               messages: conversationMessages,
               tools: toolDefs,
               systemPrompt,
               maxTokens: 8192,
-            });
+              thinking: { enabled: true, effort: 'medium' },
+              onTextDelta: (text) => queue.push({ type: 'text_delta', text }),
+              onReasoningDelta: (text) => queue.push({ type: 'reasoning_delta', text }),
+            })
+            .finally(() => queue.close());
+
+          try {
+            // Drain deltas until the queue closes (adapter has resolved/rejected).
+            while (true) {
+              const event = await queue.next();
+              if (event === null) {
+                break;
+              }
+              yield event;
+            }
+            // Surface the final result (or re-throw the adapter's error).
+            response = await promise;
             lastError = undefined;
             break;
           } catch (error: unknown) {
             lastError = error;
-            if (isRateLimitError(error) && attempt < MAX_RETRIES && !this.aborted) {
-              const delayMs = Math.min(1000 * 2 ** attempt, 30_000); // 1s, 2s, 4s
+            // Ensure any stragglers from a half-consumed queue don't leak into
+            // the next attempt.
+            queue.close();
+
+            if (isAbortError(error) || this.aborted) {
+              logger.debug('Chat stream aborted during LLM call');
+              return;
+            }
+
+            const retryable = isRateLimitError(error) || isTransientNetworkError(error);
+            if (retryable && attempt < MAX_RETRIES) {
+              const delayMs = Math.min(1000 * 2 ** attempt, 30_000); // 1s, 2s, 4s, 8s
               const delaySec = Math.round(delayMs / 1000);
+              const reason = isRateLimitError(error) ? 'Rate limited' : 'Connection error';
+              const userLabel = isRateLimitError(error)
+                ? 'Rate limited by the AI provider'
+                : 'Connection to the AI provider was interrupted';
               logger.warn(
-                `Rate limited on chat step ${steps}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})`,
+                `${reason} on chat step ${steps}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})`,
+                { error: error instanceof Error ? error.message : String(error) },
               );
               yield {
                 type: 'text_delta',
-                text: `\n\n⏳ *Rate limited by the AI provider — retrying in ${delaySec}s (attempt ${attempt + 1}/${MAX_RETRIES})…*\n\n`,
+                text: `\n\n⏳ *${userLabel} — retrying in ${delaySec}s (attempt ${attempt + 1}/${MAX_RETRIES})…*\n\n`,
               };
               await new Promise((resolve) => setTimeout(resolve, delayMs));
               continue;
             }
+
             const msg = error instanceof Error ? error.message : String(error);
             logger.error('LLM call failed in chat stream:', { error: msg });
             yield { type: 'error', message: `LLM call failed: ${msg}`, recoverable: false };
@@ -153,10 +295,8 @@ export class ChatStreamSession {
           return;
         }
 
-        // 6. Yield text content
-        if (response.content) {
-          yield { type: 'text_delta', text: response.content };
-        }
+        // 6. Text and reasoning content already yielded as deltas during the
+        //    stream. No need to re-yield the final buffer.
 
         // 7. If no tool calls, we're done
         if (response.type !== 'tool_use' || !response.toolCalls?.length) {

@@ -49,6 +49,9 @@ export class AnthropicAdapter extends BaseProviderAdapter {
 
   private client: Anthropic;
 
+  /** Default per-request timeout for agent prompts. */
+  private readonly defaultAgentTimeoutMs = 10 * 60 * 1000; // 10 minutes
+
   constructor(logger: Logger, apiKey: string, defaultModelOverride?: string) {
     super(logger, apiKey, defaultModelOverride);
     this.validateApiKey();
@@ -56,6 +59,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
     this.client = new Anthropic({
       apiKey: this.apiKey,
       maxRetries: 3, // Retry on 429 (rate limit), 500, 503 with exponential backoff
+      timeout: this.defaultAgentTimeoutMs,
     });
   }
 
@@ -150,14 +154,28 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       const anthropicMessages = this.convertMessages(request.messages);
       const tools = this.convertTools(request.tools);
 
+      const thinkingEnabled =
+        request.thinking?.enabled === true && this.modelSupportsThinking(request.model);
+      const budgetTokens = this.resolveThinkingBudget(request.thinking);
+      // Anthropic requires max_tokens > budget_tokens when thinking is enabled.
+      const baseMaxTokens = request.maxTokens || 4096;
+      const maxTokens = thinkingEnabled
+        ? Math.max(baseMaxTokens, budgetTokens + 4096)
+        : baseMaxTokens;
+
       const params: Anthropic.MessageCreateParams = {
         model: request.model,
-        max_tokens: request.maxTokens || 4096,
-        temperature: request.temperature,
+        max_tokens: maxTokens,
+        // Anthropic requires temperature === 1 when extended thinking is enabled.
+        temperature: thinkingEnabled ? 1 : request.temperature,
         system: request.systemPrompt,
         messages: anthropicMessages,
         tools: tools.length > 0 ? tools : undefined,
       };
+
+      if (thinkingEnabled) {
+        params.thinking = { type: 'enabled', budget_tokens: budgetTokens };
+      }
 
       // Set tool_choice
       if (tools.length > 0) {
@@ -168,12 +186,18 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       }
 
       // Use streaming for agent prompts
-      const stream = await this.client.messages.create({
-        ...params,
-        stream: true,
-      });
+      const stream = await this.client.messages.create(
+        {
+          ...params,
+          stream: true,
+        },
+        {
+          signal: request.signal,
+          timeout: request.timeoutMs ?? this.defaultAgentTimeoutMs,
+        },
+      );
 
-      return await this.parseStreamingResponse(stream);
+      return await this.parseStreamingResponse(stream, request);
     } catch (error) {
       this.logger.error('Anthropic agent prompt failed:', error);
       throw this.wrapError(error, 'agent prompt');
@@ -181,12 +205,48 @@ export class AnthropicAdapter extends BaseProviderAdapter {
   }
 
   /**
-   * Parse streaming response into AgentPromptResult
+   * Models that accept the `thinking` parameter. Claude 4.x and 3.7 Sonnet
+   * support extended thinking; earlier models reject it with a 400.
+   */
+  private modelSupportsThinking(model: string): boolean {
+    const m = model.toLowerCase();
+    return (
+      m.startsWith('claude-opus-4') ||
+      m.startsWith('claude-sonnet-4') ||
+      m.startsWith('claude-haiku-4') ||
+      m.startsWith('claude-3-7-sonnet')
+    );
+  }
+
+  /** Translate `effort` levels to a concrete budget when explicit budget not provided. */
+  private resolveThinkingBudget(thinking?: AgentPromptRequest['thinking']): number {
+    if (thinking?.budgetTokens && thinking.budgetTokens > 0) {
+      return Math.max(1024, Math.floor(thinking.budgetTokens));
+    }
+    switch (thinking?.effort) {
+      case 'low':
+        return 2048;
+      case 'high':
+        return 12000;
+      case 'medium':
+      default:
+        return 6000;
+    }
+  }
+
+  /**
+   * Parse streaming response into AgentPromptResult.
+   *
+   * Emits incremental text and thinking deltas via the request callbacks
+   * as they arrive, and returns the aggregated final shape once the stream
+   * completes.
    */
   private async parseStreamingResponse(
     stream: AsyncIterable<Anthropic.MessageStreamEvent>,
+    request: AgentPromptRequest,
   ): Promise<AgentPromptResult> {
     let fullContent = '';
+    let reasoningContent = '';
     let currentToolUse: { id: string; name: string; input: string } | null = null;
     const toolCalls: AgentToolCall[] = [];
 
@@ -200,11 +260,20 @@ export class AnthropicAdapter extends BaseProviderAdapter {
           };
         }
       } else if (chunk.type === 'content_block_delta') {
-        if (chunk.delta.type === 'text_delta') {
-          fullContent += chunk.delta.text;
-        } else if (chunk.delta.type === 'input_json_delta' && currentToolUse) {
-          currentToolUse.input += chunk.delta.partial_json;
+        const delta = chunk.delta as
+          | Anthropic.RawContentBlockDeltaEvent['delta']
+          | { type: 'thinking_delta'; thinking: string }
+          | { type: 'signature_delta'; signature: string };
+        if (delta.type === 'text_delta') {
+          fullContent += delta.text;
+          request.onTextDelta?.(delta.text);
+        } else if (delta.type === 'thinking_delta') {
+          reasoningContent += delta.thinking;
+          request.onReasoningDelta?.(delta.thinking);
+        } else if (delta.type === 'input_json_delta' && currentToolUse) {
+          currentToolUse.input += delta.partial_json;
         }
+        // signature_delta is an opaque cryptographic signature — ignored.
       } else if (chunk.type === 'content_block_stop' && currentToolUse) {
         // Finalize tool call
         try {
@@ -231,11 +300,12 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       }
     }
 
-    if (toolCalls.length > 0) {
-      return this.createToolUseResponse(fullContent, toolCalls);
-    }
+    const reasoning = reasoningContent ? reasoningContent : undefined;
 
-    return this.createTextResponse(fullContent);
+    if (toolCalls.length > 0) {
+      return { ...this.createToolUseResponse(fullContent, toolCalls), reasoning };
+    }
+    return { ...this.createTextResponse(fullContent), reasoning };
   }
 
   /**

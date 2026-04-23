@@ -12,25 +12,22 @@
  *   export default defineFlow({ nodes: [...], edges: [...] });
  *
  * The evaluator enforces a module-import allowlist — `@invect/sdk` (and
- * subpaths), `@invect/actions/*`, and any extra modules the caller explicitly
- * registers via `additionalModules`. Everything else (node builtins, user
- * filesystem paths, network fetches) is blocked via a pre-eval source scan.
+ * subpaths), `@invect/action-kit`, and `@invect/actions/*`. Any extra
+ * specifiers the caller wants to permit can be added via
+ * `additionalAllowedImports`; those modules must resolve via normal Node
+ * module resolution from the evaluator's cwd or node_modules tree.
+ * Everything else (node builtins, user filesystem paths, network fetches)
+ * is blocked via a pre-eval source scan.
  */
 
 import type { ResolvedEdge, SdkFlowNode } from '../types';
 
 export interface EvaluatorOptions {
   /**
-   * Additional modules to expose to the evaluated source. Useful when the
-   * source imports user-registered custom actions from the caller's own repo.
-   * Keys are import specifiers; values are the module objects.
-   */
-  additionalModules?: Record<string, unknown>;
-
-  /**
-   * Additional import specifiers to allow without providing a module. Useful
-   * when the import target is resolvable via Node's own resolution (e.g. a
-   * globally-installed action package). Defaults to `[]`.
+   * Additional import specifiers to allow through the pre-eval scan. The
+   * module must be resolvable via Node's own resolution (e.g. a workspace
+   * or globally-installed action package the caller has already added as a
+   * dependency). Defaults to `[]`.
    */
   additionalAllowedImports?: string[];
 

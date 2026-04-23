@@ -94,9 +94,7 @@ describe('clipboardToSdkText', () => {
   it('emits just the fragment body for a partial selection', () => {
     const data: ClipboardData = {
       sourceFlowId: 'flow-1',
-      nodes: [
-        clipNode({ originalId: 'n1', type: 'core.input', referenceId: 'q' }),
-      ],
+      nodes: [clipNode({ originalId: 'n1', type: 'core.input', referenceId: 'q' })],
       edges: [],
       copyTime: Date.now(),
     };
@@ -344,7 +342,10 @@ describe('full copy-paste round-trip', () => {
     expect(pasted.nodes).toHaveLength(4);
     expect(pasted.edges).toHaveLength(3);
     // Both branch-handle edges survive the round-trip.
-    const handles = pasted.edges.map((e) => e.sourceHandle).filter(Boolean).sort();
+    const handles = pasted.edges
+      .map((e) => e.sourceHandle)
+      .filter(Boolean)
+      .sort();
     expect(handles).toEqual(['false_output', 'true_output']);
   });
 

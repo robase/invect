@@ -122,7 +122,9 @@ export interface ChatToolDefinition {
  * Framework adapters (Express, NestJS, Next.js) serialize these to SSE.
  */
 export type ChatStreamEvent =
+  | { type: 'session'; sessionId: string; flowId?: string }
   | { type: 'text_delta'; text: string }
+  | { type: 'reasoning_delta'; text: string }
   | { type: 'tool_call_start'; toolName: string; toolCallId: string; args: Record<string, unknown> }
   | { type: 'tool_call_result'; toolName: string; toolCallId: string; result: ChatToolResult }
   | { type: 'ui_action'; action: string; data: Record<string, unknown> }

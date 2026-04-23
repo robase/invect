@@ -343,7 +343,9 @@ function formatEvalSuggestion(errors: Array<{ code: string; message: string }>):
  */
 function toFlowExportName(raw: string): string {
   const segments = raw.split(/[^a-zA-Z0-9]+/).filter(Boolean);
-  if (segments.length === 0) {return 'myFlow';}
+  if (segments.length === 0) {
+    return 'myFlow';
+  }
   const camel = segments
     .map((s, i) =>
       i === 0 ? s.charAt(0).toLowerCase() + s.slice(1) : s.charAt(0).toUpperCase() + s.slice(1),

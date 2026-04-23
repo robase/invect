@@ -21,6 +21,11 @@ interface UseCopyPasteOptions {
 // Helpers
 // ---------------------------------------------------------------------------
 
+const DEBUG_PREFIX = '[copy-paste]';
+function log(...args: unknown[]): void {
+  console.debug(DEBUG_PREFIX, ...args);
+}
+
 /** Deep clone JSON-safe data */
 function cloneData<T>(data: T): T {
   return JSON.parse(JSON.stringify(data));
@@ -191,7 +196,9 @@ export function sdkResultToClipboard(
     if (Array.isArray(e)) {
       const sourceId = refToOriginalId.get(e[0]);
       const targetId = refToOriginalId.get(e[1]);
-      if (!sourceId || !targetId) {continue;}
+      if (!sourceId || !targetId) {
+        continue;
+      }
       clipboardEdges.push({
         originalId: `edge-${nanoid()}`,
         source: sourceId,
@@ -201,7 +208,9 @@ export function sdkResultToClipboard(
     } else {
       const sourceId = refToOriginalId.get(e.from);
       const targetId = refToOriginalId.get(e.to);
-      if (!sourceId || !targetId) {continue;}
+      if (!sourceId || !targetId) {
+        continue;
+      }
       clipboardEdges.push({
         originalId: `edge-${nanoid()}`,
         source: sourceId,
@@ -246,7 +255,13 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
   } | null => {
     const { nodes, edges } = useFlowEditorStore.getState();
     const selectedNodes = nodes.filter((n) => n.selected);
+    log('serializeSelection', {
+      totalNodes: nodes.length,
+      selectedNodes: selectedNodes.length,
+      totalEdges: edges.length,
+    });
     if (selectedNodes.length === 0) {
+      log('serializeSelection: no selected nodes, bailing');
       return null;
     }
 
@@ -295,6 +310,13 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
       ...(edge.sourceHandle !== undefined && { sourceHandle: edge.sourceHandle }),
       ...(edge.targetHandle !== undefined && { targetHandle: edge.targetHandle }),
     }));
+
+    log('serializeSelection: built clipboard data', {
+      isFullGraph,
+      nodes: clipboardNodes.length,
+      edges: clipboardEdges.length,
+      types: clipboardNodes.map((n) => n.type),
+    });
 
     return {
       data: {
@@ -408,12 +430,21 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
         });
       }
 
+      log('materializePaste: results', {
+        anchor,
+        isCrossFlow,
+        isEmptyFlow,
+        addedNodes: newNodes.length,
+        addedEdges: newEdges.length,
+        skippedNodes: skippedNodeIds.size,
+      });
+
       if (newNodes.length > 0) {
         useFlowEditorStore.getState().pasteNodesAndEdges(newNodes, newEdges);
       }
 
       if (skippedNodeIds.size > 0) {
-        // Some nodes were skipped due to maxInstances limit
+        log('materializePaste: some nodes skipped due to maxInstances', [...skippedNodeIds]);
       }
     },
     [flowId, getNodeDefinition],
@@ -453,6 +484,11 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
     // Prefer in-memory ref — has correct relative positions from serializeSelection.
     // This covers same-session copy/paste (the common case).
     if (clipboardRef.current) {
+      log('readClipboard: using in-memory ref', {
+        nodes: clipboardRef.current.nodes.length,
+        edges: clipboardRef.current.edges.length,
+        sourceFlowId: clipboardRef.current.sourceFlowId,
+      });
       return clipboardRef.current;
     }
 
@@ -460,14 +496,23 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
     // a text editor, another browser tab, etc.)
     try {
       const text = await navigator.clipboard.readText();
+      log('readClipboard: system clipboard read', {
+        textLength: text.length,
+        preview: text.slice(0, 120),
+      });
       const parsed = parseSDKText(text);
+      log('readClipboard: parseSDKText result', {
+        nodes: parsed.nodes.length,
+        edges: parsed.edges.length,
+      });
       if (parsed.nodes.length > 0) {
         return sdkResultToClipboard(parsed, flowId);
       }
-    } catch {
-      // Permission denied, parse failed, or empty
+    } catch (err) {
+      log('readClipboard: failed', err);
     }
 
+    log('readClipboard: nothing usable found');
     return null;
   }, [flowId]);
 
@@ -476,6 +521,11 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
   // -------------------------------------------------------------------------
   const writeClipboard = useCallback(async (data: ClipboardData, isFullGraph: boolean) => {
     clipboardRef.current = data;
+    log('writeClipboard: in-memory ref set', {
+      nodes: data.nodes.length,
+      edges: data.edges.length,
+      isFullGraph,
+    });
     try {
       // Write SDK code to the system clipboard so pasting into a text editor
       // (VS Code, etc.) produces importable TypeScript helper calls.
@@ -485,9 +535,14 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
       // selections emit just the nodes/edges fragment so the user can paste
       // into an existing flow file.
       const sdkText = clipboardToSdkText(data, isFullGraph);
+      log('writeClipboard: emitted SDK text', {
+        length: sdkText.length,
+        preview: sdkText.slice(0, 200),
+      });
       await navigator.clipboard.writeText(sdkText);
-    } catch {
-      // System clipboard write failed — in-memory ref is still set
+      log('writeClipboard: system clipboard write ok');
+    } catch (err) {
+      log('writeClipboard: system clipboard write failed', err);
     }
   }, []);
 
@@ -496,25 +551,34 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
   // -------------------------------------------------------------------------
 
   const copy = useCallback(async () => {
+    log('copy: invoked');
     const selection = serializeSelection();
     if (!selection) {
+      log('copy: no selection, aborting');
       return;
     }
     await writeClipboard(selection.data, selection.isFullGraph);
+    log('copy: done');
   }, [serializeSelection, writeClipboard]);
 
   const paste = useCallback(async () => {
+    log('paste: invoked');
     const clipboard = await readClipboard();
     if (!clipboard) {
+      log('paste: nothing to paste, aborting');
       return;
     }
     const anchor = getPasteAnchor();
+    log('paste: anchor', anchor);
     materializePaste(clipboard, anchor);
+    log('paste: done');
   }, [readClipboard, getPasteAnchor, materializePaste]);
 
   const cut = useCallback(async () => {
+    log('cut: invoked');
     const selection = serializeSelection();
     if (!selection) {
+      log('cut: no selection, aborting');
       return;
     }
     await writeClipboard(selection.data, selection.isFullGraph);
@@ -524,6 +588,7 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
       .nodes.filter((n) => n.selected)
       .map((n) => n.id);
 
+    log('cut: removing nodes', { count: selectedIds.length });
     if (selectedIds.length > 0) {
       useFlowEditorStore.getState().removeNodes(selectedIds);
     }
@@ -574,27 +639,76 @@ export function useCopyPaste({ flowId, reactFlowInstance }: UseCopyPasteOptions)
       const isBodyFocused = el.tagName === 'BODY';
       const isEditing = isEditingContext(el);
 
+      const isModKey = e.metaKey || e.ctrlKey;
+      const isClipboardKey =
+        isModKey && (e.key === 'c' || e.key === 'x' || e.key === 'v' || e.key === 'd');
+      if (isClipboardKey || e.key === 'Delete' || e.key === 'Backspace') {
+        log('keydown', {
+          key: e.key,
+          mod: isModKey,
+          targetTag: el.tagName,
+          isOnCanvas,
+          isBodyFocused,
+          isEditing,
+        });
+      }
+
       if ((!isOnCanvas && !isBodyFocused) || isEditing) {
+        if (isClipboardKey) {
+          log('keydown: gated out (not-on-canvas or editing)');
+        }
         return;
       }
 
-      // If the user has a text selection anywhere in the document, let the
-      // browser handle copy/cut natively (e.g. copying AI assistant output).
-      const hasTextSelection = (window.getSelection()?.toString().length ?? 0) > 0;
+      // If the user has a text selection *outside* the react-flow canvas
+      // (e.g. AI chat output, config panels), let the browser handle
+      // copy/cut natively. A stray selection inside the canvas — commonly
+      // a side-effect of drag-selecting nodes over their labels — is
+      // treated as no selection so node-copy still wins.
+      const sel = window.getSelection();
+      const selText = sel?.toString() ?? '';
+      let selInsideCanvas = false;
+      if (selText.length > 0 && sel && sel.rangeCount > 0) {
+        const container = sel.getRangeAt(0).commonAncestorContainer;
+        const containerEl =
+          container.nodeType === Node.ELEMENT_NODE
+            ? (container as Element)
+            : container.parentElement;
+        selInsideCanvas = !!containerEl?.closest('.react-flow');
+      }
+      const hasExternalTextSelection = selText.length > 0 && !selInsideCanvas;
 
-      const isMod = e.metaKey || e.ctrlKey;
+      if (isClipboardKey) {
+        log('keydown: selection state', {
+          selTextLength: selText.length,
+          selInsideCanvas,
+          hasExternalTextSelection,
+        });
+      }
+
+      const isMod = isModKey;
 
       if (isMod && e.key === 'c') {
-        if (hasTextSelection) {
-          return;
-        } // let browser copy selected text
-        e.preventDefault();
-        await copy();
-      } else if (isMod && e.key === 'x') {
-        if (hasTextSelection) {
+        if (hasExternalTextSelection) {
+          log('c: deferring to native (external text selection)');
           return;
         }
         e.preventDefault();
+        if (selInsideCanvas) {
+          log('c: clearing stray canvas text selection');
+          sel?.removeAllRanges();
+        }
+        await copy();
+      } else if (isMod && e.key === 'x') {
+        if (hasExternalTextSelection) {
+          log('x: deferring to native (external text selection)');
+          return;
+        }
+        e.preventDefault();
+        if (selInsideCanvas) {
+          log('x: clearing stray canvas text selection');
+          sel?.removeAllRanges();
+        }
         await cut();
       } else if (isMod && e.key === 'v') {
         e.preventDefault();

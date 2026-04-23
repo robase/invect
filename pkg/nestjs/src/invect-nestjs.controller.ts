@@ -1034,6 +1034,41 @@ export class InvectController {
     }
   }
 
+  /**
+   * GET /chat/stream/:sessionId - Reattach to an in-flight chat session.
+   * Replays buffered events then tails live events until completion.
+   */
+  @Get('chat/stream/:sessionId')
+  async reattachChatStream(
+    @Param('sessionId') sessionId: string,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    const abortController = new AbortController();
+    req.on('close', () => abortController.abort());
+
+    try {
+      const stream = this.invect.chat.subscribeToSession(sessionId, abortController.signal);
+      for await (const event of stream) {
+        if (res.destroyed) {break;}
+        res.write(`event: ${(event as ChatStreamEvent).type}\ndata: ${JSON.stringify(event)}\n\n`);
+      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Chat reattach failed';
+      res.write(
+        `event: error\ndata: ${JSON.stringify({ type: 'error', message, recoverable: false })}\n\n`,
+      );
+    } finally {
+      res.end();
+    }
+  }
+
   // =====================================
   // CHAT MESSAGE PERSISTENCE ROUTES
   // =====================================

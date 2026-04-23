@@ -47,6 +47,32 @@ export interface AgentPromptRequest {
   maxTokens?: number;
   toolChoice?: 'auto' | 'none' | { type: 'tool'; name: string };
   parallelToolCalls?: boolean;
+  /** Abort signal to cancel an in-flight request (e.g. client disconnect). */
+  signal?: AbortSignal;
+  /** Per-request timeout in milliseconds. Overrides adapter default. */
+  timeoutMs?: number;
+  /**
+   * Request extended reasoning / "thinking" tokens when the model supports it.
+   * Adapters silently no-op when unsupported so callers can always pass this.
+   */
+  thinking?: {
+    enabled: boolean;
+    /**
+     * Soft budget in tokens for the thinking block (Anthropic).
+     * Mapped to `reasoning.max_tokens` on OpenRouter. Ignored by providers
+     * that only accept effort levels.
+     */
+    budgetTokens?: number;
+    /**
+     * Effort level for providers that use qualitative knobs (OpenAI o-series,
+     * OpenRouter generic). Mapped heuristically to `budgetTokens` elsewhere.
+     */
+    effort?: 'low' | 'medium' | 'high';
+  };
+  /** Called with incremental assistant text as the stream arrives. */
+  onTextDelta?: (text: string) => void;
+  /** Called with incremental reasoning / thinking text as the stream arrives. */
+  onReasoningDelta?: (text: string) => void;
 }
 
 export interface BatchSubmissionResult {

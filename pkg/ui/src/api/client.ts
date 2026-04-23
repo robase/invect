@@ -797,6 +797,25 @@ class ApiClient {
     return response;
   }
 
+  /**
+   * Reattach to an in-flight chat session. Replays buffered events and then
+   * tails live events until generation completes. Returns 404 if the session
+   * has been evicted (server restart, grace window expired).
+   */
+  async reattachChatStream(sessionId: string, signal?: AbortSignal): Promise<Response> {
+    const response = await this.rawRequest(`/chat/stream/${encodeURIComponent(sessionId)}`, {
+      method: 'GET',
+      signal,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Chat reattach failed: ${response.status}`);
+    }
+
+    return response;
+  }
+
   // =====================================
   // CHAT MESSAGE PERSISTENCE
   // =====================================

@@ -21,6 +21,13 @@ export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system' | 'tool';
   content: string;
+  /**
+   * Accumulated reasoning / thinking tokens if the model emitted any.
+   * Rendered as a collapsible "Thought for Xs" block above the message.
+   */
+  reasoning?: string;
+  /** Wall-clock duration the model spent thinking, in milliseconds. */
+  reasoningDurationMs?: number;
   toolCalls?: Array<{ id: string; name: string; input: Record<string, unknown> }>;
   toolCallId?: string;
   /** Metadata for rendering tool call/result UI */
@@ -37,13 +44,18 @@ export interface ChatMessage {
 
 export interface ChatStreamEvent {
   type:
+    | 'session'
     | 'text_delta'
+    | 'reasoning_delta'
     | 'tool_call_start'
     | 'tool_call_result'
     | 'ui_action'
     | 'suggestions'
     | 'error'
     | 'done';
+  /** Populated on `session` events — id used to reattach after a refresh. */
+  sessionId?: string;
+  flowId?: string;
   text?: string;
   toolName?: string;
   toolCallId?: string;
@@ -105,6 +117,10 @@ interface ChatState {
   abortController: AbortController | null;
   /** Accumulated text for the current streaming assistant message */
   streamingText: string;
+  /** Accumulated reasoning / thinking tokens for the current streaming turn */
+  streamingReasoning: string;
+  /** Wall-clock timestamp when the first reasoning token arrived */
+  streamingReasoningStartedAt: number | null;
   /** Error message to display */
   error: string | null;
   /** Prompt queued from the overlay — ChatPanel consumes and clears it */
@@ -119,6 +135,25 @@ interface ChatState {
   currentPlan: ChatPlan | null;
   /** Suggested follow-up actions from the assistant */
   suggestions: Array<{ label: string; prompt: string }>;
+  /**
+   * Session id of the in-flight chat turn (if any), per flow. Persisted so a
+   * page refresh can reattach to the running generation via
+   * `GET /chat/stream/:sessionId`.
+   *
+   * Keyed by `flowId ?? '__no_flow__'`. Cleared when the session completes
+   * (done/error) or the server reports the session as expired.
+   */
+  activeSessionsByFlow: Record<string, string | null>;
+  /**
+   * User message that kicked off the in-flight turn, persisted alongside
+   * `activeSessionsByFlow` so a refresh can restore it — the server still
+   * has the conversation in memory but the client's in-memory user message
+   * is gone until the final persist runs at stream end.
+   */
+  pendingUserMessagesByFlow: Record<
+    string,
+    { id: string; content: string; createdAt: number } | null
+  >;
 }
 
 interface ChatActions {
@@ -132,6 +167,7 @@ interface ChatActions {
   addUserMessage: (content: string) => string;
   startStreaming: (controller: AbortController) => void;
   appendStreamingText: (text: string) => void;
+  appendStreamingReasoning: (text: string) => void;
   addToolCallMessage: (toolName: string, toolCallId: string, args: Record<string, unknown>) => void;
   updateToolCallResult: (
     toolCallId: string,
@@ -167,6 +203,24 @@ interface ChatActions {
   setPlan: (plan: ChatPlan) => void;
   /** Set follow-up suggestions (cleared on next user message) */
   setSuggestions: (suggestions: Array<{ label: string; prompt: string }>) => void;
+  /** Record the session id for the current in-flight turn on a flow. */
+  setActiveSessionId: (flowId: string | null | undefined, sessionId: string | null) => void;
+  /** Read the session id for a flow (if any). */
+  getActiveSessionId: (flowId: string | null | undefined) => string | null;
+  /** Record / read the pending user message for a flow (see state docs). */
+  setPendingUserMessage: (
+    flowId: string | null | undefined,
+    message: { id: string; content: string; createdAt: number } | null,
+  ) => void;
+  getPendingUserMessage: (
+    flowId: string | null | undefined,
+  ) => { id: string; content: string; createdAt: number } | null;
+  /**
+   * Reset the mid-turn streaming accumulators so a reattach can replay events
+   * from the beginning without double-counting. Leaves finalized messages
+   * and the persisted session id untouched.
+   */
+  resetStreamingAccumulators: () => void;
 }
 
 type ChatStore = ChatState & ChatActions;
@@ -184,6 +238,8 @@ const initialState: ChatState = {
   isStreaming: false,
   abortController: null,
   streamingText: '',
+  streamingReasoning: '',
+  streamingReasoningStartedAt: null,
   error: null,
   pendingPrompt: null,
   _dirty: false,
@@ -191,7 +247,11 @@ const initialState: ChatState = {
   settings: DEFAULT_CHAT_SETTINGS,
   currentPlan: null,
   suggestions: [],
+  activeSessionsByFlow: {},
+  pendingUserMessagesByFlow: {},
 };
+
+const flowKey = (flowId: string | null | undefined): string => flowId ?? '__no_flow__';
 
 // =====================================
 // Store
@@ -221,6 +281,8 @@ export const useChatStore = create<ChatStore>()(
             s.activeFlowId = flowId;
             s.messages = [];
             s.streamingText = '';
+            s.streamingReasoning = '';
+            s.streamingReasoningStartedAt = null;
             s.error = null;
             s._dirty = false;
             s.isLoadingHistory = false;
@@ -260,6 +322,8 @@ export const useChatStore = create<ChatStore>()(
             s.isStreaming = true;
             s.abortController = controller as unknown as AbortController; // immer doesn't proxy AbortController
             s.streamingText = '';
+            s.streamingReasoning = '';
+            s.streamingReasoningStartedAt = null;
           }),
 
         appendStreamingText: (text) =>
@@ -267,18 +331,34 @@ export const useChatStore = create<ChatStore>()(
             s.streamingText += text;
           }),
 
+        appendStreamingReasoning: (text) =>
+          set((s) => {
+            if (s.streamingReasoningStartedAt === null) {
+              s.streamingReasoningStartedAt = Date.now();
+            }
+            s.streamingReasoning += text;
+          }),
+
         addToolCallMessage: (toolName, toolCallId, args) =>
           set((s) => {
             // Commit any accumulated streaming text as a separate message BEFORE
             // the tool call so that text and tool calls interleave chronologically.
-            if (s.streamingText.trim()) {
+            if (s.streamingText.trim() || s.streamingReasoning.trim()) {
+              const reasoningDurationMs =
+                s.streamingReasoningStartedAt !== null
+                  ? Date.now() - s.streamingReasoningStartedAt
+                  : undefined;
               s.messages.push({
                 id: genId(),
                 role: 'assistant',
                 content: s.streamingText,
+                reasoning: s.streamingReasoning || undefined,
+                reasoningDurationMs,
                 createdAt: Date.now(),
               });
               s.streamingText = '';
+              s.streamingReasoning = '';
+              s.streamingReasoningStartedAt = null;
               s._dirty = true;
             }
             s.messages.push({
@@ -310,16 +390,24 @@ export const useChatStore = create<ChatStore>()(
 
         finalizeAssistantMessage: () =>
           set((s) => {
-            if (s.streamingText.trim()) {
+            if (s.streamingText.trim() || s.streamingReasoning.trim()) {
+              const reasoningDurationMs =
+                s.streamingReasoningStartedAt !== null
+                  ? Date.now() - s.streamingReasoningStartedAt
+                  : undefined;
               s.messages.push({
                 id: genId(),
                 role: 'assistant',
                 content: s.streamingText,
+                reasoning: s.streamingReasoning || undefined,
+                reasoningDurationMs,
                 createdAt: Date.now(),
               });
               s._dirty = true;
             }
             s.streamingText = '';
+            s.streamingReasoning = '';
+            s.streamingReasoningStartedAt = null;
             s.isStreaming = false;
             s.abortController = null;
           }),
@@ -334,17 +422,25 @@ export const useChatStore = create<ChatStore>()(
             }
           }
           set((s) => {
-            // Finalize any partial text
-            if (s.streamingText.trim()) {
+            // Finalize any partial text + reasoning
+            if (s.streamingText.trim() || s.streamingReasoning.trim()) {
+              const reasoningDurationMs =
+                s.streamingReasoningStartedAt !== null
+                  ? Date.now() - s.streamingReasoningStartedAt
+                  : undefined;
               s.messages.push({
                 id: genId(),
                 role: 'assistant',
                 content: s.streamingText,
+                reasoning: s.streamingReasoning || undefined,
+                reasoningDurationMs,
                 createdAt: Date.now(),
               });
               s._dirty = true;
             }
             s.streamingText = '';
+            s.streamingReasoning = '';
+            s.streamingReasoningStartedAt = null;
             s.isStreaming = false;
             s.abortController = null;
           });
@@ -442,10 +538,46 @@ export const useChatStore = create<ChatStore>()(
           set((s) => {
             s.suggestions = suggestions;
           }),
+
+        setActiveSessionId: (flowId, sessionId) =>
+          set((s) => {
+            const key = flowKey(flowId);
+            if (sessionId === null) {
+              delete s.activeSessionsByFlow[key];
+            } else {
+              s.activeSessionsByFlow[key] = sessionId;
+            }
+          }),
+
+        getActiveSessionId: (flowId) => get().activeSessionsByFlow[flowKey(flowId)] ?? null,
+
+        setPendingUserMessage: (flowId, message) =>
+          set((s) => {
+            const key = flowKey(flowId);
+            if (message === null) {
+              delete s.pendingUserMessagesByFlow[key];
+            } else {
+              s.pendingUserMessagesByFlow[key] = message;
+            }
+          }),
+
+        getPendingUserMessage: (flowId) => get().pendingUserMessagesByFlow[flowKey(flowId)] ?? null,
+
+        resetStreamingAccumulators: () =>
+          set((s) => {
+            s.streamingText = '';
+            s.streamingReasoning = '';
+            s.streamingReasoningStartedAt = null;
+            s.suggestions = [];
+          }),
       })),
       {
         name: 'invect-chat-settings',
-        partialize: (state) => ({ settings: state.settings }),
+        partialize: (state) => ({
+          settings: state.settings,
+          activeSessionsByFlow: state.activeSessionsByFlow,
+          pendingUserMessagesByFlow: state.pendingUserMessagesByFlow,
+        }),
       },
     ),
     { name: 'chat' },
@@ -457,6 +589,9 @@ export const useChatOpen = () => useChatStore((s) => s.isOpen);
 export const useChatMessages = () => useChatStore((s) => s.messages);
 export const useChatStreaming = () => useChatStore((s) => s.isStreaming);
 export const useChatStreamingText = () => useChatStore((s) => s.streamingText);
+export const useChatStreamingReasoning = () => useChatStore((s) => s.streamingReasoning);
+export const useChatStreamingReasoningStartedAt = () =>
+  useChatStore((s) => s.streamingReasoningStartedAt);
 export const useChatError = () => useChatStore((s) => s.error);
 export const useChatLoadingHistory = () => useChatStore((s) => s.isLoadingHistory);
 export const useChatSettingsPanelOpen = () => useChatStore((s) => s.isSettingsPanelOpen);

@@ -6,6 +6,7 @@ import React, { useState, useCallback, useRef, useEffect, useLayoutEffect, useMe
 import {
   MessageSquare,
   Bot,
+  Brain,
   Loader2,
   AlertCircle,
   ChevronRight,
@@ -26,7 +27,11 @@ import { Button } from '~/components/ui/button';
 import { Textarea } from '~/components/ui/textarea';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '~/components/ui/collapsible';
 import type { ChatMessage } from './chat.store';
-import { useChatStore } from './chat.store';
+import {
+  useChatStore,
+  useChatStreamingReasoning,
+  useChatStreamingReasoningStartedAt,
+} from './chat.store';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { InlineCredentialSetup } from './InlineCredentialSetup';
 import { CreateCredentialModal } from '~/components/credentials/CreateCredentialModal';
@@ -59,6 +64,8 @@ export function ChatMessageList({
   onOpenSettings: _onOpenSettings,
   onSendMessage,
 }: ChatMessageListProps) {
+  const streamingReasoning = useChatStreamingReasoning();
+  const streamingReasoningStartedAt = useChatStreamingReasoningStartedAt();
   const _scrollRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll: only scroll to bottom if already near bottom (within 80px)
@@ -114,7 +121,7 @@ export function ChatMessageList({
     if (isNearBottomRef.current && viewportRef.current) {
       viewportRef.current.scrollTop = viewportRef.current.scrollHeight;
     }
-  }, [messages, streamingText]);
+  }, [messages, streamingText, streamingReasoning]);
 
   return (
     <ScrollArea className="flex-1 min-h-0" onScrollCapture={handleScroll} ref={scrollAreaRef}>
@@ -166,6 +173,16 @@ export function ChatMessageList({
           );
         })}
 
+        {/* Live thinking indicator — clickable loader that expands to show the
+            stream of reasoning tokens from the model. */}
+        {isStreaming && (streamingReasoning || !streamingText) && (
+          <ThinkingBlock
+            reasoning={streamingReasoning}
+            startedAt={streamingReasoningStartedAt}
+            isLive={true}
+          />
+        )}
+
         {/* Streaming indicator */}
         {isStreaming && streamingText && (
           <div className="flex gap-2 py-2">
@@ -178,13 +195,6 @@ export function ChatMessageList({
               <MarkdownRenderer content={streamingText} />
               <span className="inline-block ml-0.5 w-1.5 h-4 bg-primary/60 animate-pulse rounded-sm" />
             </div>
-          </div>
-        )}
-
-        {isStreaming && !streamingText && (
-          <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
-            <Loader2 className="size-3 animate-spin text-primary/60" />
-            <span>Thinking…</span>
           </div>
         )}
 
@@ -462,6 +472,13 @@ function AssistantMessageBubble({ message }: { message: ChatMessage }) {
         </div>
         <span className="text-[10px] text-muted-foreground/50 font-medium">Chat</span>
       </div>
+      {message.reasoning && (
+        <ThinkingBlock
+          reasoning={message.reasoning}
+          durationMs={message.reasoningDurationMs}
+          isLive={false}
+        />
+      )}
       <div className="relative min-w-0 px-3 py-2 overflow-hidden text-xs border rounded-lg rounded-tl-sm text-foreground bg-muted/30 border-border/40 max-w-[95%]">
         <MarkdownRenderer content={message.content} />
         <button
@@ -484,6 +501,105 @@ function AssistantMessageBubble({ message }: { message: ChatMessage }) {
         })}
       </span>
     </div>
+  );
+}
+
+// =====================================
+// ThinkingBlock — collapsible reasoning-token display
+// =====================================
+
+/**
+ * Shown in two modes:
+ *   • `isLive`: reasoning is actively streaming — shows spinning loader,
+ *     "Thinking…" label, live timer, and a chevron that expands to reveal
+ *     the reasoning-token stream.
+ *   • Not live: a compact "Thought for Xs" pill on a finalized message,
+ *     click to expand the full reasoning text.
+ *
+ * The whole block is a single clickable button so any click on the loader
+ * toggles the expansion, matching the "click the loader to expand" UX.
+ */
+function ThinkingBlock({
+  reasoning,
+  startedAt,
+  durationMs,
+  isLive,
+}: {
+  reasoning: string;
+  startedAt?: number | null;
+  durationMs?: number;
+  isLive: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [nowTick, setNowTick] = useState(() => Date.now());
+
+  // Tick once per second while live so the elapsed timer updates.
+  useEffect(() => {
+    if (!isLive || !startedAt) {
+      return;
+    }
+    const interval = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, [isLive, startedAt]);
+
+  const elapsedMs = isLive
+    ? startedAt
+      ? Math.max(0, nowTick - startedAt)
+      : null
+    : (durationMs ?? null);
+  const elapsedLabel = elapsedMs !== null ? `${Math.max(1, Math.round(elapsedMs / 1000))}s` : null;
+
+  const label = isLive ? (reasoning ? 'Thinking' : 'Thinking…') : 'Thought';
+
+  const hasBody = reasoning.trim().length > 0;
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen} className="w-full max-w-[95%] mb-1">
+      <CollapsibleTrigger
+        disabled={!hasBody}
+        className={cn(
+          'flex items-center gap-1.5 py-1 px-2 text-xs rounded-md transition-colors',
+          'text-muted-foreground',
+          hasBody && 'hover:bg-muted/40 hover:text-foreground cursor-pointer',
+          !hasBody && 'cursor-default',
+        )}
+      >
+        {isLive ? (
+          <Loader2 className="size-3 animate-spin text-primary/70" />
+        ) : (
+          <Brain className="size-3 text-primary/70" />
+        )}
+        <span className="font-medium">{label}</span>
+        {elapsedLabel && (
+          <span className="text-muted-foreground/70 tabular-nums">
+            {isLive ? 'for ' : 'for '}
+            {elapsedLabel}
+          </span>
+        )}
+        {hasBody &&
+          (open ? (
+            <ChevronDown className="size-3 ml-0.5 text-muted-foreground/70" />
+          ) : (
+            <ChevronRight className="size-3 ml-0.5 text-muted-foreground/70" />
+          ))}
+      </CollapsibleTrigger>
+      {hasBody && (
+        <CollapsibleContent>
+          <div
+            className={cn(
+              'mt-1 ml-1 pl-3 py-1.5 pr-2 border-l-2 border-primary/20',
+              'text-[11px] leading-relaxed text-muted-foreground/90 whitespace-pre-wrap',
+              'max-h-75 overflow-y-auto',
+            )}
+          >
+            {reasoning}
+            {isLive && (
+              <span className="inline-block ml-0.5 w-1 h-3 bg-primary/40 animate-pulse rounded-sm align-middle" />
+            )}
+          </div>
+        </CollapsibleContent>
+      )}
+    </Collapsible>
   );
 }
 

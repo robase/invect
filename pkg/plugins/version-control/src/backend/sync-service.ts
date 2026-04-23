@@ -15,6 +15,7 @@ import type {
   ConfigureSyncInput,
 } from '../shared/types';
 import { emitSdkSource } from '@invect/sdk';
+import { substituteCredentialEnvs } from './credential-env-substitution';
 
 interface FlowRow {
   id: string;
@@ -638,7 +639,13 @@ export class VcSyncService {
       },
     });
 
-    return { content: code, version: fv.version };
+    // Rewrite raw `credentialId: "cred_xxx"` refs in the human-readable
+    // section to `{{env.XXX_CREDENTIAL}}` so committed flow files are
+    // portable across Invect instances. The footer keeps the raw id for
+    // authoritative round-trip on pull.
+    const content = substituteCredentialEnvs(code);
+
+    return { content, version: fv.version };
   }
 
   private async importFlowContent(
@@ -818,7 +825,9 @@ interface VcSyncHistoryRow {
  */
 function toFlowExportName(raw: string): string {
   const segments = raw.split(/[^a-zA-Z0-9]+/).filter(Boolean);
-  if (segments.length === 0) {return 'myFlow';}
+  if (segments.length === 0) {
+    return 'myFlow';
+  }
   const camel = segments
     .map((s, i) =>
       i === 0 ? s.charAt(0).toLowerCase() + s.slice(1) : s.charAt(0).toUpperCase() + s.slice(1),
@@ -876,9 +885,7 @@ function mapHistoryRow(r: VcSyncHistoryRow): VcSyncHistoryRecord {
  * Falls back to extracting raw `nodes` and `edges` arrays if defineFlow
  * wrapper is not found.
  */
-export function parseFlowTsContent(
-  content: string,
-): { nodes: unknown[]; edges: unknown[] } | null {
+export function parseFlowTsContent(content: string): { nodes: unknown[]; edges: unknown[] } | null {
   // Strategy 1 (preferred): Look for the embedded JSON block comment.
   // The serializer embeds `/* @invect-definition {...} */` for reliable round-tripping.
   const jsonCommentMatch = content.match(/\/\*\s*@invect-definition\s+([\s\S]*?)\s*\*\//);

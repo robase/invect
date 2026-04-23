@@ -69,9 +69,7 @@ describe('Sync plugin push/pull round-trip', () => {
 
     it('footer survives even if the TS body is hand-edited into nonsense', () => {
       const definition = {
-        nodes: [
-          { id: 'node_a', type: 'core.input', referenceId: 'x', params: {} },
-        ],
+        nodes: [{ id: 'node_a', type: 'core.input', referenceId: 'x', params: {} }],
         edges: [],
       };
       const { code } = emitSdkSource(definition, {
@@ -301,9 +299,7 @@ export default defineFlow({
 
     it('subsequent pushes of the same definition produce identical content', () => {
       const definition = {
-        nodes: [
-          { id: 'stable', type: 'core.input', referenceId: 'x', params: {} },
-        ],
+        nodes: [{ id: 'stable', type: 'core.input', referenceId: 'x', params: {} }],
         edges: [],
         metadata: { name: 'Stable flow' },
       };

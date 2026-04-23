@@ -55,10 +55,21 @@ const DEFAULTS: Required<InvectLayoutOptions> = {
 
 interface LaidOutNode {
   id: string;
+  /** Top-left X of the rendered node card. This is the position ReactFlow expects. */
   x: number;
+  /** Top-left Y of the rendered node card. */
   y: number;
+  /** Card width (what the node's DOM element reports). */
   width: number;
+  /** Card height. */
   height: number;
+  /** Full reserved bounding width including any attached appendix (tools box). */
+  reservedWidth: number;
+  /** Full reserved bounding height including any attached appendix. */
+  reservedHeight: number;
+  /** Card's top-left relative to the reserved box's top-left. */
+  cardOffsetX: number;
+  cardOffsetY: number;
 }
 
 interface BoundingBox {
@@ -68,15 +79,99 @@ interface BoundingBox {
   height: number;
 }
 
-function nodeDims(
+/**
+ * Agent tools appendix dimensions. The tools box is a fixed-size visual panel
+ * rendered adjacent to agent nodes via `NodeAppendix` (absolute-positioned, so
+ * it doesn't contribute to ReactFlow's `measured` dimensions). We reserve space
+ * for it here so dagre doesn't overlap it with neighboring nodes.
+ */
+const AGENT_TOOLS_WIDTH = 220;
+const AGENT_TOOLS_HEIGHT = 170;
+const AGENT_TOOLS_GAP = 16;
+
+type EffectiveDims = Omit<LaidOutNode, 'id' | 'x' | 'y'>;
+
+/**
+ * Compute the full visual footprint of a node (card + any appendix), plus the
+ * card's offset within that footprint. Non-agent nodes have reserved dims equal
+ * to card dims.
+ */
+function effectiveNodeDims(
   node: LayoutNode,
   fallbackW: number,
   fallbackH: number,
-): { width: number; height: number } {
-  return {
-    width: node.measured?.width ?? node.width ?? fallbackW,
-    height: node.measured?.height ?? node.height ?? fallbackH,
-  };
+): EffectiveDims {
+  const cardWidth = node.measured?.width ?? node.width ?? fallbackW;
+  const cardHeight = node.measured?.height ?? node.height ?? fallbackH;
+
+  const nodeType = node.data?.type ?? node.type;
+  const isAgent = nodeType === 'core.agent' || nodeType === 'primitives.agent';
+
+  if (!isAgent) {
+    return {
+      width: cardWidth,
+      height: cardHeight,
+      reservedWidth: cardWidth,
+      reservedHeight: cardHeight,
+      cardOffsetX: 0,
+      cardOffsetY: 0,
+    };
+  }
+
+  const params = node.data?.params as { toolsPosition?: string } | undefined;
+  const position = params?.toolsPosition ?? 'bottom';
+
+  switch (position) {
+    case 'top': {
+      const reservedWidth = Math.max(cardWidth, AGENT_TOOLS_WIDTH);
+      const reservedHeight = cardHeight + AGENT_TOOLS_GAP + AGENT_TOOLS_HEIGHT;
+      return {
+        width: cardWidth,
+        height: cardHeight,
+        reservedWidth,
+        reservedHeight,
+        cardOffsetX: (reservedWidth - cardWidth) / 2,
+        cardOffsetY: AGENT_TOOLS_HEIGHT + AGENT_TOOLS_GAP,
+      };
+    }
+    case 'left': {
+      const reservedWidth = cardWidth + AGENT_TOOLS_GAP + AGENT_TOOLS_WIDTH;
+      const reservedHeight = Math.max(cardHeight, AGENT_TOOLS_HEIGHT);
+      return {
+        width: cardWidth,
+        height: cardHeight,
+        reservedWidth,
+        reservedHeight,
+        cardOffsetX: AGENT_TOOLS_WIDTH + AGENT_TOOLS_GAP,
+        cardOffsetY: (reservedHeight - cardHeight) / 2,
+      };
+    }
+    case 'right': {
+      const reservedWidth = cardWidth + AGENT_TOOLS_GAP + AGENT_TOOLS_WIDTH;
+      const reservedHeight = Math.max(cardHeight, AGENT_TOOLS_HEIGHT);
+      return {
+        width: cardWidth,
+        height: cardHeight,
+        reservedWidth,
+        reservedHeight,
+        cardOffsetX: 0,
+        cardOffsetY: (reservedHeight - cardHeight) / 2,
+      };
+    }
+    case 'bottom':
+    default: {
+      const reservedWidth = Math.max(cardWidth, AGENT_TOOLS_WIDTH);
+      const reservedHeight = cardHeight + AGENT_TOOLS_GAP + AGENT_TOOLS_HEIGHT;
+      return {
+        width: cardWidth,
+        height: cardHeight,
+        reservedWidth,
+        reservedHeight,
+        cardOffsetX: (reservedWidth - cardWidth) / 2,
+        cardOffsetY: 0,
+      };
+    }
+  }
 }
 
 function findComponents<N extends LayoutNode, E extends LayoutEdge>(
@@ -144,14 +239,16 @@ function layoutComponent<N extends LayoutNode, E extends LayoutEdge>(
   });
   g.setDefaultEdgeLabel(() => ({}));
 
-  const dims = new Map<string, { width: number; height: number }>();
+  const dims = new Map<string, EffectiveDims>();
   for (const node of nodes) {
     if (!componentIds.has(node.id)) {
       continue;
     }
-    const { width, height } = nodeDims(node, opts.nodeWidth, opts.nodeHeight);
-    dims.set(node.id, { width, height });
-    g.setNode(node.id, { width, height });
+    const d = effectiveNodeDims(node, opts.nodeWidth, opts.nodeHeight);
+    dims.set(node.id, d);
+    // Feed dagre the reserved footprint so it allocates enough space for the
+    // tools appendix — otherwise neighboring ranks can visually overlap it.
+    g.setNode(node.id, { width: d.reservedWidth, height: d.reservedHeight });
   }
 
   for (const edge of edges) {
@@ -165,17 +262,27 @@ function layoutComponent<N extends LayoutNode, E extends LayoutEdge>(
 
   const laidOut: LaidOutNode[] = [];
   for (const id of componentIds) {
-    const node = g.node(id);
-    if (!node) {
+    const dagreNode = g.node(id);
+    if (!dagreNode) {
       continue;
     }
-    const d = dims.get(id) ?? { width: opts.nodeWidth, height: opts.nodeHeight };
+    const d = dims.get(id);
+    if (!d) {
+      continue;
+    }
+    // dagre returns the CENTER of the reserved box; translate to card top-left.
+    const reservedLeft = dagreNode.x - d.reservedWidth / 2;
+    const reservedTop = dagreNode.y - d.reservedHeight / 2;
     laidOut.push({
       id,
-      x: node.x - d.width / 2,
-      y: node.y - d.height / 2,
+      x: reservedLeft + d.cardOffsetX,
+      y: reservedTop + d.cardOffsetY,
       width: d.width,
       height: d.height,
+      reservedWidth: d.reservedWidth,
+      reservedHeight: d.reservedHeight,
+      cardOffsetX: d.cardOffsetX,
+      cardOffsetY: d.cardOffsetY,
     });
   }
 
@@ -186,10 +293,53 @@ function layoutComponent<N extends LayoutNode, E extends LayoutEdge>(
 // Post-processing passes
 // ---------------------------------------------------------------------------
 
-function centerMultiOutputBranches<E extends LayoutEdge>(laidOut: LaidOutNode[], edges: E[]): void {
-  const byId = new Map(laidOut.map((n) => [n.id, n]));
+/**
+ * Resolve the declared top-to-bottom handle order for a branching node.
+ *
+ * For `core.switch` / `primitives.switch`: the slugs from `params.cases`
+ * (in user-defined order), followed by `"default"` last — matching how the
+ * switch card renders its handles visually.
+ *
+ * For `core.if_else` / `primitives.if_else`: `["true_output", "false_output"]`.
+ *
+ * Returns `undefined` for other nodes (caller falls back to edge-insertion order).
+ */
+function resolveDeclaredHandleOrder(node: LayoutNode | undefined): string[] | undefined {
+  if (!node) {
+    return undefined;
+  }
+  const nodeType = node.data?.type ?? node.type;
 
-  // Group edges by source, then by source handle
+  if (nodeType === 'core.switch' || nodeType === 'primitives.switch') {
+    const params = node.data?.params as { cases?: unknown } | undefined;
+    const cases = params?.cases;
+    if (Array.isArray(cases)) {
+      const slugs = cases
+        .map((c) =>
+          typeof c === 'object' && c !== null ? (c as { slug?: unknown }).slug : undefined,
+        )
+        .filter((s): s is string => typeof s === 'string');
+      return [...slugs, 'default'];
+    }
+  }
+
+  if (nodeType === 'core.if_else' || nodeType === 'primitives.if_else') {
+    return ['true_output', 'false_output'];
+  }
+
+  return undefined;
+}
+
+function centerMultiOutputBranches<N extends LayoutNode, E extends LayoutEdge>(
+  laidOut: LaidOutNode[],
+  nodes: N[],
+  edges: E[],
+): void {
+  const byId = new Map(laidOut.map((n) => [n.id, n]));
+  const nodeById = new Map(nodes.map((n) => [n.id, n]));
+
+  // Group edges by source, then by source handle — handle keys preserve
+  // first-seen order via Map insertion.
   const bySource = new Map<string, Map<string, string[]>>();
   for (const edge of edges) {
     const src = edge.source;
@@ -204,7 +354,10 @@ function centerMultiOutputBranches<E extends LayoutEdge>(laidOut: LaidOutNode[],
     (handleMap.get(handle) as string[]).push(edge.target);
   }
 
-  const branchSpacing = 90;
+  // Minimum per-slot height — short nodes still get reasonable breathing room.
+  const MIN_SLOT_HEIGHT = 60;
+  // Gap between adjacent slot reserved boxes.
+  const SLOT_GAP = 30;
 
   for (const [sourceId, handleMap] of bySource) {
     if (handleMap.size < 2) {
@@ -215,23 +368,62 @@ function centerMultiOutputBranches<E extends LayoutEdge>(laidOut: LaidOutNode[],
       continue;
     }
 
-    // Sort handles: alpha, then reverse so "true" sits above "false", "case_a" above "case_b", etc.
-    const handles = Array.from(handleMap.keys()).sort().reverse();
-    const totalSpan = (handles.length - 1) * branchSpacing;
-    const sourceCenterY = source.y + source.height / 2;
-    const startY = sourceCenterY - totalSpan / 2;
+    // Prefer the node's declared handle order (matches how handles render on
+    // the card). Fall back to edge-insertion order if the node type is unknown.
+    const declared = resolveDeclaredHandleOrder(nodeById.get(sourceId));
+    const liveKeys = Array.from(handleMap.keys());
+    let handles: string[];
+    if (declared) {
+      const declaredSet = new Set(declared);
+      handles = declared.filter((h) => handleMap.has(h));
+      // Append any live handles not in the declared list (legacy data, renamed
+      // slugs, etc.) so nothing is silently dropped.
+      for (const k of liveKeys) {
+        if (!declaredSet.has(k)) {
+          handles.push(k);
+        }
+      }
+    } else {
+      handles = liveKeys;
+    }
+
+    // Fix #3: per-slot spacing based on target reserved heights. A slot's
+    // height is the max reserved height across all targets sharing that handle
+    // (clamped to MIN_SLOT_HEIGHT). This keeps short nodes tight while
+    // reserving enough room for tall targets (e.g. agent + tools appendix).
+    const slotHeights = handles.map((handle) => {
+      const targetIds = handleMap.get(handle) ?? [];
+      let maxH = 0;
+      for (const tid of targetIds) {
+        const t = byId.get(tid);
+        if (t && t.reservedHeight > maxH) {
+          maxH = t.reservedHeight;
+        }
+      }
+      return Math.max(maxH, MIN_SLOT_HEIGHT);
+    });
+
+    const totalSpan =
+      slotHeights.reduce((sum, h) => sum + h, 0) + (handles.length - 1) * SLOT_GAP;
+    const sourceCardCenterY = source.y + source.height / 2;
+    let cursor = sourceCardCenterY - totalSpan / 2;
 
     handles.forEach((handle, idx) => {
       const targets = handleMap.get(handle) ?? [];
-      const targetY = startY + idx * branchSpacing;
+      const slotH = slotHeights[idx];
+      const slotTop = cursor;
       for (const targetId of targets) {
         const target = byId.get(targetId);
         if (!target) {
           continue;
         }
-        // Align target center to targetY
-        target.y = targetY - target.height / 2;
+        // Center the target's reserved box within the slot (handles the case
+        // where multiple targets share a handle but have different heights).
+        const reservedTop = slotTop + (slotH - target.reservedHeight) / 2;
+        // Card top-left = reserved top-left + card offset within reserved box.
+        target.y = reservedTop + target.cardOffsetY;
       }
+      cursor += slotH + SLOT_GAP;
     });
   }
 }
@@ -437,7 +629,11 @@ function separateSkipEdges<E extends LayoutEdge>(laidOut: LaidOutNode[], edges: 
       }
       const nodeCenterY = node.y + node.height / 2;
       if (node.x > minX && node.x < maxX && Math.abs(nodeCenterY - avgY) < yTolerance) {
-        node.y += verticalOffset;
+        // Push away from the skip-edge path based on which side the node sits
+        // on. Nodes exactly on avgY break the tie downward (matches the old
+        // always-down behavior for that edge case).
+        const direction = nodeCenterY < avgY ? -1 : 1;
+        node.y += direction * verticalOffset;
         processed.add(node.id);
       }
     }
@@ -457,17 +653,23 @@ function computeBoundingBox(laidOut: LaidOutNode[]): BoundingBox {
   let maxX = -Infinity;
   let maxY = -Infinity;
   for (const n of laidOut) {
-    if (n.x < minX) {
-      minX = n.x;
+    // Use reserved extents so vertical component stacking leaves room for any
+    // attached appendix (tools box) that extends past the card.
+    const reservedLeft = n.x - n.cardOffsetX;
+    const reservedTop = n.y - n.cardOffsetY;
+    const reservedRight = reservedLeft + n.reservedWidth;
+    const reservedBottom = reservedTop + n.reservedHeight;
+    if (reservedLeft < minX) {
+      minX = reservedLeft;
     }
-    if (n.y < minY) {
-      minY = n.y;
+    if (reservedTop < minY) {
+      minY = reservedTop;
     }
-    if (n.x + n.width > maxX) {
-      maxX = n.x + n.width;
+    if (reservedRight > maxX) {
+      maxX = reservedRight;
     }
-    if (n.y + n.height > maxY) {
-      maxY = n.y + n.height;
+    if (reservedBottom > maxY) {
+      maxY = reservedBottom;
     }
   }
   return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
@@ -514,7 +716,7 @@ export function applyInvectLayout<N extends LayoutNode, E extends LayoutEdge>(
       // Order matters: center branch targets first so they anchor new Y values,
       // then straighten chains so those Ys cascade to descendants,
       // then redistribute X for branches that dagre clustered near the fork.
-      centerMultiOutputBranches(laid, edges);
+      centerMultiOutputBranches(laid, nodes, edges);
       if (opts.straightenChains) {
         straightenLinearChains(laid, edges);
       }

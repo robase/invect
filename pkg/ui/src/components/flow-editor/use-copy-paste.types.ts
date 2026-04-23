@@ -1,8 +1,9 @@
 /**
  * Shared types for the copy-paste system.
  *
- * Extracted so both `use-copy-paste.ts` and `serialize-to-sdk.ts` can
- * reference the same clipboard payload shapes without circular imports.
+ * Extracted from `use-copy-paste.ts` so tests and any future
+ * clipboard-adjacent helpers can reference the same payload shapes without
+ * importing the React hook itself.
  */
 
 export interface ClipboardData {

@@ -152,6 +152,80 @@ export function useChat(options: UseChatOptions = {}) {
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
   }, []);
 
+  /**
+   * Consume an SSE response body and dispatch events into the chat store.
+   * Shared between a fresh POST /chat stream and a reattach GET /chat/stream/:id.
+   *
+   * Side-effects:
+   *   - persists `sessionId` for the current flow on the first `session` event
+   *   - persists the in-flight user message so a refresh can restore it
+   *   - clears both on `done` / `error`
+   *   - on unhandled disconnect, leaves the session id persisted so the next
+   *     mount can reattach
+   */
+  const consumeChatStream = useCallback(
+    async (
+      response: Response,
+      flowId: string | undefined,
+      pendingUserMessage?: { id: string; content: string; createdAt: number },
+    ) => {
+      if (!response.body) {
+        useChatStore.getState().setError('No response body from chat endpoint');
+        return;
+      }
+
+      if (pendingUserMessage) {
+        useChatStore.getState().setPendingUserMessage(flowId, pendingUserMessage);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {break;}
+
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            try {
+              const event: ChatStreamEvent = JSON.parse(data);
+              if (event.type === 'session' && event.sessionId) {
+                useChatStore.getState().setActiveSessionId(flowId, event.sessionId);
+                continue;
+              }
+              handleEvent(event, useChatStore.getState(), {
+                queryClient,
+                navigate,
+                optionsRef,
+              });
+            } catch {
+              // Ignore malformed JSON
+            }
+          }
+        }
+      }
+    },
+    [queryClient, navigate],
+  );
+
+  const finalizeStream = useCallback(
+    async (flowId: string | undefined) => {
+      useChatStore.getState().finalizePendingToolCalls();
+      useChatStore.getState().finalizeAssistantMessage();
+      useChatStore.getState().setActiveSessionId(flowId, null);
+      useChatStore.getState().setPendingUserMessage(flowId, null);
+      await saveMessages();
+    },
+    [saveMessages],
+  );
+
   const sendMessage = useCallback(
     async (content: string, opts?: { isEdit?: boolean }) => {
       const store = useChatStore.getState();
@@ -160,7 +234,8 @@ export function useChat(options: UseChatOptions = {}) {
       }
 
       // Add user message to store
-      store.addUserMessage(content);
+      const userMessageId = store.addUserMessage(content);
+      const userMessage = store.messages.find((m) => m.id === userMessageId);
 
       // Build message history for the API (only user/assistant messages)
       const historyMessages = store.messages
@@ -183,8 +258,9 @@ export function useChat(options: UseChatOptions = {}) {
         historyMessages.push({ role: 'user' as const, content });
       }
 
+      const flowId = optionsRef.current.flowId;
       const context = {
-        flowId: optionsRef.current.flowId,
+        flowId,
         selectedNodeId: optionsRef.current.selectedNodeId,
         selectedRunId: optionsRef.current.selectedRunId,
         viewMode: optionsRef.current.viewMode,
@@ -205,62 +281,33 @@ export function useChat(options: UseChatOptions = {}) {
           controller.signal,
         );
 
-        if (!response.body) {
-          useChatStore.getState().setError('No response body from chat endpoint');
-          return;
-        }
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) {
-            break;
-          }
-
-          buffer += decoder.decode(value, { stream: true });
-
-          // Parse SSE frames from buffer
-          const lines = buffer.split('\n');
-          buffer = lines.pop() ?? ''; // Keep incomplete line in buffer
-
-          for (const line of lines) {
-            if (line.startsWith('event: ')) {
-              // Event type is parsed from the JSON payload, not the SSE frame header
-            } else if (line.startsWith('data: ')) {
-              const data = line.slice(6);
-              try {
-                const event: ChatStreamEvent = JSON.parse(data);
-                handleEvent(event, useChatStore.getState(), {
-                  queryClient,
-                  navigate,
-                  optionsRef,
-                });
-              } catch {
-                // Ignore malformed JSON
+        await consumeChatStream(
+          response,
+          flowId,
+          userMessage
+            ? {
+                id: userMessage.id,
+                content: userMessage.content,
+                createdAt: userMessage.createdAt,
               }
-            }
-            // Empty line = end of SSE frame (already handled by split)
-          }
-        }
+            : undefined,
+        );
 
-        // Finalize: clean up pending tool calls and commit assistant text
-        useChatStore.getState().finalizePendingToolCalls();
-        useChatStore.getState().finalizeAssistantMessage();
-
-        // Auto-save after stream completes
-        saveMessages();
+        await finalizeStream(flowId);
       } catch (error: unknown) {
         if ((error as Error).name === 'AbortError') {
-          // User cancelled — clean up pending tool calls
+          // User cancelled locally — the server-side session keeps running,
+          // so leave the persisted sessionId in place. On mount, we'll
+          // reattach unless it's been explicitly cleared by the Stop button.
           useChatStore.getState().finalizePendingToolCalls();
+          useChatStore.getState().finalizeAssistantMessage();
           saveMessages();
           return;
         }
         // Clean up pending tool calls before showing the error
         useChatStore.getState().finalizePendingToolCalls();
+        useChatStore.getState().setActiveSessionId(flowId, null);
+        useChatStore.getState().setPendingUserMessage(flowId, null);
         saveMessages();
         const msg = (error as Error).message || 'Chat request failed';
         // Friendly error messages for common failures
@@ -279,6 +326,8 @@ export function useChat(options: UseChatOptions = {}) {
     },
     [
       apiClient,
+      consumeChatStream,
+      finalizeStream,
       options.flowId,
       options.selectedNodeId,
       options.viewMode,
@@ -302,9 +351,105 @@ export function useChat(options: UseChatOptions = {}) {
     }
   }, [options.flowId, apiClient]);
 
+  /**
+   * Attempt to reattach to an in-flight session for the current flow. Called
+   * on mount when a persisted sessionId is present. Replays buffered events
+   * from the server then tails live ones until completion.
+   *
+   * If the server returns 404 (session evicted / server restarted), we clear
+   * the persisted id and pending user message and carry on with the already-
+   * loaded conversation history.
+   */
+  const reattachIfPending = useCallback(
+    async (flowId: string | undefined) => {
+      const store = useChatStore.getState();
+      if (store.isStreaming) {return;} // Already streaming — don't double up.
+      const sessionId = store.getActiveSessionId(flowId);
+      if (!sessionId) {return;}
+
+      // Restore the pending user message that kicked off this session, if any,
+      // so the conversation reads correctly while we replay events.
+      const pending = store.getPendingUserMessage(flowId);
+      if (pending && !store.messages.some((m) => m.id === pending.id)) {
+        useChatStore.setState((s) => {
+          s.messages.push({
+            id: pending.id,
+            role: 'user',
+            content: pending.content,
+            createdAt: pending.createdAt,
+          });
+        });
+      }
+
+      // Reset streaming accumulators — the replay will rebuild them from zero.
+      store.resetStreamingAccumulators();
+
+      const controller = new AbortController();
+      useChatStore.getState().startStreaming(controller);
+
+      try {
+        const response = await apiClient.reattachChatStream(sessionId, controller.signal);
+        await consumeChatStream(response, flowId);
+        await finalizeStream(flowId);
+      } catch (error: unknown) {
+        const name = (error as Error).name;
+        const msg = (error as Error).message ?? '';
+        if (name === 'AbortError') {
+          useChatStore.getState().finalizePendingToolCalls();
+          useChatStore.getState().finalizeAssistantMessage();
+          return;
+        }
+        // Session not found / expired → treat as gone and forget it.
+        if (
+          msg.includes('404') ||
+          msg.toLowerCase().includes('not found') ||
+          msg.includes('expired')
+        ) {
+          console.info('[chat] Prior session expired, discarding', { sessionId });
+          useChatStore.getState().setActiveSessionId(flowId, null);
+          useChatStore.getState().setPendingUserMessage(flowId, null);
+          useChatStore.getState().finalizePendingToolCalls();
+          useChatStore.getState().finalizeAssistantMessage();
+          return;
+        }
+        // Unknown failure — leave session id persisted for another try.
+        useChatStore.getState().finalizePendingToolCalls();
+        useChatStore.getState().setError(msg || 'Failed to reattach to chat stream');
+      }
+    },
+    [apiClient, consumeChatStream, finalizeStream],
+  );
+
+  // On mount (and on flow switch after history loads), try to reattach.
+  // We wait until history finishes loading so the replayed events layer on
+  // top of the persisted conversation, not a blank slate.
+  const hasAttemptedReattachRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (isLoadingHistory) {return;}
+    const flowId = options.flowId;
+    const key = flowId ?? '__no_flow__';
+    if (hasAttemptedReattachRef.current === key) {return;}
+    hasAttemptedReattachRef.current = key;
+    // Fire-and-forget — any errors surface through the chat error path.
+    void reattachIfPending(flowId);
+  }, [isLoadingHistory, options.flowId, reattachIfPending]);
+
+  /**
+   * User-initiated stop. Aborts the local SSE reader AND clears the
+   * persisted session so a refresh doesn't reattach to a session the user
+   * meant to end. Note: the server-side session continues until the agent
+   * loop checks `aborted`; it will emit a truncated final response shortly.
+   */
+  const stopStreamingLocal = useCallback(() => {
+    const flowId = options.flowId;
+    useChatStore.getState().setActiveSessionId(flowId, null);
+    useChatStore.getState().setPendingUserMessage(flowId, null);
+    stopStreaming();
+  }, [options.flowId, stopStreaming]);
+
   return {
     sendMessage,
-    stopStreaming,
+    stopStreaming: stopStreamingLocal,
     clearMessages,
     messages,
     isStreaming,
@@ -464,6 +609,12 @@ function handleEvent(
     case 'text_delta':
       if (event.text) {
         store.appendStreamingText(event.text);
+      }
+      break;
+
+    case 'reasoning_delta':
+      if (event.text) {
+        store.appendStreamingReasoning(event.text);
       }
       break;
 

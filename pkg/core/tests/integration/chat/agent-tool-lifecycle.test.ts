@@ -48,7 +48,9 @@ interface ToolInstance {
 
 function getAgentTools(invect: InvectInstance, flowId: string): Promise<ToolInstance[]> {
   return invect.versions.get(flowId, 'latest').then((v) => {
-    if (!v?.invectDefinition) {return [];}
+    if (!v?.invectDefinition) {
+      return [];
+    }
     const agent = v.invectDefinition.nodes.find((n) => n.type === 'core.agent');
     return (agent?.params?.addedTools ?? []) as ToolInstance[];
   });

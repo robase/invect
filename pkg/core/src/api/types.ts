@@ -244,6 +244,14 @@ export interface ChatAPI {
     context: ChatContext;
     identity?: InvectIdentity;
   }): Promise<AsyncGenerator<ChatStreamEvent>>;
+  /**
+   * Reattach to an in-flight chat session by id. Replays the full event
+   * buffer and then tails live events until the session completes. Useful
+   * for surviving client disconnects (e.g. page refresh mid-generation).
+   */
+  subscribeToSession(sessionId: string, signal?: AbortSignal): AsyncGenerator<ChatStreamEvent>;
+  /** True if the given session id is currently live in this process. */
+  hasActiveSession(sessionId: string): boolean;
   isEnabled(): boolean;
   listModels(
     credentialId: string,

@@ -19,13 +19,6 @@ beforeAll(() => {
   }
 });
 
-/**
- * No virtual modules needed — @invect/sdk, @invect/action-kit, and
- * @invect/actions/* all resolve via the standard alias map the evaluator
- * builds at call time.
- */
-const TEST_MODULES = {};
-
 describe('scanImports', () => {
   describe('allowlist', () => {
     it('accepts @invect/sdk imports', () => {
@@ -126,9 +119,7 @@ import { defineFlow, input } from '@invect/sdk';
 import fs from 'node:fs';
 export default defineFlow({ nodes: [input('q')], edges: [] });
       `;
-      const { ok, errors, flow } = await evaluateSdkSource(src, {
-        additionalModules: TEST_MODULES,
-      });
+      const { ok, errors, flow } = await evaluateSdkSource(src);
       expect(ok).toBe(false);
       expect(flow).toBeNull();
       expect(errors[0].code).toBe('import-forbidden');
@@ -140,7 +131,7 @@ import { defineFlow, input } from '@invect/sdk';
 const _fs = await import('node:fs');
 export default defineFlow({ nodes: [input('q')], edges: [] });
       `;
-      const { ok, errors } = await evaluateSdkSource(src, { additionalModules: TEST_MODULES });
+      const { ok, errors } = await evaluateSdkSource(src);
       expect(ok).toBe(false);
       expect(errors.some((e) => e.code === 'dynamic-import')).toBe(true);
     });
@@ -155,9 +146,7 @@ export default defineFlow({
   edges: [['query', 'result']],
 });
       `;
-      const { ok, flow, errors } = await evaluateSdkSource(src, {
-        additionalModules: TEST_MODULES,
-      });
+      const { ok, flow, errors } = await evaluateSdkSource(src);
       expect(errors).toEqual([]);
       expect(ok).toBe(true);
       expect(flow).not.toBeNull();
@@ -178,7 +167,7 @@ export default defineFlow({
   edges: [['x', 'double']],
 });
       `;
-      const { ok, flow } = await evaluateSdkSource(src, { additionalModules: TEST_MODULES });
+      const { ok, flow } = await evaluateSdkSource(src);
       expect(ok).toBe(true);
       // String-form code is what the emitter currently produces; arrows come later.
       expect(flow!.nodes[1].params.code).toBe('return x * 2');
@@ -195,7 +184,7 @@ export default defineFlow({
   edges: [],
 });
       `;
-      const { ok, flow } = await evaluateSdkSource(src, { additionalModules: TEST_MODULES });
+      const { ok, flow } = await evaluateSdkSource(src);
       expect(ok).toBe(true);
       expect(flow!.metadata).toEqual({
         name: 'My Flow',
@@ -209,14 +198,14 @@ export default defineFlow({
 import { defineFlow, input } from '@invect/sdk';
 const notDefault = defineFlow({ nodes: [input('x')], edges: [] });
       `;
-      const { ok, errors } = await evaluateSdkSource(src, { additionalModules: TEST_MODULES });
+      const { ok, errors } = await evaluateSdkSource(src);
       expect(ok).toBe(false);
       expect(errors[0].code).toBe('no-default-export');
     });
 
     it('rejects a default export that is not a flow', async () => {
       const src = `export default 42;`;
-      const { ok, errors } = await evaluateSdkSource(src, { additionalModules: TEST_MODULES });
+      const { ok, errors } = await evaluateSdkSource(src);
       expect(ok).toBe(false);
       expect(errors[0].code).toBe('default-export-not-a-flow');
     });
@@ -230,7 +219,7 @@ export default defineFlow({
   edges: [],
 });
       `;
-      const { ok, errors } = await evaluateSdkSource(src, { additionalModules: TEST_MODULES });
+      const { ok, errors } = await evaluateSdkSource(src);
       expect(ok).toBe(false);
       expect(errors[0].code).toBe('eval-failed');
       expect(errors[0].message).toMatch(/duplicate/i);
@@ -245,7 +234,6 @@ await new Promise(() => {});
 export default defineFlow({ nodes: [input('x')], edges: [] });
       `;
       const { ok, errors } = await evaluateSdkSource(src, {
-        additionalModules: TEST_MODULES,
         timeoutMs: 200,
       });
       expect(ok).toBe(false);
@@ -273,9 +261,7 @@ export default defineFlow({
   edges: [['event', 'notify']],
 });
       `;
-      const { ok, flow, errors } = await evaluateSdkSource(src, {
-        additionalModules: TEST_MODULES,
-      });
+      const { ok, flow, errors } = await evaluateSdkSource(src);
       expect(errors).toEqual([]);
       expect(ok).toBe(true);
       expect(flow!.nodes[1].type).toBe('gmail.send_message');

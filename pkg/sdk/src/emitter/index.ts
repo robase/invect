@@ -275,13 +275,12 @@ function emitKnownNode(
 
     case 'core.if_else': {
       const raw = params.expression;
-      if (typeof raw !== 'string') {
-        throw new SdkEmitError(
-          `if_else node "${refLit}" is missing params.expression (expected string)`,
-          node.id,
-        );
-      }
-      const body = arrowFromExpression(raw, upstream);
+      // Unconfigured if_else nodes (no expression yet) shouldn't block a copy
+      // or full-flow emit. Emit `return null` so the source stays valid —
+      // at runtime the node's Zod schema still rejects empty expressions,
+      // so a genuinely broken node fails on execute, not on copy.
+      const expr = typeof raw === 'string' && raw.trim() !== '' ? raw : 'return null';
+      const body = arrowFromExpression(expr, upstream);
       return `ifElse(${refLit}, { condition: ${body} }${optionsSuffix}),`;
     }
 

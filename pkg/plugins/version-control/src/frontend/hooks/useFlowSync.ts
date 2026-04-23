@@ -26,7 +26,7 @@ export function useFlowSyncStatus(flowId: string | undefined) {
     queryKey: vcQueryKeys.syncStatus(flowId ?? ''),
     queryFn: async () => {
       const response = await fetch(
-        `${api.getBaseURL()}/plugins/version-control/vc/flows/${flowId}/status`,
+        `${api.getBaseURL()}/plugins/vc/flows/${flowId}/status`,
         { credentials: 'include' },
       );
       if (!response.ok) {
@@ -46,7 +46,7 @@ export function useFlowSyncHistory(flowId: string | undefined) {
     queryKey: vcQueryKeys.syncHistory(flowId ?? ''),
     queryFn: async () => {
       const response = await fetch(
-        `${api.getBaseURL()}/plugins/version-control/vc/flows/${flowId}/history?limit=20`,
+        `${api.getBaseURL()}/plugins/vc/flows/${flowId}/history?limit=20`,
         { credentials: 'include' },
       );
       if (!response.ok) {
@@ -65,7 +65,7 @@ export function useSyncedFlows() {
   return useQuery<{ flows: Array<VcSyncConfig & { flowName: string }> }>({
     queryKey: vcQueryKeys.syncedFlows(),
     queryFn: async () => {
-      const response = await fetch(`${api.getBaseURL()}/plugins/version-control/vc/flows`, {
+      const response = await fetch(`${api.getBaseURL()}/plugins/vc/flows`, {
         credentials: 'include',
       });
       if (!response.ok) {
@@ -84,7 +84,7 @@ export function usePushFlow(flowId: string) {
   return useMutation<VcSyncResult>({
     mutationFn: async () => {
       const response = await fetch(
-        `${api.getBaseURL()}/plugins/version-control/vc/flows/${flowId}/push`,
+        `${api.getBaseURL()}/plugins/vc/flows/${flowId}/push`,
         { method: 'POST', credentials: 'include' },
       );
       if (!response.ok && response.status !== 409) {
@@ -107,7 +107,7 @@ export function usePullFlow(flowId: string) {
   return useMutation<VcSyncResult>({
     mutationFn: async () => {
       const response = await fetch(
-        `${api.getBaseURL()}/plugins/version-control/vc/flows/${flowId}/pull`,
+        `${api.getBaseURL()}/plugins/vc/flows/${flowId}/pull`,
         { method: 'POST', credentials: 'include' },
       );
       if (!response.ok) {
@@ -130,7 +130,7 @@ export function useForcePushFlow(flowId: string) {
   return useMutation<VcSyncResult>({
     mutationFn: async () => {
       const response = await fetch(
-        `${api.getBaseURL()}/plugins/version-control/vc/flows/${flowId}/force-push`,
+        `${api.getBaseURL()}/plugins/vc/flows/${flowId}/force-push`,
         { method: 'POST', credentials: 'include' },
       );
       if (!response.ok) {
@@ -153,7 +153,7 @@ export function useForcePullFlow(flowId: string) {
   return useMutation<VcSyncResult>({
     mutationFn: async () => {
       const response = await fetch(
-        `${api.getBaseURL()}/plugins/version-control/vc/flows/${flowId}/force-pull`,
+        `${api.getBaseURL()}/plugins/vc/flows/${flowId}/force-pull`,
         { method: 'POST', credentials: 'include' },
       );
       if (!response.ok) {
@@ -176,7 +176,7 @@ export function usePublishFlow(flowId: string) {
   return useMutation<VcSyncResult>({
     mutationFn: async () => {
       const response = await fetch(
-        `${api.getBaseURL()}/plugins/version-control/vc/flows/${flowId}/publish`,
+        `${api.getBaseURL()}/plugins/vc/flows/${flowId}/publish`,
         { method: 'POST', credentials: 'include' },
       );
       if (!response.ok) {
@@ -199,7 +199,7 @@ export function useConfigureSync(flowId: string) {
   return useMutation<VcSyncConfig, Error, ConfigureSyncInput>({
     mutationFn: async (input) => {
       const response = await fetch(
-        `${api.getBaseURL()}/plugins/version-control/vc/flows/${flowId}/configure`,
+        `${api.getBaseURL()}/plugins/vc/flows/${flowId}/configure`,
         {
           method: 'POST',
           credentials: 'include',
@@ -228,7 +228,7 @@ export function useDisconnectSync(flowId: string) {
   return useMutation({
     mutationFn: async () => {
       const response = await fetch(
-        `${api.getBaseURL()}/plugins/version-control/vc/flows/${flowId}/disconnect`,
+        `${api.getBaseURL()}/plugins/vc/flows/${flowId}/disconnect`,
         { method: 'DELETE', credentials: 'include' },
       );
       if (!response.ok) {

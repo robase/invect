@@ -56,10 +56,7 @@ export async function evaluateSdkSource(
 ): Promise<EvaluatorResult> {
   const errors: EvaluatorError[] = [];
 
-  const additionalAllowed = [
-    ...(options.additionalAllowedImports ?? []),
-    ...Object.keys(options.additionalModules ?? {}),
-  ];
+  const additionalAllowed = options.additionalAllowedImports ?? [];
 
   // 1. Static pre-scan.
   const scan = scanImports(source, additionalAllowed);
@@ -157,13 +154,6 @@ class EvalTimeoutError extends Error {
 async function evaluateViaJiti(source: string, options: EvaluatorOptions): Promise<unknown> {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
-  // Register any additionalModules so jiti resolves them by bare specifier.
-  if (options.additionalModules) {
-    for (const [specifier, mod] of Object.entries(options.additionalModules)) {
-      registerVirtualModule(specifier, mod);
-    }
-  }
-
   // Build a path alias map so the evaluated source's `import '@invect/sdk'`
   // resolves to the known location regardless of where the temp file lives.
   // Without this, Node's module resolution walks up from the temp file's
@@ -242,8 +232,6 @@ function buildPackageAliases(options: EvaluatorOptions): Record<string, string> 
     // bare specifier resolves — jiti's alias only needs the package root.
   }
 
-  // Caller-supplied modules already registered via `registerVirtualModule`
-  // don't need an alias; Node's require cache intercept handles them.
   return aliases;
 }
 
@@ -323,79 +311,4 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
       },
     );
   });
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Virtual module registration
-// ═══════════════════════════════════════════════════════════════════════════
-
-/**
- * Install a JS object into Node's require/import resolution under a bare
- * specifier. The evaluator uses this to expose caller-supplied modules
- * (e.g. user-registered action packages) to the evaluated source.
- *
- * The mechanism uses the global require cache so the specifier resolves to
- * the supplied object on any subsequent `import specifier`. This is a
- * per-process registration that persists for the lifetime of the node
- * process — fine for server use; tests clean up after themselves.
- */
-const virtualModules = new Map<string, unknown>();
-
-export function registerVirtualModule(specifier: string, value: unknown): void {
-  virtualModules.set(specifier, value);
-  installVirtualResolver();
-}
-
-let resolverInstalled = false;
-let originalResolve: ((req: string, parent?: NodeJS.Module) => string) | null = null;
-
-function installVirtualResolver(): void {
-  if (resolverInstalled) {
-    return;
-  }
-  resolverInstalled = true;
-
-  type ModuleWithResolve = typeof import('node:module') & {
-    _resolveFilename?: (req: string, parent?: NodeJS.Module) => string;
-  };
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const Module = require('node:module') as ModuleWithResolve;
-  if (typeof Module._resolveFilename !== 'function') {
-    return;
-  }
-
-  originalResolve = Module._resolveFilename.bind(Module) as (
-    req: string,
-    parent?: NodeJS.Module,
-  ) => string;
-
-  Module._resolveFilename = (req: string, parent?: NodeJS.Module): string => {
-    if (virtualModules.has(req)) {
-      // Return a synthetic path under a directory Node is guaranteed not to
-      // hit; a require.cache entry at this path (installed below) satisfies
-      // the load.
-      const syntheticPath = `/__invect_virtual__/${encodeURIComponent(req)}.js`;
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const cache = require.cache as NodeJS.Dict<NodeJS.Module>;
-      if (!cache[syntheticPath]) {
-        const mockRequire = (() => {
-          throw new Error('virtual modules cannot require');
-        }) as unknown as NodeJS.Require;
-        cache[syntheticPath] = {
-          id: syntheticPath,
-          path: syntheticPath,
-          exports: virtualModules.get(req),
-          filename: syntheticPath,
-          loaded: true,
-          parent: null,
-          children: [],
-          paths: [],
-          require: mockRequire,
-          isPreloading: false,
-        } as NodeJS.Module;
-      }
-      return syntheticPath;
-    }
-    return originalResolve!(req, parent);
-  };
 }

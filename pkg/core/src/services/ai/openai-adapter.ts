@@ -51,6 +51,15 @@ export class OpenAIAdapter extends BaseProviderAdapter {
   // Protected so OpenRouterAdapter can override it
   protected client: OpenAI;
 
+  /**
+   * Default request timeout for agent prompts in milliseconds.
+   * Long-running tool-calling responses (large flow builders) can legitimately
+   * take several minutes. Subclasses may override.
+   */
+  protected get defaultAgentTimeoutMs(): number {
+    return 10 * 60 * 1000; // 10 minutes
+  }
+
   constructor(logger: Logger, apiKey: string, defaultModelOverride?: string, baseURL?: string) {
     super(logger, apiKey, defaultModelOverride);
     this.validateApiKey();
@@ -58,6 +67,7 @@ export class OpenAIAdapter extends BaseProviderAdapter {
     this.client = new OpenAI({
       apiKey: this.apiKey,
       maxRetries: 3, // Retry on 429 (rate limit), 500, 503 with exponential backoff
+      timeout: this.defaultAgentTimeoutMs,
       ...(baseURL && { baseURL }),
     });
   }
@@ -151,10 +161,15 @@ export class OpenAIAdapter extends BaseProviderAdapter {
   }
 
   /**
-   * Execute agent prompt with tools
+   * Execute agent prompt with tools.
+   *
+   * Uses streaming to keep the HTTP socket active during long tool-calling
+   * responses — buffered (non-streaming) requests are prone to `TypeError:
+   * terminated` from undici when the upstream or a CDN closes an idle socket
+   * before the full response arrives.
    */
   async executeAgentPrompt(request: AgentPromptRequest): Promise<AgentPromptResult> {
-    this.logger.debug('Running OpenAI agent prompt with tools', {
+    this.logger.debug(`Running ${this.providerId} agent prompt with tools (streaming)`, {
       model: request.model,
       toolCount: request.tools.length,
       messageCount: request.messages.length,
@@ -165,87 +180,167 @@ export class OpenAIAdapter extends BaseProviderAdapter {
       const tools = this.convertTools(request.tools);
       const toolChoice = this.buildToolChoice(request.toolChoice, tools.length > 0);
 
-      const params: OpenAI.Chat.Completions.ChatCompletionCreateParams = {
+      const params: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
         model: request.model,
         messages,
         temperature: request.temperature,
         tools: tools.length > 0 ? tools : undefined,
         tool_choice: toolChoice,
         parallel_tool_calls: request.parallelToolCalls !== false,
+        stream: true,
+        stream_options: { include_usage: true },
       };
 
       if (request.maxTokens) {
         params.max_completion_tokens = request.maxTokens;
       }
 
-      const response = await this.client.chat.completions.create(params);
+      this.applyThinkingParams(params, request);
 
-      return this.parseAgentResponse(response);
+      const stream = await this.client.chat.completions.create(params, {
+        signal: request.signal,
+        timeout: request.timeoutMs ?? this.defaultAgentTimeoutMs,
+      });
+
+      return await this.parseStreamingAgentResponse(stream, request);
     } catch (error) {
-      this.logger.error('OpenAI agent prompt failed:', error);
+      this.logger.error(`${this.providerId} agent prompt failed:`, error);
       throw this.wrapError(error, 'agent prompt');
     }
   }
 
   /**
-   * Parse OpenAI response into normalized AgentPromptResult
+   * Attach reasoning / thinking params to a streaming chat-completion request.
+   *
+   * OpenAI accepts `reasoning_effort` only on reasoning-capable models (o-series,
+   * gpt-5). Unknown models ignore it, so we gate on a heuristic model-name check
+   * to avoid 400s on non-reasoning models. Subclasses may override for providers
+   * that accept a richer reasoning param (e.g. OpenRouter).
    */
-  protected parseAgentResponse(
-    response: OpenAI.Chat.Completions.ChatCompletion,
-  ): AgentPromptResult {
-    const choice = response.choices[0];
-    if (!choice) {
-      throw new Error('No response from OpenAI API');
+  protected applyThinkingParams(
+    params: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming,
+    request: AgentPromptRequest,
+  ): void {
+    if (!request.thinking?.enabled) {
+      return;
+    }
+    if (!this.modelSupportsReasoningEffort(request.model)) {
+      return;
     }
 
-    const message = choice.message;
+    const effort =
+      request.thinking.effort ??
+      (request.thinking.budgetTokens && request.thinking.budgetTokens >= 8000
+        ? 'high'
+        : request.thinking.budgetTokens && request.thinking.budgetTokens <= 2048
+          ? 'low'
+          : 'medium');
+    (
+      params as OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming & {
+        reasoning_effort?: 'low' | 'medium' | 'high';
+      }
+    ).reasoning_effort = effort;
+    // Reasoning models reject temperature overrides — drop it.
+    delete (params as { temperature?: number }).temperature;
+  }
 
-    // Check for tool calls
-    if (message.tool_calls && message.tool_calls.length > 0) {
-      const toolCalls: AgentToolCall[] = message.tool_calls.map((tc) => {
-        let parsedInput: Record<string, unknown> = {};
+  /** True for OpenAI models that accept `reasoning_effort`. */
+  protected modelSupportsReasoningEffort(model: string): boolean {
+    const m = model.toLowerCase();
+    return m.startsWith('o1') || m.startsWith('o3') || m.startsWith('o4') || m.startsWith('gpt-5');
+  }
 
-        // Handle different tool call types - standard function calls have tc.function
-        const funcCall = tc as {
-          id: string;
-          type: string;
-          function?: { name: string; arguments: string };
-        };
-        if (funcCall.function) {
+  /**
+   * Aggregate an OpenAI chat-completion stream into a normalized AgentPromptResult.
+   *
+   * Tool-call arguments arrive as partial JSON chunks keyed by `index` — we
+   * concatenate and parse once the stream ends so the result shape matches the
+   * non-streaming path exactly.
+   *
+   * Emits incremental deltas via `request.onTextDelta` / `onReasoningDelta`
+   * as chunks arrive. OpenAI does not surface reasoning text on standard
+   * Chat Completions today, but OpenRouter and some OpenAI-compatible proxies
+   * populate a non-standard `delta.reasoning` field — we forward it when
+   * present so thinking UIs light up automatically.
+   */
+  protected async parseStreamingAgentResponse(
+    stream: AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>,
+    request: AgentPromptRequest,
+  ): Promise<AgentPromptResult> {
+    let content = '';
+    let reasoning = '';
+    const toolCallAcc = new Map<number, { id: string; name: string; arguments: string }>();
+
+    for await (const chunk of stream) {
+      const choice = chunk.choices[0];
+      if (!choice) {
+        continue;
+      }
+
+      const delta = choice.delta as
+        | (OpenAI.Chat.Completions.ChatCompletionChunk.Choice.Delta & {
+            reasoning?: string;
+            reasoning_content?: string;
+          })
+        | undefined;
+      if (delta?.content) {
+        content += delta.content;
+        request.onTextDelta?.(delta.content);
+      }
+
+      // Non-standard reasoning fields: `reasoning` is used by OpenRouter and
+      // some OpenAI-compatible proxies; `reasoning_content` by certain self-
+      // hosted o-series deployments. Treat both as opaque streamed text.
+      const reasoningChunk = delta?.reasoning ?? delta?.reasoning_content;
+      if (reasoningChunk) {
+        reasoning += reasoningChunk;
+        request.onReasoningDelta?.(reasoningChunk);
+      }
+
+      if (delta?.tool_calls) {
+        for (const tc of delta.tool_calls) {
+          const idx = tc.index;
+          const acc = toolCallAcc.get(idx) ?? { id: '', name: '', arguments: '' };
+          if (tc.id) {
+            acc.id = tc.id;
+          }
+          if (tc.function?.name) {
+            acc.name = tc.function.name;
+          }
+          if (tc.function?.arguments) {
+            acc.arguments += tc.function.arguments;
+          }
+          toolCallAcc.set(idx, acc);
+        }
+      }
+    }
+
+    const finalReasoning = reasoning ? reasoning : undefined;
+
+    if (toolCallAcc.size > 0) {
+      const toolCalls: AgentToolCall[] = [...toolCallAcc.entries()]
+        .sort(([a], [b]) => a - b)
+        .map(([, acc]) => {
+          let parsedInput: Record<string, unknown> = {};
           try {
-            parsedInput = JSON.parse(funcCall.function.arguments || '{}');
+            parsedInput = JSON.parse(acc.arguments || '{}');
           } catch {
-            this.logger.warn('Failed to parse tool arguments', {
-              arguments: funcCall.function.arguments,
+            this.logger.warn('Failed to parse streamed tool arguments', {
+              arguments: acc.arguments,
             });
-            // Signal the parse failure so the agent can see it and retry
             parsedInput = {
               _parseError:
                 'The tool arguments you provided were malformed JSON. Please retry with valid JSON.',
-              _rawArguments: (funcCall.function.arguments || '').substring(0, 500),
+              _rawArguments: (acc.arguments || '').substring(0, 500),
             };
           }
+          return { id: acc.id, toolId: acc.name, input: parsedInput };
+        });
 
-          return {
-            id: tc.id,
-            toolId: funcCall.function.name,
-            input: parsedInput,
-          };
-        }
-
-        // Fallback for unknown tool call types
-        return {
-          id: tc.id,
-          toolId: 'unknown',
-          input: parsedInput,
-        };
-      });
-
-      return this.createToolUseResponse(message.content || '', toolCalls);
+      return { ...this.createToolUseResponse(content, toolCalls), reasoning: finalReasoning };
     }
 
-    // Text response
-    return this.createTextResponse(message.content || '');
+    return { ...this.createTextResponse(content), reasoning: finalReasoning };
   }
 
   /**

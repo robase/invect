@@ -12,6 +12,14 @@ export function createChatAPI(sf: ServiceFactory): ChatAPI {
       });
     },
 
+    subscribeToSession(sessionId, signal) {
+      return sf.getChatStreamService().subscribeToSession(sessionId, signal);
+    },
+
+    hasActiveSession(sessionId) {
+      return sf.getChatStreamService().hasActiveSession(sessionId);
+    },
+
     isEnabled() {
       return sf.getChatStreamService().isEnabled();
     },

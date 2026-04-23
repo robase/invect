@@ -13,7 +13,7 @@
 
 import OpenAI from 'openai';
 import { Logger } from 'src/schemas';
-import { Model, BatchPollResult, BatchSubmissionResult } from './ai-types';
+import { AgentPromptRequest, Model, BatchPollResult, BatchSubmissionResult } from './ai-types';
 import { BatchRequest } from '../node-data.service';
 import { OpenAIAdapter } from './openai-adapter';
 import { ProviderCapabilities } from './provider-adapter';
@@ -72,6 +72,15 @@ export class OpenRouterAdapter extends OpenAIAdapter {
     };
   }
 
+  /**
+   * OpenRouter fans out to many upstream providers (Anthropic, OpenAI, Google, …)
+   * and can be noticeably slower than talking to OpenAI directly. Give agent
+   * prompts a longer default timeout to survive big tool-calling responses.
+   */
+  protected override get defaultAgentTimeoutMs(): number {
+    return 15 * 60 * 1000; // 15 minutes
+  }
+
   constructor(
     logger: Logger,
     apiKey: string,
@@ -88,15 +97,50 @@ export class OpenRouterAdapter extends OpenAIAdapter {
     this.appName = options?.appName || 'Invect';
     this.siteUrl = options?.siteUrl || 'https://invect.dev';
 
-    // Recreate client with OpenRouter-specific headers
+    // Recreate client with OpenRouter-specific headers + timeout
     this.client = new OpenAI({
       apiKey: this.apiKey,
       baseURL: 'https://openrouter.ai/api/v1',
+      maxRetries: 3,
+      timeout: this.defaultAgentTimeoutMs,
       defaultHeaders: {
         'HTTP-Referer': this.siteUrl,
         'X-Title': this.appName,
       },
     });
+  }
+
+  /**
+   * OpenRouter accepts a richer `reasoning` param that maps to the underlying
+   * provider's native knob (Anthropic extended thinking, OpenAI o-series
+   * `reasoning_effort`, DeepSeek-R1 traces, etc.). Override the OpenAI
+   * implementation to send `reasoning` instead of `reasoning_effort`.
+   *
+   * See: https://openrouter.ai/docs/use-cases/reasoning-tokens
+   */
+  protected override applyThinkingParams(
+    params: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming,
+    request: AgentPromptRequest,
+  ): void {
+    if (!request.thinking?.enabled) {
+      return;
+    }
+
+    const reasoning: { effort?: 'low' | 'medium' | 'high'; max_tokens?: number } = {};
+    if (request.thinking.budgetTokens && request.thinking.budgetTokens > 0) {
+      reasoning.max_tokens = Math.floor(request.thinking.budgetTokens);
+    }
+    if (request.thinking.effort) {
+      reasoning.effort = request.thinking.effort;
+    } else if (!reasoning.max_tokens) {
+      reasoning.effort = 'medium';
+    }
+
+    (
+      params as OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming & {
+        reasoning?: typeof reasoning;
+      }
+    ).reasoning = reasoning;
   }
 
   /**

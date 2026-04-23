@@ -133,6 +133,8 @@ export type AgentFinishReason = 'completed' | 'max_iterations' | 'tool_result' |
 export interface AgentPromptResult {
   type: 'text' | 'tool_use';
   content: string;
+  /** Accumulated reasoning / thinking content if the model emitted any. */
+  reasoning?: string;
   toolCalls?: AgentToolCall[];
 }
 

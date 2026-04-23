@@ -27,6 +27,7 @@ import type { FlowContextData } from './system-prompt';
 import { ChatConfigSchema } from './chat-types';
 import { ChatToolkit } from './chat-toolkit';
 import { ChatStreamSession } from './chat-stream-session';
+import { ActiveChatSessions } from './active-chat-sessions';
 import { OpenAIAdapter } from '../ai/openai-adapter';
 import { AnthropicAdapter } from '../ai/anthropic-adapter';
 import { OpenRouterAdapter } from '../ai/openrouter-adapter';
@@ -51,6 +52,13 @@ export interface CreateChatStreamOptions {
 export class ChatStreamService {
   private toolkit: ChatToolkit;
   private chatConfig: ChatConfig;
+  /**
+   * In-process registry of in-flight chat turns. Decouples generation from
+   * the HTTP request so client disconnects (page refresh) don't kill the
+   * stream — the next client to subscribe replays buffered events and tails
+   * live ones.
+   */
+  private readonly activeSessions: ActiveChatSessions;
 
   constructor(
     private readonly logger: Logger,
@@ -64,6 +72,7 @@ export class ChatStreamService {
     // Parse and apply defaults to chat config
     this.chatConfig = ChatConfigSchema.parse({});
     this.toolkit = new ChatToolkit(logger);
+    this.activeSessions = new ActiveChatSessions(logger);
 
     logger.info(
       `ChatStreamService initialized (enabled: ${this.chatConfig.enabled}, tools: ${this.toolkit.size})`,
@@ -80,11 +89,17 @@ export class ChatStreamService {
   }
 
   /**
-   * Create a streaming chat session.
+   * Start a new chat turn and return a stream of its events.
    *
-   * Returns an AsyncGenerator that yields ChatStreamEvents.
-   * Framework adapters (Express, NestJS, Next.js) consume this
-   * and serialize events to SSE.
+   * Generation runs in the background through the `ActiveChatSessions`
+   * registry, which means the producer is independent of any single HTTP
+   * request. The returned stream is a subscriber — dropping it (client
+   * disconnect / page refresh) does NOT cancel the agent. A subsequent
+   * reconnect via `subscribeToSession(sessionId)` replays buffered events
+   * and tails the remaining ones.
+   *
+   * Yields a `session` event as the first frame so the client can persist
+   * the id for reattachment.
    */
   async createStream(options: CreateChatStreamOptions): Promise<AsyncGenerator<ChatStreamEvent>> {
     if (!this.chatConfig.enabled) {
@@ -140,7 +155,16 @@ export class ChatStreamService {
       }
     }
 
-    // 5. Create and return session stream
+    // 5. Register a session and kick off the agent loop in the background.
+    const active = this.activeSessions.create({ flowId: context.flowId });
+    // Seed the buffer with the session-id frame so even a reattach that
+    // lands after the first push still sees it.
+    this.activeSessions.push(active.id, {
+      type: 'session',
+      sessionId: active.id,
+      flowId: context.flowId,
+    });
+
     const session = new ChatStreamSession({
       logger: this.logger,
       toolkit: this.toolkit,
@@ -151,7 +175,62 @@ export class ChatStreamService {
       actionRegistry: this.actionRegistry,
     });
 
-    return session.stream(messages, context, flowContext);
+    // Run the generator to completion independent of any subscriber.
+    void this.runSessionToCompletion(active.id, session, messages, context, flowContext);
+
+    // Return a subscriber stream — cancelling it does not abort the producer.
+    return this.activeSessions.subscribe(active.id);
+  }
+
+  /**
+   * Reattach to an in-flight session by id. Replays the full event buffer
+   * then tails live events until the session completes. Safe to call from
+   * multiple clients simultaneously.
+   */
+  subscribeToSession(sessionId: string, signal?: AbortSignal): AsyncGenerator<ChatStreamEvent> {
+    if (!this.activeSessions.get(sessionId)) {
+      return this.errorStream(`Chat session ${sessionId} not found or expired`);
+    }
+    return this.activeSessions.subscribe(sessionId, signal);
+  }
+
+  /** True if there's an in-flight session with the given id. */
+  hasActiveSession(sessionId: string): boolean {
+    return this.activeSessions.get(sessionId) !== null;
+  }
+
+  /**
+   * Drive the underlying ChatStreamSession generator, forwarding each event
+   * into the registry's event buffer and broadcasting to any current
+   * subscribers. Runs independently of the HTTP request that kicked it off.
+   */
+  private async runSessionToCompletion(
+    sessionId: string,
+    session: ChatStreamSession,
+    messages: ChatMessage[],
+    context: ChatContext,
+    flowContext: FlowContextData | null,
+  ): Promise<void> {
+    try {
+      for await (const event of session.stream(messages, context, flowContext)) {
+        this.activeSessions.push(sessionId, event);
+      }
+      this.activeSessions.close(sessionId);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      this.logger.error('Background chat session failed', { sessionId, error: msg });
+      this.activeSessions.push(sessionId, {
+        type: 'error',
+        message: `LLM call failed: ${msg}`,
+        recoverable: false,
+      });
+      this.activeSessions.close(sessionId, msg);
+    }
+  }
+
+  /** Called by InvectInstance.shutdown() — release any pending sessions. */
+  shutdown(): void {
+    this.activeSessions.shutdown();
   }
 
   /**

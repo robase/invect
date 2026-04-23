@@ -979,6 +979,47 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
         });
       }
 
+      // GET /chat/stream/:sessionId - Reattach to an in-flight chat session.
+      if (method === 'GET' && path.match(/^chat\/stream\/[^/]+$/)) {
+        const sessionId = path.split('/')[2]!;
+        const abortController = new AbortController();
+        request.signal.addEventListener('abort', () => abortController.abort());
+
+        const encoder = new TextEncoder();
+        const readable = new ReadableStream({
+          async start(controller) {
+            try {
+              const stream = initializedCore.chat.subscribeToSession(
+                sessionId,
+                abortController.signal,
+              );
+              for await (const event of stream) {
+                const data = JSON.stringify(event);
+                controller.enqueue(encoder.encode(`event: ${event.type}\ndata: ${data}\n\n`));
+              }
+            } catch (error: unknown) {
+              const message = error instanceof Error ? error.message : 'Chat reattach failed';
+              controller.enqueue(
+                encoder.encode(
+                  `event: error\ndata: ${JSON.stringify({ type: 'error', message, recoverable: false })}\n\n`,
+                ),
+              );
+            } finally {
+              controller.close();
+            }
+          },
+        });
+
+        return new Response(readable, {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            Connection: 'keep-alive',
+            'X-Accel-Buffering': 'no',
+          },
+        });
+      }
+
       if (method === 'GET' && path.match(/^chat\/messages\/[^/]+$/)) {
         const flowId = path.split('/')[2];
         const page = searchParams.get('page');

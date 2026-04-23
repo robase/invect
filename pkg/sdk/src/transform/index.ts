@@ -387,8 +387,12 @@ function tryArrowToOutputTemplate(extracted: {
   isBlockBody: boolean;
 }): string | null {
   const { body, ctxParamNames, isBlockBody } = extracted;
-  if (ctxParamNames.length > 1) {return null;}
-  if (ctxParamNames.length === 1 && ctxParamNames[0] !== 'ctx') {return null;}
+  if (ctxParamNames.length > 1) {
+    return null;
+  }
+  if (ctxParamNames.length === 1 && ctxParamNames[0] !== 'ctx') {
+    return null;
+  }
 
   // Normalise to an expression form — strip the destructure prelude and the
   // trailing `return (...)` wrapper if present.
@@ -396,7 +400,9 @@ function tryArrowToOutputTemplate(extracted: {
   if (isBlockBody) {
     expr = stripCtxDestructure(expr).trim();
     const returnMatch = expr.match(/^return\s+([\s\S]+?);?\s*$/);
-    if (!returnMatch) {return null;}
+    if (!returnMatch) {
+      return null;
+    }
     expr = returnMatch[1].trim();
   }
   // Unwrap outer parens from `(x)`.
@@ -428,10 +434,13 @@ function tryArrowToOutputTemplate(extracted: {
 function parensAreBalanced(s: string): boolean {
   let depth = 0;
   for (const c of s) {
-    if (c === '(') {depth++;}
-    else if (c === ')') {
+    if (c === '(') {
+      depth++;
+    } else if (c === ')') {
       depth--;
-      if (depth < 0) {return false;}
+      if (depth < 0) {
+        return false;
+      }
     }
   }
   return depth === 0;
@@ -460,12 +469,19 @@ function templateLiteralToOutputString(literal: string): string | null {
       let depth = 1;
       let j = i + 2;
       while (j < inner.length && depth > 0) {
-        if (inner[j] === '{') {depth++;}
-        else if (inner[j] === '}') {depth--;}
-        if (depth === 0) {break;}
+        if (inner[j] === '{') {
+          depth++;
+        } else if (inner[j] === '}') {
+          depth--;
+        }
+        if (depth === 0) {
+          break;
+        }
         j++;
       }
-      if (j >= inner.length) {return null;}
+      if (j >= inner.length) {
+        return null;
+      }
       let expr = inner.slice(i + 2, j).trim();
       // The emitter wraps expressions in parens: `${(foo)}`. Strip them.
       while (expr.startsWith('(') && expr.endsWith(')') && parensAreBalanced(expr.slice(1, -1))) {
