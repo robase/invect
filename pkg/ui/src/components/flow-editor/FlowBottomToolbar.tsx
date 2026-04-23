@@ -5,7 +5,6 @@ import { ToolbarCollapsedProvider } from './toolbar-context';
 
 interface FlowBottomToolbarProps {
   layoutSelector?: React.ReactNode;
-  chatToggle?: React.ReactNode;
   toolbarExtra?: React.ReactNode;
   sidebarOpen?: boolean;
   onToggleSidebar?: () => void;
@@ -13,12 +12,11 @@ interface FlowBottomToolbarProps {
 
 export function FlowBottomToolbar({
   layoutSelector,
-  chatToggle,
   toolbarExtra,
   sidebarOpen = true,
   onToggleSidebar,
 }: FlowBottomToolbarProps) {
-  if (!onToggleSidebar && !layoutSelector && !chatToggle && !toolbarExtra) {
+  if (!onToggleSidebar && !layoutSelector && !toolbarExtra) {
     return null;
   }
 
@@ -44,7 +42,6 @@ export function FlowBottomToolbar({
             </Tooltip>
           )}
           {layoutSelector}
-          {chatToggle}
           {toolbarExtra && (
             <>
               <div className="w-px h-5 bg-border mx-1" />

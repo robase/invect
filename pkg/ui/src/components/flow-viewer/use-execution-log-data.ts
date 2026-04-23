@@ -3,15 +3,11 @@ import type {
   NodeExecution,
   NodeExecutionStatus,
   ReactFlowNode,
-  GraphNodeType,
   ToolExecutionRecord,
   AgentExecutionOutput,
   AgentFinishReason,
 } from '@invect/core/types';
-import {
-  NodeExecutionStatus as NodeStatusEnum,
-  GraphNodeType as GraphNodeTypeEnum,
-} from '@invect/core/types';
+import { NodeExecutionStatus as NodeStatusEnum } from '@invect/core/types';
 
 /**
  * Individual tool call executed by an AI Agent
@@ -75,7 +71,7 @@ export interface ExecutionLogAttempt {
 export interface ExecutionLogNode {
   nodeId: string;
   nodeName: string;
-  nodeType?: GraphNodeType | string;
+  nodeType?: string;
   latestStatus: NodeExecutionStatus;
   attempts: ExecutionLogAttempt[];
   definitionIndex: number;
@@ -148,7 +144,7 @@ function extractAgentToolCalls(
   nodeExecution: NodeExecution,
 ): { toolCalls: ExecutionLogToolCall[]; agentMetadata: AgentExecutionMetadata } | undefined {
   // Only process AGENT nodes
-  if (nodeExecution.nodeType !== GraphNodeTypeEnum.AGENT) {
+  if (nodeExecution.nodeType !== 'core.agent') {
     return undefined;
   }
 
@@ -208,7 +204,7 @@ export function useExecutionLogData({ nodes, nodeExecutions }: UseExecutionLogDa
       {
         nodeId: string;
         nodeName: string;
-        nodeType?: GraphNodeType | string;
+        nodeType?: string;
         definitionIndex: number;
         attempts: RawAttempt[];
       }

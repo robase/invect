@@ -120,8 +120,3 @@ export interface NodeExecutionContext extends FlowRunContext {
 export const metadataSchema = z.record(z.string(), z.unknown()).optional();
 
 export type MetaData = z.infer<typeof metadataSchema>;
-
-// Re-export GraphNodeType and GRAPH_NODE_TYPE_NAMES from the pure types file
-// This separation is critical - they must not be in a file with Zod schemas
-// because the frontend imports them at runtime
-export { GraphNodeType, GRAPH_NODE_TYPE_NAMES } from './types/graph-node-types';

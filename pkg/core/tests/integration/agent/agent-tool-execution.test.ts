@@ -20,7 +20,6 @@ import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
 import { FlowRunStatus } from '../../../src';
 import type { InvectInstance } from '../../../src/api/types';
-import { GraphNodeType } from '../../../src/types/graph-node-types';
 import type { InvectDefinition } from '../../../src/services/flow-versions/schemas-fresh';
 import type { AgentExecutionOutput } from '../../../src/types/agent-tool.types';
 import { createTestInvect } from '../helpers/test-invect';
@@ -150,7 +149,7 @@ function agentNode(
 ): InvectDefinition['nodes'][number] {
   return {
     id: 'agent-1',
-    type: GraphNodeType.AGENT,
+    type: 'core.agent',
     label: 'Agent',
     referenceId: 'agent',
     params: {

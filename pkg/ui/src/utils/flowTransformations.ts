@@ -1,5 +1,5 @@
 import type { Node, Edge } from '@xyflow/react';
-import { InvectDefinition, FlowEdge, GraphNodeType, type MapperConfig } from '@invect/core/types';
+import type { InvectDefinition, FlowEdge, MapperConfig } from '@invect/core/types';
 
 type NodeData = Record<string, unknown> & {
   params?: Record<string, unknown>;
@@ -25,8 +25,7 @@ export function transformToInvectDefinition(nodes: Node[], edges: Edge[]): Invec
         ? data.reference_id.trim()
         : undefined;
 
-    const nodeType =
-      (node.type as GraphNodeType) || (data.type as GraphNodeType) || GraphNodeType.TEMPLATE_STRING;
+    const nodeType = (node.type as string) || (data.type as string) || 'core.template_string';
 
     const baseNode = {
       id: node.id,

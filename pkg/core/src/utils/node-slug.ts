@@ -1,5 +1,3 @@
-import { GraphNodeType } from 'src/types.internal';
-
 /**
  * Generate a stable slug for a node label. Falls back to node ID if label missing.
  */
@@ -18,10 +16,3 @@ export function generateNodeSlug(label: string | undefined | null, fallbackId: s
 
   return slug;
 }
-
-type _NodeSlugMetadata = {
-  slug: string;
-  label: string;
-  nodeId: string;
-  nodeType: GraphNodeType;
-};

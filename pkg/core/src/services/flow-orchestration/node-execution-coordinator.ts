@@ -1,5 +1,5 @@
 import { NodeExecutionStatus } from 'src/types/base';
-import { NodeExecutionContext, GraphNodeType } from 'src/types.internal';
+import { NodeExecutionContext } from 'src/types.internal';
 import { InvectDefinition, FlowEdge, FlowNodeDefinitions } from '../flow-versions/schemas-fresh';
 import { NodeOutput, NodeIncomingDataObject } from 'src/types/node-io-types';
 import { generateNodeSlug } from 'src/utils/node-slug';
@@ -344,7 +344,7 @@ export class NodeExecutionCoordinator {
         const outputValue = this.getOutputValue(
           sourceNodeOutput,
           sourceOutputKey,
-          sourceNode?.type as GraphNodeType | undefined,
+          sourceNode?.type,
           edge.source,
         );
 
@@ -480,7 +480,7 @@ export class NodeExecutionCoordinator {
     // that the executor will process - it should not be pre-resolved
     const skipTemplateResolutionKeys: string[] = [];
     const nodeTypeStr = node.type as string;
-    if (nodeTypeStr === GraphNodeType.TEMPLATE_STRING || nodeTypeStr === 'core.template_string') {
+    if (nodeTypeStr === 'core.template_string') {
       skipTemplateResolutionKeys.push('template');
     }
 
@@ -1157,7 +1157,7 @@ export class NodeExecutionCoordinator {
   private getOutputValue(
     nodeOutput: NodeOutput,
     outputKey: string,
-    sourceNodeType?: GraphNodeType,
+    sourceNodeType?: string,
     sourceNodeId?: string,
   ): unknown {
     if (!nodeOutput?.data?.variables) {

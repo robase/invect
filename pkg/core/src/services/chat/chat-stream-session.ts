@@ -92,25 +92,7 @@ export class ChatStreamSession {
       // 2. Truncate message history
       const truncatedMessages = this.truncateHistory(messages, config.maxHistoryMessages);
 
-      // 3. Get tool definitions for the LLM — filter contextually
-      let toolDefs = toolkit.getToolDefinitions();
-
-      // Remove agent-node-specific tools when no AGENT node exists in the flow.
-      // These 6 tools add ~900 tokens of schema noise that degrades tool selection.
-      if (flowContext) {
-        const hasAgentNode = flowContext.nodes.some((n) => n.type === 'core.agent');
-        if (!hasAgentNode) {
-          const agentToolIds = new Set([
-            'list_agent_tools',
-            'get_agent_node_tools',
-            'add_tool_to_agent',
-            'remove_tool_from_agent',
-            'update_agent_tool',
-            'configure_agent',
-          ]);
-          toolDefs = toolDefs.filter((t) => !agentToolIds.has(t.id));
-        }
-      }
+      const toolDefs = toolkit.getToolDefinitions();
 
       // 4. Convert ChatMessages to AgentMessages for the adapter
       const conversationMessages = this.toAgentMessages(truncatedMessages);
@@ -137,7 +119,7 @@ export class ChatStreamSession {
               messages: conversationMessages,
               tools: toolDefs,
               systemPrompt,
-              maxTokens: 4096,
+              maxTokens: 8192,
             });
             lastError = undefined;
             break;

@@ -314,9 +314,6 @@ export type {
   EndEvent,
 } from './services/execution-event-bus';
 
-// Re-export Graph Node Types and Names
-export { GraphNodeType, GRAPH_NODE_TYPE_NAMES } from './types.internal';
-
 // Re-export validation types
 export type {
   FlowValidationResult,

@@ -80,7 +80,6 @@ export interface FlowEditorState {
   // Layout state
   currentLayout: LayoutAlgorithm;
   layoutDirection: LayoutDirection;
-  initialLayoutApplied: boolean; // Track if we've applied initial layout for this flow
 
   // Execution tracking - for showing running state in editor
   activeFlowRunId: string | null;
@@ -137,10 +136,6 @@ export interface FlowEditorActions {
   // Layout
   setLayout: (layout: LayoutAlgorithm, direction?: LayoutDirection) => void;
   setLayoutedNodes: (nodes: Node[]) => void;
-  markInitialLayoutApplied: () => void;
-
-  // Computed helpers
-  needsInitialLayout: () => boolean;
 
   // Execution tracking
   setActiveFlowRunId: (flowRunId: string | null) => void;
@@ -187,7 +182,6 @@ const initialState: FlowEditorState = {
   configPanelToolInstanceId: null,
   currentLayout: 'elkjs',
   layoutDirection: 'LR',
-  initialLayoutApplied: false,
   activeFlowRunId: null,
 };
 
@@ -513,21 +507,6 @@ export const useFlowEditorStore: UseBoundStore<StoreApi<FlowEditorStore>> =
               state.currentSnapshot = computeSnapshot(state.nodes, state.edges);
             }),
 
-          markInitialLayoutApplied: () =>
-            set((state) => {
-              state.initialLayoutApplied = true;
-            }),
-
-          // Computed helpers
-          needsInitialLayout: () => {
-            const state = _get();
-            if (state.initialLayoutApplied || state.nodes.length === 0) {
-              return false;
-            }
-            // Check if all nodes are at (0, 0)
-            return state.nodes.every((node) => node.position.x === 0 && node.position.y === 0);
-          },
-
           // Execution tracking
           setActiveFlowRunId: (flowRunId) =>
             set((state) => {
@@ -628,7 +607,6 @@ export const useConfigPanelToolInstanceId = () =>
   useFlowEditorStore((s) => s.configPanelToolInstanceId);
 export const useCurrentLayout = () => useFlowEditorStore((s) => s.currentLayout);
 export const useLayoutDirection = () => useFlowEditorStore((s) => s.layoutDirection);
-export const useInitialLayoutApplied = () => useFlowEditorStore((s) => s.initialLayoutApplied);
 
 // Combined selectors for common use cases (useShallow prevents re-renders when
 // the returned object is structurally equal)
@@ -648,11 +626,8 @@ export const useFlowEditorLayout = () =>
     useShallow((s) => ({
       currentLayout: s.currentLayout,
       layoutDirection: s.layoutDirection,
-      initialLayoutApplied: s.initialLayoutApplied,
       setLayout: s.setLayout,
       setLayoutedNodes: s.setLayoutedNodes,
-      markInitialLayoutApplied: s.markInitialLayoutApplied,
-      needsInitialLayout: s.needsInitialLayout,
     })),
   );
 

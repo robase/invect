@@ -1,4 +1,3 @@
-import { GraphNodeType } from 'src/types.internal';
 import { NodeDefinition } from './node-definition.types';
 import { Logger } from 'src/schemas';
 import { CredentialsService } from 'src/services/credentials/credentials.service';
@@ -6,7 +5,7 @@ import { BaseAIClient } from 'src/services/ai/base-client';
 
 export interface NodeConfigUpdateEvent {
   nodeId: string;
-  nodeType: GraphNodeType;
+  nodeType: string;
   flowId?: string;
   params: Record<string, unknown>;
   change?: {

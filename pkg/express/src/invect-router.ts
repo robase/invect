@@ -1,10 +1,9 @@
-import { Router } from 'express';
+import { Router, json } from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import {
   BatchProvider,
   createInvect,
   InvectConfig,
-  GraphNodeType,
   InvectIdentity,
   InvectPermission,
   InvectResourceType,
@@ -109,6 +108,8 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
   await invect.startCronScheduler();
 
   const router = Router();
+
+  router.use(json({ limit: '10mb' }));
 
   /** Extract a single route parameter as a string (Express 5 params can be string | string[]). */
   function param(req: Request, name: string): string {
@@ -723,21 +724,12 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
     '/node-definition/:nodeType',
     requirePermission('flow:read'),
     async (req: Request, res: Response) => {
-      const rawNodeType = param(req, 'nodeType') ?? '';
+      const nodeTypeParam = param(req, 'nodeType') ?? '';
 
-      // Accept both legacy GraphNodeType enum values (uppercase) and
-      // action IDs (e.g. "core.model", "gmail.send_message").
-      const nodeTypeParam = rawNodeType.includes('.')
-        ? rawNodeType // action ID — pass through as-is
-        : rawNodeType.toUpperCase(); // legacy — uppercase to match enum
-
-      const isLegacyEnum = !rawNodeType.includes('.') && nodeTypeParam in GraphNodeType;
-      const isActionId = rawNodeType.includes('.');
-
-      if (!isLegacyEnum && !isActionId) {
+      if (!nodeTypeParam.includes('.')) {
         res.status(400).json({
           error: 'INVALID_NODE_TYPE',
-          message: `Unknown node type '${param(req, 'nodeType')}'`,
+          message: `Unknown node type '${nodeTypeParam}'`,
         });
         return;
       }
@@ -750,7 +742,7 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
       const flowId = typeof req.query.flowId === 'string' ? req.query.flowId : undefined;
 
       const response = await invect.actions.handleConfigUpdate({
-        nodeType: nodeTypeParam as GraphNodeType,
+        nodeType: nodeTypeParam,
         nodeId: nodeId ?? `definition-${nodeTypeParam.toLowerCase()}`,
         flowId,
         params,

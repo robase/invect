@@ -43,8 +43,8 @@ export interface NodeParamField {
 
 export interface NodeDefinition {
   /**
-   * Node type identifier. Can be a GraphNodeType enum value (e.g. "MODEL")
-   * or a provider action ID (e.g. "gmail.list_messages").
+   * Node type identifier — a provider action ID (e.g. "core.model",
+   * "gmail.list_messages").
    */
   type: string;
   label: string;

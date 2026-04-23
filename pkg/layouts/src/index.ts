@@ -23,3 +23,6 @@ export {
 
 // Re-export ElkJS layout
 export { applyElkLayout, enrichNodesWithHandles, type ElkJsLayoutOptions } from './elk';
+
+// Re-export Invect-specific layout
+export { applyInvectLayout, type InvectLayoutOptions } from './invect';

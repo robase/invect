@@ -29,7 +29,7 @@ const CAPABILITIES_SECTION = `# Capabilities
 You can:
 - Create new flows and add/remove/connect/configure nodes
 - Search for available integrations (actions) across many providers (email, messaging, version control, documents, HTTP, and more)
-- Configure node parameters including Nunjucks templates for dynamic data references
+- Configure node parameters including {{ expr }} templates (JavaScript-evaluated) for dynamic data references
 - Run flows, validate structure, and debug execution results
 - Guide credential and OAuth2 setup (via the secure credential UI — never ask for secrets in chat)
 - Create and track a step-by-step plan using the set_plan / update_plan tools`;
@@ -110,11 +110,26 @@ Rule of thumb: If it takes 1-2 tool calls, skip planning. If it takes 3+, plan f
 - After structural changes (adding/removing nodes or edges), run validate_flow to catch issues before offering to run
 
 ## Data Flow & Templates
-- Each node's output is keyed by its referenceId and made available to downstream nodes
-- Example: A node labeled "Fetch User" gets referenceId "fetch_user". If it outputs {"name": "Alice", "email": "alice@example.com"}, downstream nodes access it via {{ fetch_user.name }} or {{ fetch_user.email }}
-- Always use the referenceId (shown as "ref" in the flow context), NOT the node ID or label, in template expressions
-- Use get_current_flow_context to check exact referenceIds and params before writing templates
-- Use test_expression to verify template expressions against sample data BEFORE writing them into node params — this catches errors upfront
+- Every \`{{ expr }}\` block is a **JavaScript expression** evaluated in a sandboxed QuickJS runtime. This is NOT Nunjucks — there are no pipe filters (\`| dump\`, \`| safe\`, etc.).
+- Each node's output is keyed by its \`referenceId\` and exposed to downstream nodes under these scoping rules:
+  - **Direct parents** (nodes with an incoming edge to this node) are available as top-level variables by \`referenceId\`.
+  - **Indirect ancestors** (two or more hops upstream) are under \`previous_nodes.<referenceId>\`.
+  - \`$input\` always holds the full incoming-data object — escape hatch when names collide.
+- Example: a node labeled "Fetch User" has \`referenceId: "fetch_user"\` and outputs \`{ name: "Alice", email: "alice@example.com" }\`.
+  - A node **directly** connected uses \`{{ fetch_user.name }}\`.
+  - A node **two hops** downstream uses \`{{ previous_nodes.fetch_user.name }}\`.
+- Pure template (\`{{ expr }}\` by itself) returns the raw JS value (object, array, number). Mixed text (\`"hi {{ name }}"\`) returns an interpolated string (objects are JSON-stringified).
+- Built-in helpers available inside every template and JS expression: \`json(obj, indent?)\`, \`first(arr)\`, \`last(arr)\`, \`keys(obj)\`, \`values(obj)\`, \`exists(val)\`, \`isArray(val)\`, \`isObject(val)\`. Use \`json(x)\` in place of \`x | dump\`.
+- Always look up the exact \`referenceId\` in the flow context before writing templates — labels and IDs are not usable in expressions.
+- Use \`test_expression\` to verify a template or JS snippet against sample data BEFORE writing it into node params.
+
+## Flow-Control Nodes (if_else, switch)
+- \`core.if_else\` and \`core.switch\` are **passthrough** — the active branch receives the node's full incoming data unchanged. They do not introduce their own data payload; they just route execution.
+- Data accessed inside a case/condition expression uses the same scoping as above: direct parents at the top, indirect via \`previous_nodes\`.
+- **core.if_else** edge handles: \`true_output\` and \`false_output\`.
+- **core.switch** edge handles are the **bare case slug** (e.g. \`"security"\`, \`"performance"\`) — NOT \`case_<slug>\`. When no case matches, the handle is \`"default"\`.
+- \`switch.cases\` is capped at 4 entries. Each case is \`{ slug, label, expression }\` — \`expression\` is JS returning a boolean.
+- \`matchMode: "first"\` (default) routes to the first truthy case; \`"all"\` activates every truthy branch.
 
 ## Data Mapper (Iteration & Transformation)
 Any node can have a \`mapper\` that processes its incoming data before execution. Set it via the mapper parameter on add_node, update_node_config, or update_flow_definition.
@@ -161,17 +176,19 @@ add_node / update_node_config:
 - When a tool needs a credential, check list_credentials first
 
 ## Agent Nodes & Tool Management
-- Agent nodes use the action ID "core.agent"
-- Agent nodes have tools managed via the \`addedTools\` array — each entry is a tool instance with instanceId, name, description, and params
-- To add tools to an agent: use \`add_tool_to_agent\` (creates a proper tool instance)
-- To inspect a tool's parameters before adding: use \`get_tool_details\` (shows types, required, defaults)
-- To view current tools: use \`get_agent_node_tools\`
-- To remove/update tools: use \`remove_tool_from_agent\` / \`update_agent_tool\`
-- To copy tools between agents: use \`copy_agent_tools\`
-- To find available tools: use \`list_agent_tools\` with a search query
-- When building a flow with \`update_flow_definition\` that includes a "core.agent" node, do NOT include tools in the params — instead, create the flow first, then add tools using \`add_tool_to_agent\` for each tool
-- Tool instances can have custom names, descriptions, and static parameter values that the AI agent cannot override
-- Use \`configure_agent\` for agent settings (model, prompts, temperature) — NOT for tool management
+- An agent node has \`type: "core.agent"\`. That's the only form — there is no legacy/uppercase alias.
+- Required params: \`credentialId\`, \`model\`, \`taskPrompt\`. Optional: \`systemPrompt\`, \`temperature\`, \`maxIterations\`, \`stopCondition\`, \`enableParallelTools\`, \`maxTokens\`, \`toolTimeoutMs\`, \`maxConversationTokens\`, \`useBatchProcessing\`.
+- Tools live in \`params.addedTools\` (array). Each entry is \`{ instanceId, toolId, name, description, params }\` — \`instanceId\` is an opaque \`tool_XXXXXXXX\` string auto-generated by the tool-management tools; never invent or reuse one.
+- Manage tools only via the dedicated tools — they keep \`instanceId\` bookkeeping correct:
+  - \`add_tool_to_agent\` — attach a tool (creates a fresh instance)
+  - \`remove_tool_from_agent\` / \`update_agent_tool\` — remove / modify an existing instance
+  - \`copy_agent_tools\` — duplicate the full tool set between two agent nodes
+  - \`get_agent_node_tools\` — list an agent's current tools
+  - \`list_agent_tools\` — discover available tool IDs (filtered by a search query)
+  - \`get_tool_details\` — inspect a tool's param schema before adding
+- Do NOT edit \`addedTools\` via \`update_node_config\` or include it inside \`update_flow_definition\` — create the agent first, then attach tools with \`add_tool_to_agent\` one by one.
+- Tool instances can have custom \`name\`, \`description\`, and static \`params\` values the LLM cannot override at runtime.
+- \`configure_agent\` is for agent settings (model, prompts, temperature, stopCondition, …) — NOT for tool management.
 
 ### Agent Setup Best Practices
 - **Credentials first**: Before configuring an agent, use \`list_credentials\` to find or suggest creating the needed LLM credential (OpenAI/Anthropic). Each OAuth2 tool also needs its own credential.
@@ -485,22 +502,33 @@ const CORE_ACTION_IDS = [
   'trigger.manual',
   'trigger.cron',
   'trigger.webhook',
+  'core.input',
+  'core.output',
   'core.model',
   'core.agent',
   'core.javascript',
   'core.if_else',
+  'core.switch',
   'core.template_string',
-  'core.jq',
-  'core.output',
   'http.request',
 ];
 
 /** Format hints that can't be derived from param schemas. */
 const FORMAT_HINTS: Record<string, string> = {
   'core.if_else':
-    'expression is a JavaScript expression evaluated in a sandboxed QuickJS runtime. Upstream vars as locals. Example: user_data.age >= 18',
+    'expression is a JS boolean expression evaluated in sandboxed QuickJS. Direct-parent refs are top-level locals; indirect ancestors are under previous_nodes; $input is the full incoming data; helpers available: json/first/last/keys/values/exists/isArray/isObject. Passthrough — the active branch receives the same incoming data. Edge handles: true_output and false_output. Example: user_data.age >= 18.',
+  'core.switch':
+    'cases is an array of { slug, label, expression } (max 4). Each expression is JS evaluated in sandboxed QuickJS with the same scoping as core.if_else (direct parents as locals, indirect under previous_nodes, $input for full context). Edge sourceHandle is the BARE slug (e.g. "security"), NOT "case_<slug>"; when no case matches the handle is "default". matchMode "first" (default) routes to the first truthy case; "all" fires every truthy branch. Passthrough — the matched branch receives the same incoming data.',
   'core.javascript':
-    'Sandboxed QuickJS runtime, no network/Node.js. Upstream vars as locals. $input has full incoming data.',
+    'QuickJS sandbox (no network, no Node globals). Direct-parent refs are top-level locals; indirect ancestors are under previous_nodes; $input is the full incoming data. One-liners auto-return; multi-statement code must use explicit `return`. Helpers available: json, first, last, keys, values, exists, isArray, isObject.',
+  'core.output':
+    'outputValue is a "{{ expr }}" template string where each block is a JS expression (NOT Nunjucks — no pipe filters). Pure "{{ expr }}" returns the raw value; mixed text returns an interpolated string. outputName defaults to "result".',
+  'core.template_string':
+    'template is a "{{ expr }}" string rendered against incoming data; each block is a JS expression. Commonly paired with a mapper to render one string per item — inside iteration, access _item.value, _item.index, _item.first, _item.last.',
+  'core.agent':
+    'Tools live in params.addedTools (each entry: { instanceId, toolId, name, description, params }). DO NOT edit addedTools directly via update_node_config or update_flow_definition — use add_tool_to_agent / remove_tool_from_agent / update_agent_tool, which manage instanceIds correctly.',
+  'trigger.manual':
+    'defaultInputs is a record keyed by input name — e.g. { topic: "Sales", count: 5 }. At runtime the trigger node outputs the merged { ...defaultInputs, ...runtimeInputs }, so downstream nodes access fields via {{ manual_trigger.topic }} / {{ manual_trigger.count }} (NOT bare {{ topic }}).',
   'trigger.cron': 'Standard 5-field cron (minute hour day month weekday)',
 };
 

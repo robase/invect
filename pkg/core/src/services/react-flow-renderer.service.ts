@@ -209,8 +209,16 @@ export class ReactFlowRendererService {
     let nodes = this.transformNodes(flowVersion, executionStatusMap);
     const edges = this.transformEdges(flowVersion, executionStatusMap);
 
-    // Apply ELK left-to-right layout by default (using elkjs layered algorithm)
-    nodes = await this.applyElkLayoutToNodes(nodes, edges);
+    // Only auto-layout when no node has a saved position (e.g. a freshly
+    // created flow). Otherwise respect the positions the user has saved —
+    // layout should only run on an explicit user action from the editor.
+    const hasSavedPositions =
+      flowVersion.invectDefinition?.nodes?.some(
+        (n: FlowNodeDefinitions) => n.position !== undefined,
+      ) ?? false;
+    if (!hasSavedPositions) {
+      nodes = await this.applyElkLayoutToNodes(nodes, edges);
+    }
 
     return {
       nodes,

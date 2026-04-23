@@ -128,9 +128,7 @@ const flexibleParamsSchema = z.record(z.string(), z.unknown()).default({});
  * Flow node schema.
  *
  * All nodes share the same base shape with a flexible params record.
- * The `type` field is an arbitrary string – it can be a legacy
- * GraphNodeType enum value (e.g. "AGENT") or an action ID
- * (e.g. "core.model", "gmail.send_message").
+ * The `type` field is an action ID (e.g. "core.model", "gmail.send_message").
  *
  * Runtime validation of params is handled by each node executor /
  * action definition via its `paramFields`.

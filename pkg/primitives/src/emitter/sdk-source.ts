@@ -288,9 +288,19 @@ function emitEdge(edge: FlowEdge, nodes: FlowNodeDefinitions[]): string {
 
 // Build an arrow function from a DB-stored JS expression. Upstream referenceIds
 // available to the expression are destructured into scope, matching QuickJS.
+// `previous_nodes` is also destructured when the expression references it, so
+// indirect ancestors reachable via `previous_nodes.<ref>` resolve correctly.
 function arrowFromExpression(expression: string, upstream: string[]): string {
-  const destructure = upstream.length > 0 ? `const { ${upstream.join(', ')} } = ctx;` : '';
   const body = needsAutoReturn(expression) ? `return (${expression});` : expression;
+  return arrowFromBody(body, upstream, /\bprevious_nodes\b/.test(expression));
+}
+
+function arrowFromBody(body: string, upstream: string[], includePreviousNodes: boolean): string {
+  const names = [...upstream];
+  if (includePreviousNodes && !names.includes('previous_nodes')) {
+    names.push('previous_nodes');
+  }
+  const destructure = names.length > 0 ? `const { ${names.join(', ')} } = ctx;` : '';
   if (!destructure && !body.includes('\n')) {
     // One-liner path: keep it inline for readability.
     return `(ctx) => { ${body} }`;
@@ -306,15 +316,55 @@ function arrowFromExpression(expression: string, upstream: string[]): string {
   return lines.join('\n');
 }
 
-// Output value emission: the DB stores either a literal (template string,
-// object, etc.) or is absent. We wrap the literal as `(ctx) => <literal>`. If
-// it's a string that references upstream via template-string syntax, we keep
-// it as a TS template literal — the user's next edit can swap in `ctx.foo`.
+// Output value emission. The DB stores `params.outputValue` as a JS-templated
+// string — `{{ expr }}` blocks are JavaScript expressions (NOT Nunjucks), so
+// we translate them into real JS rather than emitting them verbatim:
+//
+//   - pure `{{ expr }}`              → `(ctx) => (expr)`
+//   - mixed text with embedded `{{ expr }}` blocks → template literal
+//   - plain string (no templates)    → string literal
+//   - non-string literal             → JSON literal
 function emitValueAsArrow(raw: unknown, upstream: string[]): string {
-  if (typeof raw === 'string') {
-    return arrowFromExpression(raw.startsWith('{{') ? raw : JSON.stringify(raw), upstream);
+  if (typeof raw !== 'string') {
+    return `(ctx) => (${JSON.stringify(raw)})`;
   }
-  return `(ctx) => (${JSON.stringify(raw)})`;
+
+  const TEMPLATE_BLOCK = /\{\{([\s\S]*?)\}\}/g;
+  if (!TEMPLATE_BLOCK.test(raw)) {
+    return `(ctx) => (${JSON.stringify(raw)})`;
+  }
+
+  // Pure expression: entire string is one `{{ expr }}` block.
+  const pure = raw.match(/^\{\{([\s\S]*?)\}\}$/);
+  if (pure && !pure[1].includes('{{') && !pure[1].includes('}}')) {
+    return arrowFromExpression(pure[1].trim(), upstream);
+  }
+
+  // Mixed — build a JS template literal.
+  const parts: string[] = [];
+  let lastIndex = 0;
+  const exprBody = /\{\{([\s\S]*?)\}\}/g;
+  let m: RegExpExecArray | null;
+  let touchesPreviousNodes = false;
+  while ((m = exprBody.exec(raw)) !== null) {
+    parts.push(escapeTemplateLiteralText(raw.slice(lastIndex, m.index)));
+    const inner = m[1].trim();
+    if (/\bprevious_nodes\b/.test(inner)) {
+      touchesPreviousNodes = true;
+    }
+    parts.push('${(' + inner + ')}');
+    lastIndex = m.index + m[0].length;
+  }
+  parts.push(escapeTemplateLiteralText(raw.slice(lastIndex)));
+
+  const templateLiteral = '`' + parts.join('') + '`';
+  return arrowFromBody(`return (${templateLiteral});`, upstream, touchesPreviousNodes);
+}
+
+// Escape a raw text segment so it can sit inside a JS template literal
+// (`…`) without breaking out or accidentally starting an interpolation.
+function escapeTemplateLiteralText(text: string): string {
+  return text.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${');
 }
 
 function indent(block: string, spaces: number): string {

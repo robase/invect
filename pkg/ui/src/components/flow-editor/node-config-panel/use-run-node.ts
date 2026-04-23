@@ -1,5 +1,4 @@
 import { useCallback } from 'react';
-import { GraphNodeType } from '@invect/core/types';
 import { useApiClient } from '../../../contexts/ApiContext';
 import { useFlowActions } from '../../../routes/flow-route-layout';
 import { useNodeConfigPanelStore, useParsedInputPreview } from './use-node-config-panel-store';
@@ -7,7 +6,7 @@ import { useNodeConfigPanelStore, useParsedInputPreview } from './use-node-confi
 interface UseRunNodeOptions {
   nodeId: string | null;
   flowId: string;
-  nodeType: GraphNodeType;
+  nodeType: string;
   nodeParams: Record<string, unknown>;
   updateNodeData: (nodeId: string, data: Record<string, unknown>) => void;
 }

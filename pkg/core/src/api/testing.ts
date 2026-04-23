@@ -3,7 +3,6 @@ import type { ServiceFactory } from '../services/service-factory';
 import type { ActionRegistry } from '../actions';
 import type { JsExpressionService, TemplateService } from '../services/templating';
 import type { Logger, InvectConfig } from '../schemas';
-import { GraphNodeType } from '../types.internal';
 import type { NodeExecutionContext } from '../types.internal';
 import type { SubmitPromptRequest } from '../services/node-data.service';
 import { NodeExecutionStatus } from '../types/base';
@@ -100,7 +99,7 @@ export function createTestingAPI(
       const mergedParams = { ...defaultParams, ...params };
 
       const skipTemplateResolutionKeys: string[] = [];
-      if (nodeType === GraphNodeType.TEMPLATE_STRING || nodeType === 'core.template_string') {
+      if (nodeType === 'core.template_string') {
         skipTemplateResolutionKeys.push('template');
       }
 

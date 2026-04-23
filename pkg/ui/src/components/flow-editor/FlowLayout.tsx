@@ -1,5 +1,7 @@
 import type React from 'react';
 import { FlowBottomToolbar } from './FlowBottomToolbar';
+import { ToolbarCollapsedProvider } from './toolbar-context';
+import { TooltipProvider } from '../ui/tooltip';
 
 interface FlowLayoutProps {
   sidebar: React.ReactNode;
@@ -9,10 +11,14 @@ interface FlowLayoutProps {
   viewportRef?: React.RefObject<HTMLDivElement | null>;
   /** Panel that appears on the right side (e.g. tool config, node config) */
   rightPanel?: React.ReactNode;
-  /** Chat toggle button rendered in the top-right toolbar */
+  /** Chat toggle button rendered in the floating top-right toolbar */
   chatToggle?: React.ReactNode;
+  /** View-code toggle button rendered in the floating top-right toolbar */
+  viewCodeToggle?: React.ReactNode;
   /** Chat panel rendered as a right sidebar */
   chatPanel?: React.ReactNode;
+  /** Code panel rendered as a right sidebar */
+  codePanel?: React.ReactNode;
   /** Floating chat overlay rendered above the viewport (for empty flows) */
   chatOverlay?: React.ReactNode;
   /** Extra controls rendered in the bottom toolbar (e.g. Run button, Active/Inactive) */
@@ -38,13 +44,17 @@ export function FlowLayout({
   viewportRef,
   rightPanel,
   chatToggle,
+  viewCodeToggle,
   chatPanel,
+  codePanel,
   chatOverlay,
   toolbarExtra,
   sidebarOpen = true,
   onToggleSidebar,
   hideToolbar = false,
 }: FlowLayoutProps) {
+  const hasFloatingToolbar = Boolean(chatToggle || viewCodeToggle);
+
   return (
     <div className="flex flex-1 min-h-0">
       {sidebarOpen && sidebar}
@@ -55,13 +65,24 @@ export function FlowLayout({
         {/* Mode switcher - top center */}
         <div className="absolute left-1/2 -translate-x-1/2 top-4 z-10">{modeSwitcher}</div>
 
+        {/* Floating top-right toolbar (chat + view code) */}
+        {hasFloatingToolbar && (
+          <TooltipProvider>
+            <ToolbarCollapsedProvider value={true}>
+              <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-1.5 rounded-xl border border-border bg-card/90 backdrop-blur-sm shadow-md p-1.5">
+                {chatToggle}
+                {viewCodeToggle}
+              </div>
+            </ToolbarCollapsedProvider>
+          </TooltipProvider>
+        )}
+
         {viewport}
         {chatOverlay}
 
         {!hideToolbar && (
           <FlowBottomToolbar
             layoutSelector={layoutSelector}
-            chatToggle={chatToggle}
             toolbarExtra={toolbarExtra}
             sidebarOpen={sidebarOpen}
             onToggleSidebar={onToggleSidebar}
@@ -70,6 +91,7 @@ export function FlowLayout({
       </div>
       {rightPanel}
       {chatPanel}
+      {codePanel}
     </div>
   );
 }

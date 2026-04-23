@@ -1,5 +1,4 @@
 import { FlowRunStatus, NodeExecutionStatus } from 'src/types/base';
-import { GraphNodeType } from 'src/types.internal';
 import {
   InvectDefinition,
   FlowNodeDefinitions,
@@ -448,7 +447,7 @@ export class FlowRunCoordinator {
                         output: batchResult.content,
                       },
                     },
-                    nodeType: GraphNodeType.MODEL,
+                    nodeType: 'core.model',
                   },
                 },
               );

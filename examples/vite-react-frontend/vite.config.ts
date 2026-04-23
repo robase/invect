@@ -30,6 +30,7 @@ export default defineConfig({
       },
       { find: /^@invect\/layouts$/, replacement: pkg('layouts/src/index.ts') },
       { find: /^@invect\/ui$/, replacement: pkg('ui/src/index.ts') },
+      { find: /^@invect\/action-kit$/, replacement: pkg('action-kit/src/index.ts') },
     ],
   },
   optimizeDeps: {

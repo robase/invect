@@ -2,7 +2,7 @@
  * ChatMessageList — Renders the chat message list, streaming indicator, and empty states.
  */
 
-import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
 import {
   MessageSquare,
   Bot,
@@ -87,18 +87,27 @@ export function ChatMessageList({
     isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
   }, []);
 
-  // Scroll to bottom on initial render / when history finishes loading
+  // Pin to bottom on mount (panel open) — runs before paint so the user never
+  // sees a mid-scroll position, then re-pins on the next frame to catch
+  // markdown/code-block reflow that lands after the initial layout.
   const hasScrolledOnLoad = useRef(false);
-  useEffect(() => {
-    if (
-      !isLoadingHistory &&
-      messages.length > 0 &&
-      !hasScrolledOnLoad.current &&
-      viewportRef.current
-    ) {
-      viewportRef.current.scrollTop = viewportRef.current.scrollHeight;
-      hasScrolledOnLoad.current = true;
+  useLayoutEffect(() => {
+    if (hasScrolledOnLoad.current || isLoadingHistory || messages.length === 0) {
+      return;
     }
+    const viewport = viewportRef.current;
+    if (!viewport) {
+      return;
+    }
+    const pin = () => {
+      viewport.scrollTop = viewport.scrollHeight;
+    };
+    pin();
+    const rafId = requestAnimationFrame(() => {
+      pin();
+      hasScrolledOnLoad.current = true;
+    });
+    return () => cancelAnimationFrame(rafId);
   }, [isLoadingHistory, messages]);
 
   useEffect(() => {
@@ -173,7 +182,7 @@ export function ChatMessageList({
         )}
 
         {isStreaming && !streamingText && (
-          <div className="flex items-center gap-2 py-2 text-xs ml-7 text-muted-foreground">
+          <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
             <Loader2 className="size-3 animate-spin text-primary/60" />
             <span>Thinking…</span>
           </div>
@@ -221,7 +230,7 @@ function SuggestionChips({
   }
 
   return (
-    <div className="flex flex-wrap gap-1.5 mt-2 ml-7">
+    <div className="flex flex-wrap gap-1.5 mt-2">
       {suggestions.map((s, i) => (
         <button
           key={i}
@@ -625,7 +634,7 @@ function CredentialSetupBubble({ data }: { data: Record<string, unknown> }) {
   const message = data.message as string | undefined;
 
   return (
-    <div className="my-1.5 ml-6">
+    <div className="my-1.5">
       <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-[11px]">
         {message && <div className="text-foreground/80 mb-2">{message}</div>}
         <Button
@@ -690,7 +699,7 @@ function PlanStepsBubble({
   };
 
   return (
-    <div className="my-1.5 ml-6">
+    <div className="my-1.5">
       <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-[11px]">
         {summary && <div className="font-medium text-foreground/80 mb-1.5">{summary}</div>}
         {progress && <div className="text-[10px] text-muted-foreground/60 mb-1.5">{progress}</div>}

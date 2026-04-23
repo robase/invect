@@ -4,7 +4,7 @@ import { memo, useCallback, useState } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { Card } from '../ui/card';
 import { useNodeRegistry } from '../../contexts/NodeRegistryContext';
-import { GraphNodeType, NodeExecutionStatus } from '@invect/core/types';
+import { NodeExecutionStatus } from '@invect/core/types';
 import { cn } from '../../lib/utils';
 import { Loader2, Bot } from 'lucide-react';
 import { NodeAppendix, type AppendixPosition } from './NodeAppendix';
@@ -20,7 +20,7 @@ const HANDLE_CLASS =
   '!bg-background !w-4 !h-4 !border-2 !border-muted-foreground !rounded-full !transition-colors hover:!bg-muted hover:!border-foreground !shadow-none !ring-0';
 
 interface AgentNodeData extends Record<string, unknown> {
-  type?: GraphNodeType;
+  type?: string;
   display_name?: string;
   executionStatus?: NodeExecutionStatus;
   params?: {
@@ -102,7 +102,7 @@ AgentNodeLoadingPlaceholder.displayName = 'AgentNodeLoadingPlaceholder';
  */
 export const AgentNode = memo(({ id, data, selected }: NodeProps) => {
   const typedData = data as AgentNodeData;
-  const nodeType = GraphNodeType.AGENT;
+  const nodeType = 'core.agent';
 
   const { getNodeDefinition, isLoading: registryLoading } = useNodeRegistry();
   const definition = getNodeDefinition(nodeType);

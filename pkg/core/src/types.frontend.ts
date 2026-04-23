@@ -147,8 +147,6 @@ export type {
 // CRITICAL: Import from pure types file, NOT from types-fresh.ts which has Zod
 export { FlowRunStatus, NodeExecutionStatus } from './types/base';
 
-export { GraphNodeType, GRAPH_NODE_TYPE_NAMES } from './types/graph-node-types';
-
 export { BatchProvider, BatchStatus } from './services/ai/ai-types';
 
 export { FLOW_VALIDATION_ERROR_TYPES } from './types/validation';

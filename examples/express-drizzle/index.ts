@@ -16,7 +16,6 @@ app.use(
     allowedHeaders: ['Content-Type', 'Authorization', 'X-User-ID', 'x-user-id'],
   }),
 );
-app.use(express.json());
 
 // Mount Invect routes under /invect (or a path of your choice)
 app.use('/invect', await createInvectRouter(invectConfig));

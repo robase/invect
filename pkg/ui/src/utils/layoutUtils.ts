@@ -3,6 +3,7 @@ import type { Node, Edge } from '@xyflow/react';
 import {
   applyDagreLayout as applyDagreLayoutFromPackage,
   applyElkLayout as applyElkLayoutFromPackage,
+  applyInvectLayout as applyInvectLayoutFromPackage,
   type ElkLayoutNode,
 } from '@invect/layouts';
 
@@ -12,7 +13,7 @@ export interface Position {
 }
 
 // Layout algorithm options
-export type LayoutAlgorithm = 'dagre' | 'elkjs';
+export type LayoutAlgorithm = 'dagre' | 'elkjs' | 'invect';
 
 export interface LayoutOptions {
   algorithm: LayoutAlgorithm;
@@ -114,6 +115,16 @@ export const applyLayout = async (
       const layoutedNodes = await applyElkLayoutFromPackage(enrichedNodes, edges, {
         direction: elkDirection,
         // Only pass nodeWidth/nodeHeight, let package defaults handle everything else
+        nodeWidth: defaultLayoutOptions.nodeWidth,
+        nodeHeight: defaultLayoutOptions.nodeHeight,
+      });
+      return { nodes: layoutedNodes as Node[], edges };
+    }
+    case 'invect': {
+      const layoutedNodes = applyInvectLayoutFromPackage(nodes, edges, {
+        direction,
+        nodeSpacing: options?.nodeSpacing ?? defaultLayoutOptions.nodeSpacing,
+        rankSpacing: options?.rankSpacing ?? defaultLayoutOptions.rankSpacing,
         nodeWidth: defaultLayoutOptions.nodeWidth,
         nodeHeight: defaultLayoutOptions.nodeHeight,
       });

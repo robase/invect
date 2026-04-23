@@ -4,7 +4,7 @@ import { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { Card } from '../ui/card';
 import { useNodeRegistry } from '../../contexts/NodeRegistryContext';
-import { GraphNodeType, NodeExecutionStatus } from '@invect/core/types';
+import { NodeExecutionStatus } from '@invect/core/types';
 import type { NodeDefinition, NodeHandleDefinition } from '../../types/node-definition.types';
 import { cn } from '../../lib/utils';
 import { Loader2 } from 'lucide-react';
@@ -214,7 +214,7 @@ NodeLoadingPlaceholder.displayName = 'NodeLoadingPlaceholder';
 
 export const UniversalNode = memo(({ data, selected }: NodeProps) => {
   const typedData = data as UniversalNodeData;
-  const nodeType = typedData.type || GraphNodeType.TEMPLATE_STRING;
+  const nodeType = typedData.type || 'core.template_string';
 
   const { getNodeDefinition, isLoading: registryLoading } = useNodeRegistry();
   const definition = getNodeDefinition(nodeType);

@@ -1,5 +1,5 @@
 import { useMemo, useCallback } from 'react';
-import { GraphNodeType, newToolInstanceId, type ReactFlowNodeData } from '@invect/core/types';
+import { newToolInstanceId, type ReactFlowNodeData } from '@invect/core/types';
 import type { ToolDefinition, AddedToolInstance } from '../../../nodes/ToolSelectorModal';
 import type { Node } from '@xyflow/react';
 
@@ -100,7 +100,7 @@ export function useAgentToolManagement({
   );
 
   const agentToolsProps = useMemo(() => {
-    if (nodeType !== GraphNodeType.AGENT) {
+    if (nodeType !== 'core.agent') {
       return undefined;
     }
     return {

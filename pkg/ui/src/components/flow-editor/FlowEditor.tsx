@@ -8,7 +8,6 @@ import { ValidationPanel } from './ValidationPanel';
 import { LayoutSelector } from '../graph/LayoutSelector';
 import { BatchFlowEdge, defaultEdgeOptions } from '../graph';
 import { applyLayout, type LayoutAlgorithm } from '~/utils/layoutUtils';
-import { GraphNodeType } from '@invect/core/types';
 import {
   NodeTypes,
   EdgeTypes,
@@ -26,6 +25,8 @@ import { getNodeComponent } from '../nodes/nodeRegistry';
 import { NodeConfigPanel } from './node-config-panel/NodeConfigPanel';
 import { ToolConfigPanel } from './ToolConfigPanel';
 import { ChatPanel, ChatToggleButton, ChatPromptOverlay } from '~/components/chat';
+import { ViewCodeToggleButton } from './ViewCodeToggleButton';
+import { FlowCodePanel } from './FlowCodePanel';
 import { useNodeRegistry } from '~/contexts/NodeRegistryContext';
 import { useFlowEditorStore } from './flow-editor.store';
 import { useFlowReactFlowData } from '../../api/flows.api';
@@ -131,7 +132,9 @@ export function FlowEditor({ flowId, flowVersion, basePath = '' }: FlowEditorPro
           onToggleSidebar={toggleNodeSidebar}
           rightPanel={rightPanelElement}
           chatToggle={<ChatToggleButton />}
+          viewCodeToggle={<ViewCodeToggleButton />}
           chatPanel={<ChatPanel flowId={flowId} basePath={basePath} />}
+          codePanel={<FlowCodePanel flowId={flowId} />}
           chatOverlay={<ChatPromptOverlay />}
           toolbarExtra={
             <RunControls
@@ -195,14 +198,11 @@ export function FlowWorkbenchView({
   // Actions
   const onNodesChange = useFlowEditorStore((s) => s.applyNodeChanges);
   const onEdgesChange = useFlowEditorStore((s) => s.applyEdgeChanges);
-  const setNodes = useFlowEditorStore((s) => s.setNodes);
   const onConnect = useFlowEditorStore((s) => s.onConnect);
   const setLayout = useFlowEditorStore((s) => s.setLayout);
   const setLayoutedNodes = useFlowEditorStore((s) => s.setLayoutedNodes);
   const closeConfigPanel = useFlowEditorStore((s) => s.closeConfigPanel);
   const selectNode = useFlowEditorStore((s) => s.selectNode);
-  const markInitialLayoutApplied = useFlowEditorStore((s) => s.markInitialLayoutApplied);
-  const needsInitialLayout = useFlowEditorStore((s) => s.needsInitialLayout);
   const setRegistryLoading = useFlowEditorStore((s) => s.setRegistryLoading);
   const setNodesInitialized = useFlowEditorStore((s) => s.setNodesInitialized);
   const setAllNodesHaveDefinitions = useFlowEditorStore((s) => s.setAllNodesHaveDefinitions);
@@ -297,25 +297,6 @@ export function FlowWorkbenchView({
     },
     [setLayout, setLayoutedNodes, fitView],
   );
-
-  React.useEffect(() => {
-    if (needsInitialLayout()) {
-      markInitialLayoutApplied();
-      const { nodes: currentNodes, edges: currentEdges } = useFlowEditorStore.getState();
-      applyLayout(currentNodes, currentEdges, currentLayout, currentDirection).then(
-        ({ nodes: layoutedNodes }) => {
-          setNodes(layoutedNodes);
-        },
-      );
-    }
-  }, [
-    needsInitialLayout,
-    markInitialLayoutApplied,
-    storeNodes.length,
-    currentLayout,
-    currentDirection,
-    setNodes,
-  ]);
 
   const handleReactFlowInit = useCallback(() => {
     const currentNodes = useFlowEditorStore.getState().nodes;
@@ -415,10 +396,14 @@ export function FlowWorkbenchView({
   React.useEffect(() => {
     if (onLayoutSelectorRender) {
       onLayoutSelectorRender(
-        <LayoutSelector currentLayout={currentLayout} onLayoutChange={handleLayoutChange} />,
+        <LayoutSelector
+          currentLayout={currentLayout}
+          currentDirection={currentDirection}
+          onLayoutChange={handleLayoutChange}
+        />,
       );
     }
-  }, [currentLayout, handleLayoutChange, onLayoutSelectorRender]);
+  }, [currentLayout, currentDirection, handleLayoutChange, onLayoutSelectorRender]);
 
   // --- Push sidebar/right panel to shell ---
   const toggleNodeSidebar = useUIStore((s) => s.toggleNodeSidebar);
@@ -490,7 +475,7 @@ export function FlowWorkbenchView({
     // @ts-ignore React 19 vs 18 type mismatch in @xyflow/react
     // eslint-disable-next-line typescript/no-explicit-any -- React node components require generic any props
     const mapping: Record<string, React.ComponentType<any>> = {
-      [GraphNodeType.AGENT]: AgentNode,
+      'core.agent': AgentNode,
       default: UniversalNode,
     };
     for (const def of nodeDefinitions) {

@@ -4,10 +4,14 @@
  * Shows current access records and allows granting/revoking access.
  */
 
-import { useState } from 'react';
-import { ChevronDown, Share2, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ChevronDown, Share2, Users as UsersIcon, X } from 'lucide-react';
 import { useFlowAccess, useGrantFlowAccess, useRevokeFlowAccess } from '../hooks/useFlowAccess';
+import { useTeams } from '../hooks/useTeams';
 import { useRbac } from '../providers/RbacProvider';
+import { PrincipalCombobox } from './access-control/PrincipalCombobox';
+import { useUsers } from './access-control/useUsers';
+import type { PrincipalSelection } from './access-control/types';
 import type { FlowAccessPermission } from '../../shared/types';
 
 const AVATAR_COLORS = [
@@ -65,27 +69,68 @@ export function ShareFlowModal({ flowId, onClose }: ShareFlowModalProps) {
   const grantAccess = useGrantFlowAccess(flowId);
   const revokeAccess = useRevokeFlowAccess(flowId);
 
-  const [newPrincipal, setNewPrincipal] = useState('');
+  const users = useUsers();
+  const teamsQuery = useTeams();
+  const teams = teamsQuery.data?.teams ?? [];
+
+  const userMap = useMemo(() => {
+    const map = new Map<string, (typeof users)[number]>();
+    for (const u of users) {
+      map.set(u.id, u);
+    }
+    return map;
+  }, [users]);
+
+  const teamMap = useMemo(() => {
+    const map = new Map<string, (typeof teams)[number]>();
+    for (const t of teams) {
+      map.set(t.id, t);
+    }
+    return map;
+  }, [teams]);
+
+  const [selections, setSelections] = useState<PrincipalSelection[]>([]);
   const [newPermission, setNewPermission] = useState<FlowAccessPermission>('viewer');
-  const [principalType, setPrincipalType] = useState<'user' | 'team'>('user');
   const [error, setError] = useState<string | null>(null);
   const [openRoleDropdown, setOpenRoleDropdown] = useState<string | null>(null);
 
   const accessRecords = data?.access ?? [];
 
+  const existingUserIds = useMemo(
+    () => new Set(accessRecords.filter((r) => r.userId).map((r) => r.userId)),
+    [accessRecords],
+  );
+  const existingTeamIds = useMemo(
+    () => new Set(accessRecords.filter((r) => r.teamId).map((r) => r.teamId)),
+    [accessRecords],
+  );
+
+  const resolveLabel = (userId: string | null | undefined, teamId: string | null | undefined) => {
+    if (userId) {
+      const u = userMap.get(userId);
+      return u?.name || u?.email || userId;
+    }
+    if (teamId) {
+      return teamMap.get(teamId)?.name || teamId;
+    }
+    return '?';
+  };
+
   const handleGrant = async () => {
-    if (!newPrincipal.trim()) {
-      setError('Please enter a user ID or team ID');
+    if (selections.length === 0) {
+      setError('Select at least one user or team');
       return;
     }
 
     setError(null);
     try {
-      await grantAccess.mutateAsync({
-        ...(principalType === 'user' ? { userId: newPrincipal } : { teamId: newPrincipal }),
-        permission: newPermission,
-      });
-      setNewPrincipal('');
+      for (const sel of selections) {
+        await grantAccess.mutateAsync({
+          ...(sel.type === 'user' ? { userId: sel.id } : { teamId: sel.id }),
+          permission: newPermission,
+        });
+      }
+      setSelections([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to grant access');
     }
@@ -160,7 +205,10 @@ export function ShareFlowModal({ flowId, onClose }: ShareFlowModalProps) {
           ) : (
             <div className="max-h-48 space-y-0.5 overflow-y-auto">
               {accessRecords.map((record) => {
+                const isUser = !!record.userId;
                 const principalId = record.userId ?? record.teamId ?? '?';
+                const label = resolveLabel(record.userId, record.teamId);
+                const secondary = isUser ? userMap.get(record.userId ?? '')?.email : undefined;
                 const isCurrentUser = record.userId === user?.id;
                 const isRoleDropdownOpen = openRoleDropdown === record.id;
 
@@ -169,18 +217,29 @@ export function ShareFlowModal({ flowId, onClose }: ShareFlowModalProps) {
                     key={record.id}
                     className="flex items-center justify-between rounded-lg px-2.5 py-2 transition-colors hover:bg-imp-muted/30"
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="flex min-w-0 items-center gap-2.5">
                       <div
                         className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${getAvatarColor(principalId)}`}
                       >
-                        {principalId[0]?.toUpperCase()}
+                        {isUser ? label[0]?.toUpperCase() : <UsersIcon className="h-3.5 w-3.5" />}
                       </div>
-                      <span className="truncate text-sm font-medium text-imp-foreground">
-                        {principalId}
-                        {isCurrentUser && (
-                          <span className="ml-1 font-normal text-imp-muted-foreground">(you)</span>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="truncate text-sm font-medium text-imp-foreground">
+                            {label}
+                          </span>
+                          {isCurrentUser && (
+                            <span className="font-normal text-xs text-imp-muted-foreground">
+                              (you)
+                            </span>
+                          )}
+                        </div>
+                        {secondary && secondary !== label && (
+                          <div className="truncate text-xs text-imp-muted-foreground">
+                            {secondary}
+                          </div>
                         )}
-                      </span>
+                      </div>
                     </div>
                     <div className="relative">
                       {isCurrentUser ? (
@@ -251,51 +310,36 @@ export function ShareFlowModal({ flowId, onClose }: ShareFlowModalProps) {
           <h3 className="mb-2.5 text-xs font-medium uppercase tracking-wide text-imp-muted-foreground">
             Add people
           </h3>
-          <div className="flex gap-2">
-            {/* Principal type toggle */}
-            <button
-              type="button"
-              onClick={() => setPrincipalType(principalType === 'user' ? 'team' : 'user')}
-              className="shrink-0 rounded-lg border border-imp-border bg-imp-background px-2.5 py-1.5 text-xs font-medium text-imp-foreground transition-colors hover:bg-imp-muted/50"
-            >
-              {principalType === 'user' ? 'User' : 'Team'}
-            </button>
-
-            {/* Principal ID input */}
-            <input
-              type="text"
-              value={newPrincipal}
-              onChange={(e) => setNewPrincipal(e.target.value)}
-              placeholder={principalType === 'user' ? 'User ID' : 'Team ID'}
-              className="flex-1 rounded-lg border border-imp-border bg-imp-background px-3 py-1.5 text-sm placeholder:text-imp-muted-foreground focus:border-imp-primary/50 focus:outline-none"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleGrant();
-                }
-              }}
+          <div className="flex flex-col gap-2">
+            <PrincipalCombobox
+              users={users}
+              teams={teams}
+              excludeUserIds={existingUserIds}
+              excludeTeamIds={existingTeamIds}
+              selections={selections}
+              onSelect={setSelections}
             />
-
-            {/* Permission selector */}
-            <button
-              type="button"
-              onClick={() => {
-                const idx = PERMISSION_OPTIONS.findIndex((o) => o.value === newPermission);
-                const next = PERMISSION_OPTIONS[(idx + 1) % PERMISSION_OPTIONS.length];
-                setNewPermission(next.value);
-              }}
-              className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-xs font-medium capitalize transition-colors ${getPermissionColor(newPermission)}`}
-            >
-              {newPermission}
-            </button>
-
-            {/* Submit */}
-            <button
-              onClick={handleGrant}
-              disabled={grantAccess.isPending}
-              className="shrink-0 rounded-lg bg-imp-primary px-3.5 py-1.5 text-sm font-medium text-imp-primary-foreground transition-colors hover:bg-imp-primary/90 disabled:opacity-50"
-            >
-              <Share2 className="h-3.5 w-3.5" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const idx = PERMISSION_OPTIONS.findIndex((o) => o.value === newPermission);
+                  const next = PERMISSION_OPTIONS[(idx + 1) % PERMISSION_OPTIONS.length];
+                  setNewPermission(next.value);
+                }}
+                className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-xs font-medium capitalize transition-colors ${getPermissionColor(newPermission)}`}
+              >
+                {newPermission}
+              </button>
+              <button
+                onClick={handleGrant}
+                disabled={grantAccess.isPending || selections.length === 0}
+                className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-imp-primary px-3.5 py-1.5 text-sm font-medium text-imp-primary-foreground transition-colors hover:bg-imp-primary/90 disabled:opacity-50"
+              >
+                <Share2 className="h-3.5 w-3.5" />
+                Share
+              </button>
+            </div>
           </div>
         </div>
       </div>

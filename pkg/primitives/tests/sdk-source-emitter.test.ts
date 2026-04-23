@@ -143,6 +143,106 @@ describe('emitSdkSource — DB InvectDefinition → primitives SDK source', () =
     expect(() => emitSdkSource(def, { flowName: 'bad name' })).toThrow(/not a valid JS identifier/);
   });
 
+  it('translates a pure {{ expr }} outputValue into a JS return, not a Nunjucks block', () => {
+    // `core.output` stores the outputValue as a `{{ expr }}` template (JS inside
+    // the braces). Before the fix the emitter produced `return ({{ x }});`,
+    // which is a parse error. The pure-expression path now emits real JS.
+    const def: InvectDefinition = {
+      nodes: [
+        { id: 'n1', type: 'core.input', referenceId: 'compute_metrics', params: {} },
+        {
+          id: 'n2',
+          type: 'core.output',
+          referenceId: 'final',
+          params: { outputValue: '{{ compute_metrics }}', outputName: 'result' },
+        },
+      ],
+      edges: [{ id: 'e1', source: 'n1', target: 'n2' }],
+    };
+
+    const { code } = emitSdkSource(def);
+    assertParsesWithoutErrors(code);
+    expect(code).toContain(`const { compute_metrics } = ctx;`);
+    expect(code).toContain(`return (compute_metrics);`);
+    expect(code).not.toContain(`{{`);
+  });
+
+  it('translates a mixed-text outputValue into a JS template literal', () => {
+    const def: InvectDefinition = {
+      nodes: [
+        { id: 'n1', type: 'core.input', referenceId: 'user', params: {} },
+        {
+          id: 'n2',
+          type: 'core.output',
+          referenceId: 'greeting',
+          params: { outputValue: 'Hi {{ user.name }} — welcome!' },
+        },
+      ],
+      edges: [{ id: 'e1', source: 'n1', target: 'n2' }],
+    };
+
+    const { code } = emitSdkSource(def);
+    assertParsesWithoutErrors(code);
+    expect(code).toContain(`const { user } = ctx;`);
+    expect(code).toContain('`Hi ${(user.name)} — welcome!`');
+    expect(code).not.toContain(`{{`);
+  });
+
+  it('emits previous_nodes destructuring when an expression references it', () => {
+    // At runtime `incomingData` exposes direct parents at the top level and
+    // indirect ancestors under `previous_nodes`. The emitter must mirror that
+    // so expressions referencing `previous_nodes.foo` don't hit ReferenceError.
+    const def: InvectDefinition = {
+      nodes: [
+        { id: 'n1', type: 'core.input', referenceId: 'raw', params: {} },
+        {
+          id: 'n2',
+          type: 'core.javascript',
+          referenceId: 'clean',
+          params: { code: 'return raw.trim();' },
+        },
+        {
+          id: 'n3',
+          type: 'core.if_else',
+          referenceId: 'check',
+          params: { expression: 'previous_nodes.raw.length > 0 && clean' },
+        },
+      ],
+      edges: [
+        { id: 'e1', source: 'n1', target: 'n2' },
+        { id: 'e2', source: 'n2', target: 'n3' },
+      ],
+    };
+
+    const { code } = emitSdkSource(def);
+    assertParsesWithoutErrors(code);
+    // Direct parent is `clean`; the expression also touches `previous_nodes`,
+    // so both get destructured on the ifElse arrow.
+    expect(code).toContain(`const { clean, previous_nodes } = ctx;`);
+    // The code node's expression doesn't touch previous_nodes → it should NOT
+    // be destructured there, keeping the emitted output tight.
+    expect(code).toContain(`const { raw } = ctx;`);
+    expect(code).not.toContain(`const { raw, previous_nodes } = ctx;`);
+  });
+
+  it('keeps non-template output strings as plain string literals', () => {
+    const def: InvectDefinition = {
+      nodes: [
+        {
+          id: 'n1',
+          type: 'core.output',
+          referenceId: 'msg',
+          params: { outputValue: 'static literal' },
+        },
+      ],
+      edges: [],
+    };
+
+    const { code } = emitSdkSource(def);
+    assertParsesWithoutErrors(code);
+    expect(code).toContain(`(ctx) => ("static literal")`);
+  });
+
   it('preserves explicit return in multi-line code', () => {
     const def: InvectDefinition = {
       nodes: [

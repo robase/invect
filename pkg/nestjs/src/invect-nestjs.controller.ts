@@ -42,7 +42,6 @@ import type {
   InvectIdentity,
   ChatMessage,
 } from '@invect/core';
-import { GraphNodeType } from '@invect/core/types';
 import type { Request, Response } from 'express';
 
 declare global {
@@ -533,20 +532,11 @@ export class InvectController {
 
   @Get('node-definition/:nodeType')
   async resolveNodeDefinition(
-    @Param('nodeType') rawNodeType: string,
+    @Param('nodeType') nodeTypeParam: string,
     @Query() query: Record<string, unknown>,
   ): Promise<NodeConfigUpdateResponse> {
-    // Accept both legacy GraphNodeType enum values (uppercase) and
-    // action IDs (e.g. "core.model", "gmail.send_message").
-    const nodeTypeParam = rawNodeType.includes('.')
-      ? rawNodeType // action ID — pass through as-is
-      : rawNodeType.toUpperCase(); // legacy — uppercase to match enum
-
-    const isLegacyEnum = !rawNodeType.includes('.') && nodeTypeParam in GraphNodeType;
-    const isActionId = rawNodeType.includes('.');
-
-    if (!isLegacyEnum && !isActionId) {
-      throw new BadRequestException(`Unknown node type '${rawNodeType}'`);
+    if (!nodeTypeParam.includes('.')) {
+      throw new BadRequestException(`Unknown node type '${nodeTypeParam}'`);
     }
 
     const params = parseParamsFromQuery(query.params);
@@ -557,7 +547,7 @@ export class InvectController {
     const flowId = typeof query.flowId === 'string' ? query.flowId : undefined;
 
     return await this.invect.actions.handleConfigUpdate({
-      nodeType: nodeTypeParam as GraphNodeType,
+      nodeType: nodeTypeParam,
       nodeId,
       flowId,
       params,

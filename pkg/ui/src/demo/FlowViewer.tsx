@@ -40,7 +40,6 @@ import {
   type NodeTypes,
   type EdgeTypes,
 } from '@xyflow/react';
-import { GraphNodeType } from '@invect/core/types';
 import { ThemeProvider, useTheme } from '../contexts/ThemeProvider';
 import { ApiProvider } from '../contexts/ApiContext';
 import { NodeRegistryProvider } from '../contexts/NodeRegistryContext';
@@ -126,7 +125,7 @@ function FlowViewerCanvas({
   const nodeTypes: NodeTypes = useMemo(() => {
     // eslint-disable-next-line typescript/no-explicit-any
     const mapping: Record<string, React.ComponentType<any>> = {
-      [GraphNodeType.AGENT]: AgentNode,
+      'core.agent': AgentNode,
       default: UniversalNode,
     };
     for (const def of nodeDefinitions) {

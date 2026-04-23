@@ -1,5 +1,4 @@
 import { useMemo, useState, useCallback } from 'react';
-import { GraphNodeType } from '@invect/core/types';
 import { ResizablePanel } from '../../../ui/resizable';
 import { ScrollArea } from '../../../ui/scroll-area';
 import { CredentialsSection } from '../CredentialsSection';
@@ -143,7 +142,7 @@ export function ConfigurationPanel({
   isRunning = false,
   agentTools,
 }: ConfigurationPanelProps) {
-  const isAgent = nodeType === GraphNodeType.AGENT && !!agentTools;
+  const isAgent = nodeType === 'core.agent' && !!agentTools;
   const [activeTab, setActiveTab] = useState<'settings' | 'tools'>('settings');
 
   const visibleFields = useMemo(
@@ -360,7 +359,7 @@ export function ConfigurationPanel({
               {runError ? <ExecutionErrorDisplay error={runError} /> : null}
 
               {/* Model status message */}
-              {nodeType === GraphNodeType.MODEL && modelStatusMessage && (
+              {nodeType === 'core.model' && modelStatusMessage && (
                 <div className="px-1 text-xs text-muted-foreground">{modelStatusMessage}</div>
               )}
             </div>

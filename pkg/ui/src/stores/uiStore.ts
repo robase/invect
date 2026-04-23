@@ -26,6 +26,7 @@ interface UIState {
   // Panels
   validationPanelOpen: boolean;
   logsPanelOpen: boolean;
+  codePanelOpen: boolean;
 
   // Node sidebar (for adding nodes)
   nodeSidebarOpen: boolean;
@@ -51,6 +52,8 @@ interface UIActions {
   setValidationPanelOpen: (open: boolean) => void;
   toggleLogsPanel: () => void;
   setLogsPanelOpen: (open: boolean) => void;
+  toggleCodePanel: () => void;
+  setCodePanelOpen: (open: boolean) => void;
 
   // Node sidebar
   toggleNodeSidebar: () => void;
@@ -74,6 +77,7 @@ const initialState: UIState = {
   modalData: {},
   validationPanelOpen: false,
   logsPanelOpen: false,
+  codePanelOpen: false,
   nodeSidebarOpen: true,
   nodeSidebarExpandedGroups: ['core'],
   toolbarCollapsed: false,
@@ -138,6 +142,16 @@ export const useUIStore: UseBoundStore<StoreApi<UIStore>> = create<UIStore>()(
         setLogsPanelOpen: (open) =>
           set((state) => {
             state.logsPanelOpen = open;
+          }),
+
+        toggleCodePanel: () =>
+          set((state) => {
+            state.codePanelOpen = !state.codePanelOpen;
+          }),
+
+        setCodePanelOpen: (open) =>
+          set((state) => {
+            state.codePanelOpen = open;
           }),
 
         // Node sidebar

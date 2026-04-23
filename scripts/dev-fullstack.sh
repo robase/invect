@@ -4,13 +4,13 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-# "...pkg" = package + all its transitive workspace dependencies (upstream).
+# "pkg..." = package + all its transitive workspace dependencies (upstream).
 # This auto-discovers the full dependency graph for both example apps:
 #   invect-express-simple  → @invect/core, @invect/express, plugins (auth, rbac, webhooks, mcp)
 #   flow-executor          → @invect/ui, plugins (auth, rbac, webhooks)
 DEV_FILTERS=(
-  --filter "...invect-express-simple"
-  --filter "...flow-executor"
+  --filter "invect-express-simple..."
+  --filter "flow-executor..."
 )
 
 # Phase 1: Build only the workspace library deps (exclude the apps themselves

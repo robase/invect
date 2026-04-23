@@ -23,7 +23,7 @@ import {
   ExecutionLogToolCall,
   SelectedExecutionAttempt,
 } from './use-execution-log-data';
-import { NodeExecutionStatus, GraphNodeType } from '@invect/core/types';
+import { NodeExecutionStatus } from '@invect/core/types';
 import { CodeMirrorJsonEditor } from '../ui/codemirror-json-editor';
 import { RunSelector, RunSelectorItem } from './RunSelector';
 
@@ -186,7 +186,7 @@ export function LogsPanel({
                   const latestAttempt = node.attempts[node.attempts.length - 1];
                   const nodeSelected =
                     selectedAttempt?.nodeId === node.nodeId && !selectedAttempt?.toolCallId;
-                  const isAgentNode = node.nodeType === GraphNodeType.AGENT;
+                  const isAgentNode = node.nodeType === 'core.agent';
                   const toolCalls = latestAttempt.toolCalls ?? [];
                   return (
                     <div

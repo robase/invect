@@ -7,6 +7,8 @@ import { RunControls } from '../flow-editor/RunControls';
 import { FlowStatusView } from './FlowStatusView';
 import { LogsPanel } from './logs-panel';
 import { ChatPanel, ChatToggleButton } from '~/components/chat';
+import { ViewCodeToggleButton } from '../flow-editor/ViewCodeToggleButton';
+import { FlowCodePanel } from '../flow-editor/FlowCodePanel';
 import { useFlowRuns, useFlowRun, useNodeExecutions } from '../../api/executions.api';
 import { useFlowRunStream } from '../../api/use-flow-run-stream';
 import { useFlowReactFlowData } from '../../api/flows.api';
@@ -180,6 +182,8 @@ export function FlowRunsView({ flowId, flowVersion, basePath }: FlowRunsViewProp
       <FlowLayout
         modeSwitcher={<ModeSwitcher mode="runs" onModeChange={handleModeChange} />}
         viewportRef={viewportRef}
+        chatToggle={<ChatToggleButton />}
+        viewCodeToggle={<ViewCodeToggleButton />}
         chatPanel={
           <ChatPanel
             flowId={flowId}
@@ -188,6 +192,7 @@ export function FlowRunsView({ flowId, flowVersion, basePath }: FlowRunsViewProp
             viewMode="runs"
           />
         }
+        codePanel={<FlowCodePanel flowId={flowId} source="version" />}
         sidebar={<></>}
         hideToolbar
         viewport={
@@ -209,7 +214,6 @@ export function FlowRunsView({ flowId, flowVersion, basePath }: FlowRunsViewProp
                   selectedNodeId={selectedAttempt?.nodeId}
                 />
                 <FlowBottomToolbar
-                  chatToggle={<ChatToggleButton />}
                   toolbarExtra={
                     <RunControls
                       onExecute={flowActions?.onExecute}

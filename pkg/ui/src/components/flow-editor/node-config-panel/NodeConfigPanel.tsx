@@ -1,5 +1,5 @@
 import { useMemo, useCallback } from 'react';
-import { GraphNodeType, type ReactFlowNodeData } from '@invect/core/types';
+import type { ReactFlowNodeData } from '@invect/core/types';
 import {
   Dialog,
   DialogClose,
@@ -66,7 +66,7 @@ export function NodeConfigPanel({
   }, [nodeId, storeNodes]);
 
   const nodeData = node?.data as ReactFlowNodeData | undefined;
-  const nodeType = nodeData?.type ?? GraphNodeType.TEMPLATE_STRING;
+  const nodeType = nodeData?.type ?? 'core.template_string';
   const nodeParams = nodeData?.params ?? {};
   const definition = node ? getNodeDefinition(nodeType) : undefined;
 
@@ -209,7 +209,7 @@ export function NodeConfigPanel({
   const nodeTypeLabel = useMemo(() => formatNodeTypeLabel(nodeType), [nodeType]);
 
   const modelStatusMessage = useMemo(() => {
-    if (nodeType !== GraphNodeType.MODEL) {
+    if (nodeType !== 'core.model') {
       return '';
     }
     const selectedCredentialId = (formValues.credentialId as string) || '';

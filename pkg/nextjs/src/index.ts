@@ -1,7 +1,6 @@
 import type {
   BatchProvider,
   CredentialFilters,
-  GraphNodeType,
   InvectConfig,
   InvectIdentity,
   InvectInstance,
@@ -588,16 +587,11 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
       }
 
       if (method === 'GET' && path.startsWith('node-definition/')) {
-        const rawNodeType = path.split('/')[1] ?? '';
-        const nodeTypeParam = rawNodeType.includes('.') ? rawNodeType : rawNodeType.toUpperCase();
+        const nodeTypeParam = path.split('/')[1] ?? '';
 
-        const { GraphNodeType } = await loadCoreModule();
-        const isLegacyEnum = !rawNodeType.includes('.') && nodeTypeParam in GraphNodeType;
-        const isActionId = rawNodeType.includes('.');
-
-        if (!isLegacyEnum && !isActionId) {
+        if (!nodeTypeParam.includes('.')) {
           return Response.json(
-            { error: 'INVALID_NODE_TYPE', message: `Unknown node type '${rawNodeType}'` },
+            { error: 'INVALID_NODE_TYPE', message: `Unknown node type '${nodeTypeParam}'` },
             { status: 400 },
           );
         }
@@ -609,7 +603,7 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
         const flowId = searchParams.get('flowId') ?? undefined;
 
         const response = await initializedCore.actions.handleConfigUpdate({
-          nodeType: nodeTypeParam as GraphNodeType,
+          nodeType: nodeTypeParam,
           nodeId,
           flowId,
           params,

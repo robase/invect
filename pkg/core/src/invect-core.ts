@@ -1,7 +1,7 @@
 // Core services and factories
 import { ServiceFactory } from './services/service-factory';
 import { FlowValidator } from './services/flow-validator';
-import { GraphNodeType, SubmitAgentPromptRequest, NodeExecutionContext } from './types.internal';
+import { SubmitAgentPromptRequest, NodeExecutionContext } from './types.internal';
 
 // Database models
 import type { Flow } from './services/flows/flows.model';
@@ -145,15 +145,6 @@ const _INVECT_CORE_PROVIDER: NonNullable<NodeDefinition['provider']> = {
   id: 'core',
   name: 'Invect Core',
   icon: 'Blocks',
-};
-
-/**
- * Provider overrides for specific legacy node types that are NOT core nodes.
- * If a legacy node type is listed here it gets that provider; otherwise it
- * gets INVECT_CORE_PROVIDER.
- */
-const _LEGACY_NODE_PROVIDER_OVERRIDES: Record<string, NonNullable<NodeDefinition['provider']>> = {
-  [GraphNodeType.GMAIL]: { id: 'gmail', name: 'Gmail', icon: 'Mail' },
 };
 
 /**
@@ -1475,7 +1466,7 @@ export class Invect {
 
     // Determine which param keys should NOT be resolved as templates
     const skipTemplateResolutionKeys: string[] = [];
-    if (nodeType === GraphNodeType.TEMPLATE_STRING || nodeType === 'core.template_string') {
+    if (nodeType === 'core.template_string') {
       skipTemplateResolutionKeys.push('template');
     }
 

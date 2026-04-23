@@ -109,3 +109,7 @@ export type {
 
 // Helpers
 export { defineAction } from './define-action';
+export type { ActionHelper } from './define-action';
+
+// SDK node types (produced by action helpers)
+export type { SdkFlowNode, NodeOptions, MapperOptions } from './sdk-node';

@@ -1,0 +1,58 @@
+{
+  "name": "@invect/sdk",
+  "version": "0.0.1",
+  "description": "Unified authoring SDK for Invect flows — defineFlow, core node helpers, and the canonical serializer",
+  "keywords": [
+    "flows",
+    "invect",
+    "sdk"
+  ],
+  "homepage": "https://invect.dev",
+  "bugs": {
+    "url": "https://github.com/robase/invect/issues"
+  },
+  "license": "MIT",
+  "author": "robase <team@invect.dev>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/robase/invect.git",
+    "directory": "pkg/sdk"
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "type": "module",
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "build:watch": "tsdown --watch",
+    "dev": "tsdown --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@invect/action-kit": "workspace:*",
+    "@invect/actions": "workspace:*",
+    "zod": "^3.25.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsdown": "^0.21.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.4"
+  }
+}
