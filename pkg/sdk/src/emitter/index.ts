@@ -23,12 +23,19 @@
  *     DB strings and emits arrows; the save path accepts strings back.
  */
 
-import type { DbFlowDefinition, DbFlowNode, DbFlowEdge, EmitOptions, EmitResult } from './types';
+import type {
+  DbFlowDefinition,
+  DbFlowNode,
+  DbFlowEdge,
+  EmitOptions,
+  EmitResult,
+  NodeSpan,
+} from './types';
 import { SdkEmitError } from './types';
 import { arrowFromExpression, arrowFromOutputValue } from './expressions';
 import { indent, isValidJsIdent, toTsLiteral } from './literals';
 
-export type { EmitOptions, EmitResult, DbFlowDefinition, DbFlowNode, DbFlowEdge };
+export type { EmitOptions, EmitResult, DbFlowDefinition, DbFlowNode, DbFlowEdge, NodeSpan };
 export { SdkEmitError };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -148,12 +155,37 @@ export function emitSdkSource(def: DbFlowDefinition, options: EmitOptions = {}):
     code += `\n/* @invect-definition\n${JSON.stringify({ nodes: def.nodes, edges: def.edges, metadata })}\n*/\n`;
   }
 
+  // Compute 1-based line spans for each emitted node. The final code layout is:
+  //   lines 1..importLines.length        → import statements
+  //   line importLines.length + 1        → blank
+  //   line importLines.length + 2        → `export const ${flowName} = defineFlow({`
+  //   next metadataLines.length lines    → metadata fields
+  //   line after metadata                → `  nodes: [`
+  //   then each nodeLines[i] (indented), one per node, possibly multi-line
+  const preambleLines =
+    importLines.length + // imports
+    1 + // blank
+    1 + // defineFlow opener
+    metadataLines.length + // metadata
+    1; // `  nodes: [`
+
+  const nodeSpans: Record<string, NodeSpan> = {};
+  let cursor = preambleLines + 1;
+  for (let i = 0; i < def.nodes.length; i++) {
+    const node = def.nodes[i];
+    const ref = node.referenceId ?? node.id;
+    const lineCount = nodeLines[i].split('\n').length;
+    nodeSpans[ref] = { start: cursor, end: cursor + lineCount - 1 };
+    cursor += lineCount;
+  }
+
   return {
     code,
     sdkImports: [...sdkImports],
     actionImports: Object.fromEntries(
       [...actionImports.entries()].map(([k, v]) => [k, [...v].sort()]),
     ),
+    nodeSpans,
   };
 }
 

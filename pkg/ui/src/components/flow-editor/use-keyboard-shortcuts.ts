@@ -94,7 +94,9 @@ export function useKeyboardShortcuts(opts: UseKeyboardShortcutsOptions = {}) {
     (nodeId: string) => {
       const { nodes, applyNodeChanges } = useFlowEditorStore.getState();
       const node = nodes.find((n) => n.id === nodeId);
-      if (!node) {return;}
+      if (!node) {
+        return;
+      }
       const width = node.measured?.width ?? node.width ?? 200;
       const height = node.measured?.height ?? node.height ?? 100;
       const x = node.position.x + width / 2;

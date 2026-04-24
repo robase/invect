@@ -18,14 +18,264 @@
  * whose params contain complex JSON structures the LLM might misformat).
  */
 
+import { createHash } from 'node:crypto';
 import { z } from 'zod/v4';
 import { emitSdkSource } from '@invect/sdk';
 import { evaluateSdkSource } from '@invect/sdk/evaluator';
 import { transformArrowsToStrings } from '@invect/sdk/transform';
 import { mergeParsedIntoDefinition } from '@invect/sdk';
-import type { DbFlowDefinition } from '@invect/sdk';
-import type { ChatToolDefinition, ChatToolResult } from '../chat-types';
+import type { DbFlowDefinition, NodeSpan } from '@invect/sdk';
+import type { ChatToolContext, ChatToolDefinition, ChatToolResult } from '../chat-types';
 import type { InvectInstance } from 'src/api/types';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Shared helpers: hashing, failure payloads, node index
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Max emitted-source length (characters) we'll embed in a failure payload. Past
+ * this threshold the tool omits `currentSource` and relies on `nodeIndex` +
+ * `closestMatches`; the LLM can call `get_flow_source` for the whole thing.
+ * Keeps retries from blowing through the 100K-token conversation budget.
+ */
+const SOURCE_INCLUDE_BUDGET = 8000;
+
+function sha1(input: string): string {
+  return createHash('sha1').update(input).digest('hex');
+}
+
+interface NodeIndexEntry extends NodeSpan {
+  type: string;
+  paramKeys: string[];
+}
+
+function buildNodeIndex(
+  def: DbFlowDefinition,
+  nodeSpans: Record<string, NodeSpan>,
+): Record<string, NodeIndexEntry> {
+  const index: Record<string, NodeIndexEntry> = {};
+  for (const node of def.nodes) {
+    const ref = node.referenceId ?? node.id;
+    const span = nodeSpans[ref];
+    if (!span) {
+      continue;
+    }
+    index[ref] = {
+      start: span.start,
+      end: span.end,
+      type: node.type,
+      paramKeys: Object.keys(node.params ?? {}),
+    };
+  }
+  return index;
+}
+
+interface FuzzyMatch {
+  text: string;
+  startLine: number;
+  endLine: number;
+  similarity: number;
+}
+
+/**
+ * Find the top-k line ranges in `source` whose tokens best overlap with
+ * `needle`. Cheap heuristic — tokenize both, score each line by shared-token
+ * ratio, and return 3-line context windows around the best-scoring lines.
+ * Good enough to give the LLM a recovery hint; not meant to replace a real
+ * diff.
+ */
+function findClosestMatches(source: string, needle: string, k: number): FuzzyMatch[] {
+  const needleTokens = tokenize(needle);
+  if (needleTokens.size === 0) {
+    return [];
+  }
+  const lines = source.split('\n');
+
+  const scored: Array<{ line: number; similarity: number }> = [];
+  for (let i = 0; i < lines.length; i++) {
+    const lineTokens = tokenize(lines[i]);
+    if (lineTokens.size === 0) {
+      continue;
+    }
+    let shared = 0;
+    for (const t of lineTokens) {
+      if (needleTokens.has(t)) {
+        shared++;
+      }
+    }
+    if (shared === 0) {
+      continue;
+    }
+    const similarity = shared / needleTokens.size;
+    scored.push({ line: i, similarity });
+  }
+
+  scored.sort((a, b) => b.similarity - a.similarity);
+
+  const picked: FuzzyMatch[] = [];
+  const usedLines = new Set<number>();
+  for (const s of scored) {
+    if (picked.length >= k) {
+      break;
+    }
+    if (usedLines.has(s.line)) {
+      continue;
+    }
+    const windowStart = Math.max(0, s.line - 1);
+    const windowEnd = Math.min(lines.length - 1, s.line + 1);
+    for (let i = windowStart; i <= windowEnd; i++) {
+      usedLines.add(i);
+    }
+    picked.push({
+      text: lines.slice(windowStart, windowEnd + 1).join('\n'),
+      startLine: windowStart + 1,
+      endLine: windowEnd + 1,
+      similarity: Number(s.similarity.toFixed(3)),
+    });
+  }
+  return picked;
+}
+
+function tokenize(s: string): Set<string> {
+  return new Set(
+    s
+      .toLowerCase()
+      .split(/[^a-z0-9_]+/)
+      .filter((t) => t.length >= 3),
+  );
+}
+
+interface AmbiguousMatch {
+  startLine: number;
+  endLine: number;
+  contextSnippet: string;
+}
+
+function findAllMatchLocations(source: string, needle: string): AmbiguousMatch[] {
+  const results: AmbiguousMatch[] = [];
+  const lines = source.split('\n');
+  let fromIdx = 0;
+  while (true) {
+    const idx = source.indexOf(needle, fromIdx);
+    if (idx === -1) {
+      break;
+    }
+    const startLine = source.slice(0, idx).split('\n').length;
+    const needleLineCount = needle.split('\n').length;
+    const endLine = startLine + needleLineCount - 1;
+    const ctxStart = Math.max(0, startLine - 2);
+    const ctxEnd = Math.min(lines.length - 1, endLine);
+    results.push({
+      startLine,
+      endLine,
+      contextSnippet: lines.slice(ctxStart, ctxEnd + 1).join('\n'),
+    });
+    fromIdx = idx + needle.length;
+    if (results.length > 10) {
+      break;
+    }
+  }
+  return results;
+}
+
+/** Load + emit canonical source. Shared by `get_flow_source` and the edit
+ *  tools so they stay in sync on emit options. */
+async function emitCurrentSource(
+  invect: InvectInstance,
+  flowId: string,
+): Promise<
+  | { ok: true; code: string; nodeSpans: Record<string, NodeSpan>; def: DbFlowDefinition }
+  | { ok: false; error: string }
+> {
+  try {
+    const [flow, version] = await Promise.all([
+      invect.flows.get(flowId),
+      invect.versions.get(flowId, 'latest'),
+    ]);
+    if (!version?.invectDefinition) {
+      return { ok: false, error: 'Flow has no versions yet' };
+    }
+    const def = version.invectDefinition as DbFlowDefinition;
+    const { code, nodeSpans } = emitSdkSource(def, {
+      flowName: toFlowExportName(flow.name),
+      metadata: {
+        name: flow.name,
+        ...(flow.description ? { description: flow.description } : {}),
+        ...(flow.tags && flow.tags.length > 0 ? { tags: flow.tags } : {}),
+      },
+    });
+    return { ok: true, code, nodeSpans, def };
+  } catch (error) {
+    return {
+      ok: false,
+      error: `Failed to emit flow source: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+}
+
+interface FailurePayloadInput {
+  reason:
+    | 'not_found'
+    | 'ambiguous'
+    | 'stale_or_missing_read'
+    | 'source_changed_since'
+    | 'eval_failed'
+    | 'merge_failed';
+  source: string;
+  sourceHash: string;
+  def: DbFlowDefinition;
+  nodeSpans: Record<string, NodeSpan>;
+  needle?: string;
+}
+
+interface FailurePayload {
+  reason: FailurePayloadInput['reason'];
+  sourceHash: string;
+  availableReferenceIds: string[];
+  nodeIndex: Record<string, NodeIndexEntry>;
+  currentSource?: string;
+  sourceElided?: boolean;
+  closestMatches?: FuzzyMatch[];
+  matchLocations?: AmbiguousMatch[];
+}
+
+function buildFailurePayload(input: FailurePayloadInput): FailurePayload {
+  const availableReferenceIds = input.def.nodes.map((n) => n.referenceId ?? n.id);
+  const nodeIndex = buildNodeIndex(input.def, input.nodeSpans);
+  const payload: FailurePayload = {
+    reason: input.reason,
+    sourceHash: input.sourceHash,
+    availableReferenceIds,
+    nodeIndex,
+  };
+  if (input.source.length <= SOURCE_INCLUDE_BUDGET) {
+    payload.currentSource = input.source;
+  } else {
+    payload.sourceElided = true;
+  }
+  if (input.reason === 'not_found' && input.needle) {
+    payload.closestMatches = findClosestMatches(input.source, input.needle, 3);
+  }
+  if (input.reason === 'ambiguous' && input.needle) {
+    payload.matchLocations = findAllMatchLocations(input.source, input.needle);
+  }
+  return payload;
+}
+
+function logEditFailure(
+  ctx: ChatToolContext,
+  tool: string,
+  reason: FailurePayloadInput['reason'],
+  extra: Record<string, unknown> = {},
+): void {
+  ctx.logger?.warn(`chat-assistant source edit failed: ${tool} / ${reason}`, {
+    tool,
+    reason,
+    flowId: ctx.chatContext.flowId,
+    step: ctx.currentStep,
+    ...extra,
+  });
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // get_flow_source
@@ -37,7 +287,8 @@ export const getFlowSourceTool: ChatToolDefinition = {
   description:
     'Return the current flow as canonical TypeScript source using the @invect/sdk. ' +
     'The source is what FlowCodePanel shows, what users hand-author, and what copy-paste / git sync produce. ' +
-    'Prefer this over the granular JSON-inspection tools when reasoning about the flow as a whole.',
+    'Prefer this over the granular JSON-inspection tools when reasoning about the flow as a whole. ' +
+    'Call this before any `edit_flow_source` / `write_flow_source` — those tools require a read in the current turn.',
   parameters: z.object({}),
   async execute(_params, ctx): Promise<ChatToolResult> {
     const flowId = ctx.chatContext.flowId;
@@ -57,7 +308,8 @@ export const getFlowSourceTool: ChatToolDefinition = {
         };
       }
 
-      const { code, sdkImports, actionImports } = emitSdkSource(version.invectDefinition, {
+      const def = version.invectDefinition as DbFlowDefinition;
+      const { code, sdkImports, actionImports, nodeSpans } = emitSdkSource(def, {
         flowName: toFlowExportName(flow.name),
         metadata: {
           name: flow.name,
@@ -66,14 +318,24 @@ export const getFlowSourceTool: ChatToolDefinition = {
         },
       });
 
+      const sourceHash = sha1(code);
+      // Record the read for this turn so subsequent edits can verify the
+      // invariant. Cross-turn state is intentionally not tracked.
+      if (ctx.readState && ctx.currentStep !== undefined) {
+        ctx.readState.set(flowId, { hash: sourceHash, readAtStep: ctx.currentStep });
+      }
+
       return {
         success: true,
         data: {
           source: code,
+          sourceHash,
+          availableReferenceIds: def.nodes.map((n) => n.referenceId ?? n.id),
+          nodeIndex: buildNodeIndex(def, nodeSpans),
           flowId,
           versionNumber: version.version,
-          nodeCount: version.invectDefinition.nodes.length,
-          edgeCount: version.invectDefinition.edges.length,
+          nodeCount: def.nodes.length,
+          edgeCount: def.edges.length,
           imports: { sdk: sdkImports, actions: actionImports },
         },
       };
@@ -95,10 +357,12 @@ export const editFlowSourceTool: ChatToolDefinition = {
   name: 'Edit Flow Source',
   description:
     'Apply a str_replace-style edit to the current flow source. ' +
+    'REQUIRES a prior `get_flow_source` call in this turn — otherwise the tool returns the fresh source without attempting the edit. ' +
     'Both `oldString` and `newString` must match the emitted source verbatim (whitespace-sensitive). ' +
     'The edit must identify `oldString` unambiguously — include enough surrounding context for the match to be unique. ' +
     'After the edit, the full source is evaluated, arrow functions are serialised back to strings for QuickJS storage, ' +
-    'and the result is merged into the prior DB version (preserving node ids, positions, and agent-tool instance ids).',
+    'and the result is merged into the prior DB version (preserving node ids, positions, and agent-tool instance ids). ' +
+    'For single-node parameter changes prefer `update_node_config`; this tool is for multi-node refactors.',
   parameters: z.object({
     oldString: z
       .string()
@@ -115,62 +379,132 @@ export const editFlowSourceTool: ChatToolDefinition = {
       return { success: false, error: 'No flow is currently open' };
     }
 
-    try {
-      const [flow, version] = await Promise.all([
-        ctx.invect.flows.get(flowId),
-        ctx.invect.versions.get(flowId, 'latest'),
-      ]);
-      if (!version?.invectDefinition) {
-        return {
-          success: false,
-          error: 'Flow has no versions yet — use write_flow_source to seed the initial definition',
-        };
-      }
+    const emitted = await emitCurrentSource(ctx.invect, flowId);
+    if (!emitted.ok) {
+      return {
+        success: false,
+        error: emitted.error,
+        suggestion:
+          'Use `write_flow_source` to seed the initial definition if the flow has no versions yet.',
+      };
+    }
+    const { code: currentSource, nodeSpans, def } = emitted;
+    const currentHash = sha1(currentSource);
 
-      // 1. Emit the current source.
-      const { code: currentSource } = emitSdkSource(version.invectDefinition, {
-        flowName: toFlowExportName(flow.name),
-        metadata: {
-          name: flow.name,
-          ...(flow.description ? { description: flow.description } : {}),
-          ...(flow.tags && flow.tags.length > 0 ? { tags: flow.tags } : {}),
-        },
-      });
-
-      // 2. Validate and apply the str_replace.
-      const firstIdx = currentSource.indexOf(oldString);
-      if (firstIdx === -1) {
-        return {
-          success: false,
-          error: '`oldString` was not found in the current flow source',
-          suggestion:
-            'Call get_flow_source first to see the exact source text, then include enough context in `oldString` to match verbatim (including whitespace).',
-        };
-      }
-      const secondIdx = currentSource.indexOf(oldString, firstIdx + 1);
-      if (secondIdx !== -1) {
+    // Read-before-edit invariant: only enforced when the caller (the session)
+    // provides a `readState` map. Callers without it (tests, direct programmatic
+    // use) opt out of the invariant.
+    if (ctx.readState) {
+      const priorRead = ctx.readState.get(flowId);
+      if (!priorRead) {
+        logEditFailure(ctx, 'edit_flow_source', 'stale_or_missing_read');
+        // Update read-state so the LLM's immediate retry succeeds without
+        // needing a separate `get_flow_source` call.
+        if (ctx.currentStep !== undefined) {
+          ctx.readState.set(flowId, { hash: currentHash, readAtStep: ctx.currentStep });
+        }
         return {
           success: false,
           error:
-            '`oldString` appears multiple times in the source — add more surrounding context so it is unique',
-          suggestion:
-            "Include surrounding lines (e.g. the containing node's declaration) in `oldString` so it uniquely identifies the edit location.",
+            'edit_flow_source requires a `get_flow_source` call earlier in this turn. The current source is attached — inspect it and call edit_flow_source again.',
+          data: buildFailurePayload({
+            reason: 'stale_or_missing_read',
+            source: currentSource,
+            sourceHash: currentHash,
+            def,
+            nodeSpans,
+          }),
         };
       }
 
-      const newSource =
-        currentSource.slice(0, firstIdx) +
-        newString +
-        currentSource.slice(firstIdx + oldString.length);
+      // Hash drift: source changed since the LLM's last read (e.g. a prior
+      // `update_node_config` saved a new version). Soft re-prime rather than
+      // erroring — the LLM's reasoning may still be valid against the new text.
+      if (priorRead.hash !== currentHash) {
+        logEditFailure(ctx, 'edit_flow_source', 'source_changed_since', {
+          priorReadStep: priorRead.readAtStep,
+        });
+        if (ctx.currentStep !== undefined) {
+          ctx.readState.set(flowId, { hash: currentHash, readAtStep: ctx.currentStep });
+        }
+        return {
+          success: false,
+          error:
+            'The flow source has changed since your last `get_flow_source` call (likely because a prior edit saved a new version). The fresh source is attached — re-apply your edit against it.',
+          data: buildFailurePayload({
+            reason: 'source_changed_since',
+            source: currentSource,
+            sourceHash: currentHash,
+            def,
+            nodeSpans,
+          }),
+        };
+      }
+    }
 
-      // 3. Evaluate + transform + merge + save.
-      return await saveFlowFromSource(ctx.invect, flowId, newSource, version.invectDefinition);
-    } catch (error) {
+    // Validate `oldString` uniqueness against the emitted source.
+    const firstIdx = currentSource.indexOf(oldString);
+    if (firstIdx === -1) {
+      logEditFailure(ctx, 'edit_flow_source', 'not_found', {
+        needleLength: oldString.length,
+      });
       return {
         success: false,
-        error: `Edit failed: ${error instanceof Error ? error.message : String(error)}`,
+        error: '`oldString` was not found in the current flow source',
+        suggestion:
+          'Check `availableReferenceIds` — if the node you want to edit is not listed, it does not exist. Otherwise see `closestMatches` for similar lines and include enough context to match the source verbatim.',
+        data: buildFailurePayload({
+          reason: 'not_found',
+          source: currentSource,
+          sourceHash: currentHash,
+          def,
+          nodeSpans,
+          needle: oldString,
+        }),
       };
     }
+    const secondIdx = currentSource.indexOf(oldString, firstIdx + 1);
+    if (secondIdx !== -1) {
+      logEditFailure(ctx, 'edit_flow_source', 'ambiguous', {
+        needleLength: oldString.length,
+      });
+      return {
+        success: false,
+        error:
+          '`oldString` appears multiple times in the source — add more surrounding context so it is unique',
+        suggestion:
+          "See `matchLocations` for every occurrence; include surrounding lines (e.g. the containing node's declaration) so `oldString` uniquely identifies one location.",
+        data: buildFailurePayload({
+          reason: 'ambiguous',
+          source: currentSource,
+          sourceHash: currentHash,
+          def,
+          nodeSpans,
+          needle: oldString,
+        }),
+      };
+    }
+
+    const newSource =
+      currentSource.slice(0, firstIdx) +
+      newString +
+      currentSource.slice(firstIdx + oldString.length);
+
+    // Evaluate + transform + merge + save. On success the stored state changes,
+    // so clear this flow's read-state; the next edit will need a fresh read.
+    const result = await saveFlowFromSource(ctx.invect, flowId, newSource, def);
+    if (result.success) {
+      ctx.readState?.delete(flowId);
+    } else {
+      // Promote stage-specific failures into the telemetry stream.
+      const stage = (result.data as { stage?: string } | undefined)?.stage;
+      if (stage === 'evaluate') {
+        logEditFailure(ctx, 'edit_flow_source', 'eval_failed');
+      } else if (stage === 'merge') {
+        logEditFailure(ctx, 'edit_flow_source', 'merge_failed');
+      }
+    }
+    return result;
   },
 };
 
@@ -184,6 +518,7 @@ export const writeFlowSourceTool: ChatToolDefinition = {
   description:
     'Replace the entire flow with the provided TypeScript source. ' +
     'Use this for new flows or when making several coordinated edits that would be awkward as individual `edit_flow_source` calls. ' +
+    'For flows that already have a version, this tool REQUIRES a prior `get_flow_source` call in this turn. ' +
     'The source must be a complete `@invect/sdk` flow file — `import { defineFlow, ... } from "@invect/sdk"` plus `export default defineFlow({...})`. ' +
     'Node ids, canvas positions, and agent-tool instance ids are preserved from the prior version by matching on `referenceId`.',
   parameters: z.object({
@@ -203,7 +538,8 @@ export const writeFlowSourceTool: ChatToolDefinition = {
 
     try {
       // Prior definition is used by the merge step for id/position/instanceId
-      // preservation. Brand-new flows have no prior version yet.
+      // preservation. Brand-new flows (no prior version) skip the invariant —
+      // there's nothing to read.
       let priorDef: DbFlowDefinition | null = null;
       try {
         const version = await ctx.invect.versions.get(flowId, 'latest');
@@ -214,7 +550,66 @@ export const writeFlowSourceTool: ChatToolDefinition = {
         // No prior version — fine; merge will generate fresh ids.
       }
 
-      return await saveFlowFromSource(ctx.invect, flowId, source, priorDef);
+      // Read-before-edit invariant: enforced only when the session wires a
+      // `readState` map AND a prior version exists. Brand-new flows skip.
+      if (priorDef && ctx.readState) {
+        const emitted = await emitCurrentSource(ctx.invect, flowId);
+        if (emitted.ok) {
+          const currentHash = sha1(emitted.code);
+          const priorRead = ctx.readState.get(flowId);
+          if (!priorRead) {
+            logEditFailure(ctx, 'write_flow_source', 'stale_or_missing_read');
+            if (ctx.currentStep !== undefined) {
+              ctx.readState.set(flowId, { hash: currentHash, readAtStep: ctx.currentStep });
+            }
+            return {
+              success: false,
+              error:
+                'write_flow_source requires a `get_flow_source` call earlier in this turn (for flows with an existing version). The current source is attached — inspect it and call write_flow_source again.',
+              data: buildFailurePayload({
+                reason: 'stale_or_missing_read',
+                source: emitted.code,
+                sourceHash: currentHash,
+                def: emitted.def,
+                nodeSpans: emitted.nodeSpans,
+              }),
+            };
+          }
+          if (priorRead.hash !== currentHash) {
+            logEditFailure(ctx, 'write_flow_source', 'source_changed_since', {
+              priorReadStep: priorRead.readAtStep,
+            });
+            if (ctx.currentStep !== undefined) {
+              ctx.readState.set(flowId, { hash: currentHash, readAtStep: ctx.currentStep });
+            }
+            return {
+              success: false,
+              error:
+                'The flow source has changed since your last `get_flow_source` call. The fresh source is attached — re-apply your rewrite against it.',
+              data: buildFailurePayload({
+                reason: 'source_changed_since',
+                source: emitted.code,
+                sourceHash: currentHash,
+                def: emitted.def,
+                nodeSpans: emitted.nodeSpans,
+              }),
+            };
+          }
+        }
+      }
+
+      const result = await saveFlowFromSource(ctx.invect, flowId, source, priorDef);
+      if (result.success) {
+        ctx.readState?.delete(flowId);
+      } else {
+        const stage = (result.data as { stage?: string } | undefined)?.stage;
+        if (stage === 'evaluate') {
+          logEditFailure(ctx, 'write_flow_source', 'eval_failed');
+        } else if (stage === 'merge') {
+          logEditFailure(ctx, 'write_flow_source', 'merge_failed');
+        }
+      }
+      return result;
     } catch (error) {
       return {
         success: false,

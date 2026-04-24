@@ -72,7 +72,14 @@ export type { ActionDefinition, ActionHelper } from '@invect/action-kit';
 // surface that renders a flow as code (FlowCodePanel, copy-paste, Vercel
 // deploy preview, chat assistant, git sync).
 export { emitSdkSource, SdkEmitError } from './emitter';
-export type { EmitOptions, EmitResult, DbFlowDefinition, DbFlowNode, DbFlowEdge } from './emitter';
+export type {
+  EmitOptions,
+  EmitResult,
+  DbFlowDefinition,
+  DbFlowNode,
+  DbFlowEdge,
+  NodeSpan,
+} from './emitter';
 
 // Merge — parsed SDK flow → canonical DB definition, preserving node ids,
 // positions, labels, and agent-tool instanceIds against a prior version.

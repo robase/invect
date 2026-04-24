@@ -83,7 +83,9 @@ export function FlowCommandPalette({ open, onOpenChange, actions }: FlowCommandP
 
   // Reset search when the dialog opens so the preview list is shown
   React.useEffect(() => {
-    if (open) {setSearch('');}
+    if (open) {
+      setSearch('');
+    }
   }, [open]);
 
   // Group actions by category

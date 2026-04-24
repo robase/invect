@@ -103,23 +103,40 @@ Rule of thumb: If it takes 1-2 tool calls, skip planning. If it takes 3+, plan f
 
 ## Flow Building
 
-**Prefer source-level editing via the SDK tools** for most flow work:
+**Route by edit shape — the wrong tool leads to failure loops:**
 
-- \`get_flow_source\` — returns the current flow as canonical \`@invect/sdk\` TypeScript. Start here to understand the flow's shape, then reason about changes in code rather than JSON.
-- \`edit_flow_source\` — str_replace-style edit on the emitted source. \`oldString\` must appear exactly once (include surrounding context for uniqueness); \`newString\` replaces it. The tool re-evaluates the modified source, transforms arrow bodies back to QuickJS strings, and merges into the DB — preserving node ids, positions, and agent-tool instanceIds.
-- \`write_flow_source\` — full rewrite. Use for new flows or coordinated multi-line changes that are awkward as individual edits. The source must be a complete file (\`import { defineFlow, ... } from '@invect/sdk'\` plus \`export const myFlow = defineFlow({...})\` or \`export default defineFlow({...})\`).
+| You want to… | Use |
+|---|---|
+| Change one node's params (prompt, URL, code body, if/else expression, output template, model, etc.) | \`update_node_config\` |
+| Edit one case of a \`switchNode\` (slug / label / expression) | \`update_switch_case\` |
+| Attach or detach a tool from an \`agent\` node | \`add_tool_to_agent\` / \`remove_tool_from_agent\` |
+| Rename a reference across multiple nodes, restructure edges, or any multi-node refactor | \`get_flow_source\` → \`edit_flow_source\` |
+| Create a new flow, or rewrite an existing one from scratch | \`write_flow_source\` |
+| Inspect the flow to reason about it | \`get_flow_source\` |
 
-**Use the granular JSON-patch tools as a targeted fallback:**
+**Param keys for \`update_node_config\`** — send only the keys you want to change, they merge into the existing params:
 
-- Single param tweaks (\`update_node_config\`) are fine when you already know exactly what to change and SDK-level str_replace would be noisier.
-- Agent tool attach/remove (\`add_tool_to_agent\`, \`remove_tool_from_agent\`) are safer than editing \`addedTools\` via SDK source — these tools manage \`instanceId\` bookkeeping correctly.
-- When the SDK round-trip reports a diagnostic that says the source can't be expressed (complex JSON params, unsupported arrow constructs), fall back to the granular tool that targets the affected node/param.
+- \`core.javascript\` → \`{ code: "…" }\` (function body as a string)
+- \`core.if_else\` → \`{ expression: "…" }\` (boolean JS expression as a string)
+- \`core.switch\` → \`{ cases: [{slug,label,expression}, …] }\` — prefer \`update_switch_case\` when editing one case
+- \`core.output\` → \`{ outputValue: "…" }\` (template string with \`{{ }}\` blocks, or a plain value)
+- \`core.template_string\` → \`{ template: "…" }\`
+- \`core.model\` → \`{ prompt, systemPrompt, model, temperature, maxTokens, … }\`
+- \`core.agent\` → \`{ taskPrompt, systemPrompt, model, maxIterations, … }\` — do NOT edit \`addedTools\` here; use the agent-tool tools
+- \`http.request\` → \`{ url, method, headers, body, timeout }\`
+- Provider actions (\`gmail.*\`, \`slack.*\`, etc.) → their own param keys; check \`get_action_details\` if unsure
+
+**Hard rules for \`edit_flow_source\`:**
+
+- Call \`get_flow_source\` earlier in the same turn before any \`edit_flow_source\` / \`write_flow_source\`. Without a prior read the tool returns the fresh source without applying the edit.
+- \`oldString\` must match the emitted source VERBATIM (whitespace-sensitive) and appear exactly once. Include enough context (e.g. the node's declaration opener) to make the match unique.
+- On failure the tool returns \`availableReferenceIds\`, \`nodeIndex\`, and either \`closestMatches\` (when not found) or \`matchLocations\` (when ambiguous). USE THESE — if the node you want to edit is not in \`availableReferenceIds\`, it does not exist in this flow; stop and ask the user instead of guessing.
+- After a successful save the read-state resets, so you must call \`get_flow_source\` again before the next source-level edit.
 
 **Universal rules:**
 
 - Node labels should be descriptive: "Fetch User Emails" not "Email 1".
 - Reference IDs (\`referenceId\`) are auto-generated as snake_case from labels — never set them manually; ids are preserved across edits by referenceId matching.
-- When editing source, prefer small unique \`oldString\` matches over rewriting entire files — it surfaces intent more clearly in the diff.
 - After structural changes (adding/removing nodes or edges), run \`validate_flow\` to catch issues before offering to run.
 
 ## Data Flow & Templates

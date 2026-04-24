@@ -39,22 +39,41 @@ type EdgeExecutionState = 'failed' | 'success' | 'active' | 'pending' | null;
 function deriveEdgeExecutionState(data?: BatchFlowEdgeData): EdgeExecutionState {
   const src = data?.sourceNodeStatus;
   const tgt = data?.targetNodeStatus;
-  if (!src && !tgt) {return null;}
+  if (!src && !tgt) {
+    return null;
+  }
+
+  // Either endpoint skipped → fall through so the existing `type: 'skipped'`
+  // styling (gray dashed) wins over execution-state coloring.
+  if (src === 'SKIPPED' || tgt === 'SKIPPED') {
+    return null;
+  }
 
   // Source failed → the edge will never deliver — render red regardless of
   // the (probably absent) target status.
-  if (src === 'FAILED') {return 'failed';}
+  if (src === 'FAILED') {
+    return 'failed';
+  }
 
   if (src === 'SUCCESS') {
     // Target running: data is being consumed right now.
-    if (tgt === 'RUNNING') {return 'active';}
+    if (tgt === 'RUNNING') {
+      return 'active';
+    }
     // Target queued or waiting on batch: dim, slow.
-    if (tgt === 'PENDING' || tgt === 'BATCH_SUBMITTED') {return 'pending';}
+    if (tgt === 'PENDING' || tgt === 'BATCH_SUBMITTED') {
+      return 'pending';
+    }
+    // Edge delivered into a node that then failed — render red so the failed
+    // path is visible end-to-end, not just on the failed node's outgoing edges.
+    if (tgt === 'FAILED') {
+      return 'failed';
+    }
     // Both finished successfully — stable green.
-    if (tgt === 'SUCCESS') {return 'success';}
-    // Target failed downstream: leave the edge green (it delivered).
-    if (tgt === 'FAILED') {return 'success';}
-    // No target trace yet — this run hasn't reached the child.
+    if (tgt === 'SUCCESS') {
+      return 'success';
+    }
+    // No target trace yet — pre-terminal-flow case (mid-run).
     return 'success';
   }
 

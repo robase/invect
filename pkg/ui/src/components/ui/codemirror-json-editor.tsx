@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useCallback, useState } from 'react';
 import {
   EditorView,
   keymap,
@@ -27,6 +27,7 @@ import {
   foldKeymap,
   foldEffect,
   foldable,
+  unfoldAll,
 } from '@codemirror/language';
 import {
   closeBrackets,
@@ -61,6 +62,20 @@ interface CodeMirrorJsonEditorProps {
   onRunSlot?: (slot: UpstreamSlot) => void;
   /** JSON keys to auto-fold when content is set (e.g. ['previous_nodes']) */
   defaultFoldKeys?: string[];
+  /**
+   * When true, automatically fold any object/array nested at depth ≥ 3 that
+   * contains more than one immediate child. Reduces noise in deeply nested
+   * payloads (e.g. node-execution outputs with embedded `previous_nodes`).
+   * The user can expand individual sections via the fold gutter, or all at
+   * once via the imperative `expandAll()` handle.
+   */
+  autoFoldDeep?: boolean;
+}
+
+/** Imperative handle exposed via `ref` for parent components. */
+export interface CodeMirrorJsonEditorHandle {
+  /** Unfold every currently-folded region in the editor. */
+  expandAll: () => void;
 }
 
 // Theme extension for styling
@@ -504,17 +519,105 @@ function foldMatchingKeys(view: EditorView, keys: string[]) {
   }
 }
 
-export function CodeMirrorJsonEditor({
-  value,
-  onChange,
-  readOnly = false,
-  className,
-  minHeight = '200px',
-  disableLinting = false,
-  upstreamSlots,
-  onRunSlot,
-  defaultFoldKeys,
-}: CodeMirrorJsonEditorProps) {
+/**
+ * Fold any object/array opener at depth ≥ `depthThreshold` whose body has
+ * more than one immediate child. Designed to run against the output of
+ * `JSON.stringify(value, null, indentSize)`, which produces predictable
+ * `indentSize`-space indentation per nesting level.
+ *
+ * Depth is 1-indexed: the root `{`/`[` is depth 1, its direct children
+ * (which sit at indent `indentSize`) open structures at depth 2, and so on.
+ * "More than one child" is counted by lines whose indent is exactly the
+ * opener's indent + `indentSize` (i.e. immediate children, not grandchildren).
+ */
+function foldDeepNested(
+  view: EditorView,
+  options: { indentSize?: number; depthThreshold?: number; minChildren?: number } = {},
+) {
+  const indentSize = options.indentSize ?? 2;
+  const depthThreshold = options.depthThreshold ?? 3;
+  const minChildren = options.minChildren ?? 2;
+
+  const effects: Array<ReturnType<typeof foldEffect.of>> = [];
+  const totalLines = view.state.doc.lines;
+
+  for (let i = 1; i <= totalLines; i++) {
+    const line = view.state.doc.line(i);
+    const text = line.text;
+    // The opener line ends with `{` or `[` — possibly followed by trailing
+    // whitespace. Anything else (closers, scalar properties, blank lines)
+    // is not a foldable opener.
+    const trimmedRight = text.replace(/\s+$/, '');
+    if (!trimmedRight.endsWith('{') && !trimmedRight.endsWith('[')) {
+      continue;
+    }
+    const leadingMatch = text.match(/^( *)/);
+    const leadingSpaces = leadingMatch ? leadingMatch[1].length : 0;
+    if (leadingSpaces % indentSize !== 0) {
+      continue;
+    }
+    const depth = leadingSpaces / indentSize + 1;
+    if (depth < depthThreshold) {
+      continue;
+    }
+
+    // Count immediate children: lines whose indent is exactly opener+indentSize.
+    // Stop at the matching closer (a line at the opener's indent starting with
+    // `}` or `]`).
+    const childIndent = leadingSpaces + indentSize;
+    let childCount = 0;
+    for (let j = i + 1; j <= totalLines; j++) {
+      const childLine = view.state.doc.line(j);
+      const childText = childLine.text;
+      const childLeadingMatch = childText.match(/^( *)/);
+      const childLeading = childLeadingMatch ? childLeadingMatch[1].length : 0;
+      if (childLeading === leadingSpaces) {
+        const trimmed = childText.trimStart();
+        if (trimmed.startsWith('}') || trimmed.startsWith(']')) {
+          break;
+        }
+      }
+      if (childLeading === childIndent) {
+        childCount++;
+        if (childCount >= minChildren) {
+          break;
+        }
+      }
+    }
+
+    if (childCount < minChildren) {
+      continue;
+    }
+
+    const range = foldable(view.state, line.from, line.to);
+    if (range) {
+      effects.push(foldEffect.of(range));
+    }
+  }
+
+  if (effects.length > 0) {
+    view.dispatch({ effects });
+  }
+}
+
+export const CodeMirrorJsonEditor = forwardRef<
+  CodeMirrorJsonEditorHandle,
+  CodeMirrorJsonEditorProps
+>(function CodeMirrorJsonEditor(
+  {
+    value,
+    onChange,
+    readOnly = false,
+    className,
+    minHeight = '200px',
+    disableLinting = false,
+    upstreamSlots,
+    onRunSlot,
+    defaultFoldKeys,
+    autoFoldDeep = false,
+  }: CodeMirrorJsonEditorProps,
+  ref,
+) {
   const vscodePalette = useCodeMirrorVscodePalette();
   const vscodeTheme = useCodeMirrorVscodeTheme();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -646,11 +749,17 @@ export function CodeMirrorJsonEditor({
 
     viewRef.current = view;
 
-    // Auto-fold specified keys after creation
-    if (defaultFoldKeys?.length) {
+    // Auto-fold specified keys and/or deep-nested structures after creation.
+    if (defaultFoldKeys?.length || autoFoldDeep) {
       requestAnimationFrame(() => {
-        if (viewRef.current) {
+        if (!viewRef.current) {
+          return;
+        }
+        if (defaultFoldKeys?.length) {
           foldMatchingKeys(viewRef.current, defaultFoldKeys);
+        }
+        if (autoFoldDeep) {
+          foldDeepNested(viewRef.current);
         }
       });
     }
@@ -659,7 +768,7 @@ export function CodeMirrorJsonEditor({
       view.destroy();
       viewRef.current = null;
     };
-  }, [readOnly, hasSlots, vscodePalette, vscodeTheme, disableLinting]);
+  }, [readOnly, hasSlots, vscodePalette, vscodeTheme, disableLinting, autoFoldDeep]);
 
   // Update content when value changes from outside
   useEffect(() => {
@@ -677,16 +786,38 @@ export function CodeMirrorJsonEditor({
           insert: value,
         },
       });
-      // Re-fold specified keys after content update
-      if (defaultFoldKeys?.length) {
+      // Re-apply auto-folding after content update.
+      if (defaultFoldKeys?.length || autoFoldDeep) {
         requestAnimationFrame(() => {
-          if (viewRef.current) {
+          if (!viewRef.current) {
+            return;
+          }
+          if (defaultFoldKeys?.length) {
             foldMatchingKeys(viewRef.current, defaultFoldKeys);
+          }
+          if (autoFoldDeep) {
+            foldDeepNested(viewRef.current);
           }
         });
       }
     }
-  }, [value]);
+  }, [value, autoFoldDeep, defaultFoldKeys]);
+
+  // Imperative handle: parent components can trigger expand-all without
+  // poking the editor view directly.
+  useImperativeHandle(
+    ref,
+    () => ({
+      expandAll: () => {
+        const view = viewRef.current;
+        if (!view) {
+          return;
+        }
+        unfoldAll(view);
+      },
+    }),
+    [],
+  );
 
   // Push upstream slot data into the editor state
   useEffect(() => {
@@ -739,7 +870,7 @@ export function CodeMirrorJsonEditor({
         )}
     </div>
   );
-}
+});
 
 // =====================================
 // Slot Popover (React component rendered via portal)

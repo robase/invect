@@ -121,6 +121,7 @@ function applyEvent(
       queryClient.setQueryData(queryKeys.flowRun(flowRunId), event.flowRun);
       queryClient.setQueryData(queryKeys.nodeExecutions(flowRunId), event.nodeExecutions);
       patchRunsList(queryClient, flowId, event.flowRun);
+      ensureRunsListFresh(queryClient, flowId);
       // Invalidate the React Flow graph so it re-renders with execution status
       invalidateReactFlow(queryClient, flowId);
       break;
@@ -129,6 +130,12 @@ function applyEvent(
     case 'flow_run.updated': {
       queryClient.setQueryData(queryKeys.flowRun(flowRunId), event.flowRun);
       patchRunsList(queryClient, flowId, event.flowRun);
+      // Defensive backstop: if the runs-list cache wasn't populated yet
+      // (race between mount and first SSE event), patchRunsList silently
+      // bails. Marking the query stale so the next observer refetches keeps
+      // the dropdown's status badge in sync — particularly important for the
+      // terminal flow_run.updated event (RUNNING → FAILED / SUCCESS).
+      ensureRunsListFresh(queryClient, flowId);
       invalidateReactFlow(queryClient, flowId);
       break;
     }
@@ -162,6 +169,7 @@ function applyEvent(
     case 'end': {
       queryClient.setQueryData(queryKeys.flowRun(flowRunId), event.flowRun);
       patchRunsList(queryClient, flowId, event.flowRun);
+      ensureRunsListFresh(queryClient, flowId);
       invalidateReactFlow(queryClient, flowId);
       break;
     }
@@ -198,5 +206,19 @@ function invalidateReactFlow(queryClient: ReturnType<typeof useQueryClient>, flo
   // Invalidate all reactFlow queries for this flow (any version / any flowRunId)
   queryClient.invalidateQueries({
     queryKey: ['flows', flowId, 'react-flow'],
+  });
+}
+
+/**
+ * Mark the runs-list query stale so any active observer refetches. Runs as a
+ * safety net alongside `patchRunsList`: when the runs-list cache exists, the
+ * patch already updated it (cheap, no network); when it doesn't (e.g. SSE
+ * arrived before the first list fetch resolved), invalidate triggers the
+ * pending fetch to use the fresh server state. Either way the dropdown ends
+ * up showing the right status.
+ */
+function ensureRunsListFresh(queryClient: ReturnType<typeof useQueryClient>, flowId: string): void {
+  queryClient.invalidateQueries({
+    queryKey: queryKeys.executions(flowId),
   });
 }

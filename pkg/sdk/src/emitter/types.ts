@@ -56,6 +56,13 @@ export interface EmitOptions {
   metadata?: DbFlowMetadata;
 }
 
+export interface NodeSpan {
+  /** 1-based line number of the first line of this node's emitted block. */
+  start: number;
+  /** 1-based line number of the last line of this node's emitted block. */
+  end: number;
+}
+
 export interface EmitResult {
   /** The full TypeScript source, imports + defineFlow call + optional footer. */
   code: string;
@@ -63,6 +70,12 @@ export interface EmitResult {
   sdkImports: string[];
   /** Action-catalogue imports, keyed by module path. */
   actionImports: Record<string, string[]>;
+  /**
+   * 1-based line ranges in `code` for each emitted node, keyed by `referenceId`.
+   * Consumers (chat tools, UI panels) use this to scope edits to a node's
+   * declaration without re-parsing the source.
+   */
+  nodeSpans: Record<string, NodeSpan>;
 }
 
 export class SdkEmitError extends Error {

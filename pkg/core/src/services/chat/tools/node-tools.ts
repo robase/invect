@@ -520,6 +520,130 @@ export const connectNodesTool: ChatToolDefinition = {
 };
 
 // =====================================
+// update_switch_case
+// =====================================
+
+export const updateSwitchCaseTool: ChatToolDefinition = {
+  id: 'update_switch_case',
+  name: 'Update Switch Case',
+  description:
+    'Update a single case of a `core.switch` node — slug, label, or expression. ' +
+    'Safer than `update_node_config` for per-case edits because you only send what changes (the existing `cases` array is preserved). ' +
+    'Identify the target case by its current `slug`. Other cases are left untouched.',
+  parameters: z.object({
+    nodeId: z.string().describe('ID or referenceId of the switch node'),
+    slug: z.string().describe('Current slug of the case to edit'),
+    newSlug: z
+      .string()
+      .optional()
+      .describe(
+        'If provided, renames the case slug. Also updates any edges whose sourceHandle matches the old slug.',
+      ),
+    label: z.string().optional().describe('New human-readable label for the case'),
+    expression: z.string().optional().describe('New JS boolean expression for the case'),
+  }),
+  async execute(params: unknown, ctx: ChatToolContext): Promise<ChatToolResult> {
+    const { nodeId, slug, newSlug, label, expression } = params as {
+      nodeId: string;
+      slug: string;
+      newSlug?: string;
+      label?: string;
+      expression?: string;
+    };
+    const invect = ctx.invect;
+    const flowId = ctx.chatContext.flowId;
+
+    if (!flowId) {
+      return { success: false, error: 'No flow is currently open' };
+    }
+    if (newSlug === undefined && label === undefined && expression === undefined) {
+      return {
+        success: false,
+        error: 'Provide at least one of `newSlug`, `label`, or `expression` to change',
+      };
+    }
+
+    try {
+      const { nodes, edges } = await loadLatestDefinition(invect, flowId);
+      const node = findNodeByIdOrRef(nodes, nodeId);
+      if (!node) {
+        return {
+          success: false,
+          error: `Node "${nodeId}" not found in flow`,
+          suggestion: 'Use get_current_flow_context to see available node IDs.',
+        };
+      }
+      if (node.type !== 'core.switch') {
+        return {
+          success: false,
+          error: `Node "${nodeId}" is type "${node.type}", not "core.switch"`,
+        };
+      }
+
+      const nodeParams = (node.params ?? {}) as Record<string, unknown>;
+      const rawCases = Array.isArray(nodeParams.cases) ? nodeParams.cases : [];
+      const cases = rawCases.map((c) => ({
+        ...(c as { slug: string; label: string; expression: string }),
+      }));
+      const idx = cases.findIndex((c) => c.slug === slug);
+      if (idx === -1) {
+        return {
+          success: false,
+          error: `Switch node "${nodeId}" has no case with slug "${slug}"`,
+          suggestion: `Available slugs: ${cases.map((c) => JSON.stringify(c.slug)).join(', ')}`,
+        };
+      }
+
+      const updated = { ...cases[idx] };
+      if (newSlug !== undefined) {
+        updated.slug = newSlug;
+      }
+      if (label !== undefined) {
+        updated.label = label;
+      }
+      if (expression !== undefined) {
+        updated.expression = expression;
+      }
+      cases[idx] = updated;
+      node.params = { ...nodeParams, cases };
+
+      // If the slug changed, update outgoing edges whose sourceHandle points
+      // at the old slug so the routing stays correct.
+      if (newSlug !== undefined && newSlug !== slug) {
+        for (const edge of edges) {
+          if (edge.source === node.id && edge.sourceHandle === slug) {
+            edge.sourceHandle = newSlug;
+          }
+        }
+      }
+
+      const version = await saveNewVersion(invect, flowId, nodes, edges);
+
+      return {
+        success: true,
+        data: {
+          nodeId: node.id,
+          slug: updated.slug,
+          label: updated.label,
+          expression: updated.expression,
+          renamedFrom: newSlug !== undefined && newSlug !== slug ? slug : undefined,
+          versionNumber: version.version,
+        },
+        uiAction: {
+          action: 'refresh_flow',
+          data: { flowId, selectNodeId: node.id },
+        },
+      };
+    } catch (error: unknown) {
+      return {
+        success: false,
+        error: `Failed to update switch case: ${(error as Error).message}`,
+      };
+    }
+  },
+};
+
+// =====================================
 // Export all node tools
 // =====================================
 
@@ -527,5 +651,6 @@ export const nodeTools: ChatToolDefinition[] = [
   addNodeTool,
   removeNodeTool,
   updateNodeConfigTool,
+  updateSwitchCaseTool,
   connectNodesTool,
 ];

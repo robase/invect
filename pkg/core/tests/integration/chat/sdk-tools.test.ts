@@ -20,6 +20,7 @@ import {
   editFlowSourceTool,
   writeFlowSourceTool,
 } from '../../../src/services/chat/tools/sdk-tools';
+import { updateSwitchCaseTool } from '../../../src/services/chat/tools/node-tools';
 import { createTestInvect } from '../helpers/test-invect';
 
 /**
@@ -375,6 +376,324 @@ export default defineFlow({
   });
 
   // ───────────────────────── end-to-end scenario ─────────────────────────
+
+  // ───────────────────── read-before-edit invariant ─────────────────────
+
+  describe('read-before-edit invariant', () => {
+    beforeEach(async () => {
+      await invect.versions.create(flowId, {
+        invectDefinition: {
+          nodes: [
+            {
+              id: 'node_a',
+              type: 'core.input',
+              referenceId: 'query',
+              params: { variableName: 'query' },
+            },
+            {
+              id: 'node_b',
+              type: 'core.output',
+              referenceId: 'result',
+              params: { outputValue: '{{ query }}' },
+            },
+          ],
+          edges: [{ id: 'e1', source: 'node_a', target: 'node_b' }],
+        },
+      });
+    });
+
+    it('blocks edit_flow_source when no get_flow_source was called in this turn', async () => {
+      const readState = new Map();
+      const ctx: ChatToolContext = {
+        ...baseCtx,
+        chatContext: { flowId },
+        readState,
+        currentStep: 1,
+      };
+      const result = await editFlowSourceTool.execute(
+        { oldString: 'return (query);', newString: 'return ("x");' },
+        ctx,
+      );
+      expect(result.success).toBe(false);
+      const data = result.data as {
+        reason: string;
+        currentSource?: string;
+        availableReferenceIds: string[];
+      };
+      expect(data.reason).toBe('stale_or_missing_read');
+      expect(data.currentSource).toContain('output("result"');
+      expect(data.availableReferenceIds).toEqual(['query', 'result']);
+    });
+
+    it('allows edit after a get_flow_source call in the same turn', async () => {
+      const readState = new Map();
+      await getFlowSourceTool.execute(
+        {},
+        { ...baseCtx, chatContext: { flowId }, readState, currentStep: 1 },
+      );
+      const result = await editFlowSourceTool.execute(
+        { oldString: 'return (query);', newString: 'return ("x");' },
+        { ...baseCtx, chatContext: { flowId }, readState, currentStep: 2 },
+      );
+      expect(result.success).toBe(true);
+    });
+
+    it('soft-reprimes when source drifted since the last read', async () => {
+      const readState = new Map();
+      await getFlowSourceTool.execute(
+        {},
+        { ...baseCtx, chatContext: { flowId }, readState, currentStep: 1 },
+      );
+
+      // Simulate an out-of-band change (e.g. another tool saved a new version).
+      await invect.versions.create(flowId, {
+        invectDefinition: {
+          nodes: [
+            {
+              id: 'node_a',
+              type: 'core.input',
+              referenceId: 'query',
+              params: { variableName: 'query' },
+            },
+            {
+              id: 'node_b',
+              type: 'core.output',
+              referenceId: 'result',
+              params: { outputValue: 'out: {{ query }}' },
+            },
+          ],
+          edges: [{ id: 'e1', source: 'node_a', target: 'node_b' }],
+        },
+      });
+
+      const result = await editFlowSourceTool.execute(
+        { oldString: 'return (query);', newString: 'return ("x");' },
+        { ...baseCtx, chatContext: { flowId }, readState, currentStep: 2 },
+      );
+      expect(result.success).toBe(false);
+      const data = result.data as { reason: string; currentSource?: string };
+      expect(data.reason).toBe('source_changed_since');
+      // Fresh source is attached (text should reflect the out-of-band change).
+      expect(data.currentSource).toContain('out: ');
+    });
+
+    it('invariant is skipped when the caller does not pass readState', async () => {
+      // Direct call without session-wired readState — backward-compatible path.
+      const result = await editFlowSourceTool.execute(
+        { oldString: 'return (query);', newString: 'return ("x");' },
+        { ...baseCtx, chatContext: { flowId } },
+      );
+      expect(result.success).toBe(true);
+    });
+
+    it('successful edit clears the read-state so the next edit needs a fresh read', async () => {
+      const readState = new Map();
+      await getFlowSourceTool.execute(
+        {},
+        { ...baseCtx, chatContext: { flowId }, readState, currentStep: 1 },
+      );
+      const first = await editFlowSourceTool.execute(
+        { oldString: 'return (query);', newString: 'return ("x");' },
+        { ...baseCtx, chatContext: { flowId }, readState, currentStep: 2 },
+      );
+      expect(first.success).toBe(true);
+      // Next edit without re-reading should be blocked even though we just
+      // successfully edited.
+      const second = await editFlowSourceTool.execute(
+        { oldString: '"x"', newString: '"y"' },
+        { ...baseCtx, chatContext: { flowId }, readState, currentStep: 3 },
+      );
+      expect(second.success).toBe(false);
+      expect((second.data as { reason: string }).reason).toBe('stale_or_missing_read');
+    });
+  });
+
+  // ───────────────────── rich failure payloads ─────────────────────
+
+  describe('failure payload', () => {
+    beforeEach(async () => {
+      await invect.versions.create(flowId, {
+        invectDefinition: {
+          nodes: [
+            {
+              id: 'node_a',
+              type: 'core.input',
+              referenceId: 'query',
+              params: { variableName: 'query' },
+            },
+            {
+              id: 'node_b',
+              type: 'core.output',
+              referenceId: 'result',
+              params: { outputValue: '{{ query }}' },
+            },
+          ],
+          edges: [{ id: 'e1', source: 'node_a', target: 'node_b' }],
+        },
+      });
+    });
+
+    it('not_found payload includes availableReferenceIds, nodeIndex, and closestMatches', async () => {
+      const result = await editFlowSourceTool.execute(
+        { oldString: 'gibberish_that_does_not_exist_anywhere', newString: '' },
+        { ...baseCtx, chatContext: { flowId } },
+      );
+      expect(result.success).toBe(false);
+      const data = result.data as {
+        reason: string;
+        availableReferenceIds: string[];
+        nodeIndex: Record<
+          string,
+          { start: number; end: number; type: string; paramKeys: string[] }
+        >;
+        closestMatches?: Array<{ text: string; startLine: number; endLine: number }>;
+      };
+      expect(data.reason).toBe('not_found');
+      expect(data.availableReferenceIds).toEqual(['query', 'result']);
+      expect(data.nodeIndex.query.type).toBe('core.input');
+      expect(data.nodeIndex.result.type).toBe('core.output');
+      expect(data.nodeIndex.result.paramKeys).toContain('outputValue');
+      // closestMatches may be empty when the needle shares no tokens with the
+      // source (e.g. all-gibberish strings). Present when the needle overlaps.
+      if (data.closestMatches) {
+        expect(Array.isArray(data.closestMatches)).toBe(true);
+      }
+    });
+
+    it('ambiguous payload includes matchLocations', async () => {
+      const result = await editFlowSourceTool.execute(
+        { oldString: '"query"', newString: '"renamed"' },
+        { ...baseCtx, chatContext: { flowId } },
+      );
+      expect(result.success).toBe(false);
+      const data = result.data as {
+        reason: string;
+        matchLocations: Array<{ startLine: number; endLine: number; contextSnippet: string }>;
+      };
+      expect(data.reason).toBe('ambiguous');
+      expect(data.matchLocations.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('omits currentSource when emitted source exceeds the budget', async () => {
+      // Build a large flow so emitted source blows past SOURCE_INCLUDE_BUDGET
+      // (8000 chars). Padded defaultValue inflates each line to ~150 chars.
+      const pad = 'x'.repeat(120);
+      const nodes = Array.from({ length: 80 }, (_, i) => ({
+        id: `node_id_${i}`,
+        type: 'core.input',
+        referenceId: `query_${i}`,
+        params: { variableName: `query_${i}`, defaultValue: `${pad}_${i}` },
+      }));
+      await invect.versions.create(flowId, { invectDefinition: { nodes, edges: [] } });
+
+      const result = await editFlowSourceTool.execute(
+        { oldString: 'absolutely_not_in_source_zz', newString: '' },
+        { ...baseCtx, chatContext: { flowId } },
+      );
+      expect(result.success).toBe(false);
+      const data = result.data as { currentSource?: string; sourceElided?: boolean };
+      expect(data.sourceElided).toBe(true);
+      expect(data.currentSource).toBeUndefined();
+    });
+  });
+
+  // ───────────────────── update_switch_case ─────────────────────
+
+  describe('update_switch_case', () => {
+    beforeEach(async () => {
+      await invect.versions.create(flowId, {
+        invectDefinition: {
+          nodes: [
+            {
+              id: 'node_in',
+              type: 'core.input',
+              referenceId: 'x',
+              params: { variableName: 'x' },
+            },
+            {
+              id: 'node_sw',
+              type: 'core.switch',
+              referenceId: 'router',
+              params: {
+                matchMode: 'first',
+                cases: [
+                  { slug: 'high', label: 'High', expression: 'x > 100' },
+                  { slug: 'low', label: 'Low', expression: 'x <= 100' },
+                ],
+              },
+            },
+          ],
+          edges: [{ id: 'e1', source: 'node_in', target: 'node_sw' }],
+        },
+      });
+    });
+
+    it('updates expression for a targeted case, leaves others untouched', async () => {
+      const result = await updateSwitchCaseTool.execute(
+        { nodeId: 'router', slug: 'high', expression: 'x > 999' },
+        { ...baseCtx, chatContext: { flowId } },
+      );
+      expect(result.success).toBe(true);
+      const latest = await invect.versions.get(flowId, 'latest');
+      const sw = latest!.invectDefinition.nodes.find((n) => n.referenceId === 'router');
+      const cases = sw!.params.cases as Array<{ slug: string; expression: string }>;
+      expect(cases.find((c) => c.slug === 'high')?.expression).toBe('x > 999');
+      expect(cases.find((c) => c.slug === 'low')?.expression).toBe('x <= 100');
+    });
+
+    it('renames slug and updates matching edges', async () => {
+      // Add an outgoing edge from the switch using the old slug.
+      const v = await invect.versions.get(flowId, 'latest');
+      const nodes = [
+        ...v!.invectDefinition.nodes,
+        {
+          id: 'node_out',
+          type: 'core.output',
+          referenceId: 'out',
+          params: { outputValue: '{{ x }}' },
+        },
+      ];
+      const edges = [
+        ...v!.invectDefinition.edges,
+        { id: 'e2', source: 'node_sw', target: 'node_out', sourceHandle: 'high' },
+      ];
+      await invect.versions.create(flowId, { invectDefinition: { nodes, edges } });
+
+      const result = await updateSwitchCaseTool.execute(
+        { nodeId: 'router', slug: 'high', newSlug: 'critical' },
+        { ...baseCtx, chatContext: { flowId } },
+      );
+      expect(result.success).toBe(true);
+
+      const latest = await invect.versions.get(flowId, 'latest');
+      const sw = latest!.invectDefinition.nodes.find((n) => n.referenceId === 'router');
+      const cases = sw!.params.cases as Array<{ slug: string }>;
+      expect(cases.map((c) => c.slug)).toEqual(['critical', 'low']);
+      const edge = latest!.invectDefinition.edges.find((e) => e.id === 'e2');
+      expect(edge?.sourceHandle).toBe('critical');
+    });
+
+    it('errors on unknown slug with a helpful suggestion', async () => {
+      const result = await updateSwitchCaseTool.execute(
+        { nodeId: 'router', slug: 'nonexistent', expression: 'true' },
+        { ...baseCtx, chatContext: { flowId } },
+      );
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/no case with slug/i);
+      expect(result.suggestion).toMatch(/high|low/);
+    });
+
+    it('errors when called on a non-switch node', async () => {
+      const result = await updateSwitchCaseTool.execute(
+        { nodeId: 'x', slug: 'high', expression: 'true' },
+        { ...baseCtx, chatContext: { flowId } },
+      );
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/not.*core\.switch/i);
+    });
+  });
+
+  // ───────────────────── full round-trip ─────────────────────
 
   describe('full round-trip: edit the flow via the chat pipeline', () => {
     it('get → edit → get shows the change persisted', async () => {

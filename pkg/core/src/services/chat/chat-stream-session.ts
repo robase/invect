@@ -21,6 +21,7 @@ import type { InvectInstance } from 'src/api/types';
 import type {
   ChatMessage,
   ChatContext,
+  ChatReadState,
   ChatStreamEvent,
   ChatToolContext,
   ResolvedChatConfig,
@@ -118,11 +119,30 @@ class StreamEventQueue {
 /**
  * A single chat streaming session (one per user message).
  */
+/** Max consecutive source-edit failures before the session injects a correction
+ *  message forcing the LLM to refresh / switch tools. See Phase 5 of
+ *  plans/chat-assistant-edit-hardening.md. */
+const MAX_CONSECUTIVE_EDIT_FAILURES = 3;
+
+/** Tool IDs that count toward (and reset) the consecutive-failure counter. */
+const EDIT_FAILURE_TOOLS = new Set(['edit_flow_source', 'write_flow_source']);
+
+/** Reset the failure counter when any of these tools succeed, or when a
+ *  successful `get_flow_source` happens. */
+const FAILURE_RESET_TOOLS = new Set(['get_flow_source', 'update_node_config']);
+
 export class ChatStreamSession {
   private aborted = false;
   private usage: ChatUsage = {};
   /** Track which tool IDs were called during this session */
   private toolsCalled: string[] = [];
+  /**
+   * Per-turn read-before-edit tracking. Populated by `get_flow_source`, read
+   * and updated by `edit_flow_source` / `write_flow_source`. Keyed by `flowId`.
+   */
+  private readonly readState: Map<string, ChatReadState> = new Map();
+  /** Consecutive failed source-edit calls without an intervening read/success. */
+  private consecutiveEditFailures = 0;
 
   constructor(private readonly deps: ChatStreamSessionDeps) {}
 
@@ -281,11 +301,16 @@ export class ChatStreamSession {
             args: toolCall.input,
           };
 
-          // Build tool context
+          // Build tool context — includes per-turn read-state and logger so
+          // source-editing tools can enforce the read-before-edit invariant
+          // and emit structured failure telemetry.
           const toolCtx: ChatToolContext = {
             invect: this.deps.invect,
             identity: this.deps.identity,
             chatContext: context,
+            readState: this.readState,
+            currentStep: steps,
+            logger,
           };
 
           // Execute tool
@@ -305,6 +330,19 @@ export class ChatStreamSession {
               action: result.uiAction.action,
               data: result.uiAction.data,
             };
+          }
+
+          // Update consecutive-failure counter for source-editing tools.
+          // A success on any source-edit call OR a successful read/structured
+          // update resets the counter.
+          if (EDIT_FAILURE_TOOLS.has(toolCall.toolId)) {
+            if (result.success) {
+              this.consecutiveEditFailures = 0;
+            } else {
+              this.consecutiveEditFailures++;
+            }
+          } else if (FAILURE_RESET_TOOLS.has(toolCall.toolId) && result.success) {
+            this.consecutiveEditFailures = 0;
           }
 
           toolResults.push({
@@ -336,6 +374,27 @@ export class ChatStreamSession {
               content: JSON.stringify(t.result),
               toolCallId: t.id,
             });
+          }
+
+          // Loop-breaker: if the LLM has failed N consecutive source edits,
+          // inject a user-role correction message so it can't keep retrying
+          // the same failing call. Reset the counter so we only interject once
+          // per streak.
+          if (this.consecutiveEditFailures >= MAX_CONSECUTIVE_EDIT_FAILURES) {
+            logger.warn(
+              `Chat assistant hit ${this.consecutiveEditFailures} consecutive edit failures — injecting correction message`,
+              { sessionStep: steps },
+            );
+            conversationMessages.push({
+              role: 'user',
+              content:
+                `You have failed ${this.consecutiveEditFailures} consecutive source-edit calls. ` +
+                `Stop retrying \`edit_flow_source\` / \`write_flow_source\` with new guesses. ` +
+                `Call \`get_flow_source\` to refresh the source, and check \`availableReferenceIds\` ` +
+                `in the most recent failure payload — if the node you want to edit isn't listed, it ` +
+                `does not exist in this flow. For single-node changes prefer \`update_node_config\`.`,
+            });
+            this.consecutiveEditFailures = 0;
           }
         }
       }

@@ -1,7 +1,7 @@
 import { FlowVersion } from '../database';
 import { FlowRun } from './flow-runs/flow-runs.model';
 import { NodeExecution } from './node-executions/node-executions.model';
-import { NodeExecutionStatus } from '../types/base';
+import { FlowRunStatus, NodeExecutionStatus } from '../types/base';
 import { Logger } from '../schemas';
 import { DatabaseError } from '../types/common/errors.types';
 import { FlowEdge, FlowNodeDefinitions } from './flow-versions/schemas-fresh';
@@ -205,6 +205,16 @@ export class ReactFlowRendererService {
     // Create execution status map
     const executionStatusMap = this.createExecutionStatusMap(nodeExecutions);
 
+    // When the flow run is in a terminal state, any node that never got a
+    // trace (never entered the scheduler's ready set after failure/cancellation)
+    // should render as SKIPPED. Same for nodes still in PENDING / RUNNING —
+    // those are stale traces from a process that died mid-flight. This makes
+    // the UI match reality: no lingering animated borders after the run ends,
+    // and edges into unstarted nodes render as skipped (gray-dashed).
+    if (flowRun && this.isTerminalFlowRunStatus(flowRun.status)) {
+      this.coerceUnfinishedNodesToSkipped(flowVersion, executionStatusMap);
+    }
+
     // Transform nodes and edges
     let nodes = this.transformNodes(flowVersion, executionStatusMap);
     const edges = this.transformEdges(flowVersion, executionStatusMap);
@@ -250,6 +260,47 @@ export class ReactFlowRendererService {
     }
 
     return statusMap;
+  }
+
+  private isTerminalFlowRunStatus(status: FlowRunStatus): boolean {
+    return (
+      status === FlowRunStatus.SUCCESS ||
+      status === FlowRunStatus.FAILED ||
+      status === FlowRunStatus.CANCELLED
+    );
+  }
+
+  /**
+   * After a terminal flow run, any node without a completed trace is treated
+   * as SKIPPED for display:
+   *  - No trace at all → synthesize a SKIPPED entry so the node renders as
+   *    dimmed/dashed and its outgoing edges get the skipped styling.
+   *  - Trace in PENDING / RUNNING / BATCH_SUBMITTED → the run ended before it
+   *    finished (cancel, crash, stale-run reaper). Coerce to SKIPPED for the
+   *    same visual; the underlying DB row is untouched.
+   */
+  private coerceUnfinishedNodesToSkipped(
+    flowVersion: FlowVersion,
+    statusMap: Map<string, NodeExecutionStatusInfo>,
+  ): void {
+    const nodes = flowVersion.invectDefinition?.nodes;
+    if (!nodes) {
+      return;
+    }
+    for (const node of nodes) {
+      const existing = statusMap.get(node.id);
+      if (!existing) {
+        statusMap.set(node.id, { status: NodeExecutionStatus.SKIPPED });
+        continue;
+      }
+      if (
+        existing.status === NodeExecutionStatus.PENDING ||
+        existing.status === NodeExecutionStatus.RUNNING ||
+        existing.status === NodeExecutionStatus.BATCH_SUBMITTED
+      ) {
+        statusMap.set(node.id, { ...existing, status: NodeExecutionStatus.SKIPPED });
+      }
+    }
   }
 
   /**

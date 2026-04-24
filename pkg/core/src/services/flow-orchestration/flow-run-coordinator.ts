@@ -152,7 +152,9 @@ export class FlowRunCoordinator {
     const raw = process.env.INVECT_SCHEDULER_CONCURRENCY;
     if (raw) {
       const n = Number.parseInt(raw, 10);
-      if (Number.isFinite(n) && n >= 1) {return n;}
+      if (Number.isFinite(n) && n >= 1) {
+        return n;
+      }
     }
     return 8;
   }
@@ -170,10 +172,16 @@ export class FlowRunCoordinator {
     flowInputs: Record<string, unknown>,
   ): void {
     const activeTriggerNodeId = flowInputs.__triggerNodeId as string | undefined;
-    if (!activeTriggerNodeId) {return;}
+    if (!activeTriggerNodeId) {
+      return;
+    }
     for (const node of nodes) {
-      if (!node.type.startsWith('trigger.')) {continue;}
-      if (node.id === activeTriggerNodeId) {continue;}
+      if (!node.type.startsWith('trigger.')) {
+        continue;
+      }
+      if (node.id === activeTriggerNodeId) {
+        continue;
+      }
       skippedNodeIds.add(node.id);
       this.deps.graphService.markDownstreamNodesAsSkipped(node.id, edges, skippedNodeIds);
     }
@@ -357,7 +365,9 @@ export class FlowRunCoordinator {
         skippedNodeIds,
       });
       nodeExecutions.push(...result.traces);
-      for (const id of result.batchPendingNodeIds) {batchPendingNodeIds.add(id);}
+      for (const id of result.batchPendingNodeIds) {
+        batchPendingNodeIds.add(id);
+      }
       if (result.paused) {
         await this.pauseFlowForBatch(execution.id);
         return this.buildPausedFlowResult(execution.id, nodeExecutions);
@@ -1065,7 +1075,9 @@ export class FlowRunCoordinator {
         skippedNodeIds,
       });
       nodeExecutions.push(...result.traces);
-      for (const id of result.batchPendingNodeIds) {batchPendingNodeIds.add(id);}
+      for (const id of result.batchPendingNodeIds) {
+        batchPendingNodeIds.add(id);
+      }
       if (result.paused) {
         hasBatchSubmission = true;
         await this.pauseFlowForBatch(execution.id);

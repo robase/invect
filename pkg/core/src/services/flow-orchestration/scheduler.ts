@@ -134,12 +134,16 @@ export class Scheduler {
       // Launch as many ready nodes as concurrency allows.
       while (this.canLaunch()) {
         const nodeId = this.readyQueue.shift();
-        if (!nodeId) {break;}
+        if (!nodeId) {
+          break;
+        }
         this.readySet.delete(nodeId);
         this.launch(nodeId);
       }
 
-      if (this.inFlight.size === 0) {break;}
+      if (this.inFlight.size === 0) {
+        break;
+      }
 
       // Wait for at least one in-flight node to complete.
       const completion = await this.raceCompletion();
@@ -158,7 +162,9 @@ export class Scheduler {
 
   private seedReady(): void {
     for (const node of this.opts.nodes) {
-      if (this.done.has(node.id)) {continue;}
+      if (this.done.has(node.id)) {
+        continue;
+      }
       if (this.allParentsTerminal(node.id)) {
         this.enqueueReady(node.id);
       }
@@ -166,11 +172,21 @@ export class Scheduler {
   }
 
   private canLaunch(): boolean {
-    if (this.readyQueue.length === 0) {return false;}
-    if (this.inFlight.size >= this.opts.concurrency) {return false;}
-    if (this.opts.signal?.aborted) {return false;}
-    if (this.firstFailure && this.opts.failureMode === 'stop') {return false;}
-    if (this.paused && this.opts.batchPolicy === 'pause-immediately') {return false;}
+    if (this.readyQueue.length === 0) {
+      return false;
+    }
+    if (this.inFlight.size >= this.opts.concurrency) {
+      return false;
+    }
+    if (this.opts.signal?.aborted) {
+      return false;
+    }
+    if (this.firstFailure && this.opts.failureMode === 'stop') {
+      return false;
+    }
+    if (this.paused && this.opts.batchPolicy === 'pause-immediately') {
+      return false;
+    }
     return true;
   }
 
@@ -217,11 +233,15 @@ export class Scheduler {
 
     this.traces.push(c.trace);
     const node = this.nodeMap.get(c.nodeId);
-    if (!node) {return;}
+    if (!node) {
+      return;
+    }
 
     switch (c.trace.status) {
       case NodeExecutionStatus.SUCCESS: {
-        if (c.trace.outputs) {this.opts.nodeOutputs.set(c.nodeId, c.trace.outputs);}
+        if (c.trace.outputs) {
+          this.opts.nodeOutputs.set(c.nodeId, c.trace.outputs);
+        }
         this.terminal.add(c.nodeId);
         // Allow the caller (FlowRunCoordinator) to propagate branch skips.
         // This may mutate `skippedNodeIds` — we absorb that below.
@@ -277,10 +297,18 @@ export class Scheduler {
     const children = this.outgoingByNode.get(parentId) ?? [];
     for (const edge of children) {
       const childId = edge.target;
-      if (this.done.has(childId)) {continue;}
-      if (this.inFlight.has(childId)) {continue;}
-      if (this.readySet.has(childId)) {continue;}
-      if (this.opts.skippedNodeIds.has(childId)) {continue;}
+      if (this.done.has(childId)) {
+        continue;
+      }
+      if (this.inFlight.has(childId)) {
+        continue;
+      }
+      if (this.readySet.has(childId)) {
+        continue;
+      }
+      if (this.opts.skippedNodeIds.has(childId)) {
+        continue;
+      }
       if (this.allParentsTerminal(childId)) {
         this.enqueueReady(childId);
       }
@@ -288,9 +316,13 @@ export class Scheduler {
   }
 
   private absorbNewlySkipped(): void {
-    if (this.opts.skippedNodeIds.size === this.lastSkippedSize) {return;}
+    if (this.opts.skippedNodeIds.size === this.lastSkippedSize) {
+      return;
+    }
     for (const id of this.opts.skippedNodeIds) {
-      if (this.done.has(id)) {continue;}
+      if (this.done.has(id)) {
+        continue;
+      }
       this.done.add(id);
       this.terminal.add(id);
       this.promoteChildren(id);
@@ -300,9 +332,13 @@ export class Scheduler {
 
   private allParentsTerminal(nodeId: string): boolean {
     const incoming = this.incomingByNode.get(nodeId) ?? [];
-    if (incoming.length === 0) {return true;}
+    if (incoming.length === 0) {
+      return true;
+    }
     for (const edge of incoming) {
-      if (!this.terminal.has(edge.source)) {return false;}
+      if (!this.terminal.has(edge.source)) {
+        return false;
+      }
     }
     return true;
   }

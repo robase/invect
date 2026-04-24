@@ -9,6 +9,7 @@
 import { z } from 'zod/v4';
 import type { InvectIdentity } from 'src/types/auth.types';
 import type { InvectInstance } from 'src/api/types';
+import type { Logger } from 'src/schemas';
 
 // =====================================
 // CHAT MESSAGES
@@ -85,6 +86,22 @@ export interface ChatToolResult {
 }
 
 /**
+ * Per-flow record of the most recent `get_flow_source` call within the current
+ * turn. Used by `edit_flow_source` / `write_flow_source` to enforce the
+ * read-before-edit invariant and detect hash drift between reads and edits.
+ *
+ * Scope is per-session (i.e. per HTTP request). Because sessions are stateless
+ * across requests, this survives only within a single assistant turn — which is
+ * where the observed edit-loop failure mode lives.
+ */
+export interface ChatReadState {
+  /** sha1 of the emitted source when `get_flow_source` succeeded. */
+  hash: string;
+  /** Tool-loop step index on which the read occurred. */
+  readAtStep: number;
+}
+
+/**
  * Context provided to chat tool execute functions
  */
 export interface ChatToolContext {
@@ -94,6 +111,19 @@ export interface ChatToolContext {
   identity?: InvectIdentity;
   /** Chat context from the frontend */
   chatContext: ChatContext;
+  /**
+   * Mutable per-session map keyed by `flowId`. `get_flow_source` populates it;
+   * `edit_flow_source` / `write_flow_source` read and update it. Stays null
+   * when no read-state tracking is wired (older callers).
+   */
+  readState?: Map<string, ChatReadState>;
+  /**
+   * Current tool-loop step index (1-based) when the tool executes. Used by
+   * tools that need to reason about call order within a single turn.
+   */
+  currentStep?: number;
+  /** Logger for structured telemetry from tools. */
+  logger?: Logger;
 }
 
 /**

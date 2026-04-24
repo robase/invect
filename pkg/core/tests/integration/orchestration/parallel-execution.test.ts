@@ -42,7 +42,9 @@ const delayPlugin: InvectPlugin = {
 };
 
 function setDelays(map: Record<string, number>): void {
-  for (const k of Object.keys(delays)) {delete delays[k];}
+  for (const k of Object.keys(delays)) {
+    delete delays[k];
+  }
   Object.assign(delays, map);
 }
 
@@ -70,7 +72,9 @@ function inputNode(id: string, value: unknown) {
 
 function getOutputString(result: { outputs?: Record<string, unknown> }, nodeId: string): string {
   const node = result.outputs?.[nodeId] as NodeOutput | undefined;
-  if (!node) {return '';}
+  if (!node) {
+    return '';
+  }
   const vars = node.data.variables as Record<string, { value?: unknown }>;
   const raw = vars.output?.value;
   return typeof raw === 'string' ? raw : JSON.stringify(raw ?? '');

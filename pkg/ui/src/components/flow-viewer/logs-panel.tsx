@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   ChevronUp,
   ChevronDown,
@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Bot,
   Wrench,
+  Expand,
 } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 import { Badge } from '../ui/badge';
@@ -25,7 +26,10 @@ import {
 } from './use-execution-log-data';
 import { NodeErrorBadge } from '../flow-editor/NodeErrorBadge';
 import { NodeExecutionStatus } from '@invect/core/types';
-import { CodeMirrorJsonEditor } from '../ui/codemirror-json-editor';
+import {
+  CodeMirrorJsonEditor,
+  type CodeMirrorJsonEditorHandle,
+} from '../ui/codemirror-json-editor';
 import { RunSelector, RunSelectorItem } from './RunSelector';
 
 interface LogsPanelProps {
@@ -422,6 +426,8 @@ function NodeAttemptDetailView({
 }) {
   const [inputsOpen, setInputsOpen] = useState(true);
   const [outputsOpen, setOutputsOpen] = useState(true);
+  const inputsEditorRef = useRef<CodeMirrorJsonEditorHandle | null>(null);
+  const outputsEditorRef = useRef<CodeMirrorJsonEditorHandle | null>(null);
 
   return (
     <div className="max-w-full">
@@ -493,21 +499,35 @@ function NodeAttemptDetailView({
 
         {hasData(attempt.inputs) && (
           <div className="max-w-full overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setInputsOpen(!inputsOpen)}
-              className="flex items-center gap-1.5 mb-2 text-sm font-semibold text-foreground cursor-pointer hover:text-foreground/80 transition-colors"
-            >
-              {inputsOpen ? (
-                <ChevronDown className="size-3.5" />
-              ) : (
-                <ChevronRight className="size-3.5" />
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <button
+                type="button"
+                onClick={() => setInputsOpen(!inputsOpen)}
+                className="flex items-center gap-1.5 text-sm font-semibold text-foreground cursor-pointer hover:text-foreground/80 transition-colors"
+              >
+                {inputsOpen ? (
+                  <ChevronDown className="size-3.5" />
+                ) : (
+                  <ChevronRight className="size-3.5" />
+                )}
+                {attempt.isLoopIteration ? 'Iteration Input' : 'Inputs'}
+              </button>
+              {inputsOpen && (
+                <button
+                  type="button"
+                  onClick={() => inputsEditorRef.current?.expandAll()}
+                  title="Expand all collapsed sections"
+                  aria-label="Expand all"
+                  className="p-1 rounded-md text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors cursor-pointer"
+                >
+                  <Expand className="size-3.5" />
+                </button>
               )}
-              {attempt.isLoopIteration ? 'Iteration Input' : 'Inputs'}
-            </button>
+            </div>
             {inputsOpen && (
               <div className="max-w-full overflow-hidden border rounded-md border-border">
                 <CodeMirrorJsonEditor
+                  ref={inputsEditorRef}
                   value={JSON.stringify(
                     attempt.isLoopIteration && attempt.iterationItem
                       ? attempt.iterationItem.value
@@ -517,6 +537,7 @@ function NodeAttemptDetailView({
                   )}
                   readOnly
                   disableLinting
+                  autoFoldDeep
                   minHeight="60px"
                   className="max-w-full"
                 />
@@ -527,24 +548,39 @@ function NodeAttemptDetailView({
 
         {attempt.outputs && (
           <div className="max-w-full overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setOutputsOpen(!outputsOpen)}
-              className="flex items-center gap-1.5 mb-2 text-sm font-semibold text-foreground cursor-pointer hover:text-foreground/80 transition-colors"
-            >
-              {outputsOpen ? (
-                <ChevronDown className="size-3.5" />
-              ) : (
-                <ChevronRight className="size-3.5" />
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <button
+                type="button"
+                onClick={() => setOutputsOpen(!outputsOpen)}
+                className="flex items-center gap-1.5 text-sm font-semibold text-foreground cursor-pointer hover:text-foreground/80 transition-colors"
+              >
+                {outputsOpen ? (
+                  <ChevronDown className="size-3.5" />
+                ) : (
+                  <ChevronRight className="size-3.5" />
+                )}
+                Outputs
+              </button>
+              {outputsOpen && (
+                <button
+                  type="button"
+                  onClick={() => outputsEditorRef.current?.expandAll()}
+                  title="Expand all collapsed sections"
+                  aria-label="Expand all"
+                  className="p-1 rounded-md text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors cursor-pointer"
+                >
+                  <Expand className="size-3.5" />
+                </button>
               )}
-              Outputs
-            </button>
+            </div>
             {outputsOpen && (
               <div className="max-w-full overflow-hidden border rounded-md border-border">
                 <CodeMirrorJsonEditor
+                  ref={outputsEditorRef}
                   value={JSON.stringify(attempt.outputs, null, 2)}
                   readOnly
                   disableLinting
+                  autoFoldDeep
                   minHeight="60px"
                   className="max-w-full"
                 />
