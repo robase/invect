@@ -3,12 +3,7 @@ import { useReactFlow, type Node } from '@xyflow/react';
 import { useNodeRegistry } from '~/contexts/NodeRegistryContext';
 import { useFlowEditorStore } from './flow-editor.store';
 import { generateUniqueDisplayName, generateUniqueReferenceId } from '~/utils/nodeReferenceUtils';
-import {
-  findVisiblePlacementPosition,
-  NODE_HEIGHT,
-  NODE_WIDTH,
-  PLACEMENT_OFFSET,
-} from './node-placement';
+import { findVisiblePlacementPosition, NODE_HEIGHT, NODE_WIDTH } from './node-placement';
 
 /**
  * Encapsulates the logic for creating new nodes from the sidebar palette.
@@ -57,21 +52,14 @@ export function useNodeCreation() {
       const displayName = generateUniqueDisplayName(baseDisplayName, currentNodes);
       const referenceId = generateUniqueReferenceId(displayName, currentNodes);
 
-      // Determine starting position
-      let startX: number;
-      let startY: number;
-      if (currentNodes.length === 0) {
-        const viewportCenter = reactFlowInstance.screenToFlowPosition({
-          x: window.innerWidth / 2,
-          y: window.innerHeight / 2,
-        });
-        startX = Math.round(viewportCenter.x - NODE_WIDTH / 2);
-        startY = Math.round(viewportCenter.y - NODE_HEIGHT / 2);
-      } else {
-        const lastNode = currentNodes[currentNodes.length - 1];
-        startX = lastNode.position.x + PLACEMENT_OFFSET;
-        startY = lastNode.position.y + PLACEMENT_OFFSET;
-      }
+      // Always try the viewport center first; findVisiblePlacementPosition
+      // bumps it bottom-left if the spot is already taken.
+      const viewportCenter = reactFlowInstance.screenToFlowPosition({
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2,
+      });
+      const startX = Math.round(viewportCenter.x - NODE_WIDTH / 2);
+      const startY = Math.round(viewportCenter.y - NODE_HEIGHT / 2);
 
       const position = findVisiblePlacementPosition(startX, startY, currentNodes);
 

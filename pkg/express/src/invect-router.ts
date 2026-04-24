@@ -582,6 +582,15 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
       res.setHeader('X-Accel-Buffering', 'no');
       res.flushHeaders();
 
+      // Disable Nagle so each `res.write` chunk hits the socket immediately
+      // — important for SSE under bursty event traffic (parallel scheduler).
+      res.socket?.setNoDelay(true);
+
+      // If a compression middleware is in the stack, `res.flush()` exists and
+      // must be called after every write to defeat its buffer.
+      const flush = (res as unknown as { flush?: () => void }).flush;
+      const flushIfPresent = typeof flush === 'function' ? flush.bind(res) : () => {};
+
       try {
         const stream = invect.runs.createEventStream(param(req, 'flowRunId'));
 
@@ -591,11 +600,13 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
           }
           const data = JSON.stringify(event);
           res.write(`event: ${event.type}\ndata: ${data}\n\n`);
+          flushIfPresent();
         }
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Stream failed';
         if (res.headersSent) {
           res.write(`event: error\ndata: ${JSON.stringify({ type: 'error', message })}\n\n`);
+          flushIfPresent();
         } else {
           return res.status(500).json({ error: 'Internal Server Error', message });
         }

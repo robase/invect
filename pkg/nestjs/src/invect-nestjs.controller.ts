@@ -404,6 +404,14 @@ export class InvectController {
     res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
 
+    // Disable Nagle so each SSE chunk is delivered immediately under bursty
+    // event traffic (relevant for the parallel scheduler).
+    res.socket?.setNoDelay(true);
+
+    // Defeat any compression-middleware buffer in the stack.
+    const flush = (res as unknown as { flush?: () => void }).flush;
+    const flushIfPresent = typeof flush === 'function' ? flush.bind(res) : () => {};
+
     try {
       const stream = this.invect.runs.createEventStream(flowRunId);
       for await (const event of stream) {
@@ -412,11 +420,13 @@ export class InvectController {
         }
         const data = JSON.stringify(event);
         res.write(`event: ${event.type}\ndata: ${data}\n\n`);
+        flushIfPresent();
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Stream failed';
       if (res.headersSent) {
         res.write(`event: error\ndata: ${JSON.stringify({ type: 'error', message })}\n\n`);
+        flushIfPresent();
       } else {
         return res.status(500).json({ error: 'Internal Server Error', message });
       }

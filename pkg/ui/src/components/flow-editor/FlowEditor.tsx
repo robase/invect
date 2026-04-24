@@ -284,6 +284,41 @@ export function FlowWorkbenchView({
     async (algorithm: LayoutAlgorithm, direction: 'TB' | 'BT' | 'LR' | 'RL' = 'LR') => {
       setLayout(algorithm, direction);
       const { nodes: currentNodes, edges: currentEdges } = useFlowEditorStore.getState();
+
+      // If 2+ nodes are selected, realign only that subset and preserve its
+      // centroid so the rest of the graph stays put.
+      const selectedIds = new Set(currentNodes.filter((n) => n.selected).map((n) => n.id));
+      if (selectedIds.size >= 2) {
+        const selectedNodes = currentNodes.filter((n) => selectedIds.has(n.id));
+        const subEdges = currentEdges.filter(
+          (e) => selectedIds.has(e.source) && selectedIds.has(e.target),
+        );
+
+        const centroid = (nodes: Node[]) => {
+          const sum = nodes.reduce(
+            (acc, n) => ({ x: acc.x + n.position.x, y: acc.y + n.position.y }),
+            { x: 0, y: 0 },
+          );
+          return { x: sum.x / nodes.length, y: sum.y / nodes.length };
+        };
+
+        const before = centroid(selectedNodes);
+        const { nodes: laidOut } = await applyLayout(selectedNodes, subEdges, algorithm, direction);
+        const after = centroid(laidOut);
+        const dx = before.x - after.x;
+        const dy = before.y - after.y;
+
+        const translatedById = new Map(
+          laidOut.map((n) => [
+            n.id,
+            { ...n, position: { x: n.position.x + dx, y: n.position.y + dy } },
+          ]),
+        );
+        const merged = currentNodes.map((n) => translatedById.get(n.id) ?? n);
+        setLayoutedNodes(merged);
+        return;
+      }
+
       const { nodes: layoutedNodes } = await applyLayout(
         currentNodes,
         currentEdges,

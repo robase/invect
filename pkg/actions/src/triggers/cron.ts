@@ -36,7 +36,6 @@ export const cronTriggerAction = defineAction({
   provider: TRIGGERS_PROVIDER,
   icon: 'Clock',
   noInput: true,
-  maxInstances: 1,
   tags: ['trigger', 'cron', 'schedule', 'timer', 'recurring', 'periodic', 'interval', 'automate'],
 
   params: {

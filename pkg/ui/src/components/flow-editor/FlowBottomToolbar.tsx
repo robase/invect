@@ -25,7 +25,7 @@ export function FlowBottomToolbar({
   return (
     <TooltipProvider>
       <ToolbarCollapsedProvider value={collapsed}>
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 rounded-xl border border-border bg-card/90 backdrop-blur-sm shadow-md p-1.5">
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 rounded-xl border border-foreground/15 bg-card/90 backdrop-blur-sm shadow-md p-1.5">
           {onToggleSidebar && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -42,12 +42,7 @@ export function FlowBottomToolbar({
             </Tooltip>
           )}
           {layoutSelector}
-          {toolbarExtra && (
-            <>
-              <div className="w-px h-5 bg-border mx-1" />
-              {toolbarExtra}
-            </>
-          )}
+          {toolbarExtra}
         </div>
       </ToolbarCollapsedProvider>
     </TooltipProvider>

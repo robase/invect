@@ -152,7 +152,18 @@ export const applyLayout = async (
         nodeWidth: defaultLayoutOptions.nodeWidth,
         nodeHeight: defaultLayoutOptions.nodeHeight,
       });
-      return { nodes: layoutedNodes as Node[], edges };
+      // Merge only the new positions back onto the original nodes — otherwise
+      // the inflated agent `measured.height` leaks into the store and
+      // compounds on every subsequent realign.
+      const originalById = new Map(nodes.map((n) => [n.id, n]));
+      const restored = (layoutedNodes as Node[]).map((n) => {
+        const original = originalById.get(n.id);
+        if (!original) {
+          return n;
+        }
+        return { ...original, position: n.position };
+      });
+      return { nodes: restored, edges };
     }
     case 'invect': {
       const layoutedNodes = await applyInvectLayoutFromPackage(nodes, edges, {

@@ -27,7 +27,6 @@ export const webhookTriggerAction = defineAction({
     'Start this flow when an external webhook event is received on a credential webhook URL',
   provider: TRIGGERS_PROVIDER,
   noInput: true,
-  maxInstances: 1,
   tags: ['trigger', 'webhook', 'http', 'callback', 'endpoint', 'event', 'listen', 'incoming'],
 
   credential: {

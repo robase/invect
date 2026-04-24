@@ -25,7 +25,7 @@ export function findVisiblePlacementPosition(
     );
 
   while (isDirectlyOnTop(x, y)) {
-    x += PLACEMENT_OFFSET;
+    x -= PLACEMENT_OFFSET;
     y += PLACEMENT_OFFSET;
   }
 

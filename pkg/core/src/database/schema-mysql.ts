@@ -14,6 +14,7 @@ import { relations, sql } from 'drizzle-orm';
 import { JSONValue } from '.';
 import { InvectDefinitionRuntime } from 'src/services/flow-versions/schemas-fresh';
 import { randomUUID } from 'crypto';
+import type { NodeErrorDetails } from '@invect/action-kit';
 
 // =============================================================================
 // Tables
@@ -127,9 +128,9 @@ export const actionTraces = mysqlTable('invect_action_traces', {
     .default('PENDING'),
   inputs: json('inputs').$type<JSONValue>().notNull(),
   outputs: json('outputs').$type<JSONValue>(),
-  error: text('error'),
-  errorDetails: json('error_details').$type<JSONValue>(),
-  fieldErrors: json('field_errors').$type<JSONValue>(),
+  // Structured failure (NodeErrorDetails) — classifier code + message +
+  // fieldErrors / providerRequestId / attempts.
+  error: json('error').$type<NodeErrorDetails>(),
   startedAt: timestamp('started_at')
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

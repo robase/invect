@@ -27,6 +27,7 @@ import {
   Keyboard,
   Search,
   MessageSquare,
+  LocateFixed,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -50,6 +51,11 @@ interface FlowCommandPaletteProps {
   actions: CommandPaletteAction[];
 }
 
+/** Fallback icon per category when an action doesn't provide its own */
+const CATEGORY_ICONS: Partial<Record<ShortcutCategory, React.ReactNode>> = {
+  nodes: <LocateFixed className="size-4" />,
+};
+
 /** Icons mapped to shortcut IDs for visual consistency */
 const SHORTCUT_ICONS: Record<string, React.ReactNode> = {
   'command-palette': <Search className="size-4" />,
@@ -70,7 +76,16 @@ const SHORTCUT_ICONS: Record<string, React.ReactNode> = {
   'toggle-chat': <MessageSquare className="size-4" />,
 };
 
+const MAX_NODE_PREVIEW = 3;
+
 export function FlowCommandPalette({ open, onOpenChange, actions }: FlowCommandPaletteProps) {
+  const [search, setSearch] = React.useState('');
+
+  // Reset search when the dialog opens so the preview list is shown
+  React.useEffect(() => {
+    if (open) {setSearch('');}
+  }, [open]);
+
   // Group actions by category
   const grouped = React.useMemo(() => {
     const groups: Record<ShortcutCategory, CommandPaletteAction[]> = {
@@ -78,12 +93,17 @@ export function FlowCommandPalette({ open, onOpenChange, actions }: FlowCommandP
       editing: [],
       navigation: [],
       view: [],
+      nodes: [],
     };
     for (const action of actions) {
       groups[action.category].push(action);
     }
+    // With no active search, cap the "Go to Node" list to a short preview.
+    if (search.trim() === '' && groups.nodes.length > MAX_NODE_PREVIEW) {
+      groups.nodes = groups.nodes.slice(0, MAX_NODE_PREVIEW);
+    }
     return groups;
-  }, [actions]);
+  }, [actions, search]);
 
   const handleSelect = React.useCallback(
     (action: CommandPaletteAction) => {
@@ -96,7 +116,7 @@ export function FlowCommandPalette({ open, onOpenChange, actions }: FlowCommandP
     [onOpenChange],
   );
 
-  const categoryOrder: ShortcutCategory[] = ['general', 'editing', 'navigation', 'view'];
+  const categoryOrder: ShortcutCategory[] = ['nodes', 'general', 'editing', 'navigation', 'view'];
   const nonEmptyCategories = categoryOrder.filter((cat) => grouped[cat].length > 0);
 
   return (
@@ -106,7 +126,11 @@ export function FlowCommandPalette({ open, onOpenChange, actions }: FlowCommandP
       title="Command Palette"
       description="Search for commands..."
     >
-      <CommandInput placeholder="Type a command or search..." />
+      <CommandInput
+        placeholder="Type a command or search..."
+        value={search}
+        onValueChange={setSearch}
+      />
       <CommandList>
         <CommandEmpty>No commands found.</CommandEmpty>
         {nonEmptyCategories.map((category, index) => (
@@ -120,8 +144,16 @@ export function FlowCommandPalette({ open, onOpenChange, actions }: FlowCommandP
                   onSelect={() => handleSelect(action)}
                   disabled={action.disabled}
                 >
-                  {action.icon ?? SHORTCUT_ICONS[action.id] ?? null}
+                  {action.icon ??
+                    SHORTCUT_ICONS[action.id] ??
+                    CATEGORY_ICONS[action.category] ??
+                    null}
                   <span>{action.label}</span>
+                  {action.description && (
+                    <span className="text-imp-muted-foreground ml-2 truncate text-xs">
+                      {action.description}
+                    </span>
+                  )}
                   {action.shortcutDisplay && (
                     <CommandShortcut>{action.shortcutDisplay}</CommandShortcut>
                   )}

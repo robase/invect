@@ -69,7 +69,7 @@ export function FlowLayout({
         {hasFloatingToolbar && (
           <TooltipProvider>
             <ToolbarCollapsedProvider value={true}>
-              <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-1.5 rounded-xl border border-border bg-card/90 backdrop-blur-sm shadow-md p-1.5">
+              <div className="absolute top-4 right-4 z-10 flex flex-col items-center gap-1.5 rounded-xl border border-foreground/15 bg-card/90 backdrop-blur-sm shadow-md p-1.5 [&>button]:size-8 [&>button]:p-0 [&>button]:gap-0">
                 {chatToggle}
                 {viewCodeToggle}
               </div>

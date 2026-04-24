@@ -238,9 +238,13 @@ export const UniversalNode = memo(({ data, selected }: NodeProps) => {
 
   const hasIncomingHandle = !!inputHandle;
 
-  // Check execution status for running state
-  const isRunning =
-    typedData.executionStatus === NodeExecutionStatus.RUNNING ||
+  // Three execution-visual states:
+  //   running  — action.execute() is in flight: bright, fast border spin
+  //   pending  — trace exists but action hasn't started (queued) OR batch
+  //              submitted, awaiting external completion: dim, slow border spin
+  //   idle     — no trace yet, or terminal state
+  const isRunning = typedData.executionStatus === NodeExecutionStatus.RUNNING;
+  const isPending =
     typedData.executionStatus === NodeExecutionStatus.PENDING ||
     typedData.executionStatus === NodeExecutionStatus.BATCH_SUBMITTED;
   const isSuccess = typedData.executionStatus === NodeExecutionStatus.SUCCESS;
@@ -272,13 +276,17 @@ export const UniversalNode = memo(({ data, selected }: NodeProps) => {
         getProviderAccentColor(definition?.provider?.id),
         // Default border
         !isRunning &&
+          !isPending &&
           !isSuccess &&
           !isError &&
           !isSkipped &&
           'border-sidebar-ring hover:border-primary/80',
-        // Running state - animated gradient border
+        // Running state - bright animated gradient border
         isRunning &&
           'node-running-border animate-node-border rounded-xl border-y border-r border-transparent',
+        // Pending / batch-submitted - dimmer, slower spinning border
+        isPending &&
+          'node-pending-border animate-node-border-slow rounded-xl border-y border-r border-transparent',
         // Success state - green border
         isSuccess && 'border-y-2 border-r-2 border-success',
         // Error state - red border
@@ -286,7 +294,13 @@ export const UniversalNode = memo(({ data, selected }: NodeProps) => {
         // Skipped state - greyed out with dashed border
         isSkipped && 'border-y-2 border-r-2 border-dashed border-muted-foreground/50 opacity-50',
         // Selection state - change existing border color to blue for visibility
-        selected && !isRunning && !isSuccess && !isError && !isSkipped && 'node-selected',
+        selected &&
+          !isRunning &&
+          !isPending &&
+          !isSuccess &&
+          !isError &&
+          !isSkipped &&
+          'node-selected',
       )}
       style={{ height: nodeHeight }}
     >

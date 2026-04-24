@@ -1,9 +1,10 @@
 /**
  * trigger.manual — Manual Trigger action
  *
- * The primary entry-point node for flows.  Every flow should have exactly
- * one Manual Trigger.  It is invoked when the flow is started from the UI
- * "Run" button, the REST API, or programmatically via `startFlowRun()`.
+ * The primary entry-point node for flows. A flow may have at most one
+ * Manual Trigger (enforced by `maxInstances: 1` and the flow validator).
+ * It is invoked when the flow is started from the UI "Run" button, the
+ * REST API, or programmatically via `startFlowRun()`.
  *
  * Accepts an optional **defaultInputs** JSON object — key/value pairs that
  * are used as the output when the flow is triggered manually (with no

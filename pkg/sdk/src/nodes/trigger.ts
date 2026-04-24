@@ -1,9 +1,10 @@
 /**
  * Trigger node helpers.
  *
- * Triggers are flow entry-points. Every flow has exactly one trigger node; the
- * trigger's `defaultInputs` / `staticInputs` provide the shape the flow is
- * called with.
+ * Triggers are flow entry-points. A flow may have at most one `trigger.manual`,
+ * but can have any number of `trigger.cron` and `trigger.webhook` nodes — when
+ * a specific trigger fires, only that trigger node's downstream subtree runs;
+ * other triggers and their subtrees are skipped.
  *
  * Exposed as a namespace to match the action ID layout (`trigger.manual`,
  * `trigger.cron`) and leave room for plugin-provided triggers like

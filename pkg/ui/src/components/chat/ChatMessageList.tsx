@@ -466,12 +466,6 @@ function AssistantMessageBubble({ message }: { message: ChatMessage }) {
 
   return (
     <div className="flex flex-col items-start py-2 group/assistant">
-      <div className="flex items-center gap-1.5 mb-1">
-        <div className="flex items-center justify-center rounded-full size-4 bg-primary/10">
-          <Bot className="size-2.5 text-primary" />
-        </div>
-        <span className="text-[10px] text-muted-foreground/50 font-medium">Chat</span>
-      </div>
       {message.reasoning && (
         <ThinkingBlock
           reasoning={message.reasoning}

@@ -38,6 +38,8 @@ export const INVECT_SCHEMA_META: SchemaMetadata = {
     id: { type: 'uuid', defaultValue: 'uuid' },
     inputs: { type: 'json' },
     outputs: { type: 'json' },
+    // Structured failure details — NodeErrorDetails — see services/node-executions.
+    error: { type: 'json' },
     success: { type: 'boolean' },
     started_at: { type: 'date' },
     completed_at: { type: 'date' },

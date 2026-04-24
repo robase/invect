@@ -236,7 +236,7 @@ export const runFlowTool: ChatToolDefinition = {
               ? JSON.parse(version.invectDefinition)
               : version.invectDefinition;
           const triggerNode = (def?.nodes ?? []).find(
-            (n: { type?: string }) => n.type === 'trigger.manual' || n.type === 'trigger.webhook',
+            (n: { type?: string }) => n.type === 'trigger.manual',
           );
           const defaultInputs = (triggerNode?.params as Record<string, unknown> | undefined)
             ?.defaultInputs as Record<string, unknown> | undefined;

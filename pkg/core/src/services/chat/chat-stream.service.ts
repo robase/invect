@@ -478,7 +478,7 @@ export class ChatStreamService {
 
       // Extract input fields from the manual trigger node (if any)
       const triggerNode = (definition?.nodes ?? []).find(
-        (n: FlowNode) => n.type === 'trigger.manual' || n.type === 'trigger.webhook',
+        (n: FlowNode) => n.type === 'trigger.manual',
       );
       const triggerParams = (triggerNode?.params ?? triggerNode?.data?.params) as
         | Record<string, unknown>

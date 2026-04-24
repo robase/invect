@@ -19,7 +19,9 @@ export interface BatchFlowEdgeData extends Record<string, unknown> {
   selected?: boolean;
   sourceHandle?: string;
   targetHandle?: string;
+  /** NodeExecutionStatus of the source node (when viewing a flow run). */
   sourceNodeStatus?: string;
+  /** NodeExecutionStatus of the target node (when viewing a flow run). */
   targetNodeStatus?: string;
   validation?: {
     valid: boolean;
@@ -27,13 +29,65 @@ export interface BatchFlowEdgeData extends Record<string, unknown> {
   };
 }
 
+/**
+ * Derive a visual execution state for the edge from the source/target node
+ * statuses. This is what drives the per-edge color + animation in flow-run
+ * views. Returns `null` when no status info is available (editor mode).
+ */
+type EdgeExecutionState = 'failed' | 'success' | 'active' | 'pending' | null;
+
+function deriveEdgeExecutionState(data?: BatchFlowEdgeData): EdgeExecutionState {
+  const src = data?.sourceNodeStatus;
+  const tgt = data?.targetNodeStatus;
+  if (!src && !tgt) {return null;}
+
+  // Source failed → the edge will never deliver — render red regardless of
+  // the (probably absent) target status.
+  if (src === 'FAILED') {return 'failed';}
+
+  if (src === 'SUCCESS') {
+    // Target running: data is being consumed right now.
+    if (tgt === 'RUNNING') {return 'active';}
+    // Target queued or waiting on batch: dim, slow.
+    if (tgt === 'PENDING' || tgt === 'BATCH_SUBMITTED') {return 'pending';}
+    // Both finished successfully — stable green.
+    if (tgt === 'SUCCESS') {return 'success';}
+    // Target failed downstream: leave the edge green (it delivered).
+    if (tgt === 'FAILED') {return 'success';}
+    // No target trace yet — this run hasn't reached the child.
+    return 'success';
+  }
+
+  // Source still running/pending → upstream not done; edge has nothing to
+  // carry yet. Fall back to the default neutral style.
+  return null;
+}
+
 // Edge styles based on type and state - Updated to match Invect's edge styling
-const getEdgeStyles = (data?: BatchFlowEdgeData, selected?: boolean) => {
+const getEdgeStyles = (
+  data: BatchFlowEdgeData | undefined,
+  selected: boolean | undefined,
+  execState: EdgeExecutionState,
+) => {
   const baseStyle = {
     strokeWidth: 2,
     stroke: 'var(--muted-foreground)', // Theme-aware default edge color
     fill: 'none', // Explicitly set fill to none for SVG paths
   };
+
+  // Execution state takes precedence over selection visuals so the user can
+  // still read the run outcome at a glance even when an edge is selected.
+  if (execState === 'failed') {
+    return { ...baseStyle, stroke: 'var(--destructive, #ef4444)', strokeWidth: 2.5 };
+  }
+  if (execState === 'success') {
+    return { ...baseStyle, stroke: 'var(--success, #16a34a)', strokeWidth: 2.5 };
+  }
+  // 'active' and 'pending' use a CSS class for the marching-ants animation —
+  // stroke / dasharray are set there, not in the inline style.
+  if (execState === 'active' || execState === 'pending') {
+    return { ...baseStyle, strokeWidth: 2.5, stroke: undefined as unknown as string };
+  }
 
   if (selected) {
     return {
@@ -111,9 +165,14 @@ export const BatchFlowEdge = memo(function BatchFlowEdge(props: EdgeProps) {
     curvature: 0.25, // Add curvature for smooth bezier curves
   });
 
+  const execState = useMemo(
+    () => deriveEdgeExecutionState(batchflowData),
+    [batchflowData?.sourceNodeStatus, batchflowData?.targetNodeStatus],
+  );
+
   const edgeStyle = useMemo(
     () => ({
-      ...getEdgeStyles(batchflowData, selected),
+      ...getEdgeStyles(batchflowData, selected, execState),
       ...style,
     }),
     [
@@ -122,7 +181,13 @@ export const BatchFlowEdge = memo(function BatchFlowEdge(props: EdgeProps) {
       batchflowData?.validation?.valid,
       selected,
       style,
+      execState,
     ],
+  );
+
+  const edgeClassName = cn(
+    execState === 'active' && 'edge-active',
+    execState === 'pending' && 'edge-pending',
   );
 
   const showLabel = batchflowData?.label || batchflowData?.validation?.message;
@@ -132,7 +197,13 @@ export const BatchFlowEdge = memo(function BatchFlowEdge(props: EdgeProps) {
 
   return (
     <>
-      <BaseEdge path={edgePath} style={edgeStyle} markerEnd={markerEnd} interactionWidth={20} />
+      <BaseEdge
+        path={edgePath}
+        style={edgeStyle}
+        markerEnd={markerEnd}
+        interactionWidth={20}
+        className={edgeClassName || undefined}
+      />
 
       {showLabel && (
         <EdgeLabelRenderer>

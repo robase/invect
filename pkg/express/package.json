@@ -63,9 +63,7 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.6",
     "@types/node": "^20.11.20",
-    "@types/supertest": "^6.0.2",
-    "supertest": "^6.3.4",
-    "tsdown": "^0.21.1",
+    "tsdown": "^0.21.10",
     "typescript": "^5.3.3",
     "vitest": "^4.1.4"
   },

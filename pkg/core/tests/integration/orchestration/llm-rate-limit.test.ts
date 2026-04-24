@@ -86,6 +86,73 @@ let requestCount = 0;
 let server: Server;
 let serverBaseUrl: string;
 
+/**
+ * Given a chat.completion-shaped body, emit an equivalent text/event-stream
+ * payload so the OpenAI SDK's streaming parser can read it when the caller
+ * set `stream: true`. We emit one chunk per choice-delta plus a final
+ * `[DONE]` terminator.
+ */
+function toSseStream(body: Record<string, unknown>): string {
+  const choices = (body.choices as Array<{ message?: Record<string, unknown> }>) ?? [];
+  const message = choices[0]?.message ?? {};
+  const toolCalls = (message as { tool_calls?: unknown[] }).tool_calls;
+  const content = (message as { content?: string | null }).content ?? null;
+  const lines: string[] = [];
+  const baseChunk = {
+    id: body.id,
+    object: 'chat.completion.chunk',
+    created: body.created,
+    model: body.model,
+  };
+
+  if (toolCalls && Array.isArray(toolCalls) && toolCalls.length > 0) {
+    toolCalls.forEach((tc, idx) => {
+      const t = tc as { id: string; function: { name: string; arguments: string } };
+      lines.push(
+        `data: ${JSON.stringify({
+          ...baseChunk,
+          choices: [
+            {
+              index: 0,
+              delta: {
+                tool_calls: [
+                  {
+                    index: idx,
+                    id: t.id,
+                    function: { name: t.function.name, arguments: t.function.arguments },
+                  },
+                ],
+              },
+              finish_reason: null,
+            },
+          ],
+        })}\n\n`,
+      );
+    });
+    lines.push(
+      `data: ${JSON.stringify({
+        ...baseChunk,
+        choices: [{ index: 0, delta: {}, finish_reason: 'tool_calls' }],
+      })}\n\n`,
+    );
+  } else if (typeof content === 'string' && content.length > 0) {
+    lines.push(
+      `data: ${JSON.stringify({
+        ...baseChunk,
+        choices: [{ index: 0, delta: { content }, finish_reason: null }],
+      })}\n\n`,
+    );
+    lines.push(
+      `data: ${JSON.stringify({
+        ...baseChunk,
+        choices: [{ index: 0, delta: {}, finish_reason: 'stop' }],
+      })}\n\n`,
+    );
+  }
+  lines.push('data: [DONE]\n\n');
+  return lines.join('');
+}
+
 function handleRequest(req: IncomingMessage, res: ServerResponse) {
   const url = req.url ?? '';
   if (req.method === 'GET' && url.endsWith('/v1/models')) {
@@ -100,23 +167,43 @@ function handleRequest(req: IncomingMessage, res: ServerResponse) {
   }
 
   if (req.method === 'POST' && url.endsWith('/v1/chat/completions')) {
-    // Drain request body (SDK doesn't care if we parse it).
-    req.on('data', () => {});
+    const chunks: Buffer[] = [];
+    req.on('data', (c: Buffer) => chunks.push(c));
     req.on('end', () => {
       requestCount += 1;
+      let streamRequested = false;
+      try {
+        const body = JSON.parse(Buffer.concat(chunks).toString('utf-8')) as {
+          stream?: boolean;
+        };
+        streamRequested = body.stream === true;
+      } catch {
+        // body not JSON — treat as non-stream
+      }
+
       const next = responseQueue.shift();
       if (!next) {
-        res.writeHead(200, { 'content-type': 'application/json' });
-        res.end(JSON.stringify(textResponse('[queue empty]')));
+        if (streamRequested) {
+          res.writeHead(200, { 'content-type': 'text/event-stream' });
+          res.end(toSseStream(textResponse('[queue empty]')));
+        } else {
+          res.writeHead(200, { 'content-type': 'application/json' });
+          res.end(JSON.stringify(textResponse('[queue empty]')));
+        }
         return;
       }
       if (next.kind === 'ok') {
-        res.writeHead(200, { 'content-type': 'application/json' });
-        res.end(JSON.stringify(next.body));
+        if (streamRequested) {
+          res.writeHead(200, { 'content-type': 'text/event-stream' });
+          res.end(toSseStream(next.body));
+        } else {
+          res.writeHead(200, { 'content-type': 'application/json' });
+          res.end(JSON.stringify(next.body));
+        }
         return;
       }
-      // Send `retry-after-ms: 1` so the SDK retries immediately instead of
-      // falling back to its default (0.5s + 1s + 2s) exponential backoff.
+      // Send `retry-after-ms: 1` so if anything still retries it does so
+      // immediately (our action-level retries respect Retry-After).
       res.writeHead(next.status, {
         'content-type': 'application/json',
         'retry-after-ms': '1',
@@ -312,7 +399,6 @@ describe('LLM rate-limit + transient-error handling', () => {
         // Exactly 3 attempts: action-level maxAttempts=3, no SDK retries.
         expect(requestCount).toBe(3);
 
-        console.error('DEBUG traces:', JSON.stringify(result.traces ?? [], null, 2));
         const trace = result.traces?.find((t) => t.nodeId === 'model');
         expect(trace?.status).toBe('FAILED');
         expect(trace?.error ?? '').toMatch(/429|rate/i);

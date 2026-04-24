@@ -123,7 +123,7 @@ model ActionTraces {
   status                String        @default("PENDING")
   inputs                Json
   outputs               Json?
-  error                 String?       @db.Text
+  error                 Json?
   startedAt             DateTime      @default(now()) @map("started_at")
   completedAt           DateTime?     @map("completed_at")
   duration              Int?

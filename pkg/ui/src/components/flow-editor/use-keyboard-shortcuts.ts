@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { useReactFlow } from '@xyflow/react';
-import { useFlowEditorStore } from './flow-editor.store';
+import { useFlowEditorStore, getNodeData } from './flow-editor.store';
 import { useFlowActions } from '../../routes/flow-route-layout';
 import { useUIStore } from '~/stores/uiStore';
 import { useTheme } from '~/contexts/ThemeProvider';
@@ -33,6 +33,23 @@ export function useKeyboardShortcuts(opts: UseKeyboardShortcutsOptions = {}) {
   const toggleNodeSidebar = useUIStore((s) => s.toggleNodeSidebar);
   const { resolvedTheme, setTheme } = useTheme();
   const toggleChat = useChatStore((s) => s.togglePanel);
+
+  // Subscribe to raw nodes; project identity fields via useMemo so the
+  // command palette has something to search over.
+  const storeNodes = useFlowEditorStore((s) => s.nodes);
+  const nodeIdentities = useMemo(
+    () =>
+      storeNodes.map((n) => {
+        const data = getNodeData(n);
+        return {
+          id: n.id,
+          displayName: data?.display_name ?? '',
+          referenceId: data?.reference_id ?? '',
+          type: data?.type ?? '',
+        };
+      }),
+    [storeNodes],
+  );
 
   // --- Actions ---
   const handleSave = useCallback(() => {
@@ -72,6 +89,23 @@ export function useKeyboardShortcuts(opts: UseKeyboardShortcutsOptions = {}) {
   const handleToggleTheme = useCallback(() => {
     setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
   }, [resolvedTheme, setTheme]);
+
+  const handleGoToNode = useCallback(
+    (nodeId: string) => {
+      const { nodes, applyNodeChanges } = useFlowEditorStore.getState();
+      const node = nodes.find((n) => n.id === nodeId);
+      if (!node) {return;}
+      const width = node.measured?.width ?? node.width ?? 200;
+      const height = node.measured?.height ?? node.height ?? 100;
+      const x = node.position.x + width / 2;
+      const y = node.position.y + height / 2;
+      reactFlow.setCenter(x, y, { zoom: reactFlow.getZoom(), duration: 400 });
+      applyNodeChanges(
+        nodes.map((n) => ({ id: n.id, type: 'select' as const, selected: n.id === nodeId })),
+      );
+    },
+    [reactFlow],
+  );
 
   const openCommandPalette = useCallback(() => setCommandPaletteOpen(true), []);
   const openShortcutsHelp = useCallback(() => setShortcutsHelpOpen(true), []);
@@ -177,8 +211,28 @@ export function useKeyboardShortcuts(opts: UseKeyboardShortcutsOptions = {}) {
   });
 
   // --- Build command palette actions ---
+  const nodeActions: CommandPaletteAction[] = useMemo(
+    () =>
+      nodeIdentities.map((n) => {
+        const label = n.displayName.trim() || n.referenceId || n.id;
+        const descriptionParts = [
+          n.referenceId && n.referenceId !== label ? n.referenceId : null,
+          n.type || null,
+        ].filter((part): part is string => Boolean(part));
+        return {
+          id: `goto-node-${n.id}`,
+          label,
+          description: descriptionParts.join(' · ') || undefined,
+          category: 'nodes' as const,
+          onSelect: () => handleGoToNode(n.id),
+        };
+      }),
+    [nodeIdentities, handleGoToNode],
+  );
+
   const commandPaletteActions: CommandPaletteAction[] = useMemo(
     () => [
+      ...nodeActions,
       {
         id: SHORTCUTS.save.id,
         label: SHORTCUTS.save.label,
@@ -256,6 +310,7 @@ export function useKeyboardShortcuts(opts: UseKeyboardShortcutsOptions = {}) {
       },
     ],
     [
+      nodeActions,
       handleSave,
       handleExecute,
       openShortcutsHelp,

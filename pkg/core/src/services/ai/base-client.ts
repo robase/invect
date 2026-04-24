@@ -243,7 +243,9 @@ export class BaseAIClient {
     try {
       return await adapter.executeAgentPrompt(request);
     } catch (error) {
-      this.logger.error(`Agent prompt failed for ${provider}:`, error);
+      // Use the adapter's own providerId so OpenRouter (which extends the
+      // OpenAI adapter) doesn't get mislabeled as OPENAI in error logs.
+      this.logger.error(`Agent prompt failed for ${adapter.providerId}:`, error);
       throw error;
     }
   }

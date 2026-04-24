@@ -21,7 +21,7 @@ export interface KeyboardShortcut {
   enableOnFormTags?: boolean;
 }
 
-export type ShortcutCategory = 'general' | 'editing' | 'navigation' | 'view';
+export type ShortcutCategory = 'general' | 'editing' | 'navigation' | 'view' | 'nodes';
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
 
@@ -187,6 +187,7 @@ export function getShortcutsByCategory(): Record<ShortcutCategory, KeyboardShort
     editing: [],
     navigation: [],
     view: [],
+    nodes: [],
   };
   for (const shortcut of ALL_SHORTCUTS) {
     grouped[shortcut.category].push(shortcut);
@@ -200,4 +201,5 @@ export const CATEGORY_LABELS: Record<ShortcutCategory, string> = {
   editing: 'Editing',
   navigation: 'Navigation',
   view: 'View',
+  nodes: 'Go to Node',
 };

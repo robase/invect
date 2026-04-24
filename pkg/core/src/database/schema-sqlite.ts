@@ -6,6 +6,7 @@ import { FlowRunStatus, NodeExecutionStatus } from 'src/types/base';
 import { BatchStatus, BatchProvider } from 'src/services/ai/base-client';
 import { InvectDefinitionRuntime } from 'src/services/flow-versions/schemas-fresh';
 import { randomUUID } from 'crypto';
+import type { NodeErrorDetails } from '@invect/action-kit';
 
 // =============================================================================
 // Tables
@@ -102,8 +103,10 @@ export const actionTraces = sqliteTable('invect_action_traces', {
     .default(NodeExecutionStatus.PENDING),
   inputs: text('inputs', { mode: 'json' }).$type<JSONValue>().notNull(),
   outputs: text('outputs', { mode: 'json' }).$type<JSONValue>(),
-  // `error` stores a JSON-serialized `NodeErrorDetails` object.
-  error: text('error'),
+  // Structured failure (NodeErrorDetails) — message + classified code +
+  // retryAfter / provider request id / attempts / fieldErrors. Stored as
+  // JSON text; adapter-factory serializes on write and parses on read.
+  error: text('error', { mode: 'json' }).$type<NodeErrorDetails>(),
   startedAt: text('started_at')
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

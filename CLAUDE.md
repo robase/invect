@@ -1,5 +1,3 @@
-I am using fish shell, always use fish shell syntax when running commands.
-
 # Invect — AI Coding Agent Instructions
 
 ## Project Overview

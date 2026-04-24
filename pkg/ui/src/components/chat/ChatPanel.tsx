@@ -237,7 +237,7 @@ export function ChatToggleButton({ className }: { className?: string }) {
         </Button>
       </TooltipTrigger>
       {collapsed && (
-        <TooltipContent side="top">{isOpen ? 'Close Assistant' : 'Open Assistant'}</TooltipContent>
+        <TooltipContent side="left">{isOpen ? 'Close Assistant' : 'Open Assistant'}</TooltipContent>
       )}
     </Tooltip>
   );

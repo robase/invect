@@ -147,9 +147,10 @@ export const AgentNode = memo(({ id, data, selected }: NodeProps) => {
 
   const hasIncomingHandle = !!inputHandle;
 
-  // Check execution status for running state
-  const isRunning =
-    typedData.executionStatus === NodeExecutionStatus.RUNNING ||
+  // RUNNING vs PENDING/BATCH_SUBMITTED are visually distinct: bright fast
+  // border for actively executing, dim slow border for queued/awaiting batch.
+  const isRunning = typedData.executionStatus === NodeExecutionStatus.RUNNING;
+  const isPending =
     typedData.executionStatus === NodeExecutionStatus.PENDING ||
     typedData.executionStatus === NodeExecutionStatus.BATCH_SUBMITTED;
   const isSuccess = typedData.executionStatus === NodeExecutionStatus.SUCCESS;
@@ -167,17 +168,18 @@ export const AgentNode = memo(({ id, data, selected }: NodeProps) => {
   });
 
   // Compute border class for the tools appendix to match the node state
-  const appendixBorderClass = isRunning
-    ? 'border-primary'
-    : isSuccess
-      ? 'border-success'
-      : isError
-        ? 'border-destructive'
-        : isSkipped
-          ? 'border-dashed border-muted-foreground/50'
-          : selected
-            ? 'node-selected'
-            : 'border-sidebar-ring group-hover:border-primary/60';
+  const appendixBorderClass =
+    isRunning || isPending
+      ? 'border-primary'
+      : isSuccess
+        ? 'border-success'
+        : isError
+          ? 'border-destructive'
+          : isSkipped
+            ? 'border-dashed border-muted-foreground/50'
+            : selected
+              ? 'node-selected'
+              : 'border-sidebar-ring group-hover:border-primary/60';
 
   return (
     <div className="relative group">
@@ -187,12 +189,15 @@ export const AgentNode = memo(({ id, data, selected }: NodeProps) => {
           'relative w-[200px] h-[60px] flex-row py-0 items-center cursor-move transition-colors node-hover-bg bg-card',
           // Default border
           !isRunning &&
+            !isPending &&
             !isSuccess &&
             !isError &&
             !isSkipped &&
             'border-sidebar-ring group-hover:border-primary/60',
-          // Running state - animated gradient border
+          // Running state - bright animated gradient border
           isRunning && 'node-running-border animate-node-border rounded-xl',
+          // Pending - dimmer, slower spinning border
+          isPending && 'node-pending-border animate-node-border-slow rounded-xl',
           // Success state - green border
           isSuccess && 'border-2 border-success',
           // Error state - red border
@@ -200,7 +205,13 @@ export const AgentNode = memo(({ id, data, selected }: NodeProps) => {
           // Skipped state - greyed out with dashed border
           isSkipped && 'border-2 border-dashed border-muted-foreground/50 opacity-50',
           // Selection state - change existing border color to blue for visibility
-          selected && !isRunning && !isSuccess && !isError && !isSkipped && 'node-selected',
+          selected &&
+            !isRunning &&
+            !isPending &&
+            !isSuccess &&
+            !isError &&
+            !isSkipped &&
+            'node-selected',
         )}
       >
         {/* Unified Input Handle */}

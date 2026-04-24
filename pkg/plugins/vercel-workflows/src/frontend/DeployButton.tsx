@@ -31,7 +31,14 @@ interface PreviewSuccess {
     outputCount: number;
     workflowName: string;
     flowExport: string;
+    activeTriggerId?: string;
   };
+}
+
+interface TriggerInfo {
+  id: string;
+  type: string;
+  referenceId?: string;
 }
 
 interface PreviewFailure {
@@ -39,6 +46,8 @@ interface PreviewFailure {
   error: string;
   stage?: string;
   sdkSource?: string;
+  /** Present when `stage === 'select-trigger'` — flow has multiple triggers. */
+  triggers?: TriggerInfo[];
 }
 
 type PreviewResponse = PreviewSuccess | PreviewFailure;
@@ -57,29 +66,51 @@ function DeployButtonInner({ flowId }: { flowId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<PreviewResponse | null>(null);
 
-  const fetchPreview = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(
-        `${apiBaseUrl}/plugins/vercel-workflows/preview/${encodeURIComponent(flowId)}`,
-        { credentials: 'include' },
-      );
-      const json = (await res.json()) as PreviewResponse | { error: string };
-      if (!res.ok) {
-        const message = 'error' in json ? json.error : `Request failed (${res.status})`;
-        setError(message);
+  const fetchPreview = useCallback(
+    async (triggerNodeId?: string) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const url = new URL(
+          `${apiBaseUrl}/plugins/vercel-workflows/preview/${encodeURIComponent(flowId)}`,
+          window.location.origin,
+        );
+        if (triggerNodeId) {
+          url.searchParams.set('triggerNodeId', triggerNodeId);
+        }
+        // URL.toString() yields an absolute URL; strip the fake origin for same-origin fetches.
+        const requestUrl = apiBaseUrl.startsWith('http')
+          ? url.toString()
+          : url.pathname + url.search;
+        const res = await fetch(requestUrl, { credentials: 'include' });
+        const json = (await res.json()) as PreviewResponse | { error: string };
+        // The multi-trigger picker response is a 400 with stage: 'select-trigger'
+        // and a `triggers` array — surface it as structured data rather than an error.
+        if (!res.ok) {
+          if (
+            typeof json === 'object' &&
+            json !== null &&
+            'stage' in json &&
+            (json as PreviewFailure).stage === 'select-trigger'
+          ) {
+            setData(json as PreviewResponse);
+          } else {
+            const message = 'error' in json ? json.error : `Request failed (${res.status})`;
+            setError(message);
+            setData(null);
+          }
+        } else {
+          setData(json as PreviewResponse);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
         setData(null);
-      } else {
-        setData(json as PreviewResponse);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [apiBaseUrl, flowId]);
+    },
+    [apiBaseUrl, flowId],
+  );
 
   useEffect(() => {
     if (open) {
@@ -125,7 +156,35 @@ function DeployButtonInner({ flowId }: { flowId: string }) {
             </div>
           )}
 
-          {data && data.success === false && (
+          {data && data.success === false && data.stage === 'select-trigger' && data.triggers && (
+            <div className="rounded-lg border bg-muted/20 px-4 py-4 text-sm">
+              <p className="font-medium">This flow has multiple triggers</p>
+              <p className="mt-1 text-muted-foreground">
+                A Vercel Workflow has a single entry point. Pick which trigger's subgraph to
+                compile.
+              </p>
+              <div className="mt-3 space-y-1.5">
+                {data.triggers.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => {
+                      void fetchPreview(t.id);
+                    }}
+                    className="flex w-full items-center justify-between gap-3 rounded-md border bg-background px-3 py-2 text-left hover:bg-accent hover:text-accent-foreground"
+                  >
+                    <span className="min-w-0">
+                      <span className="font-medium">{t.referenceId ?? t.id}</span>
+                      <span className="ml-2 font-mono text-xs text-muted-foreground">{t.type}</span>
+                    </span>
+                    <span className="shrink-0 text-xs text-muted-foreground">Compile →</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {data && data.success === false && data.stage !== 'select-trigger' && (
             <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
               <p className="font-medium">Compile failed{data.stage ? ` (${data.stage})` : ''}</p>
               <p className="mt-1 whitespace-pre-wrap break-words">{data.error}</p>

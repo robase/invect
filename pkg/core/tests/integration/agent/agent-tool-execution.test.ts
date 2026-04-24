@@ -18,6 +18,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
+import { respondWithChatCompletion } from '../helpers/openai-sse';
 import { FlowRunStatus } from '../../../src';
 import type { InvectInstance } from '../../../src/api/types';
 import type { InvectDefinition } from '../../../src/services/flow-versions/schemas-fresh';
@@ -92,11 +93,8 @@ const mswServer = setupServer(
     capturedRequests.push(body);
 
     const next = responseQueue.shift();
-    if (!next) {
-      // Fallback: if queue is empty, return a text response that triggers stop
-      return HttpResponse.json(textResponse('No more queued responses'));
-    }
-    return HttpResponse.json(next);
+    const payload = next ?? textResponse('No more queued responses');
+    return respondWithChatCompletion(body, payload);
   }),
   // Models endpoint (called during adapter registration validation)
   http.get('https://api.openai.com/v1/models', () => {

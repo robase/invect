@@ -105,7 +105,7 @@
     "@types/pg": "^8.15.4",
     "@vitest/coverage-v8": "^4.1.4",
     "dotenv": "^17.4.1",
-    "tsdown": "^0.21.1",
+    "tsdown": "^0.21.10",
     "tsx": "^4.19.2",
     "typescript": "^5.8.3",
     "vitest": "^4.1.4"

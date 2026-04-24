@@ -13,6 +13,7 @@
  */
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { setupServer } from 'msw/node';
+import { respondWithChatCompletion } from '../helpers/openai-sse';
 import { http, HttpResponse } from 'msw';
 import { FlowRunStatus } from '../../../src';
 import type { InvectInstance } from '../../../src/api/types';
@@ -83,10 +84,8 @@ const mswServer = setupServer(
     const body = (await request.json()) as Record<string, unknown>;
     capturedOpenAiRequests.push(body);
     const next = openAiQueue.shift();
-    if (!next) {
-      return HttpResponse.json(textResponse('[No more queued responses]'));
-    }
-    return HttpResponse.json(next);
+    const payload = next ?? textResponse('[No more queued responses]');
+    return respondWithChatCompletion(body, payload);
   }),
   http.get('https://api.openai.com/v1/models', () =>
     HttpResponse.json({

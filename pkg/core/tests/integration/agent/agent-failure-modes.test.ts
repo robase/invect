@@ -16,6 +16,7 @@
  */
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { setupServer } from 'msw/node';
+import { respondWithChatCompletion } from '../helpers/openai-sse';
 import { http, HttpResponse, delay } from 'msw';
 import { FlowRunStatus } from '../../../src';
 import type { InvectInstance } from '../../../src/api/types';
@@ -90,12 +91,14 @@ const mswServer = setupServer(
     capturedOpenAiRequests.push(body);
     const next = openAiQueue.shift();
     if (!next) {
-      return HttpResponse.json(textResponse('[No more queued responses]'));
+      return respondWithChatCompletion(body, textResponse('[No more queued responses]'));
     }
     if (typeof next === 'function') {
+      // Caller-provided factory — usually returns an error response. Leave
+      // untouched so tests can exercise non-happy-path shapes (timeouts, 4xx).
       return next();
     }
-    return HttpResponse.json(next);
+    return respondWithChatCompletion(body, next);
   }),
   http.get('https://api.openai.com/v1/models', () =>
     HttpResponse.json({

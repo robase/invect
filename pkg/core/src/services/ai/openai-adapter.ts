@@ -431,7 +431,7 @@ export class OpenAIAdapter extends BaseProviderAdapter {
       }
       return { value: content, type: 'string' };
     } catch (error) {
-      this.logger.error('OpenAI API call failed:', error);
+      this.logger.error(`${this.providerId} API call failed:`, error);
       throw error;
     }
   }

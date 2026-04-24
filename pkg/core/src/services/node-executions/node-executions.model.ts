@@ -213,14 +213,22 @@ export class NodeExecutionsModel {
       if (input.outputs !== undefined) {
         updateData.outputs = this.serializeOutputs(input.outputs);
       }
-      if (input.error !== undefined) {
-        updateData.error = input.error;
-      }
+      // `error` is a JSON column; adapter-factory auto-serializes on write.
+      // Prefer the classifier's structured details and fold in fieldErrors.
+      // Fall back to a minimal envelope when only a message string is given.
       if (input.errorDetails !== undefined) {
-        updateData.error_details = input.errorDetails;
-      }
-      if (input.fieldErrors !== undefined) {
-        updateData.field_errors = input.fieldErrors;
+        updateData.error = {
+          ...input.errorDetails,
+          message: input.error ?? input.errorDetails.message,
+          ...(input.fieldErrors ? { fieldErrors: input.fieldErrors } : {}),
+        } satisfies NodeErrorDetails;
+      } else if (input.error !== undefined) {
+        updateData.error = {
+          code: 'UNKNOWN',
+          message: input.error,
+          retryable: false,
+          ...(input.fieldErrors ? { fieldErrors: input.fieldErrors } : {}),
+        } satisfies NodeErrorDetails;
       }
       if (input.completedAt !== undefined) {
         updateData.completed_at = new Date(input.completedAt as string);
@@ -361,6 +369,38 @@ export class NodeExecutionsModel {
   // Private helpers
   // =========================================================================
 
+  /**
+   * Decode the `error` column (typed `NodeErrorDetails` JSON / JSONB) into
+   * the split public shape (`error` string, `errorDetails`, `fieldErrors`).
+   * Adapter-factory deserializes the column for us; pre-hardening plain-
+   * string rows are still tolerated.
+   */
+  private parseErrorColumn(raw: unknown): {
+    error?: string;
+    errorDetails?: NodeErrorDetails;
+    fieldErrors?: Record<string, string>;
+  } {
+    if (raw === null || raw === undefined) {
+      return {};
+    }
+
+    if (typeof raw === 'object') {
+      const obj = raw as Partial<NodeErrorDetails>;
+      if (typeof obj.message === 'string' && typeof obj.code === 'string') {
+        const details = obj as NodeErrorDetails;
+        return {
+          error: details.message,
+          errorDetails: details,
+          ...(details.fieldErrors ? { fieldErrors: details.fieldErrors } : {}),
+        };
+      }
+      return { error: JSON.stringify(raw) };
+    }
+
+    // Pre-hardening plain-string rows.
+    return { error: String(raw) };
+  }
+
   private serializeOutputs(outputs: NodeOutput | undefined): unknown {
     if (!outputs) {
       return undefined;
@@ -405,9 +445,7 @@ export class NodeExecutionsModel {
       status: (raw.status || 'PENDING') as NodeExecutionStatus,
       inputs: (raw.inputs || {}) as Record<string, unknown>,
       outputs: raw.outputs as NodeOutput | undefined,
-      error: raw.error ? String(raw.error) : undefined,
-      errorDetails: (raw.error_details ?? raw.errorDetails) as NodeErrorDetails | undefined,
-      fieldErrors: (raw.field_errors ?? raw.fieldErrors) as Record<string, string> | undefined,
+      ...this.parseErrorColumn(raw.error),
       startedAt: (raw.started_at ?? raw.startedAt ?? new Date()) as Date | string,
       completedAt: (raw.completed_at ?? raw.completedAt ?? undefined) as Date | string | undefined,
       duration: raw.duration ? Number(raw.duration) : undefined,
@@ -442,8 +480,6 @@ export class NodeExecutionsModel {
       parentNodeExecutionId: 'parent_node_execution_id',
       toolId: 'tool_id',
       toolName: 'tool_name',
-      errorDetails: 'error_details',
-      fieldErrors: 'field_errors',
     };
     return map[field] ?? field;
   }

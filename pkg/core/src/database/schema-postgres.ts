@@ -6,6 +6,7 @@ import {
   boolean,
   timestamp,
   json,
+  jsonb,
   pgEnum,
   uuid,
   primaryKey,
@@ -14,6 +15,7 @@ import { relations } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { JSONValue } from '.';
 import { InvectDefinitionRuntime } from 'src/services/flow-versions/schemas-fresh';
+import type { NodeErrorDetails } from '@invect/action-kit';
 
 // =============================================================================
 // Enums for PostgreSQL
@@ -131,9 +133,9 @@ export const actionTraces = pgTable('invect_action_traces', {
   status: nodeExecutionStatusEnum('status').notNull().default('PENDING'),
   inputs: json('inputs').$type<JSONValue>().notNull(),
   outputs: json('outputs').$type<JSONValue>(),
-  error: text('error'),
-  errorDetails: json('error_details').$type<JSONValue>(),
-  fieldErrors: json('field_errors').$type<JSONValue>(),
+  // Structured failure (NodeErrorDetails) — classifier code + message +
+  // fieldErrors / providerRequestId / attempts. jsonb for query-ability.
+  error: jsonb('error').$type<NodeErrorDetails>(),
   startedAt: timestamp('started_at').notNull().defaultNow(),
   completedAt: timestamp('completed_at'),
   duration: integer('duration'), // in milliseconds

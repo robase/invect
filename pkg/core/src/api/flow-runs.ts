@@ -70,27 +70,19 @@ export function createFlowRunsAPI(sf: ServiceFactory, logger: Logger): FlowRunsA
     ): AsyncGenerator<ExecutionStreamEvent, void, undefined> {
       const bus = sf.getExecutionEventBus();
 
-      // 1. Send initial snapshot
-      const flowRun = await flowRunsService.getRunById(flowRunId);
-      const nodeExecutions = await nodeExecutionsService.listNodeExecutionsByFlowRunId(flowRunId);
-
-      yield { type: 'snapshot', flowRun, nodeExecutions };
-
-      // If the run is already terminal, close immediately
+      // Subscribe to the bus FIRST so we don't drop events emitted while we
+      // fetch the snapshot. With the parallel scheduler this race is easy to
+      // hit — sibling node updates can fire in tight bursts during the
+      // snapshot DB query. Buffered events are deduped by id when applied
+      // alongside the snapshot below.
+      const queue: ExecutionStreamEvent[] = [];
+      let resolve: (() => void) | null = null;
+      let done = false;
       const terminalStatuses = new Set([
         FlowRunStatus.SUCCESS,
         FlowRunStatus.FAILED,
         FlowRunStatus.CANCELLED,
       ]);
-      if (terminalStatuses.has(flowRun.status)) {
-        yield { type: 'end', flowRun };
-        return;
-      }
-
-      // 2. Forward live events via a queue
-      const queue: ExecutionStreamEvent[] = [];
-      let resolve: (() => void) | null = null;
-      let done = false;
 
       const unsubscribe = bus.subscribe(flowRunId, (event) => {
         queue.push(event);
@@ -104,6 +96,20 @@ export function createFlowRunsAPI(sf: ServiceFactory, logger: Logger): FlowRunsA
           wakeUp();
         }
       });
+
+      // 1. Send initial snapshot. Any events that fired before this point
+      // sit in `queue` and are drained right after.
+      const flowRun = await flowRunsService.getRunById(flowRunId);
+      const nodeExecutions = await nodeExecutionsService.listNodeExecutionsByFlowRunId(flowRunId);
+
+      yield { type: 'snapshot', flowRun, nodeExecutions };
+
+      // If the run is already terminal, close immediately.
+      if (terminalStatuses.has(flowRun.status)) {
+        unsubscribe();
+        yield { type: 'end', flowRun };
+        return;
+      }
 
       // 3. Heartbeat interval
       const heartbeatTimer = setInterval(() => {

@@ -33,19 +33,35 @@ function isOutputNode(node: FlowNodeDefinitions): boolean {
 // return the output assignments separately so the workflow compiler can inject
 // `flowOutputs[name] = completedOutputs[upstream]` at the tail of the
 // orchestrator.
-function stripTriggersAndOutputs(def: InvectDefinition): {
+//
+// When `activeTriggerId` is provided, the graph is first restricted to the
+// subgraph reachable from that trigger — needed when a flow has multiple
+// triggers, since the compiled workflow has a single entry.
+function stripTriggersAndOutputs(
+  def: InvectDefinition,
+  activeTriggerId?: string,
+): {
   filtered: InvectDefinition;
   outputAssignments: Array<{ outputName: string; upstreamRef: string }>;
 } {
   const refById = new Map(def.nodes.map((n) => [n.id, n.referenceId ?? n.id]));
-  const triggerIds = new Set(def.nodes.filter(isTriggerNode).map((n) => n.id));
-  const outputNodes = def.nodes.filter(isOutputNode);
+
+  // Restrict to the reachable subgraph from the active trigger, if specified.
+  const reachable = activeTriggerId
+    ? collectReachable(activeTriggerId, def.edges)
+    : new Set(def.nodes.map((n) => n.id));
+
+  const scopedNodes = def.nodes.filter((n) => reachable.has(n.id));
+  const scopedEdges = def.edges.filter((e) => reachable.has(e.source) && reachable.has(e.target));
+
+  const triggerIds = new Set(scopedNodes.filter(isTriggerNode).map((n) => n.id));
+  const outputNodes = scopedNodes.filter(isOutputNode);
   const outputIds = new Set(outputNodes.map((n) => n.id));
   const skipIds = new Set([...triggerIds, ...outputIds]);
 
   const outputAssignments = outputNodes
     .map((outNode) => {
-      const incoming = def.edges.find((e) => e.target === outNode.id);
+      const incoming = scopedEdges.find((e) => e.target === outNode.id);
       const upstreamRef = incoming ? refById.get(incoming.source) : undefined;
       const outputName =
         typeof outNode.params.outputName === 'string' && outNode.params.outputName.length > 0
@@ -59,12 +75,37 @@ function stripTriggersAndOutputs(def: InvectDefinition): {
     .filter((x): x is { outputName: string; upstreamRef: string } => x !== null);
 
   const filtered: InvectDefinition = {
-    nodes: def.nodes.filter((n) => !skipIds.has(n.id)),
-    edges: def.edges.filter((e) => !skipIds.has(e.source) && !skipIds.has(e.target)),
+    nodes: scopedNodes.filter((n) => !skipIds.has(n.id)),
+    edges: scopedEdges.filter((e) => !skipIds.has(e.source) && !skipIds.has(e.target)),
     metadata: def.metadata,
   };
 
   return { filtered, outputAssignments };
+}
+
+// BFS forward from `startId` over directed edges; `startId` is included.
+function collectReachable(startId: string, edges: InvectDefinition['edges']): Set<string> {
+  const outgoing = new Map<string, string[]>();
+  for (const e of edges) {
+    const list = outgoing.get(e.source);
+    if (list) {
+      list.push(e.target);
+    } else {
+      outgoing.set(e.source, [e.target]);
+    }
+  }
+  const visited = new Set<string>([startId]);
+  const queue: string[] = [startId];
+  while (queue.length > 0) {
+    const next = queue.shift()!;
+    for (const target of outgoing.get(next) ?? []) {
+      if (!visited.has(target)) {
+        visited.add(target);
+        queue.push(target);
+      }
+    }
+  }
+  return visited;
 }
 
 export interface VercelWorkflowsBackendOptions {
@@ -111,8 +152,55 @@ export function buildBackendPlugin(options: VercelWorkflowsBackendOptions = {}):
           const workflowName = `${base || 'my'}Workflow`;
           const flowExport = `${base || 'my'}Flow`;
 
+          // A flow may have multiple trigger nodes (e.g. cron + webhook), but
+          // a Vercel Workflow has a single entry. Require the caller to name
+          // which trigger's subgraph to compile when more than one exists.
+          const triggerNodes = flowVersion.invectDefinition.nodes.filter(isTriggerNode);
+          const requestedTriggerId =
+            typeof ctx.query.triggerNodeId === 'string' ? ctx.query.triggerNodeId : undefined;
+
+          let activeTriggerId: string | undefined;
+          if (triggerNodes.length > 1) {
+            if (!requestedTriggerId) {
+              return {
+                status: 400,
+                body: {
+                  success: false,
+                  error:
+                    'Flow has multiple triggers. Pass ?triggerNodeId=<id> to select which trigger subgraph to compile.',
+                  stage: 'select-trigger',
+                  triggers: triggerNodes.map((n) => ({
+                    id: n.id,
+                    type: n.type,
+                    referenceId: n.referenceId,
+                  })),
+                },
+              };
+            }
+            const match = triggerNodes.find((n) => n.id === requestedTriggerId);
+            if (!match) {
+              return {
+                status: 400,
+                body: {
+                  success: false,
+                  error: `triggerNodeId "${requestedTriggerId}" does not match any trigger node in this flow.`,
+                  stage: 'select-trigger',
+                  triggers: triggerNodes.map((n) => ({
+                    id: n.id,
+                    type: n.type,
+                    referenceId: n.referenceId,
+                  })),
+                },
+              };
+            }
+            activeTriggerId = match.id;
+          } else if (triggerNodes.length === 1) {
+            activeTriggerId = triggerNodes[0].id;
+          }
+
           const { filtered, outputAssignments } = stripTriggersAndOutputs(
             flowVersion.invectDefinition,
+            activeTriggerId,
           );
 
           let sdkSource: string;
@@ -176,6 +264,7 @@ export function buildBackendPlugin(options: VercelWorkflowsBackendOptions = {}):
                   outputCount: compileResult.outputCount,
                   workflowName,
                   flowExport,
+                  activeTriggerId,
                 },
               },
             };
