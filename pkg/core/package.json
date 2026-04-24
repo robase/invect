@@ -1,6 +1,6 @@
 {
   "name": "@invect/core",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "description": "Framework-agnostic core package for Invect workflow execution engine",
   "keywords": [
     "automation",

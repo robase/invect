@@ -1,5 +1,16 @@
 # @invect/version-control
 
+## 0.0.12
+
+### Patch Changes
+
+- Pre release
+
+- Updated dependencies []:
+  - @invect/core@0.0.12
+  - @invect/sdk@0.0.2
+  - @invect/ui@0.0.12
+
 ## 0.0.11
 
 ### Patch Changes

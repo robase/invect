@@ -1,5 +1,15 @@
 # @invect/cloudflare-agents
 
+## 0.0.12
+
+### Patch Changes
+
+- Pre release
+
+- Updated dependencies []:
+  - @invect/core@0.0.12
+  - @invect/primitives@0.1.1
+
 ## 0.0.11
 
 ### Patch Changes

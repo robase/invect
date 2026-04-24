@@ -1,6 +1,6 @@
 {
   "name": "invect-cli",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "description": "CLI for managing Invect workflow projects. Thin wrapper around @invect/cli.",
   "keywords": [
     "automation",

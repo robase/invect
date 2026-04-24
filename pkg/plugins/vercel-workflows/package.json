@@ -1,6 +1,6 @@
 {
   "name": "@invect/vercel-workflows",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Run Invect primitive flows as Vercel Workflows — server plugin and single-step wrapping helpers",
   "license": "MIT",
   "author": "robase <team@invect.dev>",
@@ -67,7 +67,7 @@
     "vitest": "^4.1.4"
   },
   "peerDependencies": {
-    "@invect/ui": ">=0.0.11",
+    "@invect/ui": ">=0.0.12",
     "lucide-react": ">=0.475.0",
     "react": ">=18.0.0",
     "workflow": "*"
