@@ -5,12 +5,18 @@
  * MCP (Model Context Protocol) endpoints for AI coding agents.
  */
 
+import { randomUUID } from 'node:crypto';
 import type { InvectPlugin, InvectPluginDefinition, InvectPluginContext } from '@invect/core';
+import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import type { McpPluginOptions } from '../shared/types';
 import { DirectClient } from './client/direct-client';
 import { createMcpServer } from './mcp-server';
 import { SessionManager } from './session-manager';
 import { AuditLogger } from './audit';
+import { mapAuthInfoToIdentity } from './auth';
+import { MCP_SERVER_NAME, MCP_SERVER_VERSION, MCP_PROTOCOL_VERSION } from '../shared/package-info';
+
+const MCP_SESSION_HEADER = 'mcp-session-id';
 
 /**
  * Create the MCP plugin.
@@ -41,6 +47,12 @@ function _mcpBackendPlugin(options: McpPluginOptions = {}): InvectPlugin {
   const sessionManager = new SessionManager(sessionTtlMs);
   let auditLogger: AuditLogger | undefined;
 
+  // Per-request session context — the transport serialises handling per
+  // message so a plain variable is safe as long as we set it before the
+  // message reaches the McpServer and clear it after. Tools read it via
+  // `getSessionContext` passed to `createMcpServer`.
+  let currentSessionCtx: { sessionId?: string; userId?: string; userRole?: string } | undefined;
+
   return {
     id: 'mcp',
     name: 'Model Context Protocol',
@@ -48,47 +60,94 @@ function _mcpBackendPlugin(options: McpPluginOptions = {}): InvectPlugin {
     init(ctx: InvectPluginContext) {
       auditLogger = new AuditLogger(ctx.logger, options.audit);
 
-      // Store references for endpoint handlers
       ctx.store.set('sessionManager', sessionManager);
       ctx.store.set('auditLogger', auditLogger);
 
       sessionManager.startCleanup();
 
       ctx.logger.info(
-        `MCP plugin initialized (session TTL: ${sessionTtlMs / 1000}s, audit: ${options.audit?.enabled !== false ? 'on' : 'off'})`,
+        `MCP plugin initialized (session TTL: ${sessionTtlMs / 1000}s, audit: ${
+          options.audit?.enabled !== false ? 'on' : 'off'
+        })`,
       );
     },
 
     endpoints: [
-      // Streamable HTTP → MCP endpoint (POST for messages, GET for SSE, DELETE for close)
+      // Streamable HTTP endpoints. The SDK's WebStandard transport handles
+      // POST (messages), GET (SSE stream) and DELETE (session close) via the
+      // same handleRequest() entry point — method routing is internal.
       {
         method: 'POST',
         path: '/mcp',
         handler: async (ctx) => {
-          const invect = ctx.getInvect();
-          const client = new DirectClient(invect);
-          const mcpServer = createMcpServer(client);
+          const identity = ctx.identity ?? mapAuthInfoToIdentity(ctx.headers);
+          const sessionCtx = {
+            sessionId: pickHeader(ctx.headers, MCP_SESSION_HEADER),
+            userId: identity?.id,
+            userRole: identity?.role,
+          };
 
-          // The body contains an MCP JSON-RPC message.
-          // For a full Streamable HTTP implementation, we'd use
-          // StreamableHTTPServerTransport. For now, handle inline.
+          const transport = await resolveTransportForPost(
+            ctx.request,
+            ctx.body,
+            sessionManager,
+            () =>
+              createMcpServer(new DirectClient(ctx.getInvect()), {
+                auditLogger,
+                getSessionContext: () => currentSessionCtx,
+              }),
+          );
+
+          currentSessionCtx = sessionCtx;
           try {
-            // Delegate to a simple JSON-RPC handler
-            const result = await handleMcpJsonRpc(mcpServer, ctx.body, ctx.identity);
-            return { status: 200, body: result };
-          } catch (error) {
+            const response = await transport.handleRequest(ctx.request, {
+              parsedBody: ctx.body,
+            });
+            return response;
+          } finally {
+            currentSessionCtx = undefined;
+          }
+        },
+      },
+      {
+        method: 'GET',
+        path: '/mcp',
+        handler: async (ctx) => {
+          const sessionId = pickHeader(ctx.headers, MCP_SESSION_HEADER);
+          if (!sessionId) {
             return {
-              status: 500,
-              body: {
-                jsonrpc: '2.0',
-                error: {
-                  code: -32603,
-                  message: error instanceof Error ? error.message : 'Internal error',
-                },
-                id: (ctx.body as { id?: unknown }).id ?? null,
-              },
+              status: 400,
+              body: { error: 'Missing Mcp-Session-Id header' },
             };
           }
+          const entry = sessionManager.touch(sessionId);
+          if (!entry) {
+            return {
+              status: 404,
+              body: { error: `Unknown MCP session ${sessionId}` },
+            };
+          }
+          return await entry.transport.handleRequest(ctx.request);
+        },
+      },
+      {
+        method: 'DELETE',
+        path: '/mcp',
+        handler: async (ctx) => {
+          const sessionId = pickHeader(ctx.headers, MCP_SESSION_HEADER);
+          if (!sessionId) {
+            return {
+              status: 400,
+              body: { error: 'Missing Mcp-Session-Id header' },
+            };
+          }
+          const entry = sessionManager.get(sessionId);
+          if (!entry) {
+            return { status: 204, body: '' };
+          }
+          const response = await entry.transport.handleRequest(ctx.request);
+          await sessionManager.delete(sessionId);
+          return response;
         },
       },
 
@@ -100,9 +159,9 @@ function _mcpBackendPlugin(options: McpPluginOptions = {}): InvectPlugin {
           return {
             status: 200,
             body: {
-              name: 'invect-mcp',
-              version: '0.0.1',
-              protocolVersion: '2025-03-26',
+              name: MCP_SERVER_NAME,
+              version: MCP_SERVER_VERSION,
+              protocolVersion: MCP_PROTOCOL_VERSION,
               capabilities: {
                 tools: true,
                 resources: true,
@@ -117,60 +176,61 @@ function _mcpBackendPlugin(options: McpPluginOptions = {}): InvectPlugin {
     ],
 
     async shutdown() {
-      sessionManager.stopCleanup();
       await sessionManager.closeAll();
     },
   };
 }
 
+type PluginHeaders = Record<string, string | string[] | undefined>;
+
+function pickHeader(headers: PluginHeaders, name: string): string | undefined {
+  const raw = headers[name] ?? headers[name.toLowerCase()];
+  if (Array.isArray(raw)) {
+    return raw[0];
+  }
+  return raw;
+}
+
 /**
- * Lightweight JSON-RPC handler that delegates to the McpServer.
+ * Resolve the transport to handle a POST /mcp request.
  *
- * The MCP SDK's McpServer handles tool/resource/prompt dispatch internally.
- * We intercept the JSON-RPC request, add auth context, and call the server.
+ * - If the request carries a Mcp-Session-Id for a known session, return that
+ *   session's transport.
+ * - Otherwise (new session) create a transport + server pair and register the
+ *   session id in the manager once the SDK generates it.
  */
-async function handleMcpJsonRpc(
-  _server: ReturnType<typeof createMcpServer>,
-  body: Record<string, unknown>,
-  _identity: unknown,
-): Promise<unknown> {
-  // The MCP SDK expects to handle transport-level protocol details.
-  // For the plugin endpoint integration, we need to use the SDK's
-  // Streamable HTTP transport properly. This is a placeholder that
-  // returns the server capabilities for the "initialize" method.
+async function resolveTransportForPost(
+  request: Request,
+  body: unknown,
+  sessionManager: SessionManager,
+  createServer: () => ReturnType<typeof createMcpServer>,
+): Promise<WebStandardStreamableHTTPServerTransport> {
+  const sessionId = request.headers.get('mcp-session-id') ?? undefined;
 
-  const method = body.method as string | undefined;
-  const id = body.id;
-
-  if (method === 'initialize') {
-    return {
-      jsonrpc: '2.0',
-      result: {
-        protocolVersion: '2025-03-26',
-        capabilities: {
-          tools: { listChanged: false },
-          resources: { subscribe: false, listChanged: false },
-          prompts: { listChanged: false },
-        },
-        serverInfo: {
-          name: 'invect-mcp',
-          version: '0.0.1',
-        },
-      },
-      id,
-    };
+  if (sessionId) {
+    const existing = sessionManager.touch(sessionId);
+    if (existing) {
+      return existing.transport;
+    }
+    // Unknown session id — fall through and let the transport 404 it.
   }
 
-  // For other methods, we need the full Streamable HTTP transport integration.
-  // This will be completed when connecting the MCP SDK transport layer.
-  return {
-    jsonrpc: '2.0',
-    error: {
-      code: -32601,
-      message: `Method not yet implemented via plugin endpoint: ${method}. Use the stdio CLI transport for full MCP support.`,
+  // New session (likely an `initialize` request). Build a fresh transport +
+  // server pair; the SDK calls `onsessioninitialized` once it has generated
+  // the session id.
+  void body;
+  const server = createServer();
+  const transport = new WebStandardStreamableHTTPServerTransport({
+    sessionIdGenerator: () => randomUUID(),
+    onsessioninitialized: (sid) => {
+      sessionManager.set(sid, { transport, server });
     },
-    id,
-  };
+    onsessionclosed: (sid) => {
+      void sessionManager.delete(sid);
+    },
+  });
+  await server.connect(transport);
+  return transport;
 }
 
 export type { McpPluginOptions } from '../shared/types';

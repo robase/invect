@@ -1,12 +1,18 @@
 /**
  * Session manager for MCP Streamable HTTP transport.
  *
- * Tracks active sessions, their transports, and handles TTL-based cleanup.
+ * One `{ transport, server }` pair per MCP session id. Sessions are created
+ * when the client sends `initialize` and torn down on DELETE or TTL expiry.
  */
 
-interface SessionEntry {
-  transport: unknown; // NodeStreamableHTTPServerTransport
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
+
+export interface SessionEntry {
+  transport: WebStandardStreamableHTTPServerTransport;
+  server: McpServer;
   createdAt: number;
+  lastSeenAt: number;
 }
 
 export class SessionManager {
@@ -20,8 +26,9 @@ export class SessionManager {
     if (this.cleanupTimer) {
       return;
     }
-    this.cleanupTimer = setInterval(() => this.cleanupExpired(), intervalMs);
-    // Don't block process exit
+    this.cleanupTimer = setInterval(() => {
+      void this.cleanupExpired();
+    }, intervalMs);
     if (
       this.cleanupTimer &&
       typeof this.cleanupTimer === 'object' &&
@@ -39,60 +46,78 @@ export class SessionManager {
     }
   }
 
-  /** Track a new session */
-  set(sessionId: string, transport: unknown): void {
-    this.sessions.set(sessionId, {
-      transport,
-      createdAt: Date.now(),
-    });
+  /** Register a new session */
+  set(sessionId: string, entry: Omit<SessionEntry, 'createdAt' | 'lastSeenAt'>): void {
+    const now = Date.now();
+    this.sessions.set(sessionId, { ...entry, createdAt: now, lastSeenAt: now });
   }
 
-  /** Get a session's transport */
-  get(sessionId: string): unknown | undefined {
-    return this.sessions.get(sessionId)?.transport;
+  /** Get a session's entry and refresh its lastSeenAt */
+  touch(sessionId: string): SessionEntry | undefined {
+    const entry = this.sessions.get(sessionId);
+    if (entry) {
+      entry.lastSeenAt = Date.now();
+    }
+    return entry;
   }
 
-  /** Check if a session exists */
+  get(sessionId: string): SessionEntry | undefined {
+    return this.sessions.get(sessionId);
+  }
+
   has(sessionId: string): boolean {
     return this.sessions.has(sessionId);
   }
 
-  /** Remove a specific session */
-  delete(sessionId: string): boolean {
-    return this.sessions.delete(sessionId);
+  async delete(sessionId: string): Promise<boolean> {
+    const entry = this.sessions.get(sessionId);
+    if (!entry) {
+      return false;
+    }
+    this.sessions.delete(sessionId);
+    await this.closeEntry(entry);
+    return true;
   }
 
-  /** Remove sessions that exceed the TTL */
-  cleanupExpired(): number {
+  /** Remove sessions that exceed the TTL (since lastSeenAt) */
+  async cleanupExpired(): Promise<number> {
     const now = Date.now();
-    let cleaned = 0;
+    const toClose: SessionEntry[] = [];
     for (const [id, entry] of this.sessions) {
-      if (now - entry.createdAt > this.ttlMs) {
+      if (now - entry.lastSeenAt > this.ttlMs) {
         this.sessions.delete(id);
-        cleaned++;
+        toClose.push(entry);
       }
     }
-    return cleaned;
+    for (const entry of toClose) {
+      await this.closeEntry(entry);
+    }
+    return toClose.length;
   }
 
-  /** Number of active sessions */
   get size(): number {
     return this.sessions.size;
   }
 
-  /** Close all sessions and stop cleanup */
   async closeAll(): Promise<void> {
     this.stopCleanup();
-    for (const [_id, entry] of this.sessions) {
-      try {
-        const transport = entry.transport as { close?: () => Promise<void> | void };
-        if (transport.close) {
-          await transport.close();
-        }
-      } catch {
-        // Best-effort cleanup
-      }
-    }
+    const entries = Array.from(this.sessions.values());
     this.sessions.clear();
+    for (const entry of entries) {
+      await this.closeEntry(entry);
+    }
+  }
+
+  private async closeEntry(entry: SessionEntry): Promise<void> {
+    try {
+      await entry.transport.close();
+    } catch {
+      // best-effort
+    }
+    try {
+      await entry.server.close();
+    } catch {
+      // best-effort
+    }
   }
 }

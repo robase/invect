@@ -7,9 +7,12 @@
  * Return types are intentionally `unknown` for most operations since the
  * MCP layer JSON-stringifies everything. This avoids mapping internal
  * types to a duplicated schema.
+ *
+ * Note on identity: these methods do NOT take an `InvectIdentity`. Auth is
+ * handled at the transport layer — the plugin endpoint resolves identity
+ * via the framework adapter's middleware before the MCP server dispatches
+ * tool calls, and the stdio CLI authenticates via API key.
  */
-
-import type { InvectIdentity } from '@invect/core';
 
 /** Sanitized credential (no secrets) */
 export interface CredentialSummary {
@@ -19,94 +22,92 @@ export interface CredentialSummary {
   provider?: string;
   lastUsedAt?: string;
   createdAt?: string;
+  expiresAt?: string;
+}
+
+/** Result of emitting a flow as SDK source */
+export interface FlowSdkSourceResult {
+  code: string;
+  importedBuilders: string[];
+  flowName: string;
+  version: string | number;
+}
+
+export interface GetFlowSdkSourceOptions {
+  version?: string | number;
+  flowName?: string;
+  sdkImport?: string;
 }
 
 export interface InvectClient {
   // ===== Flows =====
-  listFlows(identity: InvectIdentity | null): Promise<unknown>;
-  getFlow(identity: InvectIdentity | null, flowId: string): Promise<unknown>;
-  getFlowDefinition(identity: InvectIdentity | null, flowId: string): Promise<unknown>;
-  createFlow(
-    identity: InvectIdentity | null,
-    data: { name: string; description?: string },
-  ): Promise<unknown>;
-  updateFlow(
-    identity: InvectIdentity | null,
-    flowId: string,
-    data: { name?: string; description?: string },
-  ): Promise<unknown>;
-  deleteFlow(identity: InvectIdentity | null, flowId: string): Promise<void>;
-  validateFlow(
-    identity: InvectIdentity | null,
-    flowId: string,
-    definition: unknown,
-  ): Promise<{ valid: boolean; errors?: string[] }>;
+  listFlows(): Promise<unknown>;
+  getFlow(flowId: string): Promise<unknown>;
+  getFlowDefinition(flowId: string): Promise<unknown | null>;
+  getFlowSdkSource(flowId: string, options?: GetFlowSdkSourceOptions): Promise<FlowSdkSourceResult>;
+  createFlow(data: { name: string; description?: string }): Promise<unknown>;
+  updateFlow(flowId: string, data: { name?: string; description?: string }): Promise<unknown>;
+  deleteFlow(flowId: string): Promise<void>;
+  validateFlow(flowId: string, definition: unknown): Promise<{ valid: boolean; errors?: string[] }>;
 
   // ===== Versions =====
-  listVersions(identity: InvectIdentity | null, flowId: string): Promise<unknown>;
-  getVersion(
-    identity: InvectIdentity | null,
-    flowId: string,
-    version: string | number | 'latest',
-  ): Promise<unknown>;
-  publishVersion(identity: InvectIdentity | null, flowId: string, data: unknown): Promise<unknown>;
+  listVersions(flowId: string): Promise<unknown>;
+  getVersion(flowId: string, version: string | number | 'latest'): Promise<unknown>;
+  publishVersion(flowId: string, data: unknown): Promise<unknown>;
 
   // ===== Runs =====
-  startRun(
-    identity: InvectIdentity | null,
-    flowId: string,
-    inputs?: Record<string, unknown>,
-  ): Promise<unknown>;
-  runToNode(
-    identity: InvectIdentity | null,
-    flowId: string,
-    nodeId: string,
-    inputs?: Record<string, unknown>,
-  ): Promise<unknown>;
-  listRuns(identity: InvectIdentity | null, flowId: string): Promise<unknown>;
-  getRun(identity: InvectIdentity | null, flowRunId: string): Promise<unknown>;
-  cancelRun(identity: InvectIdentity | null, flowRunId: string): Promise<{ message: string }>;
-  pauseRun(identity: InvectIdentity | null, flowRunId: string): Promise<{ message: string }>;
-  resumeRun(identity: InvectIdentity | null, flowRunId: string): Promise<{ message: string }>;
+  startRun(flowId: string, inputs?: Record<string, unknown>): Promise<unknown>;
+  startRunAsync(flowId: string, inputs?: Record<string, unknown>): Promise<unknown>;
+  runToNode(flowId: string, nodeId: string, inputs?: Record<string, unknown>): Promise<unknown>;
+  listRuns(flowId: string): Promise<unknown>;
+  getRun(flowRunId: string): Promise<unknown>;
+  cancelRun(flowRunId: string): Promise<{ message: string }>;
+  pauseRun(flowRunId: string): Promise<{ message: string }>;
+  resumeRun(flowRunId: string): Promise<{ message: string }>;
 
   // ===== Debug =====
-  getNodeExecutions(identity: InvectIdentity | null, flowRunId: string): Promise<unknown[]>;
+  getNodeExecutions(flowRunId: string): Promise<unknown[]>;
+  listNodeExecutions(): Promise<unknown[]>;
+  getToolExecutions(nodeExecutionId: string): Promise<unknown[]>;
   testNode(
-    identity: InvectIdentity | null,
     nodeType: string,
     params: Record<string, unknown>,
     inputData?: Record<string, unknown>,
   ): Promise<{ success: boolean; output?: unknown; error?: string }>;
   testJsExpression(
-    identity: InvectIdentity | null,
     expression: string,
     context: Record<string, unknown>,
   ): Promise<{ success: boolean; result?: unknown; error?: string }>;
   testMapper(
-    identity: InvectIdentity | null,
     expression: string,
     incomingData: Record<string, unknown>,
   ): Promise<{ success: boolean; result?: unknown; error?: string }>;
 
   // ===== Credentials =====
-  listCredentials(identity: InvectIdentity | null): Promise<CredentialSummary[]>;
-  testCredential(
-    identity: InvectIdentity | null,
-    credentialId: string,
-  ): Promise<{ success: boolean; error?: string }>;
+  listCredentials(): Promise<CredentialSummary[]>;
+  testCredential(credentialId: string): Promise<{ success: boolean; error?: string }>;
+  listOAuth2Providers(): Promise<unknown[]>;
 
   // ===== Triggers =====
-  listTriggers(identity: InvectIdentity | null, flowId: string): Promise<unknown[]>;
-  getTrigger(identity: InvectIdentity | null, triggerId: string): Promise<unknown>;
-  createTrigger(identity: InvectIdentity | null, input: unknown): Promise<unknown>;
-  updateTrigger(
-    identity: InvectIdentity | null,
-    triggerId: string,
-    input: unknown,
-  ): Promise<unknown>;
-  deleteTrigger(identity: InvectIdentity | null, triggerId: string): Promise<void>;
+  listTriggers(flowId: string): Promise<unknown[]>;
+  getTrigger(triggerId: string): Promise<unknown>;
+  createTrigger(input: unknown): Promise<unknown>;
+  updateTrigger(triggerId: string, input: unknown): Promise<unknown>;
+  deleteTrigger(triggerId: string): Promise<void>;
+  syncTriggers(flowId: string, definition: unknown): Promise<unknown[]>;
+  executeCronTrigger(triggerId: string): Promise<unknown>;
+  listEnabledCronTriggers(): Promise<unknown[]>;
 
   // ===== Node Reference =====
-  listProviders(identity: InvectIdentity | null): Promise<unknown[]>;
-  listAvailableNodes(identity: InvectIdentity | null): Promise<unknown[]>;
+  listProviders(): Promise<unknown[]>;
+  listAvailableNodes(): Promise<unknown[]>;
+  listNodesForProvider(providerId: string): Promise<unknown[]>;
+  resolveFieldOptions(
+    actionId: string,
+    fieldName: string,
+    deps: Record<string, unknown>,
+  ): Promise<unknown>;
+
+  // ===== Agent =====
+  listAgentTools(): Promise<unknown[]>;
 }

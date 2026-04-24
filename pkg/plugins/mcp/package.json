@@ -60,6 +60,7 @@
   },
   "dependencies": {
     "@invect/core": "workspace:*",
+    "@invect/primitives": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^3.25.0"
   },
@@ -68,13 +69,5 @@
     "tsdown": "^0.21.10",
     "typescript": "^5.9.3",
     "vitest": "^4.1.4"
-  },
-  "peerDependencies": {
-    "@invect/user-auth": ">=0.0.12"
-  },
-  "peerDependenciesMeta": {
-    "@invect/user-auth": {
-      "optional": false
-    }
   }
 }

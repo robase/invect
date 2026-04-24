@@ -5,119 +5,162 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { InvectClient } from '../client/types';
-import { resolveIdentity } from '../auth';
 import { TOOL_IDS } from '../../shared/types';
-import { mapRunStarted, mapRun, mapRunList } from '../response-mappers';
+import {
+  mapRunStarted,
+  mapRun,
+  mapRunList,
+  mapNodeExecutions,
+  mapToolExecutions,
+} from '../response-mappers';
 
 export function registerRunTools(server: McpServer, client: InvectClient): void {
-  server.tool(
+  server.registerTool(
     TOOL_IDS.RUN_START,
-    'Execute a flow synchronously with optional input values. Returns the full run result when complete.',
     {
-      flowId: z.string().describe('The flow ID to execute'),
-      inputs: z
-        .record(z.unknown())
-        .optional()
-        .describe('Optional key-value input data for the flow'),
+      description:
+        'Execute a flow synchronously with optional input values. Blocks until the run reaches a terminal state (SUCCESS, FAILED, CANCELLED) and returns the full result. Use run_start_async for long-running or AI-heavy flows.',
+      inputSchema: {
+        flowId: z.string().describe('The flow ID to execute'),
+        inputs: z
+          .record(z.unknown())
+          .optional()
+          .describe('Optional key-value input data for the flow'),
+      },
     },
-    async ({ flowId, inputs }, extra) => {
-      const identity = resolveIdentity(extra.authInfo);
-      const result = await client.startRun(identity, flowId, inputs);
-      return {
-        content: [{ type: 'text', text: mapRunStarted(result) }],
-      };
+    async ({ flowId, inputs }) => {
+      const result = await client.startRun(flowId, inputs);
+      return { content: [{ type: 'text', text: mapRun(result) }] };
     },
   );
 
-  server.tool(
+  server.registerTool(
+    TOOL_IDS.RUN_START_ASYNC,
+    {
+      description:
+        'Start a flow run asynchronously and return immediately with the flow run id. The run continues in the background; poll run_get to monitor progress.',
+      inputSchema: {
+        flowId: z.string().describe('The flow ID to execute'),
+        inputs: z
+          .record(z.unknown())
+          .optional()
+          .describe('Optional key-value input data for the flow'),
+      },
+    },
+    async ({ flowId, inputs }) => {
+      const result = await client.startRunAsync(flowId, inputs);
+      return { content: [{ type: 'text', text: mapRunStarted(result) }] };
+    },
+  );
+
+  server.registerTool(
     TOOL_IDS.RUN_TO_NODE,
-    'Execute a flow up to a specific node (for debugging). Returns partial results stopping at the target node.',
     {
-      flowId: z.string().describe('The flow ID'),
-      nodeId: z.string().describe('Stop execution at this node ID'),
-      inputs: z.record(z.unknown()).optional().describe('Optional input data'),
+      description:
+        'Execute a flow up to a specific node (for debugging). Returns partial results stopping at the target node.',
+      inputSchema: {
+        flowId: z.string().describe('The flow ID'),
+        nodeId: z.string().describe('Stop execution at this node ID'),
+        inputs: z.record(z.unknown()).optional().describe('Optional input data'),
+      },
     },
-    async ({ flowId, nodeId, inputs }, extra) => {
-      const identity = resolveIdentity(extra.authInfo);
-      const result = await client.runToNode(identity, flowId, nodeId, inputs);
-      return {
-        content: [{ type: 'text', text: mapRun(result) }],
-      };
+    async ({ flowId, nodeId, inputs }) => {
+      const result = await client.runToNode(flowId, nodeId, inputs);
+      return { content: [{ type: 'text', text: mapRun(result) }] };
     },
   );
 
-  server.tool(
+  server.registerTool(
     TOOL_IDS.RUN_LIST,
-    'List execution history for a flow, including status, timing, and errors',
     {
-      flowId: z.string().describe('The flow ID'),
+      description: 'List execution history for a flow, including status, timing, and errors',
+      inputSchema: { flowId: z.string().describe('The flow ID') },
     },
-    async ({ flowId }, extra) => {
-      const identity = resolveIdentity(extra.authInfo);
-      const result = await client.listRuns(identity, flowId);
-      return {
-        content: [{ type: 'text', text: mapRunList(result) }],
-      };
+    async ({ flowId }) => {
+      const result = await client.listRuns(flowId);
+      return { content: [{ type: 'text', text: mapRunList(result) }] };
     },
   );
 
-  server.tool(
+  server.registerTool(
     TOOL_IDS.RUN_GET,
-    'Get detailed results of a specific flow run including status, output, timing, and any errors',
     {
-      flowRunId: z.string().describe('The flow run ID'),
+      description:
+        'Get detailed results of a specific flow run including status, output, timing, and any errors',
+      inputSchema: { flowRunId: z.string().describe('The flow run ID') },
     },
-    async ({ flowRunId }, extra) => {
-      const identity = resolveIdentity(extra.authInfo);
-      const run = await client.getRun(identity, flowRunId);
-      return {
-        content: [{ type: 'text', text: mapRun(run) }],
-      };
+    async ({ flowRunId }) => {
+      const run = await client.getRun(flowRunId);
+      return { content: [{ type: 'text', text: mapRun(run) }] };
     },
   );
 
-  server.tool(
+  server.registerTool(
     TOOL_IDS.RUN_CANCEL,
-    'Cancel a running flow execution',
     {
-      flowRunId: z.string().describe('The flow run ID to cancel'),
+      description: 'Cancel a running flow execution',
+      inputSchema: { flowRunId: z.string().describe('The flow run ID to cancel') },
     },
-    async ({ flowRunId }, extra) => {
-      const identity = resolveIdentity(extra.authInfo);
-      const result = await client.cancelRun(identity, flowRunId);
+    async ({ flowRunId }) => {
+      const result = await client.cancelRun(flowRunId);
       return {
         content: [{ type: 'text', text: `Run ${flowRunId} cancelled. ${result.message || ''}` }],
       };
     },
   );
 
-  server.tool(
+  server.registerTool(
     TOOL_IDS.RUN_PAUSE,
-    'Pause a running flow execution (can be resumed later)',
     {
-      flowRunId: z.string().describe('The flow run ID to pause'),
+      description: 'Pause a running flow execution (can be resumed later)',
+      inputSchema: { flowRunId: z.string().describe('The flow run ID to pause') },
     },
-    async ({ flowRunId }, extra) => {
-      const identity = resolveIdentity(extra.authInfo);
-      const result = await client.pauseRun(identity, flowRunId);
+    async ({ flowRunId }) => {
+      const result = await client.pauseRun(flowRunId);
       return {
         content: [{ type: 'text', text: `Run ${flowRunId} paused. ${result.message || ''}` }],
       };
     },
   );
 
-  server.tool(
+  server.registerTool(
     TOOL_IDS.RUN_RESUME,
-    'Resume a previously paused flow execution',
     {
-      flowRunId: z.string().describe('The flow run ID to resume'),
+      description: 'Resume a previously paused flow execution',
+      inputSchema: { flowRunId: z.string().describe('The flow run ID to resume') },
     },
-    async ({ flowRunId }, extra) => {
-      const identity = resolveIdentity(extra.authInfo);
-      const result = await client.resumeRun(identity, flowRunId);
+    async ({ flowRunId }) => {
+      const result = await client.resumeRun(flowRunId);
       return {
         content: [{ type: 'text', text: `Run ${flowRunId} resumed. ${result.message || ''}` }],
       };
+    },
+  );
+
+  server.registerTool(
+    TOOL_IDS.RUN_LIST_NODE_EXECUTIONS,
+    {
+      description: 'List node executions across all runs (cross-run debug view).',
+      inputSchema: {},
+    },
+    async () => {
+      const items = await client.listNodeExecutions();
+      return { content: [{ type: 'text', text: mapNodeExecutions(items) }] };
+    },
+  );
+
+  server.registerTool(
+    TOOL_IDS.RUN_GET_TOOL_EXECUTIONS,
+    {
+      description:
+        'Get the tools an agent called during a specific node execution. Critical for debugging agent nodes — reveals which tools the agent invoked, with what arguments, and what they returned.',
+      inputSchema: {
+        nodeExecutionId: z.string().describe('The node execution ID (from debug_node_executions)'),
+      },
+    },
+    async ({ nodeExecutionId }) => {
+      const items = await client.getToolExecutions(nodeExecutionId);
+      return { content: [{ type: 'text', text: mapToolExecutions(items) }] };
     },
   );
 }

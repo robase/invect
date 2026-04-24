@@ -5,53 +5,56 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { InvectClient } from '../client/types';
-import { resolveIdentity } from '../auth';
 import { TOOL_IDS } from '../../shared/types';
 import { mapVersionList, mapFlowDefinition } from '../response-mappers';
 
 export function registerVersionTools(server: McpServer, client: InvectClient): void {
-  server.tool(
+  server.registerTool(
     TOOL_IDS.VERSION_LIST,
-    'List all versions of a flow with version numbers and timestamps',
-    { flowId: z.string().describe('The flow ID') },
-    async ({ flowId }, extra) => {
-      const identity = resolveIdentity(extra.authInfo);
-      const result = await client.listVersions(identity, flowId);
-      return {
-        content: [{ type: 'text', text: mapVersionList(result) }],
-      };
+    {
+      description: 'List all versions of a flow with version numbers and timestamps',
+      inputSchema: { flowId: z.string().describe('The flow ID') },
+    },
+    async ({ flowId }) => {
+      const result = await client.listVersions(flowId);
+      return { content: [{ type: 'text', text: mapVersionList(result) }] };
     },
   );
 
-  server.tool(
+  server.registerTool(
     TOOL_IDS.VERSION_GET,
-    'Get a specific version\'s full definition by version number or "latest"',
     {
-      flowId: z.string().describe('The flow ID'),
-      version: z.string().describe('Version number or "latest"'),
+      description: 'Get a specific version\'s full definition by version number or "latest"',
+      inputSchema: {
+        flowId: z.string().describe('The flow ID'),
+        version: z.string().describe('Version number or "latest"'),
+      },
     },
-    async ({ flowId, version }, extra) => {
-      const identity = resolveIdentity(extra.authInfo);
-      const v = await client.getVersion(identity, flowId, version);
-      return {
-        content: [{ type: 'text', text: mapFlowDefinition(v) }],
-      };
+    async ({ flowId, version }) => {
+      const v = await client.getVersion(flowId, version);
+      return { content: [{ type: 'text', text: mapFlowDefinition(v) }] };
     },
   );
 
-  server.tool(
+  server.registerTool(
     TOOL_IDS.VERSION_PUBLISH,
-    'Publish a new version of a flow with a complete definition (nodes, edges, configuration)',
     {
-      flowId: z.string().describe('The flow ID'),
-      definition: z.any().describe('The complete flow definition to publish'),
+      description:
+        'Publish a new version of a flow with a complete definition (nodes, edges, configuration)',
+      inputSchema: {
+        flowId: z.string().describe('The flow ID'),
+        definition: z
+          .object({
+            nodes: z.array(z.unknown()),
+            edges: z.array(z.unknown()).optional(),
+          })
+          .passthrough()
+          .describe('The complete flow definition to publish'),
+      },
     },
-    async ({ flowId, definition }, extra) => {
-      const identity = resolveIdentity(extra.authInfo);
-      const v = await client.publishVersion(identity, flowId, definition);
-      return {
-        content: [{ type: 'text', text: mapFlowDefinition(v) }],
-      };
+    async ({ flowId, definition }) => {
+      const v = await client.publishVersion(flowId, definition);
+      return { content: [{ type: 'text', text: mapFlowDefinition(v) }] };
     },
   );
 }

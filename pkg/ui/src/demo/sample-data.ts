@@ -59,9 +59,11 @@ export const sampleNodeDefinitions: NodeDefinition[] = [
         type: 'select',
         required: true,
         options: [
+          { label: 'Claude Opus 4.7', value: 'claude-opus-4-7' },
+          { label: 'Claude Sonnet 4.6', value: 'claude-sonnet-4-6' },
+          { label: 'Claude Haiku 4.5', value: 'claude-haiku-4-5-20251001' },
           { label: 'GPT-4o', value: 'gpt-4o' },
           { label: 'GPT-4o Mini', value: 'gpt-4o-mini' },
-          { label: 'Claude Sonnet 4', value: 'claude-sonnet-4-20250514' },
         ],
       },
       { name: 'prompt', label: 'Prompt', type: 'textarea', required: true },
@@ -69,14 +71,15 @@ export const sampleNodeDefinitions: NodeDefinition[] = [
     ],
   },
   {
-    type: 'core.jq',
-    label: 'JQ Transform',
-    description: 'Transform JSON data using JQ expressions.',
+    type: 'core.javascript',
+    label: 'JavaScript',
+    description:
+      'Transform data with JavaScript in a sandboxed runtime. Upstream outputs are available as local variables by reference ID.',
     icon: 'Braces',
     provider: { id: 'core', name: 'Core', icon: 'Blocks' },
     input: { id: 'input', label: 'Input', type: 'any' },
     outputs: [{ id: 'output', label: 'Output', type: 'any' }],
-    paramFields: [{ name: 'query', label: 'JQ Query', type: 'code', required: true }],
+    paramFields: [{ name: 'code', label: 'JavaScript Code', type: 'code', required: true }],
   },
   {
     type: 'core.if_else',
@@ -245,8 +248,9 @@ export const sampleNodeDefinitions: NodeDefinition[] = [
         type: 'select',
         required: true,
         options: [
+          { label: 'Claude Opus 4.7', value: 'claude-opus-4-7' },
+          { label: 'Claude Sonnet 4.6', value: 'claude-sonnet-4-6' },
           { label: 'GPT-4o', value: 'gpt-4o' },
-          { label: 'Claude Sonnet 4', value: 'claude-sonnet-4-20250514' },
         ],
       },
       { name: 'taskPrompt', label: 'Task Prompt', type: 'textarea', required: true },
@@ -299,7 +303,7 @@ export const sampleNodeDefinitions: NodeDefinition[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// 2. Example Flow: Input → AI Model → JQ Transform → Output
+// 2. Example Flow: Input → AI Model → JavaScript Transform → Output
 // ---------------------------------------------------------------------------
 
 export const simpleFlowNodes: Node<ReactFlowNodeData>[] = [
@@ -334,17 +338,17 @@ export const simpleFlowNodes: Node<ReactFlowNodeData>[] = [
     },
   },
   {
-    id: 'node-jq',
-    type: 'core.jq',
+    id: 'node-transform',
+    type: 'core.javascript',
     position: { x: 600, y: 100 },
     data: {
-      id: 'node-jq',
-      type: 'core.jq',
+      id: 'node-transform',
+      type: 'core.javascript',
       display_name: 'Format Output',
       reference_id: 'format_output',
       status: 'idle',
       params: {
-        query: '{ summary: .summarize, timestamp: now | todate }',
+        code: 'return { summary: summarize, timestamp: new Date().toISOString() };',
       },
     },
   },
@@ -365,8 +369,8 @@ export const simpleFlowNodes: Node<ReactFlowNodeData>[] = [
 
 export const simpleFlowEdges: Edge[] = [
   { id: 'e-input-model', source: 'node-input', target: 'node-model' },
-  { id: 'e-model-jq', source: 'node-model', target: 'node-jq' },
-  { id: 'e-jq-output', source: 'node-jq', target: 'node-output' },
+  { id: 'e-model-transform', source: 'node-model', target: 'node-transform' },
+  { id: 'e-transform-output', source: 'node-transform', target: 'node-output' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -568,7 +572,7 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
       reference_id: 'linear_webhook',
       status: 'idle',
       params: {
-        credentialId: 'linear-test',
+        credentialId: 'cred-linear',
       },
     },
   },
@@ -583,7 +587,7 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
       reference_id: 'investigation_agent',
       status: 'idle',
       params: {
-        credentialId: 'openai-test',
+        credentialId: 'cred-openai',
         model: 'gpt-4o',
         taskPrompt:
           'Investigate Linear ticket "{{ linear_webhook.title }}".\n\n1. Query the database for related records\n2. Search Sentry for recent errors\n3. Check AWS logs for anomalies\n4. Search Notion for relevant docs\n5. Read related source files on GitHub\n\nOutput a JSON object with: summary, root_cause, severity (critical/high/medium/low), issue_type (bug/feature_request/incident), and recommended_action.',
@@ -682,7 +686,7 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
       reference_id: 'create_fix_pr',
       status: 'idle',
       params: {
-        credentialId: 'github-test',
+        credentialId: 'cred-github',
         owner: 'acme',
         repo: 'platform',
         title: 'fix: {{ linear_webhook.title }}',
@@ -705,7 +709,7 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
       reference_id: 'notify_product',
       status: 'idle',
       params: {
-        credentialId: 'slack-test',
+        credentialId: 'cred-slack',
         channel: '#product-requests',
         text: '*New feature request:* {{ linear_webhook.title }}\n\n{{ investigation.summary }}',
       },
@@ -743,7 +747,7 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
       reference_id: 'notify_triage',
       status: 'idle',
       params: {
-        credentialId: 'slack-test',
+        credentialId: 'cred-slack',
         channel: '#triage',
         text: '*Unclassified ticket:* {{ linear_webhook.title }}\nSeverity: {{ investigation.severity }}\n\n{{ investigation.summary }}',
       },
@@ -765,7 +769,7 @@ export const showcaseFlowNodes: Node<ReactFlowNodeData>[] = [
       reference_id: 'update_linear_ticket',
       status: 'idle',
       params: {
-        credentialId: 'linear-test',
+        credentialId: 'cred-linear',
         issueId: '{{ linear_webhook.identifier }}',
         stateId: 'in-progress',
         comment:
@@ -1301,6 +1305,25 @@ export const sampleCredentials = [
     lastUsedAt: '2025-03-28T03:15:00Z',
     createdAt: '2025-02-20T16:00:00Z',
     updatedAt: '2025-02-20T16:00:00Z',
+  },
+  {
+    id: 'cred-linear',
+    name: 'Linear — acme workspace',
+    type: 'http-api' as const,
+    authType: 'oauth2' as const,
+    description: 'Linear OAuth2 for issue creation and updates',
+    isActive: true,
+    userId: 'demo-user',
+    isShared: true,
+    config: {
+      oauth2Provider: 'linear',
+      accessToken: 'lin_api_••••••••',
+      tokenType: 'bearer',
+      scope: 'read,write',
+    },
+    lastUsedAt: '2025-04-07T16:32:29Z',
+    createdAt: '2025-01-30T12:00:00Z',
+    updatedAt: '2025-04-07T16:32:29Z',
   },
 ];
 

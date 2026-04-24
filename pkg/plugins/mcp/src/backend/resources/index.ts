@@ -3,24 +3,24 @@
  */
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { InvectClient } from '../client/types';
-import { resolveIdentity } from '../auth';
 
 export function registerResources(server: McpServer, client: InvectClient): void {
   // Resource template: individual flow definition
-  server.resource(
+  server.registerResource(
     'flow-definition',
-    'invect://flows/{flowId}/definition',
+    new ResourceTemplate('invect://flows/{flowId}/definition', { list: undefined }),
     { description: 'The current definition of a specific flow (nodes, edges, params)' },
-    async (uri, extra) => {
-      const identity = resolveIdentity(extra.authInfo);
-      // Extract flowId from URI: invect://flows/{flowId}/definition
+    async (uri) => {
       const match = uri.href.match(/^invect:\/\/flows\/([^/]+)\/definition$/);
       if (!match?.[1]) {
-        return { contents: [{ uri: uri.href, text: 'Invalid flow URI', mimeType: 'text/plain' }] };
+        return {
+          contents: [{ uri: uri.href, text: 'Invalid flow URI', mimeType: 'text/plain' }],
+        };
       }
       const flowId = decodeURIComponent(match[1]);
-      const def = await client.getFlowDefinition(identity, flowId);
+      const def = await client.getFlowDefinition(flowId);
       return {
         contents: [
           {
@@ -34,23 +34,88 @@ export function registerResources(server: McpServer, client: InvectClient): void
   );
 
   // Resource template: flow run result
-  server.resource(
+  server.registerResource(
     'flow-run',
-    'invect://runs/{flowRunId}',
+    new ResourceTemplate('invect://runs/{flowRunId}', { list: undefined }),
     { description: 'The result details of a specific flow run' },
-    async (uri, extra) => {
-      const identity = resolveIdentity(extra.authInfo);
+    async (uri) => {
       const match = uri.href.match(/^invect:\/\/runs\/([^/]+)$/);
       if (!match?.[1]) {
-        return { contents: [{ uri: uri.href, text: 'Invalid run URI', mimeType: 'text/plain' }] };
+        return {
+          contents: [{ uri: uri.href, text: 'Invalid run URI', mimeType: 'text/plain' }],
+        };
       }
       const flowRunId = decodeURIComponent(match[1]);
-      const run = await client.getRun(identity, flowRunId);
+      const run = await client.getRun(flowRunId);
       return {
         contents: [
           {
             uri: uri.href,
             text: JSON.stringify(run, null, 2),
+            mimeType: 'application/json',
+          },
+        ],
+      };
+    },
+  );
+
+  // Static resource: list of flows
+  server.registerResource(
+    'flows',
+    'invect://flows',
+    { description: 'List of all flows' },
+    async (uri) => {
+      const flows = await client.listFlows();
+      return {
+        contents: [
+          {
+            uri: uri.href,
+            text: JSON.stringify(flows, null, 2),
+            mimeType: 'application/json',
+          },
+        ],
+      };
+    },
+  );
+
+  // Static resource: sanitised credential list
+  server.registerResource(
+    'credentials',
+    'invect://credentials',
+    { description: 'List of all credentials (metadata only, no secrets)' },
+    async (uri) => {
+      const creds = await client.listCredentials();
+      return {
+        contents: [
+          {
+            uri: uri.href,
+            text: JSON.stringify(creds, null, 2),
+            mimeType: 'application/json',
+          },
+        ],
+      };
+    },
+  );
+
+  // Resource template: node executions for a flow run
+  server.registerResource(
+    'run-node-executions',
+    new ResourceTemplate('invect://runs/{flowRunId}/node-executions', { list: undefined }),
+    { description: 'Per-node execution traces for a flow run' },
+    async (uri) => {
+      const match = uri.href.match(/^invect:\/\/runs\/([^/]+)\/node-executions$/);
+      if (!match?.[1]) {
+        return {
+          contents: [{ uri: uri.href, text: 'Invalid URI', mimeType: 'text/plain' }],
+        };
+      }
+      const flowRunId = decodeURIComponent(match[1]);
+      const executions = await client.getNodeExecutions(flowRunId);
+      return {
+        contents: [
+          {
+            uri: uri.href,
+            text: JSON.stringify(executions, null, 2),
             mimeType: 'application/json',
           },
         ],

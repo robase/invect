@@ -1,113 +1,160 @@
 /**
- * Flow management tools — CRUD operations on flows.
+ * Flow management tools — CRUD + inspection.
  */
 
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { InvectClient } from '../client/types';
-import { resolveIdentity } from '../auth';
 import { TOOL_IDS } from '../../shared/types';
-import { mapFlowList, mapFlow, mapFlowDefinition, mapValidation } from '../response-mappers';
+import {
+  mapFlowList,
+  mapFlow,
+  mapFlowDefinition,
+  mapValidation,
+  mapSdkSource,
+} from '../response-mappers';
 
 export function registerFlowTools(server: McpServer, client: InvectClient): void {
-  server.tool(
+  server.registerTool(
     TOOL_IDS.FLOW_LIST,
-    'List all flows with their names, IDs, status, and metadata',
-    {},
-    async (_params, extra) => {
-      const identity = resolveIdentity(extra.authInfo);
-      const result = await client.listFlows(identity);
-      return {
-        content: [{ type: 'text', text: mapFlowList(result) }],
-      };
+    {
+      description: 'List all flows with their names, IDs, status, and metadata',
+      inputSchema: {},
+    },
+    async () => {
+      const result = await client.listFlows();
+      return { content: [{ type: 'text', text: mapFlowList(result) }] };
     },
   );
 
-  server.tool(
+  server.registerTool(
     TOOL_IDS.FLOW_GET,
-    'Get detailed metadata for a specific flow by ID',
-    { flowId: z.string().describe('The flow ID') },
-    async ({ flowId }, extra) => {
-      const identity = resolveIdentity(extra.authInfo);
-      const flow = await client.getFlow(identity, flowId);
-      return {
-        content: [{ type: 'text', text: mapFlow(flow) }],
-      };
+    {
+      description: 'Get detailed metadata for a specific flow by ID',
+      inputSchema: { flowId: z.string().describe('The flow ID') },
+    },
+    async ({ flowId }) => {
+      const flow = await client.getFlow(flowId);
+      return { content: [{ type: 'text', text: mapFlow(flow) }] };
     },
   );
 
-  server.tool(
+  server.registerTool(
     TOOL_IDS.FLOW_GET_DEFINITION,
-    'Get the current flow definition including all nodes, edges, and configuration parameters',
-    { flowId: z.string().describe('The flow ID') },
-    async ({ flowId }, extra) => {
-      const identity = resolveIdentity(extra.authInfo);
-      const def = await client.getFlowDefinition(identity, flowId);
-      return {
-        content: [{ type: 'text', text: mapFlowDefinition(def) }],
-      };
+    {
+      description:
+        'Get the current flow definition including all nodes, edges, and configuration parameters',
+      inputSchema: { flowId: z.string().describe('The flow ID') },
+    },
+    async ({ flowId }) => {
+      const def = await client.getFlowDefinition(flowId);
+      if (def === null || def === undefined) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: 'Flow has no published version yet. Use version_publish to create one.',
+            },
+          ],
+        };
+      }
+      return { content: [{ type: 'text', text: mapFlowDefinition(def) }] };
     },
   );
 
-  server.tool(
+  server.registerTool(
+    TOOL_IDS.FLOW_GET_SDK_SOURCE,
+    {
+      description:
+        'Emit the flow definition as @invect/primitives TypeScript source (defineFlow + node builders). Ready to drop into a TS file and version-control. Throws if the flow uses node types that cannot be expressed in the primitives SDK.',
+      inputSchema: {
+        flowId: z.string().describe('The flow ID'),
+        version: z
+          .union([z.string(), z.number()])
+          .optional()
+          .describe('Version number or "latest" (default: "latest")'),
+        flowName: z
+          .string()
+          .optional()
+          .describe('Exported const name in the emitted source (default: "myFlow")'),
+        sdkImport: z
+          .string()
+          .optional()
+          .describe('Import specifier for SDK builders (default: "@invect/primitives")'),
+      },
+    },
+    async ({ flowId, version, flowName, sdkImport }) => {
+      const result = await client.getFlowSdkSource(flowId, {
+        version: version as string | number | undefined,
+        flowName,
+        sdkImport,
+      });
+      return { content: [{ type: 'text', text: mapSdkSource(result) }] };
+    },
+  );
+
+  server.registerTool(
     TOOL_IDS.FLOW_CREATE,
-    'Create a new empty flow with a name and optional description',
     {
-      name: z.string().describe('Flow name'),
-      description: z.string().optional().describe('Flow description'),
+      description: 'Create a new empty flow with a name and optional description',
+      inputSchema: {
+        name: z.string().describe('Flow name'),
+        description: z.string().optional().describe('Flow description'),
+      },
     },
-    async ({ name, description }, extra) => {
-      const identity = resolveIdentity(extra.authInfo);
-      const flow = await client.createFlow(identity, { name, description });
-      return {
-        content: [{ type: 'text', text: mapFlow(flow) }],
-      };
+    async ({ name, description }) => {
+      const flow = await client.createFlow({ name, description });
+      return { content: [{ type: 'text', text: mapFlow(flow) }] };
     },
   );
 
-  server.tool(
+  server.registerTool(
     TOOL_IDS.FLOW_UPDATE,
-    "Update a flow's name or description",
     {
-      flowId: z.string().describe('The flow ID'),
-      name: z.string().optional().describe('New name'),
-      description: z.string().optional().describe('New description'),
+      description: "Update a flow's name or description",
+      inputSchema: {
+        flowId: z.string().describe('The flow ID'),
+        name: z.string().optional().describe('New name'),
+        description: z.string().optional().describe('New description'),
+      },
     },
-    async ({ flowId, name, description }, extra) => {
-      const identity = resolveIdentity(extra.authInfo);
-      const flow = await client.updateFlow(identity, flowId, { name, description });
-      return {
-        content: [{ type: 'text', text: mapFlow(flow) }],
-      };
+    async ({ flowId, name, description }) => {
+      const flow = await client.updateFlow(flowId, { name, description });
+      return { content: [{ type: 'text', text: mapFlow(flow) }] };
     },
   );
 
-  server.tool(
+  server.registerTool(
     TOOL_IDS.FLOW_DELETE,
-    'Permanently delete a flow and all its versions and run history',
-    { flowId: z.string().describe('The flow ID to delete') },
-    async ({ flowId }, extra) => {
-      const identity = resolveIdentity(extra.authInfo);
-      await client.deleteFlow(identity, flowId);
-      return {
-        content: [{ type: 'text', text: `Flow ${flowId} deleted successfully.` }],
-      };
+    {
+      description: 'Permanently delete a flow and all its versions and run history',
+      inputSchema: { flowId: z.string().describe('The flow ID to delete') },
+    },
+    async ({ flowId }) => {
+      await client.deleteFlow(flowId);
+      return { content: [{ type: 'text', text: `Flow ${flowId} deleted successfully.` }] };
     },
   );
 
-  server.tool(
+  server.registerTool(
     TOOL_IDS.FLOW_VALIDATE,
-    'Validate a flow definition against the schema without saving it',
     {
-      flowId: z.string().describe('The flow ID'),
-      definition: z.any().describe('The flow definition to validate'),
+      description:
+        'Validate a flow definition against the schema without saving it. Returns structured errors for malformed or semantically invalid definitions.',
+      inputSchema: {
+        flowId: z.string().describe('The flow ID'),
+        definition: z
+          .object({
+            nodes: z.array(z.unknown()),
+            edges: z.array(z.unknown()).optional(),
+          })
+          .passthrough()
+          .describe('The flow definition (at minimum: { nodes, edges? })'),
+      },
     },
-    async ({ flowId, definition }, extra) => {
-      const identity = resolveIdentity(extra.authInfo);
-      const result = await client.validateFlow(identity, flowId, definition);
-      return {
-        content: [{ type: 'text', text: mapValidation(result) }],
-      };
+    async ({ flowId, definition }) => {
+      const result = await client.validateFlow(flowId, definition);
+      return { content: [{ type: 'text', text: mapValidation(result) }] };
     },
   );
 }

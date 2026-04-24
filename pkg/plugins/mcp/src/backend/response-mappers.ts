@@ -338,6 +338,94 @@ export function mapNodeList(raw: unknown): string {
   return sections.join('\n');
 }
 
+// ─── Tool / Agent Mappers ────────────────────────────────────────────────────
+
+export function mapToolExecutions(raw: unknown): string {
+  const items = Array.isArray(raw) ? raw : [];
+  if (items.length === 0) {
+    return 'No tool executions found.';
+  }
+
+  const lines = items.map((t: Record<string, unknown>) => {
+    const status = String(t.status ?? 'UNKNOWN');
+    const icon = status === 'SUCCESS' ? '✓' : status === 'FAILED' ? '✗' : '○';
+    const dur = durationMs(t.startedAt, t.completedAt);
+    const parts = [`### ${icon} \`${t.toolId ?? t.toolName}\` — ${status} (${dur})`];
+    if (t.arguments) {
+      parts.push(`**Arguments:** ${jsonCompact(t.arguments, 400)}`);
+    }
+    if (t.result !== undefined && t.result !== null) {
+      parts.push(`**Result:** ${jsonCompact(t.result, 400)}`);
+    }
+    if (t.error) {
+      parts.push(`**Error:** ${truncate(String(t.error), 200)}`);
+    }
+    return parts.join('\n');
+  });
+
+  return `**${items.length} tool execution(s):**\n\n${lines.join('\n\n')}`;
+}
+
+export function mapAgentTools(raw: unknown): string {
+  const items = Array.isArray(raw) ? raw : [];
+  if (items.length === 0) {
+    return 'No agent tools registered.';
+  }
+  const lines = items.map((t: Record<string, unknown>) => {
+    const category = t.category ? ` [${t.category}]` : '';
+    return `- \`${t.id}\`${category} — ${t.name ?? t.id}${
+      t.description ? `: ${truncate(String(t.description), 120)}` : ''
+    }`;
+  });
+  return `**${items.length} agent tool(s):**\n\n${lines.join('\n')}`;
+}
+
+// ─── Field Options / OAuth2 / SDK Source Mappers ────────────────────────────
+
+export function mapFieldOptions(raw: unknown): string {
+  const r = raw as Record<string, unknown>;
+  if (!r) {
+    return 'No options.';
+  }
+  const options = Array.isArray(r.options) ? r.options : Array.isArray(raw) ? raw : [];
+  if (options.length === 0) {
+    return 'No options available (loader may require more dependency values).';
+  }
+  const lines = (options as Array<Record<string, unknown>>).map(
+    (o) => `- \`${o.value}\` — ${o.label ?? o.value}`,
+  );
+  return `**${options.length} option(s):**\n\n${lines.join('\n')}`;
+}
+
+export function mapSdkSource(raw: {
+  code: string;
+  importedBuilders: string[];
+  flowName: string;
+  version: string | number;
+}): string {
+  const parts = [
+    `**SDK source for \`${raw.flowName}\`** (version ${raw.version})`,
+    `Imported builders: ${raw.importedBuilders.map((b) => `\`${b}\``).join(', ')}`,
+    '',
+    '```ts',
+    raw.code,
+    '```',
+  ];
+  return parts.join('\n');
+}
+
+export function mapOAuth2ProviderList(raw: unknown): string {
+  const items = Array.isArray(raw) ? raw : [];
+  if (items.length === 0) {
+    return 'No OAuth2 providers registered.';
+  }
+  const lines = (items as Array<Record<string, unknown>>).map((p) => {
+    const scopes = Array.isArray(p.defaultScopes) ? ` (scopes: ${p.defaultScopes.join(', ')})` : '';
+    return `- **${p.name ?? p.id}** (\`${p.id}\`)${p.docsUrl ? ` — ${p.docsUrl}` : ''}${scopes}`;
+  });
+  return `**${items.length} OAuth2 provider(s):**\n\n${lines.join('\n')}`;
+}
+
 export function mapProviderList(raw: unknown): string {
   const items = Array.isArray(raw) ? raw : [];
   if (items.length === 0) {

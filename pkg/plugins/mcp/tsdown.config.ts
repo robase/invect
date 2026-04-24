@@ -15,6 +15,7 @@ export default defineConfig({
   deps: {
     neverBundle: [
       '@invect/core',
+      '@invect/primitives',
       '@modelcontextprotocol/sdk',
       '@modelcontextprotocol/sdk/server/mcp.js',
       '@modelcontextprotocol/sdk/server/stdio.js',

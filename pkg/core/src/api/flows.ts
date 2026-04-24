@@ -51,9 +51,22 @@ export function createFlowsAPI(sf: ServiceFactory, logger: Logger): FlowsAPI {
 
     async validate(flowId, definition) {
       const { flowId: id } = Schemas.flow.FlowIdParamsSchema.parse({ flowId });
-      const validatedBody = invectDefinitionSchema.parse(definition);
-      const typedDefinition = validatedBody as InvectDefinition;
       logger.debug('Validating flow definition', { flowId: id });
+      const parsed = invectDefinitionSchema.safeParse(definition);
+      if (!parsed.success) {
+        return {
+          isValid: false,
+          errors: parsed.error.issues.map((issue) => ({
+            severity: 'error' as const,
+            type: 'VALIDATION_SYSTEM_ERROR' as const,
+            message: issue.path.length
+              ? `${issue.path.join('.')}: ${issue.message}`
+              : issue.message,
+          })),
+          warnings: [],
+        };
+      }
+      const typedDefinition = parsed.data as InvectDefinition;
       return FlowValidator.validateFlowDefinition(typedDefinition);
     },
 
