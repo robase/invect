@@ -1,0 +1,152 @@
+/**
+ * VSCode theme → Invect canvas token bridge.
+ *
+ * The `<FlowCanvas>` reads `--imp-*` tokens for every colored surface. Inside
+ * a VSCode webview those tokens are unset by default, so the canvas would
+ * render unstyled (and look wrong against the surrounding editor chrome).
+ *
+ * Mapping each `--imp-*` to a `var(--vscode-*)` equivalent makes the canvas
+ * inherit the user's chosen VSCode theme — light / dark / high contrast all
+ * just work, including when the user switches themes mid-session
+ * (`themeChanged` from the host re-renders the React tree which re-applies
+ * the CSS variables anyway).
+ *
+ * For tokens VSCode doesn't have a clean equivalent for (accents, muted
+ * variants), we synthesize from the closest sibling token.
+ */
+
+:root {
+  --imp-background: var(--vscode-editor-background);
+  --imp-foreground: var(--vscode-editor-foreground);
+
+  --imp-muted: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  --imp-muted-foreground: var(--vscode-descriptionForeground, var(--vscode-editor-foreground));
+
+  --imp-border: var(--vscode-panel-border, var(--vscode-editorWidget-border, transparent));
+
+  --imp-card: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  --imp-card-foreground: var(--vscode-editor-foreground);
+
+  --imp-primary: var(--vscode-button-background, var(--vscode-textLink-foreground));
+  --imp-primary-foreground: var(--vscode-button-foreground, var(--vscode-editor-background));
+
+  --imp-accent: var(--vscode-list-activeSelectionBackground, var(--vscode-button-background));
+  --imp-accent-foreground: var(
+    --vscode-list-activeSelectionForeground,
+    var(--vscode-button-foreground)
+  );
+
+  --imp-destructive: var(--vscode-errorForeground, var(--vscode-editorError-foreground));
+  --imp-destructive-foreground: var(--vscode-editor-background);
+
+  --imp-ring: var(--vscode-focusBorder, var(--vscode-button-background));
+}
+
+/*
+ * Hide Invect's own sidebar (`AppSideMenu`). Inside the VSCode extension
+ * we route navigation through the native side panel (Backends, Flows,
+ * Credentials, Webhooks tree views), so the in-app left rail is dead
+ * weight and steals horizontal space.
+ *
+ * `AppSideMenu` renders as `<div class="relative w-16 shrink-0">`
+ * containing `.imp-sidebar-shell`. We collapse the wrapper too so the
+ * `<Outlet />` slot reclaims the full width.
+ */
+.imp-shell > div:has(> .imp-sidebar-shell) {
+  display: none !important;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: var(--vscode-editor-background);
+  color: var(--vscode-editor-foreground);
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+  overflow: hidden;
+}
+
+/*
+ * The chain probe revealed FlowCanvas's internal divs use Tailwind `h-full`
+ * (`height: 100%`) on six nested levels, but `flex-1` reports as the default
+ * `0 1 auto` and `h-full` resolves to `0px`. Likely a cascade-layer / preflight
+ * interaction in Tailwind v4 that prevents the percentage chain from
+ * resolving via plain `height: 100%`.
+ *
+ * Switching #root to `display: grid` with a single 1fr × 1fr cell sidesteps
+ * the whole chain: the first child is auto-stretched by grid placement, so
+ * its computed height is the track's resolved size — a definite value that
+ * satisfies percentage resolution for everything downstream. No specificity
+ * fight required.
+ */
+#root {
+  display: grid;
+  grid-template-rows: 1fr;
+  grid-template-columns: 1fr;
+  /* Confine to viewport — without this the grid track can grow with content,
+     defeating the "explicit height" guarantee and causing scroll-inside-
+     scroll situations in the canvas's node palette. */
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/*
+ * The canvas's NodeSidebar uses Tailwind `overflow-y-auto` for its internal
+ * scrolling. If our chain ever serves up an `overflow: hidden` on an
+ * intermediate ancestor, the scroll is silently swallowed. Force the
+ * known-needed scrolls back on. (The sidebar list and the chat log are the
+ * two places we've seen this matter.)
+ */
+.imp-flow-canvas [data-scroll-region],
+.imp-flow-canvas .overflow-y-auto {
+  overflow-y: auto !important;
+  min-height: 0 !important;
+}
+
+/*
+ * Force the React Flow root to fill its parent. Probes show the canvas
+ * sizes to width:1044, height:0 inside a healthy 1044×535 wrapper — meaning
+ * react-flow's `.react-flow` element is computing height: 0 from its
+ * default styling somewhere between FlowCanvas's wrapper chain and the
+ * react-flow viewport. Forcing 100% here guarantees the chain holds even
+ * if FlowCanvas wraps its viewport in additional layout layers we don't
+ * control. `!important` because @invect/ui/styles ships its own rule for
+ * `.react-flow` and our specificity isn't enough otherwise.
+ */
+.react-flow,
+.react-flow__renderer,
+.react-flow__viewport {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+}
+
+/* Used by the parse-error / readonly-banner fallback states. */
+.invect-fallback {
+  padding: 1rem;
+  font-family: var(--vscode-font-family);
+  color: var(--vscode-editor-foreground);
+}
+.invect-fallback h2 {
+  margin: 0 0 0.5rem;
+  font-size: 14px;
+  font-weight: 600;
+}
+.invect-fallback p {
+  margin: 0 0 0.5rem;
+  font-size: 12px;
+  opacity: 0.8;
+  white-space: pre-wrap;
+}
+.invect-fallback button {
+  padding: 4px 10px;
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}

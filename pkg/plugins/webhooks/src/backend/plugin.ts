@@ -271,7 +271,7 @@ function _webhooksBackendPlugin(options?: Omit<WebhooksPluginOptions, 'frontend'
           // Signature verification
           if (trigger.provider !== 'generic') {
             const rawBody = typeof ctx.body === 'string' ? ctx.body : JSON.stringify(ctx.body);
-            const sigResult = state.signatureService.verify(
+            const sigResult = await state.signatureService.verify(
               trigger.provider,
               trigger.hmacSecret ?? '',
               rawBody,
@@ -285,7 +285,7 @@ function _webhooksBackendPlugin(options?: Omit<WebhooksPluginOptions, 'frontend'
             }
           } else if (trigger.hmacEnabled && trigger.hmacHeaderName && trigger.hmacSecret) {
             const rawBody = typeof ctx.body === 'string' ? ctx.body : JSON.stringify(ctx.body);
-            const sigResult = state.signatureService.verifyCustomHmac(
+            const sigResult = await state.signatureService.verifyCustomHmac(
               trigger.hmacSecret,
               trigger.hmacHeaderName,
               rawBody,

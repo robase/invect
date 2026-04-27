@@ -36,6 +36,13 @@ export type {
   EvaluatedFlow,
 } from './types';
 
+// Pre-save TypeScript validation — runs the user's flow source through the
+// real TS compiler and returns structured diagnostics. Used by the chat
+// assistant before merge/save to catch type errors the LLM produces before
+// they reach the runtime.
+export { typecheckSdkSource } from './typecheck';
+export type { TypecheckDiagnostic, TypecheckOptions, TypecheckResult } from './typecheck';
+
 const DEFAULT_TIMEOUT_MS = 10_000;
 
 /**
@@ -221,18 +228,77 @@ function buildPackageAliases(options: EvaluatorOptions): Record<string, string> 
     aliases['@invect/action-kit'] = kitRoot;
   }
 
-  // actions — the bare specifier + every subpath we can discover. jiti's
-  // alias map is exact-match, so we have to enumerate. This list covers the
-  // built-in providers; callers can extend via `additionalAllowedImports`
-  // and register virtual modules for anything else.
+  // actions — the bare specifier + EVERY subpath the package exports.
+  // jiti's alias map is exact-match: when source has `import x from
+  // '@invect/actions/triggers'`, jiti looks up that exact key in the
+  // alias map. Without an entry it falls back to filesystem resolution
+  // from the temp eval dir, which has no node_modules and no awareness
+  // of the package's `exports` field — so the subpath import errors
+  // out (`Cannot find module .../triggers`).
+  //
+  // Read the package.json's `exports` map and add an alias per subpath.
+  // For each subpath, use `require.resolve('@invect/actions/<sub>')` so
+  // Node respects the conditions (import / require / types) and lands
+  // on the right built file.
   const actionsRoot = tryResolvePackageRoot('@invect/actions');
   if (actionsRoot) {
     aliases['@invect/actions'] = actionsRoot;
-    // Subpaths are handled via the package's own `exports` field once the
-    // bare specifier resolves — jiti's alias only needs the package root.
+    addSubpathAliases('@invect/actions', actionsRoot, req, aliases);
+  }
+  // Same treatment for the other packages — they may grow subpaths later.
+  if (sdkRoot) {
+    addSubpathAliases(sdkSpecifier, sdkRoot, req, aliases);
+  }
+  if (kitRoot) {
+    addSubpathAliases('@invect/action-kit', kitRoot, req, aliases);
   }
 
   return aliases;
+}
+
+function addSubpathAliases(
+  specifier: string,
+  root: string,
+  req: NodeJS.Require,
+  aliases: Record<string, string>,
+): void {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const fs = require('node:fs') as typeof import('node:fs');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const path = require('node:path') as typeof import('node:path');
+  let pkg: { exports?: unknown };
+  try {
+    const raw = fs.readFileSync(path.join(root, 'package.json'), 'utf-8');
+    pkg = JSON.parse(raw) as { exports?: unknown };
+  } catch {
+    return;
+  }
+  const exportsMap = pkg.exports;
+  if (!exportsMap || typeof exportsMap !== 'object') {
+    return;
+  }
+  for (const key of Object.keys(exportsMap)) {
+    if (key === '.') {
+      continue;
+    }
+    if (!key.startsWith('./')) {
+      continue;
+    }
+    if (key.endsWith('package.json')) {
+      continue;
+    }
+    const sub = key.slice(2); // './triggers' → 'triggers'
+    const fullSpecifier = `${specifier}/${sub}`;
+    try {
+      // `require.resolve` honours `exports`, so this returns the exact
+      // built file (e.g. `dist/triggers/index.cjs`) the runtime should
+      // load. jiti will then transpile it on the way in.
+      aliases[fullSpecifier] = req.resolve(fullSpecifier);
+    } catch {
+      // Subpath listed in `exports` but unresolvable — typically a
+      // browser-only / dist-not-built case. Skip silently.
+    }
+  }
 }
 
 function resolveDefaultExport(mod: unknown): unknown {

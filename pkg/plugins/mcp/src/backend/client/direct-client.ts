@@ -3,7 +3,7 @@
  */
 
 import type { InvectInstance } from '@invect/core';
-import { emitSdkSource, SdkEmitError } from '@invect/primitives';
+import { emitSdkSource, SdkEmitError } from '@invect/sdk';
 import type {
   InvectClient,
   CredentialSummary,
@@ -63,7 +63,7 @@ export class DirectClient implements InvectClient {
       });
       return {
         code: result.code,
-        importedBuilders: result.importedBuilders,
+        importedBuilders: result.sdkImports,
         flowName: options.flowName ?? 'myFlow',
         version: (version as { version: string | number }).version,
       };

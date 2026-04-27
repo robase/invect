@@ -19,6 +19,9 @@ import { BaseAIClient, BatchStatus } from './ai/base-client';
 import { NodeExecutionCoordinator } from './flow-orchestration/node-execution-coordinator';
 import { FlowRunCoordinator } from './flow-orchestration/flow-run-coordinator';
 import type { PluginHookRunner } from 'src/types/plugin.types';
+import type { JobRunnerAdapter } from 'src/types/services';
+import { JOB_TYPES, type BatchJobResumeJobPayload, type FlowRunJobPayload } from './job-runner';
+import { InProcessJobRunner } from './job-runner/in-process-job-runner';
 
 /**
  * Core Flow Orchestration Service implementation
@@ -33,6 +36,13 @@ export class FlowOrchestrationService {
   private readonly flowRunCoordinator: FlowRunCoordinator;
   private readonly flowTimeoutMs: number;
   private readonly staleRunCheckIntervalMs: number;
+  /**
+   * When true, the in-process `setInterval` lifecycle loops
+   * (`startStaleRunDetector`, `startFlowResumptionPolling`) become no-ops;
+   * the host is expected to drive single-tick `detectStaleRuns()` /
+   * `pollBatchJobs()` calls from an external scheduler. PR 5/14.
+   */
+  private readonly externalSchedulerEnabled: boolean;
 
   constructor(
     private readonly logger: Logger,
@@ -49,10 +59,31 @@ export class FlowOrchestrationService {
       heartbeatIntervalMs?: number;
       flowTimeoutMs?: number;
       staleRunCheckIntervalMs?: number;
+      /**
+       * When true, in-process maintenance timers are skipped and the host
+       * is responsible for invoking `invect.maintenance.detectStaleRuns()`
+       * + `pollBatchJobs()` from an external scheduler (Cloudflare Cron
+       * Triggers, Vercel Cron, etc.). PR 5/14.
+       */
+      externalScheduler?: boolean;
     },
     private readonly pluginHookRunner?: PluginHookRunner,
     private readonly jsExpressionService?: JsExpressionService,
     private readonly templateService?: TemplateService,
+    /**
+     * Pluggable background job runner (PR 13/14). When omitted, the
+     * legacy fire-and-forget `.then()` path is used. When provided,
+     * the orchestration service routes:
+     *
+     *  - async flow execution → `enqueue('flow-run', { flowRunId, ... })`
+     *  - batch resumption    → `enqueue('batch-job-resume', { ... })`
+     *
+     * If the runner is the default `InProcessJobRunner`, this service
+     * also registers handlers on it so the in-memory queue can drive
+     * the work; external runners (Cloudflare Queues, SQS) are expected
+     * to register their own consumer-side handlers separately.
+     */
+    private readonly jobRunner?: JobRunnerAdapter,
   ) {
     if (!baseAIClient) {
       throw new Error('BaseAIClient is required for FlowOrchestrationService');
@@ -60,6 +91,7 @@ export class FlowOrchestrationService {
 
     this.flowTimeoutMs = executionConfig?.flowTimeoutMs ?? 600_000; // 10 min default
     this.staleRunCheckIntervalMs = executionConfig?.staleRunCheckIntervalMs ?? 60_000; // 1 min default
+    this.externalSchedulerEnabled = executionConfig?.externalScheduler ?? false;
 
     this.nodeExecutionCoordinator = new NodeExecutionCoordinator({
       logger,
@@ -109,6 +141,12 @@ export class FlowOrchestrationService {
       // the server previously stopped.  Their heartbeats will be stale.
       await this.recoverStaleRuns();
 
+      // Register in-process handlers for the canonical job types if the
+      // host is using the default in-process runner. External adapters
+      // (Cloudflare Queues, SQS) configure their consumer side
+      // separately and don't expose a `registerHandler` method.
+      this.registerInProcessJobHandlers();
+
       // Start flow resumption polling for completed batches
       await this.startMaintenancePolling();
 
@@ -141,9 +179,20 @@ export class FlowOrchestrationService {
   /**
    * Start a periodic check for stale flow runs.
    * Runs at the configured `staleRunCheckIntervalMs`.
+   *
+   * No-op when `executionConfig.externalScheduler === true` (PR 5/14):
+   * the host drives stale-run detection via
+   * `invect.maintenance.detectStaleRuns()` from an external cron tick.
    */
   private startStaleRunDetector(): void {
     if (this.staleRunCheckInterval) {
+      return;
+    }
+
+    if (this.externalSchedulerEnabled) {
+      this.logger.info(
+        'Skipping in-process stale run detector — externalScheduler enabled (PR 5/14)',
+      );
       return;
     }
 
@@ -288,30 +337,51 @@ export class FlowOrchestrationService {
           : {}),
       };
 
-      this.flowRunCoordinator
-        .executeFlowDefinition(
-          execution,
-          typedDefinition,
-          augmentedInputs,
-          options?.useBatchProcessing,
-        )
-        .then((result) => {
-          this.logger.info('Async flow execution completed', {
-            flowRunId: execution.id,
-            status: result.status,
-          });
-        })
-        .catch(async (error) => {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          this.logger.error('Async flow execution failed', {
-            flowRunId: execution.id,
-            error: errorMessage,
-          });
-          // Mark as failed
-          await this.flowRunsService.updateRunStatus(execution.id, FlowRunStatus.FAILED, {
-            error: errorMessage,
-          });
+      // Route the actual flow-running work through the JobRunnerAdapter
+      // when one is wired (PR 13/14). The default in-process runner
+      // schedules the registered handler on a microtask, preserving
+      // today's fire-and-forget semantics. External adapters
+      // (Cloudflare Queues, SQS) ship the payload to a consumer Worker
+      // — `executeFlowAsync` still returns the freshly-created run id
+      // synchronously so callers (HTTP handlers, trigger services) can
+      // respond immediately.
+      if (this.jobRunner) {
+        const payload: FlowRunJobPayload = {
+          flowRunId: execution.id,
+          flowId: flow.id,
+          useBatchProcessing: options?.useBatchProcessing,
+        };
+        await this.jobRunner.enqueue(JOB_TYPES.FLOW_RUN, payload, {
+          // Per-flow-run idempotency: enqueueing the same `flowRunId`
+          // twice (e.g. retried request) MUST run the flow once.
+          idempotencyKey: execution.id,
         });
+      } else {
+        this.flowRunCoordinator
+          .executeFlowDefinition(
+            execution,
+            typedDefinition,
+            augmentedInputs,
+            options?.useBatchProcessing,
+          )
+          .then((result) => {
+            this.logger.info('Async flow execution completed', {
+              flowRunId: execution.id,
+              status: result.status,
+            });
+          })
+          .catch(async (error) => {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.logger.error('Async flow execution failed', {
+              flowRunId: execution.id,
+              error: errorMessage,
+            });
+            // Mark as failed
+            await this.flowRunsService.updateRunStatus(execution.id, FlowRunStatus.FAILED, {
+              error: errorMessage,
+            });
+          });
+      }
 
       // Return immediately with PENDING status
       return {
@@ -605,11 +675,22 @@ export class FlowOrchestrationService {
   }
 
   /**
-   * Start polling for completed batch jobs to resume flows
+   * Start polling for completed batch jobs to resume flows.
+   *
+   * No-op when `executionConfig.externalScheduler === true` (PR 5/14):
+   * the host drives batch resumption via
+   * `invect.maintenance.pollBatchJobs()` from an external cron tick.
    */
   async startFlowResumptionPolling(intervalMs: number = 30000): Promise<void> {
     if (this.isPollingActive) {
       this.logger.debug('Flow resumption polling is already active');
+      return;
+    }
+
+    if (this.externalSchedulerEnabled) {
+      this.logger.info(
+        'Skipping in-process batch resumption poller — externalScheduler enabled (PR 5/14)',
+      );
       return;
     }
 
@@ -698,15 +779,39 @@ export class FlowOrchestrationService {
 
     for (const flowResumption of flowsToResume) {
       try {
-        await this.resumeFromBatchCompletion(
-          flowResumption.flowRunId,
-          flowResumption.nodeId,
-          flowResumption.batchResult,
-          flowResumption.batchError,
-        );
+        // Route through the pluggable runner (PR 13/14) only when an
+        // EXTERNAL adapter is plugged in (e.g. Cloudflare Queues, SQS).
+        // External adapters don't expose `processNextBatch` — they ship
+        // jobs to a consumer Worker. For the default in-process runner,
+        // we call `resumeFromBatchCompletion` directly so callers see
+        // the resumed status in the same await — the enqueue→microtask→
+        // handler indirection adds only race-conditions for in-process.
+        const externalRunner =
+          this.jobRunner && typeof this.jobRunner.processNextBatch !== 'function';
+
+        if (externalRunner) {
+          // `findFlowsReadyForResumption` types `batchResult` as
+          // `unknown` (JSON column from the DB); cast at the boundary.
+          const payload: BatchJobResumeJobPayload = {
+            flowRunId: flowResumption.flowRunId,
+            nodeId: flowResumption.nodeId,
+            batchResult: flowResumption.batchResult as BatchJobResumeJobPayload['batchResult'],
+            batchError: flowResumption.batchError,
+          };
+          await this.jobRunner?.enqueue(JOB_TYPES.BATCH_JOB_RESUME, payload, {
+            idempotencyKey: `${flowResumption.flowRunId}:${flowResumption.nodeId}`,
+          });
+        } else {
+          await this.resumeFromBatchCompletion(
+            flowResumption.flowRunId,
+            flowResumption.nodeId,
+            flowResumption.batchResult,
+            flowResumption.batchError,
+          );
+        }
 
         resumedCount += 1;
-        this.logger.info('Flow resumed successfully', {
+        this.logger.info('Flow resumption enqueued', {
           flowRunId: flowResumption.flowRunId,
           nodeId: flowResumption.nodeId,
         });
@@ -737,6 +842,36 @@ export class FlowOrchestrationService {
     }
 
     return { failedCount };
+  }
+
+  // ─── PR 5/14: external-scheduler entry points ─────────────────────────
+  // The stale-run detector and batch-resumption poller above are also
+  // exposed here as `{ count }` methods for hosts that drive them from
+  // an external scheduler (Cloudflare Cron Triggers, Vercel Cron). They
+  // perform exactly one tick — the long-lived `setInterval` wrappers
+  // (`startStaleRunDetector`, `startFlowResumptionPolling`) become
+  // no-ops when the host opts into external scheduling via the
+  // `BatchPollerAdapter` override (PR 2/14).
+
+  /**
+   * Run a single stale-run detection tick. Equivalent to one iteration of
+   * the in-process `staleRunCheckInterval` loop. Safe to invoke from an
+   * external cron entry point on workers/edge runtimes.
+   */
+  async detectStaleRuns(): Promise<{ count: number }> {
+    const { failedCount } = await this.runStaleRunSweep();
+    return { count: failedCount };
+  }
+
+  /**
+   * Run a single batch-resumption tick. Equivalent to one iteration of the
+   * in-process `batchPollingInterval` loop, but reports only how many
+   * paused flows were successfully resumed (failed/total are still
+   * available via `runBatchResumptionSweep()`).
+   */
+  async pollBatchJobs(): Promise<{ count: number }> {
+    const { resumedCount } = await this.runBatchResumptionSweep();
+    return { count: resumedCount };
   }
 
   /**
@@ -808,6 +943,93 @@ export class FlowOrchestrationService {
       this.logger.error('Failed to find flows ready for resumption', { error });
       return [];
     }
+  }
+
+  /**
+   * Register handlers on the in-process job runner for the canonical
+   * job types this service produces. Called once from `initialize()`.
+   *
+   * No-op if no `jobRunner` was injected, or if the injected runner is
+   * an external adapter (i.e. doesn't expose `registerHandler`). Hosts
+   * using external runners (Cloudflare Queues, SQS) are expected to
+   * register their own consumer-side handlers in their Queue/SQS
+   * consumer Worker.
+   */
+  private registerInProcessJobHandlers(): void {
+    if (!this.jobRunner) {
+      return;
+    }
+    if (!(this.jobRunner instanceof InProcessJobRunner)) {
+      this.logger.debug(
+        'JobRunnerAdapter is not InProcessJobRunner — skipping in-process handler registration; ' +
+          'host must wire consumer-side handlers for FLOW_RUN and BATCH_JOB_RESUME externally',
+      );
+      return;
+    }
+
+    this.jobRunner.registerHandler<FlowRunJobPayload>(JOB_TYPES.FLOW_RUN, async (payload) => {
+      // Re-load the freshly-created run row so we have its inputs
+      // and any trigger context the producer wrote.
+      let run: FlowRun;
+      try {
+        run = await this.flowRunsService.getRunById(payload.flowRunId);
+      } catch (err) {
+        this.logger.error('FLOW_RUN job referenced missing flow run', {
+          flowRunId: payload.flowRunId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        return;
+      }
+      // Re-load the flow at the version that was pinned on the run.
+      const flow = await this.flowsService.getFlowById(payload.flowId, {
+        flowVersion: { version: run.flowVersion },
+      });
+      if (!flow?.flowVersion?.invectDefinition) {
+        await this.flowRunsService.updateRunStatus(payload.flowRunId, FlowRunStatus.FAILED, {
+          error: 'Flow definition missing at execution time',
+        });
+        return;
+      }
+      const augmentedInputs: Record<string, unknown> = {
+        ...run.inputs,
+        ...(run.triggerData
+          ? {
+              __triggerData: run.triggerData,
+              __triggerNodeId: run.triggerNodeId,
+            }
+          : {}),
+      };
+
+      try {
+        await this.flowRunCoordinator.executeFlowDefinition(
+          run,
+          flow.flowVersion.invectDefinition as InvectDefinition,
+          augmentedInputs,
+          payload.useBatchProcessing,
+        );
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        this.logger.error('Async flow execution failed (job runner path)', {
+          flowRunId: payload.flowRunId,
+          error: errorMessage,
+        });
+        await this.flowRunsService.updateRunStatus(payload.flowRunId, FlowRunStatus.FAILED, {
+          error: errorMessage,
+        });
+      }
+    });
+
+    this.jobRunner.registerHandler<BatchJobResumeJobPayload>(
+      JOB_TYPES.BATCH_JOB_RESUME,
+      async (payload) => {
+        await this.resumeFromBatchCompletion(
+          payload.flowRunId,
+          payload.nodeId,
+          payload.batchResult,
+          payload.batchError,
+        );
+      },
+    );
   }
 
   /**

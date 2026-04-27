@@ -25,6 +25,9 @@ import { modelAction } from './model';
 import { agentAction } from './agent';
 import { mathEvalAction } from './math-eval';
 
+// Lazy descriptors (edge-runtime bundle size — see ../LAZY_ACTIONS_MIGRATION.md)
+export { lazyCoreActions } from './lazy';
+
 /** All core actions as an array (for bulk registration). */
 export const coreActions: ActionDefinition[] = [
   javascriptAction,

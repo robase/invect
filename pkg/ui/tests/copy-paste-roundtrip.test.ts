@@ -87,8 +87,8 @@ describe('clipboardToSdkText', () => {
 
     expect(source).toContain(`import { defineFlow, input, output } from "@invect/sdk"`);
     expect(source).toContain(`export const copiedFlow = defineFlow({`);
-    expect(source).toContain(`input("query"`);
-    expect(source).toContain(`output("result"`);
+    expect(source).toContain(`query: input(`);
+    expect(source).toContain(`result: output(`);
   });
 
   it('emits just the fragment body for a partial selection', () => {
@@ -106,8 +106,8 @@ describe('clipboardToSdkText', () => {
     expect(source).not.toContain('export');
     expect(source).not.toContain('defineFlow');
     // But it does carry the nodes/edges entries.
-    expect(source).toContain('nodes: [');
-    expect(source).toContain(`input("q"`);
+    expect(source).toContain('nodes: {');
+    expect(source).toContain(`q: input(`);
   });
 
   it('preserves sourceHandle on edges (if_else true/false branches)', () => {
@@ -171,7 +171,7 @@ describe('sdkResultToClipboard', () => {
         output('result', { value: '{{ query }}' }),
       ],
       edges: [
-        ['query', 'result'],
+        { from: 'query', to: 'result' },
       ],
     `);
 
@@ -192,14 +192,14 @@ describe('sdkResultToClipboard', () => {
     expect(clipboard.edges[0].target).toBe(clipboard.nodes[1].originalId);
   });
 
-  it('handles tuple-form edges with sourceHandle', () => {
+  it('handles object-form edges with handle', () => {
     const parsed = parseSDKText(`
       nodes: [
         ifElse('check', { condition: 'x > 0' }),
         output('yes', { value: 'yes' }),
       ],
       edges: [
-        ['check', 'yes', 'true_output'],
+        { from: 'check', to: 'yes', handle: 'true_output' },
       ],
     `);
 
@@ -378,7 +378,7 @@ describe('full copy-paste round-trip', () => {
     };
 
     const source = clipboardToSdkText(original, true);
-    expect(source).toContain('agent("researcher"');
+    expect(source).toContain('researcher: agent(');
     expect(source).toContain('tool("github.search_issues"');
     // Source instanceId should not appear in the emitted text (stripped for
     // paste; merge assigns fresh ids on save).

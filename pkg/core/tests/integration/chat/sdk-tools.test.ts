@@ -89,8 +89,8 @@ describe('Chat SDK tools — source-level flow editing', () => {
         nodeCount: number;
       };
       expect(data.source).toContain(`from "@invect/sdk"`);
-      expect(data.source).toContain(`input("query"`);
-      expect(data.source).toContain(`output("out"`);
+      expect(data.source).toContain(`query: input(`);
+      expect(data.source).toContain(`out: output(`);
       expect(data.nodeCount).toBe(2);
     });
 
@@ -125,7 +125,7 @@ export default defineFlow({
     input('query'),
     output('greeting', { value: 'Hello {{ query }}' }),
   ],
-  edges: [['query', 'greeting']],
+  edges: [{ from: 'query', to: 'greeting' }],
 });
 `;
       const result = await writeFlowSourceTool.execute(
@@ -174,7 +174,7 @@ export default defineFlow({
     input('query', { defaultValue: 'default text' }),
     output('out', { value: '{{ query }} (updated)' }),
   ],
-  edges: [['query', 'out']],
+  edges: [{ from: 'query', to: 'out' }],
 });
 `;
       const result = await writeFlowSourceTool.execute(
@@ -234,7 +234,7 @@ export default defineFlow({
     input('x'),
     code('check', { code: ((ctx) => ctx.x > threshold) }),
   ],
-  edges: [['x', 'check']],
+  edges: [{ from: 'x', to: 'check' }],
 });
 `;
       const result = await writeFlowSourceTool.execute(
@@ -243,11 +243,86 @@ export default defineFlow({
       );
       // The transform stage catches the closure — may or may not run
       // depending on whether code param is evaluated as function. If string,
-      // it passes through; if function, transform flags it.
+      // it passes through; if function, transform flags it. Typecheck may
+      // also flag it before the transform runs.
       if (!result.success) {
         const data = result.data as { stage?: string };
-        expect(['transform', 'evaluate']).toContain(data.stage);
+        expect(['transform', 'evaluate', 'typecheck']).toContain(data.stage);
       }
+    });
+
+    it('rejects save when flow source has TypeScript errors', async () => {
+      // Wrong handle for if-else — only `'true_output' | 'false_output'`
+      // are valid handles for a `core.if_else` source. The named-record
+      // EdgeOf<N> machinery rejects 'output' here at typecheck time.
+      const source = `
+import { defineFlow, input, output, ifElse } from '@invect/sdk';
+
+export default defineFlow({
+  nodes: {
+    q: input(),
+    classify: ifElse({ condition: 'true' }),
+    out: output({ value: 'x' }),
+  },
+  edges: [
+    { from: 'q', to: 'classify' },
+    { from: 'classify', to: 'out', handle: 'output' },
+  ],
+});
+`;
+      const result = await writeFlowSourceTool.execute(
+        { source },
+        { ...baseCtx, chatContext: { flowId } },
+      );
+      expect(result.success).toBe(false);
+      const data = result.data as {
+        stage: string;
+        diagnostics: Array<{ line: number; column: number; message: string; code: number }>;
+      };
+      expect(data.stage).toBe('typecheck');
+      expect(data.diagnostics.length).toBeGreaterThan(0);
+      // The diagnostic message should mention the bad handle so the LLM
+      // knows what to fix.
+      const allMessages = data.diagnostics.map((d) => d.message).join('\n');
+      expect(allMessages).toMatch(/output/);
+      expect(allMessages).toMatch(/true_output|false_output/);
+      expect(result.suggestion).toMatch(/Line \d+/);
+    });
+
+    it('rejects save when a required field is missing from a generated wrapper', async () => {
+      // `gmail.sendMessage` requires `credentialId`, `to`, `subject`, `body`.
+      // Omitting `body` is a TS-only error — at runtime jiti would happily
+      // build the node and Zod would reject only when the node ran. The
+      // pre-save typecheck catches it before save.
+      const source = `
+import { defineFlow, input } from '@invect/sdk';
+import { gmail } from '@invect/sdk/actions';
+
+export default defineFlow({
+  nodes: {
+    event: input(),
+    notify: gmail.sendMessage({
+      credentialId: 'cred',
+      to: 'a@b.c',
+      subject: 'hi',
+    }),
+  },
+  edges: [{ from: 'event', to: 'notify' }],
+});
+`;
+      const result = await writeFlowSourceTool.execute(
+        { source },
+        { ...baseCtx, chatContext: { flowId } },
+      );
+      expect(result.success).toBe(false);
+      const data = result.data as {
+        stage: string;
+        diagnostics: Array<{ message: string }>;
+      };
+      expect(data.stage).toBe('typecheck');
+      // The diagnostic should mention the missing field.
+      const allMessages = data.diagnostics.map((d) => d.message).join('\n');
+      expect(allMessages).toMatch(/body/);
     });
 
     it('rejects save when flow source has no flow open', async () => {
@@ -314,8 +389,10 @@ export default defineFlow({
     });
 
     it('rejects an oldString that appears multiple times without more context', async () => {
+      // `query` appears as the node key, in the destructured prelude, and in
+      // the arrow body — multiple occurrences in the named-record emitter.
       const result = await editFlowSourceTool.execute(
-        { oldString: '"query"', newString: '"renamed"' },
+        { oldString: 'query', newString: 'renamed' },
         { ...baseCtx, chatContext: { flowId } },
       );
       expect(result.success).toBe(false);
@@ -421,7 +498,7 @@ export default defineFlow({
         availableReferenceIds: string[];
       };
       expect(data.reason).toBe('stale_or_missing_read');
-      expect(data.currentSource).toContain('output("result"');
+      expect(data.currentSource).toContain('result: output(');
       expect(data.availableReferenceIds).toEqual(['query', 'result']);
     });
 
@@ -561,8 +638,10 @@ export default defineFlow({
     });
 
     it('ambiguous payload includes matchLocations', async () => {
+      // `query` appears as the node key, in destructured prelude, and inside
+      // the arrow body — multiple matches.
       const result = await editFlowSourceTool.execute(
-        { oldString: '"query"', newString: '"renamed"' },
+        { oldString: 'query', newString: 'renamed' },
         { ...baseCtx, chatContext: { flowId } },
       );
       expect(result.success).toBe(false);

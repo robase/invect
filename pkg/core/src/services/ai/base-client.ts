@@ -434,6 +434,22 @@ export class BaseAIClient {
   }
 
   /**
+   * Run a single batch-polling tick. PR 5/14 (flowlib-hosted/UPSTREAM.md):
+   * external-scheduler entry point that maps onto
+   * `pollBatchJobsForAllProviders()` and reports just `{ count }` (the
+   * total number of pending batch jobs polled across all providers).
+   *
+   * Hosts on serverless / edge runtimes invoke this from
+   * `invect.maintenance.pollPendingBatches()` from a cron tick; the
+   * in-process `setInterval` started by `startBatchPolling()` is the
+   * long-lived-Node-process equivalent.
+   */
+  async pollPendingBatches(): Promise<{ count: number }> {
+    const report = await this.pollBatchJobsForAllProviders();
+    return { count: report.jobsPolled };
+  }
+
+  /**
    * Poll batch jobs for all providers
    */
   async pollBatchJobsForAllProviders(): Promise<BatchPollingRunResult> {

@@ -5,6 +5,15 @@ export default defineConfig({
     'src/index.ts',
     'src/providers.ts',
     'src/registry/index.ts',
+    // Lazy entries — pure descriptors, only `import()`s into provider modules.
+    // Kept as separate entry points so edge consumers importing one of these
+    // don't accidentally pull the eager `xxxActions` array (which statically
+    // imports every action module in the provider).
+    'src/core/lazy.ts',
+    'src/gmail/lazy.ts',
+    'src/slack/lazy.ts',
+    'src/github/lazy.ts',
+    'src/http/lazy.ts',
     'src/core/index.ts',
     'src/asana/index.ts',
     'src/cloudwatch/index.ts',

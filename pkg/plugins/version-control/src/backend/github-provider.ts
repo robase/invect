@@ -1,8 +1,11 @@
 // =============================================================================
-// GitHub Provider — implements GitProvider using the GitHub REST API (Octokit)
+// GitHub Provider — implements GitProvider using the GitHub REST API
+//
+// Crypto note: ported from `node:crypto` (createHmac, timingSafeEqual, createSign)
+// to WebCrypto so this runs unchanged on Cloudflare Workers / Deno / Bun.
+// HMAC verification uses `crypto.subtle.verify` (constant-time by spec).
+// GitHub-App JWT signing uses `crypto.subtle.sign` with a PKCS#8 RSA key.
 // =============================================================================
-
-import { createHmac, timingSafeEqual } from 'node:crypto';
 
 import type {
   CreatePullRequestOptions,
@@ -18,6 +21,86 @@ import type { GitProviderAuth } from '../shared/types';
 
 interface GitHubProviderOptions {
   auth: GitProviderAuth;
+}
+
+// ─── WebCrypto helpers (module-scoped, no per-call allocation) ─────────
+
+const encoder = new TextEncoder();
+
+function base64ToBytes(b64: string): Uint8Array {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function bytesToBase64Url(bytes: Uint8Array): string {
+  let binary = '';
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  // base64url = base64 with - / _ in place of + / and no `=` padding.
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function hexToBytes(hex: string): Uint8Array {
+  const clean = hex.length % 2 === 0 ? hex : `0${hex}`;
+  const bytes = new Uint8Array(clean.length / 2);
+  for (let i = 0; i < bytes.length; i++) {
+    const byte = parseInt(clean.slice(i * 2, i * 2 + 2), 16);
+    if (Number.isNaN(byte)) {
+      // Sentinel — caller treats a single 0xFF byte as "invalid hex".
+      return new Uint8Array([0xff]);
+    }
+    bytes[i] = byte;
+  }
+  return bytes;
+}
+
+/**
+ * Import a PKCS#8 PEM private key as a WebCrypto `CryptoKey` for RS256 signing.
+ *
+ * GitHub Apps return PKCS#8 (`-----BEGIN PRIVATE KEY-----`) directly. PKCS#1
+ * (`-----BEGIN RSA PRIVATE KEY-----`) is not natively importable via WebCrypto —
+ * Node would accept it, but Workers don't, so we surface a clear error with the
+ * conversion command rather than papering over it.
+ */
+async function importRsaPrivateKey(pem: string): Promise<CryptoKey> {
+  const trimmed = pem.trim();
+  if (trimmed.includes('-----BEGIN RSA PRIVATE KEY-----')) {
+    throw new Error(
+      'GitHub App private key is in PKCS#1 format (BEGIN RSA PRIVATE KEY). ' +
+        'WebCrypto requires PKCS#8 — convert with: ' +
+        '`openssl pkcs8 -topk8 -nocrypt -in rsa.pem -out pkcs8.pem` ' +
+        'and re-upload the resulting key.',
+    );
+  }
+  const match = trimmed.match(/-----BEGIN PRIVATE KEY-----([\s\S]+?)-----END PRIVATE KEY-----/);
+  if (!match) {
+    throw new Error(
+      'GitHub App private key is not a valid PEM (expected `-----BEGIN PRIVATE KEY-----`).',
+    );
+  }
+  const base64 = match[1].replace(/\s+/g, '');
+  const der = base64ToBytes(base64);
+  // Detach to a fresh ArrayBuffer so the type aligns with `BufferSource`
+  // (rejects SharedArrayBuffer-backed views in WebCrypto's TS types).
+  const derBuffer = der.slice().buffer;
+  return crypto.subtle.importKey(
+    'pkcs8',
+    derBuffer,
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    /* extractable */ false,
+    ['sign'],
+  );
+}
+
+/** Copy `bytes` into a fresh ArrayBuffer view that satisfies `BufferSource`. */
+function asBufferSource(bytes: Uint8Array): ArrayBuffer {
+  return bytes.slice().buffer;
 }
 
 /**
@@ -99,18 +182,20 @@ export function githubProvider(options: GitHubProviderOptions): GitProvider {
 
   /** Create a JWT for GitHub App authentication (RS256, 10-min expiry). */
   async function createAppJwt(appId: string, privateKey: string): Promise<string> {
-    const { createSign } = await import('node:crypto');
-
     const now = Math.floor(Date.now() / 1000);
     const header = { alg: 'RS256', typ: 'JWT' };
     const payload = { iss: appId, iat: now - 60, exp: now + 10 * 60 };
 
-    const b64 = (obj: unknown) => Buffer.from(JSON.stringify(obj)).toString('base64url');
-    const unsigned = `${b64(header)}.${b64(payload)}`;
+    const b64url = (obj: unknown) => bytesToBase64Url(encoder.encode(JSON.stringify(obj)));
+    const unsigned = `${b64url(header)}.${b64url(payload)}`;
 
-    const sign = createSign('RSA-SHA256');
-    sign.update(unsigned);
-    const signature = sign.sign(privateKey, 'base64url');
+    const key = await importRsaPrivateKey(privateKey);
+    const sigBuffer = await crypto.subtle.sign(
+      { name: 'RSASSA-PKCS1-v1_5' },
+      key,
+      asBufferSource(encoder.encode(unsigned)),
+    );
+    const signature = bytesToBase64Url(new Uint8Array(sigBuffer));
 
     return `${unsigned}.${signature}`;
   }
@@ -314,12 +399,35 @@ export function githubProvider(options: GitHubProviderOptions): GitProvider {
       await request('PATCH', `/repos/${owner}/${name}/pulls/${number}`, { state: 'closed' });
     },
 
-    verifyWebhookSignature(payload: string, signature: string, secret: string): boolean {
-      const expected = `sha256=${createHmac('sha256', secret).update(payload).digest('hex')}`;
-      if (expected.length !== signature.length) {
+    async verifyWebhookSignature(
+      payload: string,
+      signature: string,
+      secret: string,
+    ): Promise<boolean> {
+      // GitHub sends `sha256=<hex>`; strip the prefix and verify constant-time
+      // via WebCrypto. Anything that doesn't match the prefix shape is a
+      // mismatch by definition.
+      if (!signature.startsWith('sha256=')) {
         return false;
       }
-      return timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+      const receivedHex = signature.slice('sha256='.length);
+      const expectedBytes = hexToBytes(receivedHex);
+      if (expectedBytes.length === 1 && expectedBytes[0] === 0xff && receivedHex.length !== 2) {
+        return false;
+      }
+      const key = await crypto.subtle.importKey(
+        'raw',
+        asBufferSource(encoder.encode(secret)),
+        { name: 'HMAC', hash: 'SHA-256' },
+        /* extractable */ false,
+        ['verify'],
+      );
+      return crypto.subtle.verify(
+        'HMAC',
+        key,
+        asBufferSource(expectedBytes),
+        asBufferSource(encoder.encode(payload)),
+      );
     },
   };
 

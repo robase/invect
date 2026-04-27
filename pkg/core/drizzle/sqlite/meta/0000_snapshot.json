@@ -571,6 +571,13 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "node_outputs": {
+          "name": "node_outputs",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {},

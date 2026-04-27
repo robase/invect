@@ -182,11 +182,11 @@ Always use tools for data operations rather than estimating. Show your analysis 
       }),
     ],
     edges: [
-      ['analysis_request', 'sales_data'],
-      ['sales_data', 'analyst_agent'],
-      ['analysis_request', 'analyst_agent'],
-      ['analyst_agent', 'formatted_report'],
-      ['formatted_report', 'analysis_report'],
+      { from: 'analysis_request', to: 'sales_data' },
+      { from: 'sales_data', to: 'analyst_agent' },
+      { from: 'analysis_request', to: 'analyst_agent' },
+      { from: 'analyst_agent', to: 'formatted_report' },
+      { from: 'formatted_report', to: 'analysis_report' },
     ],
   });
 }

@@ -52,10 +52,6 @@ export { buildNodeContext } from './node-context';
 export { createFetchPromptClient } from './fetch-prompt';
 export type { FetchPromptClientOptions } from './fetch-prompt';
 
-// ─── SDK source emitter (DB InvectDefinition → TS source) ────────────────────
-export { emitSdkSource, SdkEmitError } from './emitter/sdk-source';
-export type { EmitSdkSourceOptions, EmitSdkSourceResult } from './emitter/sdk-source';
-
 // ─── Node-type aliases (core.X ⇄ primitives.X) ────────────────────────────────
 export {
   INPUT_TYPES,

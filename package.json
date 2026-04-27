@@ -43,6 +43,7 @@
     "dev:fullstack": "bash scripts/dev-fullstack.sh",
     "dev:next": "bash scripts/dev-next.sh",
     "dev:nest": "bash scripts/dev-nest.sh",
+    "dev:ext": "bash scripts/dev-ext.sh",
     "dev:watch-all": "pnpm --filter '...invect-express-simple' --filter '...flow-executor' --parallel run dev",
     "test": "pnpm --filter '@invect/core' run test:unit && pnpm --filter '@invect/cli' --filter '@invect/user-auth' --filter '@invect/version-control' run test",
     "test:int": "pnpm --filter '@invect/core' run test:integration",

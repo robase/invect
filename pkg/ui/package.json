@@ -44,6 +44,11 @@
       "import": "./dist/demo.js",
       "default": "./dist/demo.js"
     },
+    "./flow-canvas": {
+      "types": "./dist/flow-canvas/index.d.ts",
+      "import": "./dist/flow-canvas.js",
+      "default": "./dist/flow-canvas.js"
+    },
     "./styles": {
       "types": "./dist/styles.d.ts",
       "default": "./dist/index.css"

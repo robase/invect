@@ -1,7 +1,12 @@
 import { defineConfig } from 'tsdown';
 
 export default defineConfig({
-  entry: ['src/index.ts', 'src/transform/index.ts', 'src/evaluator/index.ts'],
+  entry: [
+    'src/index.ts',
+    'src/transform/index.ts',
+    'src/evaluator/index.ts',
+    'src/generated/index.ts',
+  ],
   format: ['esm', 'cjs'],
   dts: { resolve: false },
   sourcemap: true,

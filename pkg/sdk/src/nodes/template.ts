@@ -3,15 +3,32 @@
  *
  * `core.template_string` — renders a string with `{{ expr }}` interpolations
  * evaluated against upstream node outputs.
+ *
+ * Two call forms:
+ *   - `template({ template: '...' })` — named-record `defineFlow` form.
+ *   - `template('ref', { template: '...' })` — positional form.
  */
 
 import { templateStringAction } from '@invect/actions/core';
 import type { NodeOptions, SdkFlowNode } from '@invect/action-kit';
 
+interface TemplateParams {
+  template: string;
+}
+
+export function template(params: TemplateParams, options?: NodeOptions): SdkFlowNode;
 export function template(
   referenceId: string,
-  params: { template: string },
+  params: TemplateParams,
   options?: NodeOptions,
+): SdkFlowNode;
+export function template(
+  arg0: string | TemplateParams,
+  arg1?: TemplateParams | NodeOptions,
+  arg2?: NodeOptions,
 ): SdkFlowNode {
-  return templateStringAction(referenceId, { template: params.template }, options);
+  if (typeof arg0 === 'string') {
+    return templateStringAction(arg0, { template: (arg1 as TemplateParams).template }, arg2);
+  }
+  return templateStringAction('', { template: arg0.template }, arg1 as NodeOptions | undefined);
 }

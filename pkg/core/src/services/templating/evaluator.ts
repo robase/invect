@@ -64,7 +64,58 @@ export function needsAutoReturn(code: string): boolean {
 }
 
 /**
- * DirectEvaluator — unsandboxed `new Function` backend.
+ * Runtime feature check: is the `Function` constructor usable?
+ *
+ * Some edge runtimes (Cloudflare Workers without `unsafe_eval`, browsers with
+ * strict CSP, Deno Deploy) throw when `new Function(...)` is called. Detect
+ * this once at module load so callers don't have to. The probe is wrapped in
+ * try/catch so module import never throws — the worst case is `HAS_EVAL`
+ * resolves to `false` and `DirectEvaluator` falls back (or errors clearly)
+ * when `evaluate()` is called.
+ *
+ * Exposed for tests and for hosts that want to log the runtime capability.
+ */
+export const HAS_EVAL: boolean = (() => {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-implied-eval, no-new-func
+    new Function('return 1')();
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+/**
+ * Constructor options for {@link DirectEvaluator}.
+ */
+export interface DirectEvaluatorOptions {
+  /**
+   * Force-disable the `new Function` fast path even when the runtime supports
+   * it. Useful for security-conscious hosts that want CSP-style guarantees
+   * without trusting runtime sniffing. When true, `evaluate()` always
+   * delegates to `fallback`.
+   *
+   * Mirrors `InvectConfig.execution.disableNativeEval`.
+   *
+   * @default false
+   */
+  disableNativeEval?: boolean;
+
+  /**
+   * Sandboxed evaluator to use when `new Function` is unavailable (or when
+   * `disableNativeEval` is set). Typically a `JsExpressionService` instance,
+   * but any `JsExpressionEvaluator` works.
+   *
+   * Optional — when omitted and the native path is unavailable, `evaluate()`
+   * throws a clear, actionable error instead of attempting a forbidden
+   * `new Function` call.
+   */
+  fallback?: JsExpressionEvaluator;
+}
+
+/**
+ * DirectEvaluator — unsandboxed `new Function` backend with edge-runtime
+ * fallback.
  *
  * Use ONLY when:
  *   - the host trusts the flow author (single-tenant, edge self-deployment), or
@@ -75,15 +126,44 @@ export function needsAutoReturn(code: string): boolean {
  *   - No CPU / memory limits (infinite loops hang the host).
  *   - No syscall sandbox — user code has whatever globals the runtime exposes.
  *   - Cloudflare Workers block `new Function` without `compatibility_flags =
- *     ["unsafe_eval"]` (or nodejs_compat_v2) — ensure that is set.
+ *     ["unsafe_eval"]` (or nodejs_compat_v2). On those runtimes the constructor
+ *     check at module load returns `HAS_EVAL = false` and `evaluate()` will
+ *     delegate to a configured `fallback` (or throw a clear error if none).
  */
 export class DirectEvaluator implements JsExpressionEvaluator {
+  private readonly disableNativeEval: boolean;
+  private readonly fallback?: JsExpressionEvaluator;
+
+  constructor(options: DirectEvaluatorOptions = {}) {
+    this.disableNativeEval = options.disableNativeEval ?? false;
+    this.fallback = options.fallback;
+  }
+
+  async initialize(): Promise<void> {
+    if (this.fallback?.initialize) {
+      await this.fallback.initialize();
+    }
+  }
+
   async evaluate(expression: string, context: Record<string, unknown>): Promise<unknown> {
+    if (this.disableNativeEval || !HAS_EVAL) {
+      if (!this.fallback) {
+        throw new JsExpressionEvaluationError(
+          this.disableNativeEval
+            ? 'DirectEvaluator: native eval disabled via disableNativeEval, but no fallback evaluator was configured'
+            : 'DirectEvaluator: `new Function` is not available in this runtime (e.g. Cloudflare Workers without `unsafe_eval`, strict CSP), and no fallback evaluator was configured',
+          expression,
+        );
+      }
+      return this.fallback.evaluate(expression, context);
+    }
+
     const safeKeys = Object.keys(context).filter((k) => VALID_JS_IDENT.test(k));
     const userBody = needsAutoReturn(expression) ? `return (${expression})` : expression;
     const destructure = safeKeys.length > 0 ? `const {${safeKeys.join(',')}} = $input;` : '';
     const body = `${destructure}${userBody}`;
     try {
+      // eslint-disable-next-line @typescript-eslint/no-implied-eval, no-new-func
       const fn = new Function('$input', body) as (input: Record<string, unknown>) => unknown;
       const result = fn(context);
       if (result instanceof Promise) {
@@ -91,6 +171,9 @@ export class DirectEvaluator implements JsExpressionEvaluator {
       }
       return result;
     } catch (error) {
+      if (error instanceof JsExpressionEvaluationError) {
+        throw error;
+      }
       const message = error instanceof Error ? error.message : String(error);
       throw new JsExpressionEvaluationError(message, expression);
     }

@@ -10,7 +10,7 @@ describe('parseSDKText', () => {
           output('result', { value: '{{ query }}' }),
         ],
         edges: [
-          ['query', 'result'],
+          { from: 'query', to: 'result' },
         ],
       `);
 
@@ -18,7 +18,7 @@ describe('parseSDKText', () => {
       expect(nodes[0].referenceId).toBe('query');
       expect(nodes[0].type).toBe('core.input');
       expect(nodes[1].referenceId).toBe('result');
-      expect(edges).toEqual([['query', 'result']]);
+      expect(edges).toEqual([{ from: 'query', to: 'result' }]);
     });
 
     it('accepts object-form edges with handles', () => {
@@ -35,7 +35,7 @@ describe('parseSDKText', () => {
       expect(edges).toEqual([{ from: 'check', to: 'yes', handle: 'true_output' }]);
     });
 
-    it('accepts tuple-form edges with sourceHandle', () => {
+    it('rejects legacy tuple-form edges (Phase 6 removed tuple support)', () => {
       const { edges } = parseSDKText(`
         nodes: [
           ifElse('check', { condition: 'x > 0' }),
@@ -45,7 +45,7 @@ describe('parseSDKText', () => {
           ['check', 'no', 'false_output'],
         ],
       `);
-      expect(edges).toEqual([['check', 'no', 'false_output']]);
+      expect(edges).toEqual([]);
     });
   });
 
@@ -111,6 +111,7 @@ export default defineFlow({
 
     it('skips items that do not look like nodes or edges', () => {
       // Mixed valid and garbage — valid items pass through, garbage drops.
+      // Tuple-form edges are now garbage too (Phase 6 removed tuple support).
       const { nodes, edges } = parseSDKText(`
         nodes: [
           input('x'),
@@ -118,12 +119,13 @@ export default defineFlow({
           42,
         ],
         edges: [
+          { from: 'x', to: 'y' },
           ['x', 'y'],
           'not an edge',
         ],
       `);
       expect(nodes).toHaveLength(1);
-      expect(edges).toEqual([['x', 'y']]);
+      expect(edges).toEqual([{ from: 'x', to: 'y' }]);
     });
   });
 

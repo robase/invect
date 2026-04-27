@@ -32,6 +32,20 @@ type FlowRunCoordinatorDeps = {
   heartbeatIntervalMs: number;
   /** Plugin hook runner for lifecycle hooks (optional for backward compat). */
   pluginHookRunner?: PluginHookRunner;
+  /**
+   * When `false`, falls back to the legacy sequential topological loop instead
+   * of the ready-set scheduler. Defaults to `true` (parallel scheduler on).
+   * Self-hosted users who previously set `INVECT_PARALLEL_SCHEDULER=0` should
+   * pass `parallelSchedulerEnabled: false` instead — core no longer reads env.
+   */
+  parallelSchedulerEnabled?: boolean;
+  /**
+   * Maximum number of nodes to run concurrently inside the ready-set
+   * scheduler. Defaults to 8. Self-hosted users who previously set
+   * `INVECT_SCHEDULER_CONCURRENCY=N` should pass `schedulerConcurrency: N`
+   * instead — core no longer reads env.
+   */
+  schedulerConcurrency?: number;
 };
 
 /**
@@ -98,6 +112,14 @@ export class FlowRunCoordinator {
   /**
    * Start a periodic heartbeat for a flow run.
    * The first heartbeat is written immediately.
+   *
+   * PR 5/14 (flowlib-hosted/UPSTREAM.md): this in-process `setInterval` is
+   * intentionally not extracted into an external-tick maintenance method.
+   * Hosted runtimes that target Cloudflare Workflows / Vercel Workflows
+   * already get equivalent liveness from the workflow engine's own retry
+   * + step-resumption guarantees, so heartbeats are redundant there. To
+   * disable in-process heartbeats on those runtimes, set
+   * `executionConfig.heartbeatIntervalMs = 0` in `InvectConfig`.
    */
   private startHeartbeat(flowRunId: string): void {
     const { heartbeatIntervalMs, flowRunsService, logger } = this.deps;
@@ -138,23 +160,20 @@ export class FlowRunCoordinator {
 
   /**
    * Node execution uses the ready-set scheduler by default (sibling nodes
-   * run concurrently). Setting `INVECT_PARALLEL_SCHEDULER=0` falls back to
-   * the legacy sequential topological loop — kept as an emergency escape
-   * hatch but slated for removal. For a milder rollback, set
-   * `INVECT_SCHEDULER_CONCURRENCY=1` to keep the scheduler code path but
-   * launch nodes one at a time.
+   * run concurrently). Set `parallelSchedulerEnabled: false` on the
+   * coordinator deps to fall back to the legacy sequential topological loop —
+   * kept as an emergency escape hatch but slated for removal. For a milder
+   * rollback, set `schedulerConcurrency: 1` to keep the scheduler code path
+   * but launch nodes one at a time.
    */
   private isParallelEnabled(): boolean {
-    return process.env.INVECT_PARALLEL_SCHEDULER !== '0';
+    return this.deps.parallelSchedulerEnabled !== false;
   }
 
   private getConcurrency(): number {
-    const raw = process.env.INVECT_SCHEDULER_CONCURRENCY;
-    if (raw) {
-      const n = Number.parseInt(raw, 10);
-      if (Number.isFinite(n) && n >= 1) {
-        return n;
-      }
+    const n = this.deps.schedulerConcurrency;
+    if (typeof n === 'number' && Number.isFinite(n) && n >= 1) {
+      return Math.floor(n);
     }
     return 8;
   }
@@ -958,6 +977,13 @@ export class FlowRunCoordinator {
     this.stopHeartbeat(flowRunId);
     this.clearAbortController(flowRunId);
     logger.debug('Pausing flow for batch processing', { flowRunId });
+    // Note: under `execution.persistence: 'per-run'`, the in-memory buffer
+    // remains held in this process across the pause. If the resume happens
+    // on a different process (e.g., maintenance polling on another worker),
+    // the original buffer is lost. Hosts mixing batch processing with
+    // per-run persistence should currently stick with `'per-node'`. A
+    // proper fix requires spilling the buffer to a partial blob and
+    // teaching resume to re-merge — out of scope for PR 11.
     await flowRunsService.updateRunStatus(flowRunId, FlowRunStatus.PAUSED_FOR_BATCH);
     logger.debug('Flow paused for batch processing', { flowRunId });
   }
@@ -989,6 +1015,39 @@ export class FlowRunCoordinator {
     this.startAbortController(flowRunId);
   }
 
+  /**
+   * Drain the in-memory node-execution buffer for `'per-run'` persistence
+   * mode. Returns the buffered traces (if any) for inclusion in the
+   * `flow_runs.node_outputs` JSON column. For `'per-node'` runs, returns
+   * `null` and the column is left untouched.
+   *
+   * Defensive: any failure here logs and returns `null` so a flush bug can
+   * never block a terminal-state write.
+   */
+  private flushPerRunBuffer(flowRunId: string): unknown {
+    try {
+      const buffered = this.deps.nodeExecutionService.flushBuffer(flowRunId);
+      if (!buffered || buffered.length === 0) {
+        return null;
+      }
+      // Stored as a plain array — adapter-factory serializes to JSON on
+      // write. Sort by startedAt for deterministic readback.
+      return buffered
+        .map((t) => ({ ...t }))
+        .sort((a, b) => {
+          const av = typeof a.startedAt === 'string' ? a.startedAt : a.startedAt.toISOString();
+          const bv = typeof b.startedAt === 'string' ? b.startedAt : b.startedAt.toISOString();
+          return av.localeCompare(bv);
+        });
+    } catch (err) {
+      this.deps.logger.warn('Failed to flush per-run node-execution buffer (non-fatal)', {
+        flowRunId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return null;
+    }
+  }
+
   private async markExecutionSuccess(
     flowRunId: string,
     outputs: Record<string, unknown>,
@@ -997,7 +1056,11 @@ export class FlowRunCoordinator {
     this.stopHeartbeat(flowRunId);
     this.clearAbortController(flowRunId);
     logger.debug('Marking execution as successful', { flowRunId });
-    await flowRunsService.updateRunStatus(flowRunId, FlowRunStatus.SUCCESS, { outputs });
+    const nodeOutputs = this.flushPerRunBuffer(flowRunId);
+    await flowRunsService.updateRunStatus(flowRunId, FlowRunStatus.SUCCESS, {
+      outputs,
+      ...(nodeOutputs !== null ? { nodeOutputs } : {}),
+    });
   }
 
   private async markExecutionFailed(flowRunId: string, error: string): Promise<void> {
@@ -1005,7 +1068,11 @@ export class FlowRunCoordinator {
     this.stopHeartbeat(flowRunId);
     this.clearAbortController(flowRunId);
     logger.debug('Marking execution as failed', { flowRunId, error });
-    await flowRunsService.updateRunStatus(flowRunId, FlowRunStatus.FAILED, { error });
+    const nodeOutputs = this.flushPerRunBuffer(flowRunId);
+    await flowRunsService.updateRunStatus(flowRunId, FlowRunStatus.FAILED, {
+      error,
+      ...(nodeOutputs !== null ? { nodeOutputs } : {}),
+    });
   }
 
   /**

@@ -258,9 +258,11 @@ describe('Full pipeline: emit → parse → transform → merge', () => {
 
       // Emit + parse the authored source for a flow with a new node added.
       const { code } = emitSdkSource(prior);
+      // Phase 9 emitter produces named-record `nodes: { q: input(), }`.
+      // Inject a sibling entry alongside `q`.
       const editedSource = code.replace(
-        '    input("q"),\n',
-        '    input("q"),\n    code("double", { code: (ctx) => ctx.q }),\n',
+        '    q: input(),\n',
+        '    q: input(),\n    double: code({ code: (ctx) => ctx.q }),\n',
       );
       // The edit also needs an edge to the new node — add one.
       const withEdge = editedSource.replace(
@@ -312,7 +314,7 @@ describe('Full pipeline: emit → parse → transform → merge', () => {
           output('end', { value: '{{ first }}' }),
         ],
         edges: [
-          ['first', 'end'],
+          { from: 'first', to: 'end' },
         ],
       `;
       const merged = runPipeline(prior, newSource);
@@ -407,7 +409,7 @@ describe('Full pipeline: emit → parse → transform → merge', () => {
 
       const { code, actionImports } = emitSdkSource(prior);
       expect(code).toContain(`import { gmailSendMessageAction } from "@invect/actions/gmail"`);
-      expect(code).toContain(`gmailSendMessageAction("notify"`);
+      expect(code).toContain(`notify: gmailSendMessageAction({`);
       expect(actionImports['@invect/actions/gmail']).toEqual(['gmailSendMessageAction']);
     });
   });

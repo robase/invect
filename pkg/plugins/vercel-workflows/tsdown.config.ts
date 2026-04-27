@@ -17,6 +17,7 @@ export default defineConfig({
     neverBundle: [
       '@invect/core',
       '@invect/primitives',
+      '@invect/sdk',
       '@invect/ui',
       'react',
       'react-dom',

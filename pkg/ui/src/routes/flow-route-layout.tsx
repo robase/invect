@@ -18,7 +18,7 @@ interface SaveOptions {
 }
 
 // Context for flow actions
-interface FlowActionsContextType {
+export interface FlowActionsContextType {
   // Always available
   onExecute: () => Promise<void>;
   isExecuting: boolean;
@@ -31,7 +31,7 @@ interface FlowActionsContextType {
   isSaving?: boolean;
 }
 
-const FlowActionsContext = createContext<FlowActionsContextType | null>(null);
+export const FlowActionsContext = createContext<FlowActionsContextType | null>(null);
 
 export function useFlowActions() {
   return useContext(FlowActionsContext);

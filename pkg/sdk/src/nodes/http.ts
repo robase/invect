@@ -3,6 +3,10 @@
  *
  * `http.request` — make an outbound HTTP call with configurable method,
  * headers, body, and optional credential-bound auth.
+ *
+ * Two call forms:
+ *   - `httpRequest({ url, method? })` — named-record `defineFlow` form.
+ *   - `httpRequest('ref', { url, method? })` — positional form.
  */
 
 import { httpRequestAction } from '@invect/actions/http';
@@ -17,11 +21,21 @@ export interface HttpRequestParams {
   timeout?: number;
 }
 
+export function httpRequest(params: HttpRequestParams, options?: NodeOptions): SdkFlowNode;
 export function httpRequest(
   referenceId: string,
   params: HttpRequestParams,
   options?: NodeOptions,
+): SdkFlowNode;
+export function httpRequest(
+  arg0: string | HttpRequestParams,
+  arg1?: HttpRequestParams | NodeOptions,
+  arg2?: NodeOptions,
 ): SdkFlowNode {
+  const referenceId = typeof arg0 === 'string' ? arg0 : '';
+  const params = (typeof arg0 === 'string' ? arg1 : arg0) as HttpRequestParams;
+  const options = (typeof arg0 === 'string' ? arg2 : arg1) as NodeOptions | undefined;
+
   return httpRequestAction(
     referenceId,
     {

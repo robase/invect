@@ -15,6 +15,8 @@ export async function generateRawSql(options: {
   plugins: Array<{ id: string; schema?: Record<string, unknown>; [key: string]: unknown }>;
   dialect: 'sqlite' | 'postgresql' | 'mysql';
   outputDir?: string;
+  /** Optional schema transforms (e.g., column injection for multi-tenancy) */
+  transforms?: unknown[];
 }): Promise<{
   result: SchemaGeneratorResult;
   stats: {
@@ -31,8 +33,8 @@ export async function generateRawSql(options: {
     generateMysqlRawSql,
   } = await import('@invect/core');
 
-  // oxlint-disable-next-line typescript/no-explicit-any -- plugins type from dynamic import doesn't match exactly
-  const mergedSchema = mergeSchemas(options.plugins as any);
+  // oxlint-disable-next-line typescript/no-explicit-any -- plugins/transforms types from dynamic import don't match exactly
+  const mergedSchema = mergeSchemas(options.plugins as any, options.transforms as any);
   const coreTableCount = Object.keys(CORE_SCHEMA).length;
 
   const generators: Record<string, (schema: typeof mergedSchema) => string> = {

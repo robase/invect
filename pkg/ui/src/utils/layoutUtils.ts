@@ -88,6 +88,14 @@ function effectiveMeasuredHeight(node: Node): number | undefined {
   return cardHeight + AGENT_TOOLS_GAP + AGENT_TOOLS_HEIGHT;
 }
 
+const roundPosition = (n: number) => Math.round(n * 100) / 100;
+
+const roundNodePositions = (nodes: Node[]): Node[] =>
+  nodes.map((node) => ({
+    ...node,
+    position: { x: roundPosition(node.position.x), y: roundPosition(node.position.y) },
+  }));
+
 /**
  * Main layout function that applies the selected algorithm
  */
@@ -96,6 +104,17 @@ export const applyLayout = async (
   edges: Edge[],
   algorithm: LayoutAlgorithm,
   direction: 'TB' | 'BT' | 'LR' | 'RL' = 'LR',
+  options?: LayoutOptions,
+): Promise<{ nodes: Node[]; edges: Edge[] }> => {
+  const result = await runLayout(nodes, edges, algorithm, direction, options);
+  return { nodes: roundNodePositions(result.nodes), edges: result.edges };
+};
+
+const runLayout = async (
+  nodes: Node[],
+  edges: Edge[],
+  algorithm: LayoutAlgorithm,
+  direction: 'TB' | 'BT' | 'LR' | 'RL',
   options?: LayoutOptions,
 ): Promise<{ nodes: Node[]; edges: Edge[] }> => {
   switch (algorithm) {

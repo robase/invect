@@ -41,6 +41,10 @@ export { githubListReleasesAction } from './list-releases';
 // ── Search ──────────────────────────────────────────────────────────────
 export { githubSearchIssuesAction } from './search-issues';
 
+// ── Lazy descriptors ────────────────────────────────────────────────────
+// Edge-runtime bundle size — see ../LAZY_ACTIONS_MIGRATION.md
+export { lazyGithubActions } from './lazy';
+
 // ── Bulk array ──────────────────────────────────────────────────────────
 
 import type { ActionDefinition } from '@invect/action-kit';

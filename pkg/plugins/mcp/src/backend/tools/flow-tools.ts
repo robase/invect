@@ -66,7 +66,7 @@ export function registerFlowTools(server: McpServer, client: InvectClient): void
     TOOL_IDS.FLOW_GET_SDK_SOURCE,
     {
       description:
-        'Emit the flow definition as @invect/primitives TypeScript source (defineFlow + node builders). Ready to drop into a TS file and version-control. Throws if the flow uses node types that cannot be expressed in the primitives SDK.',
+        'Emit the flow definition as @invect/sdk TypeScript source (defineFlow + node helpers + provider action callables). Ready to drop into a TS file and version-control. Throws if the flow contains a structurally unrepresentable node.',
       inputSchema: {
         flowId: z.string().describe('The flow ID'),
         version: z
@@ -80,7 +80,7 @@ export function registerFlowTools(server: McpServer, client: InvectClient): void
         sdkImport: z
           .string()
           .optional()
-          .describe('Import specifier for SDK builders (default: "@invect/primitives")'),
+          .describe('Import specifier for SDK helpers (default: "@invect/sdk")'),
       },
     },
     async ({ flowId, version, flowName, sdkImport }) => {

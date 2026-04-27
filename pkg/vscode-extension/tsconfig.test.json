@@ -1,0 +1,60 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./out",
+    "rootDir": ".",
+    "noEmit": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": true,
+    // VSCode's extension host runs Node 22+ in current releases, so
+    // ES2022 (top-level await, class fields) lands without downleveling.
+    "target": "ES2022",
+    // CJS output keeps `node out/test/runTest.js` and Mocha's
+    // `require()`-based loader working without ESM loader hooks.
+    "module": "CommonJS",
+    // Legacy `node` resolution doesn't read package.json `exports`
+    // maps, so a handful of source files using subpath imports
+    // (`@invect/ui/flow-canvas`, `@invect/sdk/evaluator`) won't compile
+    // here. They're excluded below — those modules already work at
+    // runtime via tsdown's bundle, so this only affects type-checking
+    // for tests.
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "lib": ["ES2022", "DOM"],
+    "types": ["node", "vscode", "mocha"],
+    "baseUrl": ".",
+    "paths": {}
+  },
+  "include": ["test/**/*.ts"],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "out",
+    "webview",
+    // Fixture .flow.ts files import @invect/sdk runtime — they're
+    // workspace data, not test code. The runtime workspace handles them.
+    "test/fixtures/**",
+    // Source files that use subpath imports (`@invect/ui/flow-canvas`,
+    // `@invect/sdk/evaluator`) the legacy `node` resolver can't see.
+    // Excluding them here means the tests that import them won't
+    // compile either — see exclusion list below if you add a unit test
+    // that touches these modules.
+    // The whole `src/` tree (the runtime source) — tests don't need to
+    // recompile it; they call into the loaded extension via `vscode.*`.
+    // Keeping it out of the test build sidesteps the `@invect/sdk/...`
+    // / `@invect/ui/...` subpath-resolution failures on legacy
+    // `node` resolution.
+    "src/**/*.ts",
+    // Tests that depend on the excluded source files. Re-enable once
+    // the tsconfig moves to `node16` / `bundler` resolution.
+    "test/unit/parse.test.ts",
+    "test/unit/actionCatalogue.test.ts",
+    "test/unit/flowDiagnostics.test.ts",
+    "test/unit/file-sync.test.ts"
+  ]
+}

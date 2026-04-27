@@ -13,6 +13,7 @@ import type {
   ActionDefinition,
   ParamField,
   ProviderDef,
+  LazyActionDefinition,
   LoadOptionsContext,
   LoadOptionsResult,
   Logger,
@@ -32,6 +33,16 @@ export class ActionRegistry {
   private providerActions = new Map<string, Set<string>>();
   private providers = new Map<string, ProviderDef>();
 
+  /**
+   * Lazy descriptors that have not yet been loaded. Once a descriptor's
+   * `load()` resolves, the resulting `ActionDefinition` is moved into
+   * `actions` (and the entry here is removed) so subsequent calls hit the
+   * sync path without the `Promise` overhead.
+   */
+  private lazyActions = new Map<string, LazyActionDefinition>();
+  /** In-flight `load()` calls so concurrent callers share a single promise. */
+  private lazyLoading = new Map<string, Promise<ActionDefinition>>();
+
   constructor(private readonly logger?: Logger) {}
 
   // ─── Registration ──────────────────────────────────────────────────────
@@ -42,6 +53,9 @@ export class ActionRegistry {
     }
 
     this.actions.set(action.id, action as ActionDefinition);
+    // If this id was previously registered lazily, drop the descriptor — the
+    // eager registration wins.
+    this.lazyActions.delete(action.id);
 
     // Track provider (de-duplicated by id)
     const pid = action.provider.id;
@@ -64,26 +78,146 @@ export class ActionRegistry {
     }
   }
 
+  /**
+   * Register lazy action descriptors. The full {@link ActionDefinition} is
+   * only loaded on first {@link loadAction} / {@link executeAction} call.
+   *
+   * Use this in edge-runtime bundles to avoid eagerly importing every
+   * provider SDK on cold start.
+   */
+  registerLazy(defs: LazyActionDefinition[]): void {
+    for (const def of defs) {
+      // If an eager definition is already registered, the lazy descriptor is
+      // redundant — keep the eager entry and skip.
+      if (this.actions.has(def.id)) {
+        this.logger?.debug(`Lazy action "${def.id}" ignored — eager definition already registered`);
+        continue;
+      }
+      if (this.lazyActions.has(def.id)) {
+        this.logger?.warn(`Lazy action "${def.id}" already registered – overwriting`);
+      }
+      this.lazyActions.set(def.id, def);
+
+      // Track provider id only (the full ProviderDef arrives with the action
+      // when it's loaded). This lets `getActionsForProvider()` enumerate ids
+      // without forcing a load.
+      const pid = def.provider?.id;
+      if (pid) {
+        if (!this.providerActions.has(pid)) {
+          this.providerActions.set(pid, new Set());
+        }
+        this.providerActions.get(pid)?.add(def.id);
+      }
+
+      this.logger?.debug(`Registered lazy action: ${def.id}`);
+    }
+  }
+
+  /**
+   * Resolve a lazy action by id. If the action is already loaded (or was
+   * registered eagerly), returns it synchronously-via-Promise. Otherwise
+   * invokes the descriptor's `load()` thunk, caches the result, and
+   * promotes it into the eager `actions` map.
+   *
+   * Concurrent calls for the same id share a single in-flight Promise.
+   */
+  async loadAction(actionId: string): Promise<ActionDefinition | undefined> {
+    const eager = this.actions.get(actionId);
+    if (eager) {
+      return eager;
+    }
+
+    const inFlight = this.lazyLoading.get(actionId);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const lazy = this.lazyActions.get(actionId);
+    if (!lazy) {
+      return undefined;
+    }
+
+    const promise = lazy
+      .load()
+      .then((action) => {
+        // Promote into the eager map so subsequent sync `get()` calls work.
+        this.register(action);
+        this.lazyLoading.delete(actionId);
+        return action;
+      })
+      .catch((err) => {
+        this.lazyLoading.delete(actionId);
+        throw err;
+      });
+
+    this.lazyLoading.set(actionId, promise);
+    return promise;
+  }
+
+  /**
+   * Execute an action by id, lazy-loading it if necessary, then invoking its
+   * `execute` function with the provided params + context. Mirrors
+   * `action.execute(params, context)` but transparently resolves lazy
+   * descriptors first.
+   */
+  async executeAction(
+    actionId: string,
+    params: unknown,
+    context: import('@invect/action-kit').ActionExecutionContext,
+  ): Promise<import('@invect/action-kit').ActionResult> {
+    const action = await this.loadAction(actionId);
+    if (!action) {
+      throw new Error(`Unknown action '${actionId}'`);
+    }
+    return action.execute(params as never, context);
+  }
+
   // ─── Lookup ────────────────────────────────────────────────────────────
 
-  /** Get an action by its id (e.g. "gmail.list_messages"). */
+  /**
+   * Get an eagerly-registered action by id. Returns `undefined` for lazy
+   * descriptors that have not yet been loaded — call {@link loadAction} to
+   * resolve those first.
+   */
   get(actionId: string): ActionDefinition | undefined {
     return this.actions.get(actionId);
   }
 
-  /** Whether an action id is registered. */
+  /** Whether an action id is registered (eager or lazy). */
   has(actionId: string): boolean {
-    return this.actions.has(actionId);
+    return this.actions.has(actionId) || this.lazyActions.has(actionId);
   }
 
-  /** All registered actions. */
+  /** Whether an action id is registered as lazy and not yet loaded. */
+  hasLazy(actionId: string): boolean {
+    return this.lazyActions.has(actionId) && !this.actions.has(actionId);
+  }
+
+  /** All eagerly-loaded actions. (Lazy descriptors are excluded.) */
   getAll(): ActionDefinition[] {
     return Array.from(this.actions.values());
   }
 
-  /** Number of registered actions. */
+  /**
+   * All registered action ids — including lazy descriptors that have not yet
+   * been loaded. Cheap; does not trigger any `load()` calls.
+   */
+  getAllIds(): string[] {
+    const ids = new Set<string>(this.actions.keys());
+    for (const id of this.lazyActions.keys()) {
+      ids.add(id);
+    }
+    return Array.from(ids);
+  }
+
+  /** Number of eagerly-loaded actions. */
   get size(): number {
     return this.actions.size;
+  }
+
+  /** Number of lazy descriptors still pending a `load()` call. */
+  get lazySize(): number {
+    return this.lazyActions.size;
   }
 
   // ─── Provider queries ──────────────────────────────────────────────────
@@ -366,7 +500,9 @@ export function actionToNodeDefinition<T = unknown>(action: ActionDefinition<T>)
       ...(action.provider.svgIcon ? { svgIcon: action.provider.svgIcon } : {}),
     },
     input: action.noInput ? undefined : { id: 'input', label: 'Input', type: 'object' },
-    outputs: action.outputs ?? [{ id: 'output', label: 'Output', type: 'object' }],
+    outputs: action.outputs
+      ? [...action.outputs]
+      : [{ id: 'output', label: 'Output', type: 'object' }],
     dynamicOutputs: action.dynamicOutputs,
     paramFields: [
       ...(credentialField ? [credentialField] : []),

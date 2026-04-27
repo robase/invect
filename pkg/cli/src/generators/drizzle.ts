@@ -16,14 +16,19 @@
 import { existsSync, readFileSync } from 'node:fs';
 import type { SchemaGenerator, SchemaGeneratorResult } from './types.js';
 
-export const generateDrizzleSchema: SchemaGenerator = async ({ plugins, file, dialect }) => {
+export const generateDrizzleSchema: SchemaGenerator = async ({
+  plugins,
+  file,
+  dialect,
+  transforms,
+}) => {
   // Dynamically import @invect/core to avoid bundling it
   const { mergeSchemas, generateSqliteSchema, generatePostgresSchema, generateMysqlSchema } =
     await import('@invect/core');
 
-  // Merge core + plugin schemas
-  // oxlint-disable-next-line typescript/no-explicit-any -- plugins type from dynamic import doesn't match exactly
-  const mergedSchema = mergeSchemas(plugins as any);
+  // Merge core + plugin schemas (with optional transforms)
+  // oxlint-disable-next-line typescript/no-explicit-any -- plugins/transforms types from dynamic import don't match exactly
+  const mergedSchema = mergeSchemas(plugins as any, transforms as any);
 
   // Select the right generator for the dialect
   const generators: Record<string, (schema: typeof mergedSchema) => string> = {
@@ -62,6 +67,8 @@ export async function generateAllDrizzleSchemas(options: {
   plugins: Array<{ id: string; schema?: Record<string, unknown>; [key: string]: unknown }>;
   outputDir?: string;
   dialect: 'sqlite' | 'postgresql' | 'mysql';
+  /** Optional schema transforms (e.g., column injection for multi-tenancy) */
+  transforms?: unknown[];
 }): Promise<{
   results: SchemaGeneratorResult[];
   // oxlint-disable-next-line typescript/no-explicit-any -- merged schema type is opaque from dynamic import
@@ -75,8 +82,8 @@ export async function generateAllDrizzleSchemas(options: {
 }> {
   const { mergeSchemas, CORE_SCHEMA } = await import('@invect/core');
 
-  // oxlint-disable-next-line typescript/no-explicit-any -- plugins type from dynamic import doesn't match exactly
-  const mergedSchema = mergeSchemas(options.plugins as any);
+  // oxlint-disable-next-line typescript/no-explicit-any -- plugins/transforms types from dynamic import don't match exactly
+  const mergedSchema = mergeSchemas(options.plugins as any, options.transforms as any);
   const coreTableCount = Object.keys(CORE_SCHEMA).length;
   const pluginsWithSchema = options.plugins.filter((p) => p.schema).length;
 
@@ -142,6 +149,8 @@ export async function generateAllDrizzleSchemas(options: {
 export async function generateAppendSchema(options: {
   plugins: Array<{ id: string; schema?: Record<string, unknown>; [key: string]: unknown }>;
   dialect: 'sqlite' | 'postgresql' | 'mysql';
+  /** Optional schema transforms (e.g., column injection for multi-tenancy) */
+  transforms?: unknown[];
 }): Promise<{
   result: { imports: string[]; code: string };
   stats: {
@@ -158,8 +167,8 @@ export async function generateAppendSchema(options: {
     generateMysqlSchemaAppend,
   } = await import('@invect/core');
 
-  // oxlint-disable-next-line typescript/no-explicit-any -- plugins type from dynamic import doesn't match exactly
-  const mergedSchema = mergeSchemas(options.plugins as any);
+  // oxlint-disable-next-line typescript/no-explicit-any -- plugins/transforms types from dynamic import don't match exactly
+  const mergedSchema = mergeSchemas(options.plugins as any, options.transforms as any);
   const coreTableCount = Object.keys(CORE_SCHEMA).length;
 
   const generators: Record<

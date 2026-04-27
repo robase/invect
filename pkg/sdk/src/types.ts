@@ -10,7 +10,14 @@ import type { SdkFlowNode, NodeOptions, MapperOptions } from '@invect/action-kit
 
 export type { SdkFlowNode, NodeOptions, MapperOptions };
 
-/** Object form for edges: `{ from, to, handle? }`. */
+/**
+ * Edge shape — `{ from, to, handle? }`.
+ *
+ * Tuple form (`[from, to]` / `[from, to, handle]`) was removed in the
+ * Phase 6 type-safety pass. Use the `edge(from, to, handle?)` helper for
+ * programmatic construction; hand-author flows write the object literal
+ * directly.
+ */
 export interface SdkEdgeObject {
   from: string;
   to: string;
@@ -18,13 +25,7 @@ export interface SdkEdgeObject {
   handle?: string;
 }
 
-/**
- * Tuple shorthand for edges — less verbose than `{ from, to, handle }`.
- * `[source, target]` or `[source, target, handle]`.
- */
-export type SdkEdgeTuple = [string, string] | [string, string, string];
-
-export type SdkEdge = SdkEdgeObject | SdkEdgeTuple;
+export type SdkEdge = SdkEdgeObject;
 
 /**
  * Accept either referenceId strings or the `SdkFlowNode` objects helpers
@@ -47,6 +48,64 @@ export interface SdkFlowDefinition {
   nodes: SdkFlowNode[];
   /** Edges linking node referenceIds. */
   edges: SdkEdge[];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Named-record form (Phase 3) — keys are referenceIds, edges narrow against
+// `keyof N` and source nodes' declared output handles.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Extract the declared output-handle union from an `SdkFlowNode<R, T, H>`.
+ * Falls back to `'output'` (the default single-output handle id).
+ */
+type HandlesOf<T> = T extends SdkFlowNode<infer _R, infer _T, infer H> ? H : 'output';
+
+/**
+ * Discriminated union of all valid edges in a named-record flow:
+ *
+ *   - `from` is constrained to `keyof N`.
+ *   - `to` is constrained to `keyof N` excluding `from` (no self-loops —
+ *     loops in flows go through a separate node).
+ *   - `handle` is narrowed to the source node's declared output union.
+ *
+ * Usage emerges from `defineFlow({ nodes: { event: ..., classify: ... }, edges: [...] })`:
+ *
+ *   ```ts
+ *   { from: 'classify', to: 'log', handle: 'true_output' }   // ✓
+ *   { from: 'classify', to: 'log', handle: 'output' }        // ✗ ts error
+ *   { from: 'evnt',     to: 'log' }                          // ✗ unknown ref
+ *   { from: 'event',    to: 'event' }                        // ✗ self-loop
+ *   ```
+ */
+export type EdgeOf<N extends Record<string, SdkFlowNode>> = {
+  [K in keyof N & string]: {
+    from: K;
+    to: Exclude<keyof N & string, K>;
+    handle?: HandlesOf<N[K]>;
+  };
+}[keyof N & string];
+
+/**
+ * Named-record form of `SdkFlowDefinition`. Keys are referenceIds; edges
+ * narrow against `EdgeOf<N>`.
+ *
+ * `defineFlow()` accepts both this form and the legacy array form (see
+ * `SdkFlowDefinition`). New authoring should prefer the named form — it
+ * gives type-safe edges, hover-clean LLM authoring, and catches typos at
+ * compile time.
+ */
+export interface SdkFlowDefinitionNamed<N extends Record<string, SdkFlowNode>> {
+  /** Display name — surfaces in the UI and as the DB metadata. */
+  name?: string;
+  /** Optional short description. */
+  description?: string;
+  /** Optional tags for categorisation. */
+  tags?: string[];
+  /** Named nodes — each key is the node's referenceId. */
+  nodes: N;
+  /** Edges linking node referenceIds. */
+  edges: ReadonlyArray<EdgeOf<N>>;
 }
 
 /**

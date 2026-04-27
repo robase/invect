@@ -256,23 +256,15 @@ export class TemplateService {
   }
 }
 
-// ── Singleton helpers ──────────────────────────────────────────────────────────
-
-let defaultInstance: TemplateService | null = null;
-
-/**
- * Get (or create) the global TemplateService singleton.
- * Requires an initialized JsExpressionService.
- */
-export function getTemplateService(
-  jsExpressionService: JsExpressionService,
-  logger?: Logger,
-): TemplateService {
-  if (!defaultInstance) {
-    defaultInstance = new TemplateService(jsExpressionService, logger);
-  }
-  return defaultInstance;
-}
+// ── Factory helpers ──────────────────────────────────────────────────────────
+//
+// PR 14 (`flowlib-hosted/UPSTREAM.md`): the previous `getTemplateService()`
+// memoized a module-level instance. That meant the first `createInvect()`
+// call's `JsExpressionService` won — subsequent instances silently reused
+// the same `TemplateService` and ignored their own QuickJS runtime. Per-
+// instance state belongs on the `InvectInstance`, so `createTemplateService`
+// is now the canonical factory and `getTemplateService` is a deprecated
+// pass-through that always returns a fresh instance.
 
 export function createTemplateService(
   jsExpressionService: JsExpressionService,
@@ -282,8 +274,19 @@ export function createTemplateService(
 }
 
 /**
- * Reset the singleton (for testing).
+ * @deprecated Use `createTemplateService(jsExpressionService, logger)` and
+ * hold the resulting instance on your `ServiceFactory` / `InvectInstance`.
+ * Returning a module-level singleton breaks correctness when multiple
+ * `createInvect()` instances share a process — they would unknowingly
+ * share the first instance's `JsExpressionService`.
  */
-export function resetTemplateService(): void {
-  defaultInstance = null;
+export function getTemplateService(
+  jsExpressionService: JsExpressionService,
+  logger?: Logger,
+): TemplateService {
+  return createTemplateService(jsExpressionService, logger);
 }
+
+/** No-op retained for backward compatibility. Previously reset the module-level singleton. */
+// eslint-disable-next-line typescript/no-empty-function
+export function resetTemplateService(): void {}

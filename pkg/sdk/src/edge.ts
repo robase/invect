@@ -1,30 +1,23 @@
 /**
  * Edge helpers.
  *
- * Tuple form is the author-friendly default; the object form lets callers
- * attach named source handles (`true_output`, case slugs) explicitly.
+ * The canonical edge shape is `{ from, to, handle? }`. The `edge()` helper
+ * is a convenience for programmatic construction; hand-authored flows write
+ * the object literal directly.
  */
 
 import type { SdkEdge, SdkEdgeObject } from './types';
 
 /**
- * Build an edge object. Preferred over the tuple form when the edge has a
- * source handle so the intent is explicit at the call site.
+ * Build an edge object. Useful for programmatic construction; otherwise
+ * write `{ from, to, handle? }` directly.
  */
 export function edge(from: string, to: string, handle?: string): SdkEdgeObject {
   return handle === undefined ? { from, to } : { from, to, handle };
 }
 
-/** Type guard — distinguishes tuple form from object form. */
-export function isEdgeTuple(e: SdkEdge): e is [string, string] | [string, string, string] {
-  return Array.isArray(e);
-}
-
-/** Normalize any edge shape into `{ from, to, sourceHandle? }`. */
+/** Normalize an edge into `{ from, to, sourceHandle? }` for the runtime. */
 export function resolveEdge(e: SdkEdge): { from: string; to: string; sourceHandle?: string } {
-  if (isEdgeTuple(e)) {
-    return e.length === 3 ? { from: e[0], to: e[1], sourceHandle: e[2] } : { from: e[0], to: e[1] };
-  }
   return e.handle === undefined
     ? { from: e.from, to: e.to }
     : { from: e.from, to: e.to, sourceHandle: e.handle };

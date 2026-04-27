@@ -10,9 +10,15 @@
  * - Plugin fields added to existing core tables (additive only)
  * - Duplicate field detection (throws error)
  * - Ordering by foreign key dependencies
+ * - Optional `SchemaTransform`s that inject columns/indexes across many tables
+ *   (e.g., a hosted multi-tenant variant injecting `organization_id` everywhere)
  */
 
-import type { InvectPlugin, PluginTableDefinition } from 'src/types/plugin.types';
+import type {
+  InvectPlugin,
+  PluginFieldAttribute,
+  PluginTableDefinition,
+} from 'src/types/plugin.types';
 import { CORE_SCHEMA, CORE_TABLE_NAMES } from './core-schema';
 
 // =============================================================================
@@ -33,6 +39,96 @@ export interface MergedTable {
   definition: PluginTableDefinition;
   /** Which source this table came from */
   source: 'core' | string; // 'core' or plugin ID
+  /**
+   * Composite/secondary indexes added by `SchemaTransform`s.
+   * Single-column indexes declared via `PluginFieldAttribute.index` are still
+   * carried on the field itself; this list is for transform-injected indexes
+   * that may span multiple columns and have a deterministic name.
+   */
+  indexes?: TableIndex[];
+}
+
+/**
+ * A table-level index injected by a `SchemaTransform`.
+ *
+ * The `name` is deterministic so generated dialect output is stable across
+ * runs. The columns reference the **logical** field names (camelCase) — the
+ * generator translates them to snake_case DB column names.
+ */
+export interface TableIndex {
+  /** Deterministic index name, e.g. `idx_<table>_<col1>_<col2>` */
+  name: string;
+  /** Logical field names (camelCase) the index spans */
+  columns: string[];
+  /** Source transform name (for diagnostics) */
+  source?: string;
+}
+
+/**
+ * A reusable, declarative schema transform.
+ *
+ * Transforms run **after** the additive plugin merge and operate on the merged
+ * schema. They are how a host (e.g., a multi-tenant hosted variant) injects a
+ * cross-cutting column like `organization_id` into every table without forking
+ * the merger or every plugin.
+ *
+ * @example Inject `organizationId` into every table and index it
+ * ```typescript
+ * const orgScopeTransform: SchemaTransform = {
+ *   name: 'multi-tenant',
+ *   injectColumns: {
+ *     // default predicate (omit) → applies to every table
+ *     columns: {
+ *       organizationId: {
+ *         type: 'string',
+ *         required: true,
+ *         references: { table: 'organization', field: 'id' },
+ *       },
+ *     },
+ *   },
+ *   injectIndexes: [{ columns: ['organizationId'] }],
+ * };
+ * ```
+ */
+export interface SchemaTransform {
+  /** Identifier used in error messages and provenance — required for diagnostics */
+  name: string;
+  /** Inject columns into every (or filtered) table */
+  injectColumns?: {
+    /** If provided, only tables for which this returns true receive the columns */
+    predicate?: (tableName: string) => boolean;
+    /** Field-name → field-definition map, same shape as `PluginTableDefinition.fields` */
+    columns: Record<string, PluginFieldAttribute>;
+  };
+  /** Add table-level indexes (each entry is one index spanning the listed columns) */
+  injectIndexes?: {
+    /** If provided, only tables for which this returns true receive the index */
+    predicate?: (tableName: string) => boolean;
+    /** Logical field names (camelCase) the index spans */
+    columns: string[];
+  }[];
+}
+
+/**
+ * Thrown when a `SchemaTransform` tries to inject a column that already
+ * exists on a target table.
+ */
+export class SchemaConflictError extends Error {
+  readonly table: string;
+  readonly column: string;
+  readonly transform: string;
+
+  constructor(args: { table: string; column: string; transform: string; existingSource?: string }) {
+    const sourceClause = args.existingSource ? ` (defined by "${args.existingSource}")` : '';
+    super(
+      `Schema transform "${args.transform}" cannot inject column "${args.column}" on table ` +
+        `"${args.table}" — a column with that name already exists${sourceClause}.`,
+    );
+    this.name = 'SchemaConflictError';
+    this.table = args.table;
+    this.column = args.column;
+    this.transform = args.transform;
+  }
 }
 
 export interface SchemaProvenance {
@@ -57,13 +153,18 @@ export interface SchemaMergeError {
 // =============================================================================
 
 /**
- * Merge core schema with all plugin schemas.
+ * Merge core schema with all plugin schemas, then apply any `SchemaTransform`s.
  *
  * @param plugins - Array of plugins (only those with `schema` are processed)
+ * @param transforms - Optional transforms applied **after** the additive merge
  * @returns Merged schema with tables in dependency order
  * @throws Error if there are conflicting field definitions
+ * @throws SchemaConflictError if a transform injects a column that already exists on a target table
  */
-export function mergeSchemas(plugins: InvectPlugin[]): MergedSchema {
+export function mergeSchemas(
+  plugins: InvectPlugin[],
+  transforms?: SchemaTransform[],
+): MergedSchema {
   const errors: SchemaMergeError[] = [];
   const provenance: SchemaProvenance[] = [];
 
@@ -138,6 +239,19 @@ export function mergeSchemas(plugins: InvectPlugin[]): MergedSchema {
     }
   }
 
+  // Apply schema transforms (after additive merge, before FK validation so
+  // injected references participate in FK validation).
+  const indexesByTable: Record<string, TableIndex[]> = {};
+  if (transforms && transforms.length > 0) {
+    applyTransforms({
+      transforms,
+      merged,
+      provenance,
+      tableSources,
+      indexesByTable,
+    });
+  }
+
   // Validate foreign key references
   for (const [tableName, tableDef] of Object.entries(merged)) {
     for (const [fieldName, fieldDef] of Object.entries(tableDef.fields)) {
@@ -172,6 +286,8 @@ export function mergeSchemas(plugins: InvectPlugin[]): MergedSchema {
       name,
       definition,
       source: (tableSources[name] || 'core') as 'core' | string,
+      indexes:
+        indexesByTable[name] && indexesByTable[name].length > 0 ? indexesByTable[name] : undefined,
     }))
     .sort((a, b) => {
       const orderA = a.definition.order ?? 100;
@@ -183,6 +299,105 @@ export function mergeSchemas(plugins: InvectPlugin[]): MergedSchema {
     });
 
   return { tables, provenance };
+}
+
+// =============================================================================
+// Transform Application
+// =============================================================================
+
+function applyTransforms(args: {
+  transforms: SchemaTransform[];
+  merged: Record<string, PluginTableDefinition>;
+  provenance: SchemaProvenance[];
+  tableSources: Record<string, string>;
+  indexesByTable: Record<string, TableIndex[]>;
+}): void {
+  const { transforms, merged, provenance, tableSources, indexesByTable } = args;
+
+  for (const transform of transforms) {
+    if (!transform.name) {
+      throw new Error('SchemaTransform requires a non-empty `name` for diagnostics.');
+    }
+
+    // Inject columns
+    if (transform.injectColumns) {
+      const { predicate, columns } = transform.injectColumns;
+      for (const tableName of Object.keys(merged)) {
+        if (predicate && !predicate(tableName)) {
+          continue;
+        }
+        const target = merged[tableName];
+        if (!target) {
+          continue;
+        }
+        for (const [colName, colDef] of Object.entries(columns)) {
+          if (colName in target.fields) {
+            const existingSource = provenance.find(
+              (p) => p.table === tableName && p.field === colName,
+            )?.source;
+            throw new SchemaConflictError({
+              table: tableName,
+              column: colName,
+              transform: transform.name,
+              existingSource,
+            });
+          }
+          target.fields[colName] = { ...colDef };
+          provenance.push({
+            table: tableName,
+            field: colName,
+            source: `transform:${transform.name}`,
+          });
+        }
+      }
+    }
+
+    // Inject indexes
+    if (transform.injectIndexes) {
+      for (const idx of transform.injectIndexes) {
+        if (!Array.isArray(idx.columns) || idx.columns.length === 0) {
+          continue;
+        }
+        for (const tableName of Object.keys(merged)) {
+          if (idx.predicate && !idx.predicate(tableName)) {
+            continue;
+          }
+          const target = merged[tableName];
+          if (!target) {
+            continue;
+          }
+          // Only add the index if every column actually exists on the target
+          // table (post-injection). Otherwise it's silently skipped — this
+          // matches the column-injection predicate semantics: an index that
+          // refers to a column that wasn't injected on this table is a no-op.
+          const allPresent = idx.columns.every((c) => c in target.fields);
+          if (!allPresent) {
+            continue;
+          }
+          const dbTableName = target.tableName || toSnakeCaseLocal(tableName);
+          const colSegment = idx.columns.map((c) => toSnakeCaseLocal(c)).join('_');
+          const indexName = `idx_${dbTableName}_${colSegment}`;
+          // Dedupe by name in case the same transform is applied twice
+          const list = indexesByTable[tableName] || (indexesByTable[tableName] = []);
+          if (!list.some((i) => i.name === indexName)) {
+            list.push({
+              name: indexName,
+              columns: [...idx.columns],
+              source: transform.name,
+            });
+          }
+        }
+        // Track table source for diagnostics (no-op when table already known)
+        // (reserved for future provenance enrichment)
+        void tableSources;
+      }
+    }
+  }
+}
+
+/** Local copy of the camelCase→snake_case helper used by the generators. */
+function toSnakeCaseLocal(str: string): string {
+  return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
 }
 
 // =============================================================================

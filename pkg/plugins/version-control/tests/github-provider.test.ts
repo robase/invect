@@ -113,17 +113,19 @@ describe('githubProvider', () => {
   });
 
   describe('verifyWebhookSignature', () => {
-    it('validates correct signatures', () => {
+    it('validates correct signatures', async () => {
       const crypto = require('node:crypto');
       const secret = 'webhook-secret';
       const payload = '{"action":"opened"}';
       const expected = `sha256=${crypto.createHmac('sha256', secret).update(payload).digest('hex')}`;
 
-      expect(provider.verifyWebhookSignature(payload, expected, secret)).toBe(true);
+      expect(await provider.verifyWebhookSignature(payload, expected, secret)).toBe(true);
     });
 
-    it('rejects incorrect signatures', () => {
-      expect(provider.verifyWebhookSignature('payload', 'sha256=invalid', 'secret')).toBe(false);
+    it('rejects incorrect signatures', async () => {
+      expect(await provider.verifyWebhookSignature('payload', 'sha256=invalid', 'secret')).toBe(
+        false,
+      );
     });
   });
 });

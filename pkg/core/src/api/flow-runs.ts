@@ -4,11 +4,26 @@ import type { Logger } from '../schemas';
 import * as Schemas from '../schemas';
 import { FlowRunStatus } from '../types/base';
 import type { ExecutionStreamEvent } from '../services/execution-event-bus';
+import { FlowValidator } from '../services/flow-validator';
+import {
+  invectDefinitionSchema,
+  type InvectDefinition,
+} from '../services/flow-versions/schemas-fresh';
+import { ValidationError } from '../types/common/errors.types';
+
+/**
+ * Marker tag applied to ephemeral flows created via `runs.runEphemeral`.
+ * Surfaces and dashboards can filter by tag to hide ephemeral runs from
+ * the user-facing flow library.
+ */
+export const EPHEMERAL_FLOW_TAG = '__ephemeral__';
 
 export function createFlowRunsAPI(sf: ServiceFactory, logger: Logger): FlowRunsAPI {
   const orchestration = sf.getOrchestrationService();
   const flowRunsService = sf.getFlowRunsService();
   const nodeExecutionsService = sf.getNodeExecutionsService();
+  const flowsService = sf.getFlowService();
+  const flowVersionsService = sf.getFlowVersionsService();
 
   return {
     start(flowId, inputs = {}, options) {
@@ -111,14 +126,18 @@ export function createFlowRunsAPI(sf: ServiceFactory, logger: Logger): FlowRunsA
         return;
       }
 
-      // 3. Heartbeat interval
+      // 3. Heartbeat interval. Configurable via
+      // `config.execution.sseHeartbeatIntervalMs`. The timer is per-request
+      // (not module-level), so it's safe on edge runtimes — fires only
+      // while a client is connected and is cleared on disconnect.
+      const heartbeatMs = sf.getConfig().execution?.sseHeartbeatIntervalMs ?? 15_000;
       const heartbeatTimer = setInterval(() => {
         queue.push({ type: 'heartbeat' });
         if (resolve) {
           resolve();
           resolve = null;
         }
-      }, 15_000);
+      }, heartbeatMs);
 
       try {
         while (!done) {
@@ -140,6 +159,90 @@ export function createFlowRunsAPI(sf: ServiceFactory, logger: Logger): FlowRunsA
         clearInterval(heartbeatTimer);
         unsubscribe();
       }
+    },
+
+    async runEphemeral(definition, inputs = {}, options) {
+      logger.debug('runEphemeral called', {
+        nodeCount: definition?.nodes?.length,
+        edgeCount: definition?.edges?.length,
+      });
+
+      // 1) Validate the inline definition shape via Zod
+      const parsed = invectDefinitionSchema.safeParse(definition);
+      if (!parsed.success) {
+        throw new ValidationError('Invalid ephemeral flow definition', 'definition', undefined, {
+          issues: parsed.error.issues.map((i) => ({
+            path: i.path,
+            message: i.message,
+          })),
+        });
+      }
+      const typedDef = parsed.data as InvectDefinition;
+
+      // 2) Static validation (graph integrity, cycles, etc.)
+      const validation = FlowValidator.validateFlowDefinition(typedDef);
+      if (!validation.isValid) {
+        throw new ValidationError(
+          'Ephemeral flow failed static validation',
+          'definition',
+          undefined,
+          {
+            errors: validation.errors,
+            warnings: validation.warnings,
+          },
+        );
+      }
+
+      // 3) Create a temporary flow + version to back the run.
+      // The flow is tagged `__ephemeral__` so listing surfaces can hide it,
+      // and inherits the same FK/cascade semantics as a regular flow — so
+      // the SSE bus, node-execution persistence, and inspection endpoints
+      // all work without any special-casing downstream.
+      //
+      // NOTE: credentials referenced by the definition still resolve by ID
+      // against the persisted credential store. "Ephemeral" applies to the
+      // flow definition, not to credentials.
+      const ephemeralName =
+        options?.name ?? `__ephemeral_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+      const flow = await flowsService.createFlow({
+        name: ephemeralName,
+        description: 'Ephemeral run — flow definition supplied inline',
+        tags: [EPHEMERAL_FLOW_TAG],
+        isActive: false,
+      });
+
+      try {
+        await flowVersionsService.createFlowVersion(flow.id, {
+          invectDefinition: typedDef,
+        });
+      } catch (error) {
+        // Best-effort cleanup if version creation fails so we don't leave
+        // a dangling ephemeral flow record.
+        try {
+          await flowsService.deleteFlow(flow.id);
+        } catch (cleanupError) {
+          logger.warn('Failed to clean up ephemeral flow after version error', {
+            flowId: flow.id,
+            cleanupError,
+          });
+        }
+        throw error;
+      }
+
+      // 4) Kick off the run in the background — returns immediately
+      const result = await orchestration.executeFlowAsync(flow.id, inputs, {
+        version: 'latest',
+        initiatedBy: options?.initiatedBy,
+        useBatchProcessing: options?.useBatchProcessing,
+      });
+
+      return {
+        flowRunId: result.flowRunId,
+        flowId: flow.id,
+        status: result.status,
+        eventsPath: `/flow-runs/${result.flowRunId}/stream`,
+      };
     },
 
     getNodeExecutions(flowRunId, options) {

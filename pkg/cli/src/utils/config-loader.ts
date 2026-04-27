@@ -37,6 +37,13 @@ interface ResolvedConfig {
     type: 'postgresql' | 'sqlite' | 'mysql';
     name?: string;
   };
+  /**
+   * Optional schema transforms (e.g., multi-tenant column injection).
+   *
+   * Plumbed straight through to `mergeSchemas` — the loader does not validate
+   * the shape so the consumer (`@invect/core`) can evolve the contract.
+   */
+  schemaTransforms: unknown[];
   /** Raw config object */
   raw: Record<string, unknown>;
   /** Path to the config file that was loaded */
@@ -237,9 +244,13 @@ export async function loadConfig(configPath: string): Promise<ResolvedConfig> {
     (p): p is ResolvedConfig['plugins'][number] => 'id' in p,
   );
 
+  // Surface optional schema transforms (defaults to []).
+  const rawTransforms = Array.isArray(config.schemaTransforms) ? config.schemaTransforms : [];
+
   return {
     plugins: validPlugins,
     database: config.database as ResolvedConfig['database'],
+    schemaTransforms: rawTransforms,
     raw: config,
     configPath,
   };

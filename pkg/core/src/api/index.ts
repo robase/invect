@@ -20,4 +20,5 @@ export type {
   TestingAPI,
   AuthAPI,
   PluginsAPI,
+  MaintenanceAPI,
 } from './types';

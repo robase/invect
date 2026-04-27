@@ -72,6 +72,9 @@ export const flowRuns = sqliteTable('invect_flow_executions', {
   triggerNodeId: text('trigger_node_id'), // The trigger node that initiated this run
   triggerData: text('trigger_data', { mode: 'json' }).$type<JSONValue>(), // Webhook payload / cron metadata
   lastHeartbeatAt: text('last_heartbeat_at'), // Updated periodically during execution for stale run detection
+  // Buffered node executions for execution.persistence: 'per-run' mode.
+  // Populated only at flow-run completion — never during in-flight runs.
+  nodeOutputs: text('node_outputs', { mode: 'json' }).$type<JSONValue>(),
 });
 
 // Action traces table — unified node executions + agent tool executions

@@ -144,21 +144,39 @@ function isPromiseStateResult(result: unknown): boolean {
   return type === 'pending' || type === 'fulfilled' || type === 'rejected';
 }
 
-let defaultInstance: JsExpressionService | null = null;
+// PR 14 (`flowlib-hosted/UPSTREAM.md`): the previous `getJsExpressionService`
+// memoized a single `JsExpressionService` at module scope. The QuickJS WASM
+// **module** is genuinely stateless and is cached internally by
+// `getQuickJS()` — that cache is fine to share. The **service** instance,
+// however, owns config (memory limit, CPU time limit) and a logger, so
+// sharing it across `createInvect()` instances would silently apply the
+// first instance's config to all subsequent ones. `createInvect()` and the
+// legacy `Invect` class both already construct their own service via
+// `new JsExpressionService(...)`; `getJsExpressionService` is retained
+// as a deprecated convenience for external callers.
 
-export async function getJsExpressionService(logger?: Logger): Promise<JsExpressionService> {
-  if (!defaultInstance) {
-    defaultInstance = new JsExpressionService({}, logger);
-    await defaultInstance.initialize();
-  }
-  return defaultInstance;
-}
+let defaultInstance: JsExpressionService | null = null;
 
 export function createJsExpressionService(
   config?: JsExpressionServiceConfig,
   logger?: Logger,
 ): JsExpressionService {
   return new JsExpressionService(config, logger);
+}
+
+/**
+ * @deprecated Construct a `new JsExpressionService(config, logger)` and
+ * call `await service.initialize()` instead, keeping the instance on your
+ * `ServiceFactory` / `InvectInstance`. The module-level singleton this
+ * function used to return shared QuickJS state across `createInvect()`
+ * instances — incorrect under multi-isolate runtimes.
+ */
+export async function getJsExpressionService(logger?: Logger): Promise<JsExpressionService> {
+  if (!defaultInstance) {
+    defaultInstance = new JsExpressionService({}, logger);
+    await defaultInstance.initialize();
+  }
+  return defaultInstance;
 }
 
 export function disposeJsExpressionService(): void {

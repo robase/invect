@@ -5,7 +5,7 @@
  * The button calls `GET /plugins/vercel-workflows/preview/:flowId`
  * which returns:
  *   - workflowSource: `'use workflow'` file the user drops into their Next.js app
- *   - sdkSource:      `@invect/primitives` flow definition the workflow imports
+ *   - sdkSource:      `@invect/sdk` flow definition the workflow imports
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -229,7 +229,7 @@ function DeployButtonInner({ flowId }: { flowId: string }) {
               <CodeBlock
                 title="flow.ts"
                 filename="flow.ts"
-                description="@invect/primitives flow definition imported by workflow.ts."
+                description="@invect/sdk flow definition imported by workflow.ts."
                 code={data.sdkSource}
               />
             </>

@@ -11,7 +11,6 @@
  * Webhook dispatch has been moved to the @invect/webhooks plugin.
  */
 
-import { randomUUID } from 'node:crypto';
 import { Cron } from 'croner';
 import type { Logger } from 'src/schemas';
 import { DatabaseError, ValidationError } from 'src/types/common/errors.types';
@@ -33,12 +32,12 @@ import type {
 
 /** Generate a unique webhook path slug. */
 function generateWebhookPath(): string {
-  return randomUUID().replace(/-/g, '').slice(0, 24);
+  return crypto.randomUUID().replace(/-/g, '').slice(0, 24);
 }
 
 /** Generate a random webhook secret. */
 function generateWebhookSecret(): string {
-  return randomUUID().replace(/-/g, '');
+  return crypto.randomUUID().replace(/-/g, '');
 }
 
 /** Return the trigger type from an action id, e.g. "trigger.cron" → "cron". */

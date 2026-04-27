@@ -181,3 +181,22 @@ export type {
   HeartbeatEvent,
   EndEvent,
 } from './services/execution-event-bus';
+
+/**
+ * Public alias for the SSE event union exposed at
+ * `GET /flow-runs/:flowRunId/stream` (and `GET /runs/:flowRunId/events`).
+ *
+ * Discriminated by `event.type`:
+ * - `snapshot` — initial state: full `flowRun` + all existing `nodeExecutions`
+ * - `flow_run.updated` — `flowRun.status` advanced (RUNNING / SUCCESS / FAILED / CANCELLED / PAUSED_FOR_BATCH)
+ * - `node_execution.created` — a node entered execution
+ * - `node_execution.updated` — a node's status/output changed
+ * - `heartbeat` — every 15s, no payload (keep-alive)
+ * - `end` — terminal: stream is closing, last event the consumer will receive
+ *
+ * Per-node lifecycle is encoded in `nodeExecution.status` (PENDING / RUNNING /
+ * SUCCESS / FAILED / SKIPPED / BATCH_SUBMITTED). Per-flow lifecycle in
+ * `flowRun.status` (PENDING / RUNNING / SUCCESS / FAILED / CANCELLED /
+ * PAUSED / PAUSED_FOR_BATCH).
+ */
+export type { ExecutionStreamEvent as RunEvent } from './services/execution-event-bus';

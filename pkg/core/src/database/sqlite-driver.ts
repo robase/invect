@@ -55,7 +55,7 @@ export function resolveSqliteDriverType(config: InvectDatabaseConfig): SqliteDri
   if (d === 'better-sqlite3' || d === 'libsql') {
     return d;
   }
-  if (config.connectionString.startsWith('libsql://')) {
+  if (config.connectionString?.startsWith('libsql://')) {
     return 'libsql';
   }
   return 'better-sqlite3';
@@ -78,6 +78,9 @@ export async function createSqliteDriver(
     case 'better-sqlite3':
       return createBetterSqlite3Driver(filePath, logger);
     case 'libsql':
+      if (!config.connectionString) {
+        throw new Error('libsql driver requires a connectionString');
+      }
       return createLibsqlDriver(config.connectionString, filePath, logger);
   }
 }

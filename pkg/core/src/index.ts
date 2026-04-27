@@ -218,12 +218,14 @@ export type {
 
 // Schema infrastructure (for CLI and advanced usage)
 export { CORE_SCHEMA, CORE_TABLE_NAMES, CORE_ENUMS } from './database/core-schema';
-export { mergeSchemas, diffSchemas } from './database/schema-merger';
+export { mergeSchemas, diffSchemas, SchemaConflictError } from './database/schema-merger';
 export type {
   MergedSchema,
   MergedTable,
   SchemaProvenance,
   SchemaDiff,
+  SchemaTransform,
+  TableIndex,
 } from './database/schema-merger';
 export {
   generateSqliteSchema,
@@ -298,9 +300,37 @@ export type {
   CreateChatStreamOptions,
 } from './services/chat';
 
+// Pluggable service adapter interfaces (PR 2/14 — see flowlib-hosted/UPSTREAM.md)
+export type {
+  EncryptionAdapter,
+  EncryptionContext,
+  ExecutionEventBusAdapter,
+  ChatSessionStore,
+  CronSchedulerAdapter,
+  BatchPollerAdapter,
+  // PR 13/14 — background job runner abstraction
+  JobRunnerAdapter,
+  JobOptions,
+  InvectServiceOverrides,
+} from './types/services';
+// EncryptedData envelope type (referenced by EncryptionAdapter signatures).
+export type { EncryptedData } from './services/credentials/encryption.service';
+
+// Default in-process job runner + canonical job-type strings (PR 13/14)
+export { InProcessJobRunner, JOB_TYPES } from './services/job-runner';
+export type {
+  InProcessJobRunnerOptions,
+  JobHandler,
+  JobType,
+  FlowRunJobPayload,
+  BatchJobResumeJobPayload,
+} from './services/job-runner';
+
 // Execution event bus (SSE streaming)
 export {
   ExecutionEventBus,
+  RemoteEventBus,
+  NoopEventBus,
   getExecutionEventBus,
   resetExecutionEventBus,
 } from './services/execution-event-bus';
@@ -312,7 +342,11 @@ export type {
   NodeExecutionUpdatedEvent,
   HeartbeatEvent,
   EndEvent,
+  RemoteEventBusOptions,
 } from './services/execution-event-bus';
+// Public alias used by external clients (VSCode extension, etc.).
+// See pkg/core/src/types.frontend.ts for the full doc comment.
+export type { ExecutionStreamEvent as RunEvent } from './services/execution-event-bus';
 
 // Re-export validation types
 export type {
@@ -350,10 +384,14 @@ export type {
 // Re-export JS expression evaluator (pluggable backend for core.javascript / if_else / switch).
 export {
   DirectEvaluator,
+  HAS_EVAL,
   JsExpressionEvaluationError,
   needsAutoReturn,
 } from './services/templating/evaluator';
-export type { JsExpressionEvaluator } from './services/templating/evaluator';
+export type {
+  DirectEvaluatorOptions,
+  JsExpressionEvaluator,
+} from './services/templating/evaluator';
 export {
   JsExpressionService,
   JsExpressionError,
@@ -407,4 +445,5 @@ export type {
   TestingAPI,
   AuthAPI,
   PluginsAPI,
+  MaintenanceAPI,
 } from './api';

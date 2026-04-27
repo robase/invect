@@ -6,17 +6,43 @@
  * split between `@invect/core/sdk` and the authoring surface of
  * `@invect/primitives` (which becomes a runtime-only package).
  *
- * Use:
+ * Type-safe end-to-end:
+ *   - Action params are split into Zod input (caller-facing — defaults are
+ *     optional) and output (`execute()` runtime) shapes.
+ *   - Edge `from`/`to` narrow against `keyof N` when using the named-record
+ *     form; `handle` narrows against the source action's declared output
+ *     handles. Self-loops blocked.
+ *   - Per-action `*Params` interfaces (codegen at `@invect/sdk/actions`)
+ *     carry per-field JSDoc lifted from `params.fields[].description`.
+ *
+ * Use the **named-record form** (preferred):
  *   ```ts
  *   import { defineFlow, input, code, output } from '@invect/sdk';
  *
  *   export default defineFlow({
- *     nodes: [
- *       input('query'),
- *       code('upper', { code: 'return query.toUpperCase()' }),
- *       output('result', { value: '{{ upper }}' }),
+ *     nodes: {
+ *       query:  input(),
+ *       upper:  code({ code: 'return query.toUpperCase()' }),
+ *       result: output({ value: '{{ upper }}' }),
+ *     },
+ *     edges: [
+ *       { from: 'query', to: 'upper' },
+ *       { from: 'upper', to: 'result' },
  *     ],
- *     edges: [['query', 'upper'], ['upper', 'result']],
+ *   });
+ *   ```
+ *
+ * The legacy array form (`nodes: [helper('ref', ...)]`) still works — both
+ * forms type-check and produce the same runtime output.
+ *
+ * For non-core actions, prefer the namespaced wrappers from `@invect/sdk/actions`:
+ *   ```ts
+ *   import { gmail, slack } from '@invect/sdk/actions';
+ *   defineFlow({
+ *     nodes: {
+ *       notify: gmail.sendMessage({ credentialId, to, subject, body }),
+ *     },
+ *     edges: [],
  *   });
  *   ```
  *
@@ -24,7 +50,7 @@
  * callable directly — no codegen step, no separate import path:
  *   ```ts
  *   import { mySlackDigest } from './my-actions';
- *   defineFlow({ nodes: [input('x'), mySlackDigest('notify', { ... })], ... });
+ *   defineFlow({ nodes: { notify: mySlackDigest({ ... }) }, edges: [] });
  *   ```
  */
 
@@ -33,7 +59,7 @@ export { defineFlow, FlowValidationError } from './define-flow';
 export type { DefinedFlow } from './define-flow';
 
 // Edge helpers
-export { edge, isEdgeTuple, resolveEdge } from './edge';
+export { edge, resolveEdge } from './edge';
 
 // Agent tool-instance helper
 export { tool } from './tool';
@@ -55,9 +81,10 @@ export { node } from './nodes/generic';
 export type {
   SdkFlowNode,
   SdkFlowDefinition,
+  SdkFlowDefinitionNamed,
   SdkEdge,
   SdkEdgeObject,
-  SdkEdgeTuple,
+  EdgeOf,
   ResolvedEdge,
   NodeOptions,
   MapperOptions,

@@ -318,6 +318,7 @@ export const flowRuns = sqliteTable('invect_flow_executions', {
   triggerNodeId: text('trigger_node_id'),
   triggerData: text('trigger_data', { mode: 'json' }).$type<JSONValue>(),
   lastHeartbeatAt: text('last_heartbeat_at'),
+  nodeOutputs: text('node_outputs', { mode: 'json' }).$type<JSONValue>(),
 });
 
 export const actionTraces = sqliteTable('invect_action_traces', {

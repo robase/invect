@@ -55,7 +55,8 @@
     "@invect/action-kit": "workspace:*",
     "@invect/actions": "workspace:*",
     "@invect/core": "workspace:*",
-    "@invect/primitives": "workspace:*"
+    "@invect/primitives": "workspace:*",
+    "@invect/sdk": "workspace:*"
   },
   "devDependencies": {
     "@invect/ui": "workspace:*",

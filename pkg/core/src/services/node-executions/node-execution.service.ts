@@ -13,16 +13,152 @@ import type { ExecutionEventBus } from '../execution-event-bus';
 import type { NodeErrorDetails } from '@invect/action-kit';
 
 /**
+ * Persistence strategy for node executions during a flow run.
+ *
+ * - `'per-node'`: every create/update writes through to `invect_action_traces`.
+ * - `'per-run'`:  buffered in memory for the run's lifetime, flushed by the
+ *                 FlowRunCoordinator into `invect_flow_executions.node_outputs`
+ *                 when the run reaches a terminal state.
+ */
+export type PersistenceMode = 'per-node' | 'per-run';
+
+/**
+ * Generate a stable, server-side-only synthetic id for buffered node
+ * executions. UUIDv4 isn't strictly required (rows never hit the DB), but
+ * keeping the same shape lets downstream consumers (event bus, UI) treat
+ * buffered + persisted rows interchangeably.
+ */
+function syntheticTraceId(): string {
+  // Avoid pulling in node:crypto here — `crypto.randomUUID` is available
+  // globally in Node 19+ and Workers (PR 1 already aligned core on this).
+  return globalThis.crypto.randomUUID();
+}
+
+/**
+ * Parse a `flow_runs.node_outputs` blob (set by `'per-run'` mode at flush
+ * time) back into the same `NodeExecution[]` shape consumers expect.
+ *
+ * Tolerates three on-disk shapes:
+ * - already-parsed array (PostgreSQL JSON, SQLite text-with-mode-json)
+ * - JSON-encoded string (PostgreSQL text fallback)
+ * - any other shape → returns null (caller falls through to action_traces)
+ */
+function parseNodeOutputsBlob(raw: unknown): NodeExecution[] | null {
+  let arr: unknown = raw;
+  if (typeof raw === 'string') {
+    try {
+      arr = JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+  if (!Array.isArray(arr)) {
+    return null;
+  }
+  // Trust the shape — anything we wrote in flushBuffer is already a
+  // NodeExecution. Tolerate Date strings vs Date instances.
+  return arr.map((row) => {
+    const r = row as Record<string, unknown>;
+    return {
+      id: String(r.id ?? syntheticTraceId()),
+      flowRunId: String(r.flowRunId ?? r.flow_run_id ?? ''),
+      parentNodeExecutionId: (r.parentNodeExecutionId ?? r.parent_node_execution_id ?? null) as
+        | string
+        | null,
+      nodeId: String(r.nodeId ?? r.node_id ?? ''),
+      nodeType: String(r.nodeType ?? r.node_type ?? ''),
+      toolId: (r.toolId ?? r.tool_id ?? null) as string | null,
+      toolName: (r.toolName ?? r.tool_name ?? null) as string | null,
+      iteration: r.iteration === null || r.iteration === undefined ? null : Number(r.iteration),
+      status: (r.status ?? 'PENDING') as NodeExecutionStatus,
+      inputs: (r.inputs ?? {}) as Record<string, unknown>,
+      outputs: r.outputs as NodeOutput | undefined,
+      error: r.error as string | undefined,
+      errorDetails: r.errorDetails as NodeErrorDetails | undefined,
+      fieldErrors: r.fieldErrors as Record<string, string> | undefined,
+      startedAt: (r.startedAt ?? r.started_at ?? new Date()) as Date | string,
+      completedAt: (r.completedAt ?? r.completed_at) as Date | string | undefined,
+      duration: r.duration === null || r.duration === undefined ? undefined : Number(r.duration),
+      retryCount: Number(r.retryCount ?? r.retry_count ?? 0),
+    } satisfies NodeExecution;
+  });
+}
+
+/**
  * Core Execution Trace Service implementation using database models
  */
 export class NodeExecutionService {
   private initialized: boolean = false;
   private eventBus: ExecutionEventBus | null = null;
 
+  /**
+   * Per-run in-memory buffer for `'per-run'` persistence mode.
+   * Keyed by `flowRunId`; cleared on flush.
+   */
+  private buffer: Map<string, NodeExecution[]> = new Map();
+
+  /**
+   * Default persistence mode for newly-started runs. Individual runs can be
+   * forced into `'per-node'` via `forceFlowRunPerNode` (used by
+   * `resumeFromBatchCompletion` so resuming a previously-persisted run
+   * doesn't lose its already-written traces).
+   */
+  private persistenceMode: PersistenceMode = 'per-node';
+
   constructor(
     private readonly logger: Logger,
     private readonly databaseService: DatabaseService,
   ) {}
+
+  /**
+   * Configure the persistence strategy for new flow runs.
+   * Called once at service initialization from `ServiceFactory`.
+   */
+  setPersistenceMode(mode: PersistenceMode): void {
+    this.persistenceMode = mode;
+    this.logger.debug('Node execution persistence mode set', { mode });
+  }
+
+  getPersistenceMode(): PersistenceMode {
+    return this.persistenceMode;
+  }
+
+  /**
+   * Whether an in-flight run is being buffered (vs. persisted per-node).
+   */
+  private isBufferedRun(flowRunId: string): boolean {
+    return this.persistenceMode === 'per-run' && !this.bufferDisabledRuns.has(flowRunId);
+  }
+
+  /**
+   * Set of flowRunIds that have been forced into per-node mode for a single
+   * run. Used by `resumeFromBatchCompletion` to avoid losing traces written
+   * during the original execution.
+   */
+  private bufferDisabledRuns: Set<string> = new Set();
+
+  /**
+   * Disable per-run buffering for a single flow run. Subsequent
+   * create/update calls fall through to the database. Idempotent.
+   */
+  forceFlowRunPerNode(flowRunId: string): void {
+    this.bufferDisabledRuns.add(flowRunId);
+  }
+
+  /**
+   * Take ownership of the buffered traces for a flow run. The buffer is
+   * cleared after this call. Returns `null` if no buffered rows exist
+   * (which is the case for `'per-node'` runs).
+   */
+  flushBuffer(flowRunId: string): NodeExecution[] | null {
+    const buf = this.buffer.get(flowRunId);
+    if (!buf) {
+      return null;
+    }
+    this.buffer.delete(flowRunId);
+    this.bufferDisabledRuns.delete(flowRunId);
+    return buf;
+  }
 
   /** Attach the event bus so state changes are broadcast to SSE subscribers. */
   setEventBus(bus: ExecutionEventBus): void {
@@ -60,6 +196,30 @@ export class NodeExecutionService {
   ) {
     this.logger.debug('Creating execution trace', { executionId, nodeId, nodeType });
 
+    // ── 'per-run' buffering path ────────────────────────────────────────
+    if (this.isBufferedRun(executionId)) {
+      const trace: NodeExecution = {
+        id: syntheticTraceId(),
+        flowRunId: executionId,
+        parentNodeExecutionId: null,
+        nodeId,
+        nodeType,
+        toolId: null,
+        toolName: null,
+        iteration: null,
+        status: NodeExecutionStatus.PENDING,
+        inputs,
+        startedAt: new Date(),
+        retryCount: 0,
+      };
+      const list = this.buffer.get(executionId) ?? [];
+      list.push(trace);
+      this.buffer.set(executionId, list);
+      this.eventBus?.emitNodeExecutionCreate(trace);
+      return trace;
+    }
+
+    // ── default 'per-node' path ─────────────────────────────────────────
     try {
       const trace = await this.databaseService.nodeExecutions.create({
         flowRunId: executionId,
@@ -87,10 +247,40 @@ export class NodeExecutionService {
   }
 
   /**
+   * Locate a buffered trace by id and apply an in-place mutation.
+   * Returns the updated row (or null if not found in any buffer).
+   */
+  private updateBufferedTrace(
+    nodeExecutionId: string,
+    mutate: (current: NodeExecution) => NodeExecution,
+  ): NodeExecution | null {
+    for (const [flowRunId, traces] of this.buffer) {
+      const idx = traces.findIndex((t) => t.id === nodeExecutionId);
+      if (idx >= 0) {
+        const updated = mutate(traces[idx]);
+        traces[idx] = updated;
+        this.buffer.set(flowRunId, traces);
+        return updated;
+      }
+    }
+    return null;
+  }
+
+  /**
    * Update execution trace
    */
   async updateNodeExecution(nodeExecutionId: string, updates: Partial<NodeExecution>) {
     this.logger.debug('Updating execution trace', { nodeExecutionId, updates });
+
+    // ── 'per-run' buffering path ────────────────────────────────────────
+    const buffered = this.updateBufferedTrace(nodeExecutionId, (current) => ({
+      ...current,
+      ...updates,
+    }));
+    if (buffered) {
+      this.eventBus?.emitNodeExecutionUpdate(buffered);
+      return buffered;
+    }
 
     try {
       // Map the updates to the model's update input type
@@ -128,6 +318,14 @@ export class NodeExecutionService {
   async getNodeExecutionById(nodeExecutionId: string) {
     this.logger.debug('Retrieving execution trace by ID', { nodeExecutionId });
 
+    // Buffer first (in-flight per-run on this process)
+    for (const traces of this.buffer.values()) {
+      const hit = traces.find((t) => t.id === nodeExecutionId);
+      if (hit) {
+        return { ...hit };
+      }
+    }
+
     try {
       const trace = await this.databaseService.nodeExecutions.findById(nodeExecutionId);
 
@@ -144,12 +342,47 @@ export class NodeExecutionService {
   }
 
   /**
-   * Get all traces for an execution
+   * Get all traces for an execution.
+   *
+   * Resolution order:
+   * 1. In-memory buffer (in-flight `'per-run'` runs on this process).
+   * 2. Flushed JSON blob in `invect_flow_executions.node_outputs` (completed
+   *    `'per-run'` runs).
+   * 3. `invect_action_traces` table (`'per-node'` runs and tool traces).
+   *
+   * For a `'per-run'` run that completed on a different process, only step
+   * 2 is consulted — step 1 will be empty.
    */
   async listNodeExecutionsByFlowRunId(flowRunId: string) {
     this.logger.debug('Retrieving execution traces', { flowRunId: flowRunId });
 
+    // 1. Buffer (in-flight per-run on this process)
+    const buffered = this.buffer.get(flowRunId);
+    if (buffered && buffered.length > 0) {
+      this.logger.debug('Returning buffered execution traces (in-flight per-run)', {
+        flowRunId,
+        count: buffered.length,
+      });
+      // Defensive copy so callers can't mutate the buffer.
+      return buffered.map((t) => ({ ...t }));
+    }
+
     try {
+      // 2. Flushed JSON blob (completed per-run)
+      const flowRun = await this.databaseService.flowRuns.findById(flowRunId);
+      const blob = flowRun?.nodeOutputs;
+      if (blob !== undefined && blob !== null) {
+        const parsed = parseNodeOutputsBlob(blob);
+        if (parsed && parsed.length > 0) {
+          this.logger.debug('Returning flushed per-run execution traces', {
+            flowRunId,
+            count: parsed.length,
+          });
+          return parsed;
+        }
+      }
+
+      // 3. Fall through to action_traces
       const traces = await this.databaseService.nodeExecutions.findByFlowRunId(flowRunId);
 
       this.logger.debug('Execution traces retrieved successfully', {
@@ -179,6 +412,34 @@ export class NodeExecutionService {
   ): Promise<NodeExecution> {
     this.logger.debug('Updating node execution status', JSON.stringify({ traceId, status, data }));
 
+    // ── 'per-run' buffering path ────────────────────────────────────────
+    const buffered = this.updateBufferedTrace(traceId, (current) => {
+      const isTerminal = status !== 'PENDING' && status !== 'RUNNING';
+      const startedAtMs =
+        typeof current.startedAt === 'string'
+          ? Date.parse(current.startedAt)
+          : current.startedAt.getTime();
+      const completedAt = isTerminal ? new Date() : current.completedAt;
+      const duration =
+        isTerminal && completedAt instanceof Date
+          ? completedAt.getTime() - startedAtMs
+          : current.duration;
+      return {
+        ...current,
+        status,
+        outputs: data?.outputs ?? current.outputs,
+        error: data?.error ?? current.error,
+        errorDetails: data?.errorDetails ?? current.errorDetails,
+        fieldErrors: data?.fieldErrors ?? current.fieldErrors,
+        completedAt,
+        duration,
+      };
+    });
+    if (buffered) {
+      this.eventBus?.emitNodeExecutionUpdate(buffered);
+      return buffered;
+    }
+
     try {
       const updated = await this.databaseService.nodeExecutions.updateTraceStatus(
         traceId,
@@ -201,13 +462,47 @@ export class NodeExecutionService {
   }
 
   /**
-   * Get all executions across all flows with optional filtering, pagination, and sorting
+   * Get all executions across all flows with optional filtering, pagination, and sorting.
+   *
+   * When the caller filters by a single `flowRunId` and the run was captured
+   * under `'per-run'` persistence, results are sourced from the in-memory
+   * buffer or the flushed JSON blob — same fallback ladder as
+   * `listNodeExecutionsByFlowRunId`. Cross-flow listings (no flowRunId
+   * filter, or multiple flowRunIds) still hit `action_traces` directly,
+   * which means they only see `'per-node'` runs. That's intentional — a
+   * cross-flow listing under `'per-run'` would be unbounded JSON parsing.
    */
   async listNodeExecutions(
     options?: QueryOptions<NodeExecution>,
   ): Promise<PaginatedResponse<NodeExecution>> {
     try {
       this.logger.debug('Getting all node executions', { options });
+
+      // Detect single-flow-run filter — that's the per-run-mode-friendly path.
+      const flowRunIds = options?.filter?.flowRunId;
+      if (Array.isArray(flowRunIds) && flowRunIds.length === 1) {
+        const flowRunId = String(flowRunIds[0]);
+        const traces = await this.listNodeExecutionsByFlowRunId(flowRunId);
+        // If we found buffered/blob results, return them paginated. If the
+        // ladder fell through to action_traces, traces is whatever the
+        // table held — same as the original code path, just paginated by
+        // application code.
+        if (traces.length > 0 || this.buffer.has(flowRunId)) {
+          const pagination = options?.pagination ?? { page: 1, limit: 100 };
+          const offset = (pagination.page - 1) * pagination.limit;
+          const slice = traces.slice(offset, offset + pagination.limit);
+          return {
+            data: slice,
+            pagination: {
+              page: pagination.page,
+              limit: pagination.limit,
+              totalPages: Math.max(1, Math.ceil(traces.length / pagination.limit)),
+            },
+          };
+        }
+        // Fall through to the database — covers per-node mode and the
+        // empty-blob edge case.
+      }
 
       // Call the model's list method which now handles pagination, sorting, and filtering
       const result = await this.databaseService.nodeExecutions.list(options);
@@ -261,8 +556,8 @@ export class NodeExecutionService {
         return execution;
       }
 
-      // Get execution traces
-      const traces = await this.databaseService.nodeExecutions.findByFlowRunId(executionId);
+      // Get execution traces (per-run-aware: checks buffer/blob/table)
+      const traces = await this.listNodeExecutionsByFlowRunId(executionId);
 
       return {
         ...execution,

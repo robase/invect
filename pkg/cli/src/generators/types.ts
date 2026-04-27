@@ -17,6 +17,12 @@ export interface SchemaGeneratorOptions {
   file?: string;
   /** Database dialect to generate for */
   dialect: 'sqlite' | 'postgresql' | 'mysql';
+  /**
+   * Optional schema transforms (e.g., column injection for multi-tenancy).
+   * Typed as `unknown[]` here so this types module stays free of `@invect/core`
+   * dependencies; the generator passes them straight through to `mergeSchemas`.
+   */
+  transforms?: unknown[];
 }
 
 export interface SchemaGeneratorResult {

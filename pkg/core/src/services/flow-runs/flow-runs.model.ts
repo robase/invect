@@ -30,6 +30,16 @@ export interface FlowRun {
   triggerNodeId?: string | null;
   triggerData?: Record<string, unknown> | null;
   lastHeartbeatAt?: Date | string | null;
+  /**
+   * Buffered node executions (JSON blob) for runs captured under
+   * `execution.persistence: 'per-run'`. Populated only when the flow run
+   * reaches a terminal state — never during in-flight runs.
+   *
+   * Stored as a JSON-encoded array of `NodeExecution` rows. Consumers should
+   * read this through `NodeExecutionService.listNodeExecutionsByFlowRunId`,
+   * which transparently merges per-node and per-run sources.
+   */
+  nodeOutputs?: unknown;
 }
 
 /**
@@ -56,6 +66,12 @@ export interface UpdateFlowRunInput {
   completedAt?: Date | string;
   duration?: number;
   lastHeartbeatAt?: Date | string;
+  /**
+   * Buffered node-execution blob for `execution.persistence: 'per-run'`.
+   * Pass `null` to clear; pass an array of `NodeExecution`-shaped records
+   * to flush the buffered traces alongside the terminal state update.
+   */
+  nodeOutputs?: unknown;
 }
 
 /**
@@ -176,6 +192,9 @@ export class FlowRunsModel {
       }
       if (input.lastHeartbeatAt !== undefined) {
         updateData.last_heartbeat_at = new Date(input.lastHeartbeatAt as string);
+      }
+      if (input.nodeOutputs !== undefined) {
+        updateData.node_outputs = input.nodeOutputs;
       }
 
       const result = await this.adapter.update<Record<string, unknown>>({
@@ -402,6 +421,7 @@ export class FlowRunsModel {
         | Date
         | string
         | null,
+      nodeOutputs: raw.node_outputs ?? raw.nodeOutputs,
     };
   }
 

@@ -111,6 +111,7 @@ export default defineConfig(({ mode }) => ({
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
         demo: resolve(__dirname, 'src/demo/index.ts'),
+        'flow-canvas': resolve(__dirname, 'src/flow-canvas/index.ts'),
       },
       formats: ['es'],
       fileName: (format, entryName) => `${entryName}.js`,

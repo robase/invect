@@ -1,0 +1,430 @@
+{
+  "name": "@invect/vscode",
+  "displayName": "Invect",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Edit Invect flows visually inside VSCode. .flow.ts files are the source of truth.",
+  "categories": [
+    "Other",
+    "Visualization"
+  ],
+  "keywords": [
+    "flow",
+    "invect",
+    "visual-editor",
+    "workflow"
+  ],
+  "homepage": "https://invect.dev",
+  "bugs": {
+    "url": "https://github.com/robase/invect/issues"
+  },
+  "license": "MIT",
+  "author": "robase <team@invect.dev>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/robase/invect.git",
+    "directory": "pkg/vscode-extension"
+  },
+  "publisher": "invect",
+  "main": "./dist/extension.js",
+  "scripts": {
+    "build": "pnpm catalogue:build && pnpm build:extension && pnpm build:webview",
+    "build:extension": "tsdown && node scripts/copy-jiti-babel.mjs",
+    "build:webview": "vite build",
+    "build:watch": "node scripts/copy-jiti-babel.mjs && tsdown --watch",
+    "catalogue:build": "tsx scripts/build-action-catalogue.ts",
+    "catalogue:check": "tsx scripts/check-action-catalogue.ts",
+    "dev": "pnpm build:watch",
+    "clean": "rm -rf dist out",
+    "typecheck": "tsc --noEmit",
+    "build:test": "tsc -p tsconfig.test.json",
+    "pretest": "pnpm build && pnpm build:test",
+    "test": "node out/test/runTest.js",
+    "package": "pnpm build && node scripts/package.mjs"
+  },
+  "dependencies": {
+    "@invect/action-kit": "workspace:*",
+    "@invect/core": "workspace:*",
+    "@invect/express": "workspace:*",
+    "@invect/mcp": "workspace:*",
+    "@invect/sdk": "workspace:*",
+    "@invect/ui": "workspace:*",
+    "@invect/webhooks": "workspace:*",
+    "@libsql/client": "^0.17.2",
+    "@tanstack/react-query": "^5.62.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "jiti": "^2.4.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router": "^7.13.1"
+  },
+  "devDependencies": {
+    "@invect/actions": "workspace:*",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.10.2",
+    "@types/react": "18.3.7",
+    "@types/react-dom": "18.3.7",
+    "@types/vscode": "^1.85.0",
+    "@vitejs/plugin-react": "^5.0.4",
+    "@vscode/test-electron": "^2.4.1",
+    "@vscode/vsce": "^3.9.1",
+    "glob": "^11.0.0",
+    "mocha": "^10.8.2",
+    "ovsx": "^0.10.1",
+    "tsdown": "^0.21.10",
+    "tsx": "^4.21.0",
+    "typescript": "^5.8.3",
+    "vite": "^8.0.5",
+    "zod": "^3.25.1"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "invect.hello",
+        "title": "Invect: Hello",
+        "category": "Invect"
+      },
+      {
+        "command": "invect.showLogs",
+        "title": "Invect: Show Logs",
+        "category": "Invect"
+      },
+      {
+        "command": "invect.trustWorkspace",
+        "title": "Invect: Trust Workspace",
+        "category": "Invect"
+      },
+      {
+        "command": "invect.connect",
+        "title": "Invect: Connect to Backend",
+        "category": "Invect"
+      },
+      {
+        "command": "invect.disconnect",
+        "title": "Invect: Disconnect",
+        "category": "Invect"
+      },
+      {
+        "command": "invect.refreshFlows",
+        "title": "Invect: Refresh Flows",
+        "category": "Invect",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "invect.pullFromBackend",
+        "title": "Invect: Pull Flow from Backend",
+        "category": "Invect"
+      },
+      {
+        "command": "invect.pushToBackend",
+        "title": "Invect: Push Flow to Backend",
+        "category": "Invect"
+      },
+      {
+        "command": "invect.newFlow",
+        "title": "Invect: New Flow",
+        "category": "Invect"
+      },
+      {
+        "command": "invect.openCredentials",
+        "title": "Invect: Open Credentials",
+        "category": "Invect"
+      },
+      {
+        "command": "invect.openWebhooks",
+        "title": "Invect: Open Webhooks",
+        "category": "Invect"
+      },
+      {
+        "command": "invect.viewRun",
+        "title": "Invect: View Run",
+        "category": "Invect"
+      },
+      {
+        "command": "invect.editAsCode",
+        "title": "Invect: Edit as Code",
+        "category": "Invect",
+        "icon": "$(code)"
+      },
+      {
+        "command": "invect.editVisually",
+        "title": "Invect: Edit Visually",
+        "category": "Invect",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "invect.showMcpConfig",
+        "title": "Invect: Show MCP Config (Claude Code, Cursor, Claude Desktop)",
+        "category": "Invect",
+        "icon": "$(plug)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "invect",
+          "title": "Invect",
+          "icon": "resources/invect.svg"
+        }
+      ]
+    },
+    "views": {
+      "invect": [
+        {
+          "id": "invect.backends",
+          "name": "Backends"
+        },
+        {
+          "id": "invect.flows",
+          "name": "Flows"
+        },
+        {
+          "id": "invect.credentials",
+          "name": "Credentials"
+        },
+        {
+          "id": "invect.webhooks",
+          "name": "Webhooks"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "invect.refreshFlows",
+          "when": "view == invect.flows",
+          "group": "navigation"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "invect.editAsCode",
+          "when": "activeCustomEditorId == 'invect.flowEditor'",
+          "group": "navigation"
+        },
+        {
+          "command": "invect.editVisually",
+          "when": "resourceFilename =~ /\\.flow\\.ts$/ && !activeCustomEditorId",
+          "group": "navigation"
+        }
+      ]
+    },
+    "customEditors": [
+      {
+        "viewType": "invect.flowEditor",
+        "displayName": "Invect Flow Editor",
+        "selector": [
+          {
+            "filenamePattern": "*.flow.ts"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
+    "languageModelTools": [
+      {
+        "name": "invect_list_flows",
+        "displayName": "List Invect flows",
+        "modelDescription": "Returns the list of .flow.ts files in the workspace plus their backing DB flow ids. Useful as a first step before reading or running a specific flow.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "invectListFlows",
+        "icon": "$(list-tree)",
+        "tags": [
+          "invect"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "invect_get_flow",
+        "displayName": "Read Invect flow",
+        "modelDescription": "Parses an Invect .flow.ts file (using the SDK evaluator) and returns its full definition: nodes (with type, params, referenceId, etc.) and edges. Use this when the user asks about the structure of a flow.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "invectGetFlow",
+        "icon": "$(symbol-event)",
+        "tags": [
+          "invect"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "fileUri": {
+              "type": "string",
+              "description": "Workspace URI of the .flow.ts file (e.g. 'file:///Users/me/proj/flows/my.flow.ts')"
+            }
+          },
+          "required": [
+            "fileUri"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "invect_validate_flow",
+        "displayName": "Validate Invect flow",
+        "modelDescription": "Parses a .flow.ts file and reports whether it's structurally valid. Returns either { valid: true, nodeCount, edgeCount } or { valid: false, error }.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "invectValidateFlow",
+        "icon": "$(check)",
+        "tags": [
+          "invect"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "fileUri": {
+              "type": "string",
+              "description": "Workspace URI of the .flow.ts file to validate"
+            }
+          },
+          "required": [
+            "fileUri"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "invect_run_flow",
+        "displayName": "Run Invect flow",
+        "modelDescription": "Executes an Invect flow against the embedded backend with the supplied inputs. Returns the flow run id and initial status. The flow may make external API calls (HTTP, LLM, etc.); the user is asked to confirm before execution.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "invectRunFlow",
+        "icon": "$(play)",
+        "tags": [
+          "invect"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "fileUri": {
+              "type": "string",
+              "description": "Workspace URI of the .flow.ts file to run"
+            },
+            "inputs": {
+              "type": "object",
+              "description": "Inputs for the flow's input nodes, keyed by referenceId. Pass {} when there are no inputs.",
+              "additionalProperties": true
+            }
+          },
+          "required": [
+            "fileUri"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "invect_list_runs",
+        "displayName": "List Invect runs",
+        "modelDescription": "Returns recent flow runs for a flow, newest first. Includes status, started/completed times, duration, and any error.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "invectListRuns",
+        "icon": "$(history)",
+        "tags": [
+          "invect"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "flowId": {
+              "type": "string",
+              "description": "Flow id — typically the file URI of the .flow.ts (embedded mode) or a backend flow row id (HTTP mode)"
+            }
+          },
+          "required": [
+            "flowId"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "invect_get_run",
+        "displayName": "Get Invect run details",
+        "modelDescription": "Returns per-node executions for a single flow run — status, timing, error per node. Use this to debug a failed run.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "invectGetRun",
+        "icon": "$(debug)",
+        "tags": [
+          "invect"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "runId": {
+              "type": "string",
+              "description": "Flow run id (UUID) — get one from invect_list_runs"
+            }
+          },
+          "required": [
+            "runId"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "invect_list_actions",
+        "displayName": "List Invect actions",
+        "modelDescription": "Returns every action (node type) available in the embedded backend — id, name, description. Use this to discover what nodes can be added to a flow.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "invectListActions",
+        "icon": "$(extensions)",
+        "tags": [
+          "invect"
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      }
+    ],
+    "configuration": {
+      "title": "Invect",
+      "properties": {
+        "invect.backendUrl": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "pattern": "^(https?://.*)?$",
+          "patternErrorMessage": "Backend URL must start with http:// or https://",
+          "description": "URL of the Invect backend (e.g. http://localhost:3000/invect). Leave empty to work offline."
+        },
+        "invect.autoSaveDebounceMs": {
+          "type": "number",
+          "default": 400,
+          "minimum": 0,
+          "maximum": 5000,
+          "scope": "resource",
+          "description": "Debounce window (ms) before propagating webview edits to the underlying .flow.ts document."
+        },
+        "invect.diagnostics.enabled": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "Surface flow validation errors as editor diagnostics."
+        },
+        "invect.formatOnSave": {
+          "type": "boolean",
+          "default": false,
+          "scope": "resource",
+          "description": "Re-emit the .flow.ts source on save to enforce canonical formatting (off by default — Prettier / oxfmt usually owns this)."
+        }
+      }
+    }
+  },
+  "activationEvents": [],
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "Parsing the JSON footer of .flow.ts files is safe in untrusted workspaces. Evaluating the TypeScript body (for footer-less files) requires a trusted workspace."
+    }
+  }
+}

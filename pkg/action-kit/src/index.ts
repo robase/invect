@@ -10,6 +10,7 @@
 export type {
   ActionDefinition,
   ActionExecutionContext,
+  ActionOutputDef,
   ActionResult,
   ActionCategory,
   ActionRetryConfig,
@@ -115,7 +116,10 @@ export type {
 
 // Helpers
 export { defineAction } from './define-action';
-export type { ActionHelper } from './define-action';
+export type { ActionHelper, HandleIdsOf } from './define-action';
+
+// Lazy action loading (edge-runtime bundle size)
+export type { LazyActionDefinition } from './lazy-action';
 
 // SDK node types (produced by action helpers)
 export type { SdkFlowNode, NodeOptions, MapperOptions } from './sdk-node';

@@ -235,9 +235,9 @@ AgentToolExecutionsService          # Agent tool execution tracking
 
 ### 2. Provider-Actions architecture (primary)
 
-All node types **except AGENT** are defined as actions using `defineAction()`. An action is a single-file definition that serves as **both** a flow node and an agent tool.
+Every node type is defined as an action using `defineAction()`. An action is a single-file definition that serves as **both** a flow node and an agent tool — including the AI agent itself, which lives at `pkg/actions/src/core/agent.ts` under the action id `core.agent`.
 
-Node types use **string-based action IDs** (e.g., `"core.jq"`, `"gmail.send_message"`) — not the legacy `GraphNodeType` enum. Actions are grouped by **provider** (core, http, gmail, slack, github, google-drive, …).
+Node types are **string-based action IDs** (e.g., `"core.jq"`, `"gmail.send_message"`, `"core.agent"`). Actions are grouped by **provider** (core, http, gmail, slack, github, google-drive, …).
 
 ```typescript
 // pkg/actions/src/core/javascript.ts (or similar)
@@ -292,21 +292,6 @@ pkg/actions/src/
 - `ActionExecutionContext` provides: `logger`, `credential`, `incomingData`, `flowInputs`, `functions` (submitPrompt, getCredential, markDownstreamNodesAsSkipped, …), `flowRunState`.
 - `ActionResult` may include `outputVariables` for multi-output nodes like if-else/switch (with `true_output`/`false_output`/`case_*` handles).
 
-### Legacy node executors (AGENT only)
-
-The `BaseNodeExecutor` pattern in `pkg/core/src/nodes/` is **legacy**. Only `AgentNodeExecutor` still uses it because the agent's iterative tool-calling loop is too complex to migrate. All other node types have been ported to actions.
-
-```typescript
-// executor-registry.ts only registers AGENT now
-static async createDefault(): Promise<NodeExecutorRegistry> {
-  const registry = new NodeExecutorRegistry();
-  registry.register(new AgentNodeExecutor(toolRegistry));
-  return registry;
-}
-```
-
-`GraphNodeType` still exists in `pkg/core/src/types/graph-node-types.ts`. New nodes must always use action ID strings, but the enum is **not fully vestigial** — `GraphNodeType.TEMPLATE_STRING`, `IF_ELSE`, `SWITCH`, and others are still referenced in `NodeExecutionCoordinator` and `FlowRunCoordinator` for special-case handling (param resolution, branch routing).
-
 ### 3. Workflow execution model
 
 #### Input data construction
@@ -352,9 +337,7 @@ executeFlow(flowId, inputs)
   │   │   ├── resolveTemplateParams()
   │   │   ├── executeNode()
   │   │   │   ├── NodeExecutionService.createNodeExecution()
-  │   │   │   ├── Dispatch:
-  │   │   │   │   ├── legacy executor (AGENT only) → AgentNodeExecutor.execute()
-  │   │   │   │   └── action registry → executeActionAsNode()
+  │   │   │   ├── action registry → executeActionAsNode()
   │   │   │   └── NodeExecutionService.updateNodeExecutionStatus()
   │   │   └── Store output for downstream nodes
   │   └── markExecutionSuccess / Failed()
@@ -464,7 +447,7 @@ export { loopConfigSchema } from './services/flow-versions/schemas-fresh'; // Zo
 ```typescript
 // Node outputs stored via StructuredOutput
 type NodeOutputs = {
-  nodeType: string; // Action ID ("core.javascript", "gmail.send_message") or "AGENT"
+  nodeType: string; // Action ID ("core.javascript", "gmail.send_message", "core.agent", …)
   data: {
     variables: Record<string, { value: unknown; type: 'string' | 'object' }>;
     metadata?: Record<string, unknown>;
@@ -510,13 +493,93 @@ this.logger.error('Node execution failed', { nodeId, error: error.message });
 - **Frontend**: `<Invect config={...} />` — same config shape; only `apiPath`, `frontendPath`, `theme`, `plugins` are read client-side (the rest passes through harmlessly)
 - **Credentials**: AES-256-GCM encrypted. Set `INVECT_ENCRYPTION_KEY` (base64, 32 bytes — use `npx invect-cli secret`). Access in actions: `context.credential` (auto-refreshed for OAuth2) or `context.functions.getCredential(id)`
 
+## Authoring SDK (`@invect/sdk`)
+
+`@invect/sdk` is the unified TypeScript flow-authoring surface — used in hand-authored `.flow.ts` files, the chat assistant's source-level edits, copy-paste round-trip, and git sync. It is type-safe end-to-end.
+
+### Named-record `defineFlow` (preferred form)
+
+Keys are referenceIds; edges narrow `from`/`to`/`handle` against them.
+
+```ts
+import { defineFlow, input, output, ifElse, switchNode } from '@invect/sdk';
+import { gmail, slack } from '@invect/sdk/actions';
+
+export default defineFlow({
+  name: 'Triage event',
+  nodes: {
+    event: input(),
+    classify: ifElse({ condition: '{{ event.priority > 5 }}' }),
+    notify: gmail.sendMessage({
+      credentialId: '{{ env.GMAIL }}',
+      to: 'oncall@example.com',
+      subject: 'Alert',
+      body: '{{ event.message }}',
+    }),
+    log: output({ value: 'logged' }),
+  },
+  edges: [
+    { from: 'event', to: 'classify' },
+    { from: 'classify', to: 'notify', handle: 'true_output' }, // ✓
+    { from: 'classify', to: 'log', handle: 'false_output' }, // ✓
+    // { from: 'classify', to: 'log',    handle: 'output' }      // ✗ tsc: not assignable to '"true_output" | "false_output"'
+    // { from: 'evnt',     to: 'notify' }                        // ✗ tsc: '"evnt"' not in '"event" | "classify" | "notify" | "log"'
+    // { from: 'event',    to: 'event' }                         // ✗ tsc: self-loop blocked by Exclude in EdgeOf<N>
+  ],
+});
+```
+
+The legacy **array form** (`nodes: [helper('ref', ...)]`) still type-checks and runs; defineFlow is overloaded to accept both. Only use the array form for non-string referenceIds or programmatic construction.
+
+### Type-safety guarantees
+
+- **Action params** are split into Zod `input` (caller-facing — defaults are optional) and `output` (`execute()` runtime) shapes. Authors pass the input shape, runtime parses to output. Missing required fields, wrong types, and out-of-enum values fire as `tsc` errors at the call site.
+- **Edge handles** narrow against the source action's declared output union. `core.if_else` → `'true_output' | 'false_output'`; `core.switch` computes the union from `cases[].slug` literals (`{ slug: 'high', ... } as const` propagates without manual annotation thanks to the `const C` modifier on the helper).
+- **Edge `from`/`to`** narrow against `keyof N` in the named-record form. Self-loops are blocked.
+- See [pkg/action-kit/src/define-action.ts](pkg/action-kit/src/define-action.ts) for the `defineAction<S, const H>` machinery — `z.input<S>` / `z.output<S>` drive both sides.
+
+### Codegen-generated action wrappers (`@invect/sdk/actions`)
+
+Every action in `@invect/actions` ships with a typed wrapper under `@invect/sdk/actions`:
+
+```ts
+import { gmail, github, linear, slack } from '@invect/sdk/actions';
+
+gmail.sendMessage({ credentialId, to, subject, body });
+linear.createIssue({ credentialId, teamId, title });
+```
+
+- Each wrapper has a `*Params` interface (e.g. `GmailSendMessageParams`) with **per-field JSDoc** lifted from `params.fields[].description`. Hover any field at a call site and IntelliSense surfaces the field's UI-form description.
+- Field types reference `z.input<typeof <action>.params.schema>['<field>']` directly — there's no risk of drift from the underlying schema.
+- The catalogue lives at [pkg/sdk/src/generated/](pkg/sdk/src/generated/) and is committed. Regenerate with `pnpm --filter @invect/sdk gen-actions`. CI runs `gen-actions:check` to fail on diff.
+- Core actions (`core.input`, `core.output`, `core.javascript`, `core.if_else`, `core.switch`, `core.agent`, `http.request`, `trigger.*`) are NOT codegened — they have hand-written wrappers in [pkg/sdk/src/nodes/core.ts](pkg/sdk/src/nodes/core.ts) that carry handle-narrowing and accept arrow forms (`code: (ctx) => ...`).
+
+### Pre-save TypeScript validation (chat assistant)
+
+The chat assistant's `write_flow_source` and `edit_flow_source` tools run the LLM-generated source through the real TS compiler **before** save. Wrong handles, missing fields, unknown referenceIds — anything `tsc --strict` would flag — gets surfaced back to the LLM as line-numbered diagnostics, blocking the save until the LLM fixes it.
+
+Implementation: [pkg/sdk/src/evaluator/typecheck.ts](pkg/sdk/src/evaluator/typecheck.ts) exports `typecheckSdkSource(source)`. It synthesises a temp file, builds a `ts.createProgram` with workspace package paths resolved via `package.json` `exports`, runs `getPreEmitDiagnostics`, and filters down to the user file. Cold-path latency is ~200ms (TS program creation). Called from [pkg/core/src/services/chat/tools/sdk-tools.ts](pkg/core/src/services/chat/tools/sdk-tools.ts) `saveFlowFromSource`.
+
+### Emitter symmetry
+
+The DB → source emitter ([pkg/sdk/src/emitter/index.ts](pkg/sdk/src/emitter/index.ts)) produces named-record form. Authoring named → save → re-load shows named on round-trip. The `parseSDKText` browser parser ([pkg/sdk/src/parse-fragment.ts](pkg/sdk/src/parse-fragment.ts)) accepts both forms (named-record and legacy array) so old emitter output keeps parsing.
+
+### Author tooling — key files
+
+- [pkg/sdk/src/define-flow.ts](pkg/sdk/src/define-flow.ts) — `defineFlow` overloads + `EdgeOf<N>`, `SdkFlowDefinitionNamed<N>`.
+- [pkg/sdk/src/types.ts](pkg/sdk/src/types.ts) — public types (`SdkFlowNode<R, T, H>`, `EdgeOf<N>`, `HandlesOf<T>`).
+- [pkg/sdk/src/nodes/core.ts](pkg/sdk/src/nodes/core.ts) — hand-written core helpers with handle-narrowing.
+- [pkg/sdk/src/generated/](pkg/sdk/src/generated/) — codegen output (per-provider files + index barrel).
+- [pkg/sdk/scripts/gen-actions.mjs](pkg/sdk/scripts/gen-actions.mjs) — codegen script.
+- [pkg/sdk/src/evaluator/typecheck.ts](pkg/sdk/src/evaluator/typecheck.ts) — pre-save validation.
+
 ## AI Agent & Tool Calling Architecture
 
-Invect supports AI agent workflows with tool calling via the **AGENT** node. Agents run a prompt→tool→iterate loop using OpenAI, Anthropic, or OpenRouter.
+Invect supports AI agent workflows with tool calling via the `core.agent` action. Agents run a prompt→tool→iterate loop using OpenAI, Anthropic, or OpenRouter.
 
 ### Agent node overview
 
-`AgentNodeExecutor` (`pkg/core/src/nodes/agent-executor.ts`) manages the loop:
+The agent action lives at `pkg/actions/src/core/agent.ts`. Its `execute()` runs the loop:
 
 1. Send task prompt + available tools to the LLM
 2. LLM responds with text or tool call(s)
@@ -597,7 +660,7 @@ Tool instances support per-instance customization (custom name, description, par
 
 ### Key agent/tool files
 
-- `pkg/core/src/nodes/agent-executor.ts` — Agent loop
+- `pkg/actions/src/core/agent.ts` — Agent action: prompt → tool → iterate loop
 - `pkg/action-kit/src/agent-tool.ts` — Agent/tool type contracts
 - `pkg/core/src/services/agent-tools/agent-tool-registry.ts` — Registry + global singleton
 - `pkg/core/src/services/agent-tools/builtin/` — Standalone tools
@@ -737,7 +800,7 @@ Root tsconfig also has `"noEmit": true`. Packages that use `tsc --emitDeclaratio
 
 ### Key files
 
-**Core execution**: `pkg/core/src/services/flow-orchestration.service.ts` | `services/flow-orchestration/flow-run-coordinator.ts` | `services/flow-orchestration/node-execution-coordinator.ts` | `services/templating/template.service.ts` | `nodes/executor-registry.ts` | `services/service-factory.ts` | `database/schema-*.ts` | `types/` + `types.internal.ts` + `types.frontend.ts` | `schemas/` | `nodes/agent-executor.ts`
+**Core execution**: `pkg/core/src/services/flow-orchestration.service.ts` | `services/flow-orchestration/flow-run-coordinator.ts` | `services/flow-orchestration/node-execution-coordinator.ts` | `services/templating/template.service.ts` | `services/service-factory.ts` | `database/schema-*.ts` | `types/` + `types.internal.ts` + `types.frontend.ts` | `schemas/`
 
 **Actions / tools**: `pkg/action-kit/src/` (types) | `pkg/actions/src/registry/` | `pkg/actions/src/action-executor.ts` | `pkg/actions/src/providers.ts` | `pkg/core/src/actions/` (core-side bridge/barrel) | `pkg/core/src/services/agent-tools/agent-tool-registry.ts`
 
@@ -749,9 +812,9 @@ Root tsconfig also has `"noEmit": true`. Packages that use `tsc --emitDeclaratio
 
 ## When Adding/Updating/Removing Node Types
 
-New node types should be added as **actions** using `defineAction()`. The legacy `BaseNodeExecutor` pattern is only used for the AGENT node.
+All node types are added as **actions** using `defineAction()`.
 
-### Adding a new action (recommended)
+### Adding a new action
 
 #### 1. Create the file
 
@@ -943,9 +1006,8 @@ const invect = await createInvect({
 
 1. Action registry created; all built-in actions registered (`allProviderActions`)
 2. `pluginManager.initializePlugins()` — for each plugin: register `backend.actions`, then `backend.init(context)`
-3. Node registry initialized (only `AgentNodeExecutor`)
-4. `registerActionsAsTools()` — all actions converted to agent tools
-5. `initializeServices()` — `ServiceFactory` built, `DatabaseService.initialize()`:
+3. `registerActionsAsTools()` — all actions converted to agent tools
+4. `initializeServices()` — `ServiceFactory` built, `DatabaseService.initialize()`:
    - Core table existence check (from `core-schema.ts`)
    - Plugin table existence check (`requiredTables` or inferred from `schema`)
    - Opt-in detailed schema verification (columns)

@@ -2,6 +2,7 @@ packages:
   - pkg/*
   - pkg/plugins/*
   - examples/*
+  - experiments/*
   - docs
 
 onlyBuiltDependencies:

@@ -6,16 +6,50 @@
  * a plugin-provided action the current project hasn't imported yet. Always
  * prefer importing the real action callable when available; `node()` loses the
  * Zod-inferred param types.
+ *
+ * Two call forms:
+ *   - `node('action.id', { ... })` — named-record `defineFlow` form.
+ *     Pass the action type as the first arg; `defineFlow` injects the
+ *     referenceId from the object key.
+ *   - `node('ref', 'action.id', { ... })` — positional form.
  */
 
 import type { NodeOptions, SdkFlowNode } from '@invect/action-kit';
 
 export function node<TParams extends Record<string, unknown>>(
+  type: string,
+  params?: TParams,
+  options?: NodeOptions,
+): SdkFlowNode;
+export function node<TParams extends Record<string, unknown>>(
   referenceId: string,
   type: string,
-  params: TParams = {} as TParams,
+  params?: TParams,
   options?: NodeOptions,
+): SdkFlowNode;
+export function node<TParams extends Record<string, unknown>>(
+  arg0: string,
+  arg1?: string | TParams,
+  arg2?: TParams | NodeOptions,
+  arg3?: NodeOptions,
 ): SdkFlowNode {
+  // Discriminate on whether arg1 is a string (= type, positional form) or
+  // an object/undefined (= params, named form).
+  let referenceId: string;
+  let type: string;
+  let params: TParams;
+  let options: NodeOptions | undefined;
+  if (typeof arg1 === 'string') {
+    referenceId = arg0;
+    type = arg1;
+    params = ((arg2 as TParams | undefined) ?? ({} as TParams)) as TParams;
+    options = arg3;
+  } else {
+    referenceId = '';
+    type = arg0;
+    params = ((arg1 as TParams | undefined) ?? ({} as TParams)) as TParams;
+    options = arg2 as NodeOptions | undefined;
+  }
   const n: SdkFlowNode = {
     referenceId,
     type,

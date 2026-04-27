@@ -2,8 +2,6 @@
 // Version Control Sync Service — orchestrates push/pull/publish operations
 // =============================================================================
 
-import { randomUUID } from 'node:crypto';
-
 import type { GitProvider } from './git-provider';
 import type { PluginDatabaseApi } from '@invect/core';
 import type { VersionControlPluginOptions } from './types';
@@ -62,7 +60,7 @@ export class VcSyncService {
     }
 
     const flow = flows[0];
-    const id = randomUUID();
+    const id = crypto.randomUUID();
     const now = new Date().toISOString();
 
     const repo = input.repo ?? this.options.repo;
@@ -767,7 +765,7 @@ export class VcSyncService {
       `INSERT INTO invect_vc_sync_history (id, flow_id, action, commit_sha, pr_number, version, message, created_at, created_by)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        randomUUID(),
+        crypto.randomUUID(),
         flowId,
         action,
         opts.commitSha ?? null,

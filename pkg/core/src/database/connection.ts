@@ -8,8 +8,6 @@ import type { drizzle as drizzlePostgresType } from 'drizzle-orm/postgres-js';
 import type { drizzle as drizzleSQLiteType } from 'drizzle-orm/better-sqlite3';
 import type { drizzle as drizzleMySQLType } from 'drizzle-orm/mysql2';
 import type Database from 'better-sqlite3';
-import fs from 'fs';
-import path from 'path';
 
 import { sqliteSchema, mysqlSchema, postgresqlSchema } from './schema';
 import type { DatabaseDriver } from './drivers/types';
@@ -203,26 +201,34 @@ export class DatabaseConnectionFactory {
   }
 
   /**
-   * Helper method to prepare SQLite file path and ensure directory exists
+   * Extract the SQLite file path from a connection string.
+   *
+   * The host is responsible for passing an absolute path (or `:memory:`).
+   * Relative paths are rejected with a clear error — core does NOT call
+   * `process.cwd()` or `fs.mkdirSync()` to resolve or create the parent
+   * directory, because those APIs don't exist on edge runtimes (Cloudflare
+   * Workers, Deno Deploy, etc.). If you need the parent directory created,
+   * do it in your bootstrap code before calling `createInvect()`.
    */
-  private static prepareSQLiteFilePath(connectionString: string, logger: Logger): string {
+  private static prepareSQLiteFilePath(connectionString: string, _logger: Logger): string {
     // Extract file path from SQLite URL
-    let filePath = connectionString.replace('sqlite:', '').replace('file:', '');
+    const filePath = connectionString.replace(/^sqlite:/, '').replace(/^file:/, '');
 
-    // Ensure the directory exists for SQLite files
-    if (filePath !== ':memory:') {
-      // Resolve relative paths to absolute paths
-      if (!path.isAbsolute(filePath)) {
-        filePath = path.resolve(process.cwd(), filePath);
-      }
+    if (filePath === ':memory:') {
+      return filePath;
+    }
 
-      const dir = path.dirname(filePath);
-      // oxlint-disable-next-line security/detect-non-literal-fs-filename -- database directory path derived from config
-      if (!fs.existsSync(dir)) {
-        // oxlint-disable-next-line security/detect-non-literal-fs-filename -- database directory path derived from config
-        fs.mkdirSync(dir, { recursive: true });
-        logger.debug('Created SQLite database directory', { dir });
-      }
+    // Reject relative paths — host must pass an absolute path. Lightweight
+    // POSIX/Windows check to avoid importing `node:path`.
+    const isAbsolute = filePath.startsWith('/') || /^[A-Za-z]:[\\/]/.test(filePath);
+    if (!isAbsolute) {
+      throw new Error(
+        `SQLite connection string must be an absolute path or ':memory:'. ` +
+          `Got: "${connectionString}". ` +
+          `Resolve relative paths in your bootstrap (e.g. with path.resolve(process.cwd(), '...')) ` +
+          `and pre-create any parent directories before calling createInvect(). ` +
+          `Core does not call process.cwd() or fs.mkdirSync() so it stays portable to edge runtimes.`,
+      );
     }
 
     return filePath;
@@ -273,11 +279,17 @@ export class DatabaseConnectionFactory {
     logger: Logger,
     schema?: Record<string, unknown>,
   ): Promise<unknown> {
+    if (!config.connectionString) {
+      throw new Error(
+        `PostgreSQL driver "${driver.type}" requires a connectionString in database config.`,
+      );
+    }
+    const connectionString = config.connectionString;
     switch (driver.type) {
       case 'postgres': {
         const postgres = (await import('postgres')).default;
         const { drizzle: drizzlePostgres } = await import('drizzle-orm/postgres-js');
-        const client = postgres(config.connectionString, {
+        const client = postgres(connectionString, {
           onnotice: (notice: unknown) => logger.debug('PostgreSQL notice', notice),
         });
         return schema ? drizzlePostgres(client, { schema }) : drizzlePostgres(client);
@@ -285,7 +297,7 @@ export class DatabaseConnectionFactory {
       case 'pg': {
         const { Pool } = await import('pg');
         const { drizzle: drizzleNodePg } = await import('drizzle-orm/node-postgres');
-        const pool = new Pool({ connectionString: config.connectionString });
+        const pool = new Pool({ connectionString });
         return schema ? drizzleNodePg(pool, { schema }) : drizzleNodePg(pool);
       }
       case 'neon-serverless': {
@@ -294,7 +306,7 @@ export class DatabaseConnectionFactory {
         const { drizzle: drizzleNeon } = await import('drizzle-orm/neon-serverless');
 
         const pool = new (neonMod.Pool as new (o: Record<string, unknown>) => unknown)({
-          connectionString: config.connectionString,
+          connectionString,
         });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return schema ? drizzleNeon(pool as any, { schema }) : drizzleNeon(pool as any);
@@ -309,6 +321,11 @@ export class DatabaseConnectionFactory {
    *
    * Resolves the driver type from config, creates
    * both the Drizzle ORM instance and the raw DatabaseDriver handle.
+   *
+   * D1 short-circuits: it has no `connectionString` and no file path, so
+   * `prepareSQLiteFilePath` (which calls `process.cwd()` and `fs.mkdirSync()`)
+   * is skipped entirely — those Node-only APIs don't exist on Cloudflare
+   * Workers.
    */
   private static async createSQLiteConnection(
     config: InvectDatabaseConfig,
@@ -317,8 +334,31 @@ export class DatabaseConnectionFactory {
     db: DrizzleSQLiteDb<typeof sqliteSchema>;
     driver: DatabaseDriver;
   }> {
-    const filePath = this.prepareSQLiteFilePath(config.connectionString, logger);
     const driverType = resolveDatabaseDriverType(config);
+
+    // D1: no file path, no connection string — bind directly to env.DB.
+    if (driverType === 'd1') {
+      if (!config.binding) {
+        throw new Error(
+          'D1 driver requires a `binding` (the `D1Database` from `env.DB` in your Workers handler).',
+        );
+      }
+      const driver = await createDatabaseDriver(config, logger);
+      const { drizzle: drizzleD1 } = await import('drizzle-orm/d1');
+      const db = drizzleD1(config.binding as Parameters<typeof drizzleD1>[0], {
+        schema: sqliteSchema,
+      }) as unknown as DrizzleSQLiteDb<typeof sqliteSchema>;
+      logger.debug('Skipping SQLite migrations - assuming D1 database conforms to schema');
+      return { db, driver };
+    }
+
+    // File-based drivers (better-sqlite3 / libsql) — need filePath resolution.
+    if (!config.connectionString) {
+      throw new Error(
+        `SQLite driver "${driverType}" requires a connectionString (e.g. 'file:/abs/path/to.db').`,
+      );
+    }
+    const filePath = this.prepareSQLiteFilePath(config.connectionString, logger);
 
     // Create the unified driver (handles pragmas internally).
     const driver = await createDatabaseDriver(config, logger, filePath);
@@ -361,6 +401,9 @@ export class DatabaseConnectionFactory {
     _driver: DatabaseDriver,
     logger: Logger,
   ): Promise<ReturnType<typeof drizzleMySQLType<typeof mysqlSchema>>> {
+    if (!config.connectionString) {
+      throw new Error('MySQL driver requires a connectionString in database config.');
+    }
     const mysql = await import('mysql2/promise');
     const { drizzle: drizzleMySQL } = await import('drizzle-orm/mysql2');
     const connection = mysql.createPool(config.connectionString);
@@ -384,6 +427,8 @@ export class DatabaseConnectionFactory {
 
   /**
    * Create SQLite query connection (without schema)
+   *
+   * D1 short-circuits: it has no `connectionString` and no file path.
    */
   private static async createSQLiteQueryConnection(
     config: InvectDatabaseConfig,
@@ -392,8 +437,30 @@ export class DatabaseConnectionFactory {
     db: DrizzleSQLiteDb;
     driver: DatabaseDriver;
   }> {
-    const filePath = this.prepareSQLiteFilePath(config.connectionString, logger);
     const driverType = resolveDatabaseDriverType(config);
+
+    // D1: bind directly, skip file path handling.
+    if (driverType === 'd1') {
+      if (!config.binding) {
+        throw new Error(
+          'D1 driver requires a `binding` (the `D1Database` from `env.DB` in your Workers handler).',
+        );
+      }
+      const driver = await createDatabaseDriver(config, logger);
+      const { drizzle: drizzleD1 } = await import('drizzle-orm/d1');
+      const db = drizzleD1(
+        config.binding as Parameters<typeof drizzleD1>[0],
+      ) as unknown as DrizzleSQLiteDb;
+      logger.info('SQLite query connection established successfully (d1)');
+      return { db, driver };
+    }
+
+    if (!config.connectionString) {
+      throw new Error(
+        `SQLite driver "${driverType}" requires a connectionString (e.g. 'file:/abs/path/to.db').`,
+      );
+    }
+    const filePath = this.prepareSQLiteFilePath(config.connectionString, logger);
 
     const driver = await createDatabaseDriver(config, logger, filePath);
 
@@ -429,6 +496,9 @@ export class DatabaseConnectionFactory {
     _driver: DatabaseDriver,
     logger: Logger,
   ): Promise<ReturnType<typeof drizzleMySQLType>> {
+    if (!config.connectionString) {
+      throw new Error('MySQL driver requires a connectionString in database config.');
+    }
     const mysql = await import('mysql2/promise');
     const { drizzle: drizzleMySQL } = await import('drizzle-orm/mysql2');
     const connection = mysql.createPool(config.connectionString);
@@ -438,9 +508,16 @@ export class DatabaseConnectionFactory {
   }
 
   /**
-   * Generate a unique key for connection caching
+   * Generate a unique key for connection caching.
+   *
+   * For D1 (no connectionString), keys are derived from the binding identity
+   * — falling back to a stable per-binding tag so multiple D1 instances cache
+   * separately within the same worker isolate.
    */
   private static generateConnectionKey(config: InvectDatabaseConfig): string {
+    if (config.driver === 'd1') {
+      return `${config.type}:d1:${this.bindingTag(config.binding)}`;
+    }
     return `${config.type}:${config.connectionString}`;
   }
 
@@ -448,7 +525,30 @@ export class DatabaseConnectionFactory {
    * Generate a unique key for query connection caching
    */
   private static generateQueryConnectionKey(config: InvectDatabaseConfig): string {
+    if (config.driver === 'd1') {
+      return `query:${config.type}:d1:${this.bindingTag(config.binding)}`;
+    }
     return `query:${config.type}:${config.connectionString}`;
+  }
+
+  /**
+   * Best-effort identity tag for a D1 binding so distinct bindings don't
+   * share cached connections within the same isolate. We fall back to the
+   * object's reference identity via a WeakMap lookup.
+   */
+  private static d1BindingTags = new WeakMap<object, string>();
+  private static d1BindingCounter = 0;
+  private static bindingTag(binding: unknown): string {
+    if (binding && typeof binding === 'object') {
+      const existing = this.d1BindingTags.get(binding as object);
+      if (existing) {
+        return existing;
+      }
+      const tag = `b${++this.d1BindingCounter}`;
+      this.d1BindingTags.set(binding as object, tag);
+      return tag;
+    }
+    return 'unknown';
   }
 
   /**

@@ -145,7 +145,12 @@ export async function runApiContract(request: APIRequestContext, apiBase: string
   expect(flowRuns).toBeDefined();
 
   // -------------------------------------------------------------------
-  // 6. Cleanup: delete the test flow
+  // 6. Ephemeral runs + SSE event stream
+  // -------------------------------------------------------------------
+  await runEphemeralAndStreamContract(request, apiBase);
+
+  // -------------------------------------------------------------------
+  // 7. Cleanup: delete the test flow
   // -------------------------------------------------------------------
   const deleteFlowRes = await request.delete(`${apiBase}/flows/${flowId}`);
   expect(deleteFlowRes.status()).toBeLessThan(300);
@@ -153,6 +158,215 @@ export async function runApiContract(request: APIRequestContext, apiBase: string
   // Verify flow is gone
   const verifyFlowDeletedRes = await request.get(`${apiBase}/flows/${flowId}`);
   expect(verifyFlowDeletedRes.ok()).toBeFalsy();
+}
+
+/**
+ * Build the smallest valid InvectDefinition we can run end-to-end:
+ * one input → one output. Uses the canonical action IDs ("core.input",
+ * "core.output") so it works against any backend that ships the default
+ * action catalogue.
+ */
+function buildTrivialInvectDefinition(): {
+  nodes: Array<Record<string, unknown>>;
+  edges: Array<Record<string, unknown>>;
+  metadata?: Record<string, unknown>;
+} {
+  return {
+    nodes: [
+      {
+        id: 'node_input',
+        type: 'core.input',
+        referenceId: 'event',
+        label: 'Input',
+        params: { variableName: 'hello', defaultValue: 'world' },
+        position: { x: 0, y: 0 },
+      },
+      {
+        id: 'node_output',
+        type: 'core.output',
+        referenceId: 'result',
+        label: 'Output',
+        params: { outputValue: '{{ event }}', outputName: 'result' },
+        position: { x: 200, y: 0 },
+      },
+    ],
+    edges: [
+      {
+        id: 'edge_input_output',
+        source: 'node_input',
+        target: 'node_output',
+      },
+    ],
+  };
+}
+
+/**
+ * Read a Server-Sent-Events stream and return parsed events until a
+ * predicate fires or the stream closes / times out. Adapter-agnostic — works
+ * against the same wire format Express, NestJS, and Next.js all emit.
+ */
+async function readSseEvents(
+  request: APIRequestContext,
+  url: string,
+  options: {
+    until: (evt: { type: string; data: unknown }) => boolean;
+    timeoutMs: number;
+  },
+): Promise<Array<{ type: string; data: unknown }>> {
+  const res = await request.get(url, {
+    headers: { Accept: 'text/event-stream' },
+    timeout: options.timeoutMs + 5_000,
+  });
+  expect(res.ok()).toBeTruthy();
+
+  const collected: Array<{ type: string; data: unknown }> = [];
+  let buffer = '';
+  const decoder = new TextDecoder();
+  const start = Date.now();
+
+  const body = await res.body();
+  // Playwright buffers the body of a streaming response into a single
+  // chunk by the time `body()` resolves — fine for our trivial flow which
+  // completes in well under a second. For longer-running flows we'd need
+  // a lower-level streaming consumer.
+  buffer += decoder.decode(body);
+
+  const frames = buffer.split('\n\n');
+  for (const frame of frames) {
+    if (!frame.trim()) {
+      continue;
+    }
+    let type = 'message';
+    let data: string | undefined;
+    for (const line of frame.split('\n')) {
+      if (line.startsWith('event: ')) {
+        type = line.slice(7).trim();
+      } else if (line.startsWith('data: ')) {
+        data = (data ?? '') + line.slice(6);
+      }
+    }
+    if (data === undefined) {
+      continue;
+    }
+    let parsed: unknown = data;
+    try {
+      parsed = JSON.parse(data);
+    } catch {
+      // Leave as string
+    }
+    const event = { type, data: parsed };
+    collected.push(event);
+    if (options.until(event)) {
+      break;
+    }
+  }
+
+  if (Date.now() - start > options.timeoutMs) {
+    throw new Error(`SSE stream timed out after ${options.timeoutMs}ms`);
+  }
+
+  return collected;
+}
+
+/**
+ * Validate the new VSCode-extension-facing endpoints:
+ *  - POST /flow-runs/ephemeral (and /runs/ephemeral alias)
+ *  - GET  /flow-runs/:flowRunId/stream and /runs/:flowRunId/events alias
+ *
+ * Asserted invariants:
+ *  - Ephemeral runs return `{ flowRunId, flowId, status, eventsPath }`
+ *  - The events stream emits at least a `snapshot` and an `end` event
+ *  - Invalid definitions return 400 with a structured error body
+ *  - Both alias paths behave identically to the canonical ones
+ */
+async function runEphemeralAndStreamContract(
+  request: APIRequestContext,
+  apiBase: string,
+): Promise<void> {
+  // 6a. Happy path — ephemeral run + SSE stream
+  const ephemeralRes = await request.post(`${apiBase}/flow-runs/ephemeral`, {
+    data: {
+      definition: buildTrivialInvectDefinition(),
+      inputs: { hello: 'world' },
+    },
+  });
+  expect(ephemeralRes.ok()).toBeTruthy();
+  const ephemeral = await ephemeralRes.json();
+  expect(ephemeral).toHaveProperty('flowRunId');
+  expect(ephemeral).toHaveProperty('flowId');
+  expect(ephemeral).toHaveProperty('status');
+  expect(ephemeral).toHaveProperty('eventsPath');
+  expect(typeof ephemeral.flowRunId).toBe('string');
+  expect(typeof ephemeral.flowId).toBe('string');
+
+  // 6b. SSE stream — canonical path
+  const eventsCanonical = await readSseEvents(
+    request,
+    `${apiBase}/flow-runs/${ephemeral.flowRunId}/stream`,
+    {
+      until: (evt) => evt.type === 'end',
+      timeoutMs: 15_000,
+    },
+  );
+  expect(eventsCanonical.length).toBeGreaterThan(0);
+  // Must include the initial snapshot and a terminal event (end + flow_run.updated)
+  expect(eventsCanonical.some((e) => e.type === 'snapshot')).toBeTruthy();
+  expect(
+    eventsCanonical.some((e) => e.type === 'end' || e.type === 'flow_run.updated'),
+  ).toBeTruthy();
+
+  // 6c. SSE stream — /runs/:id/events alias against the same flow run
+  // (run is already terminal, so the stream sends snapshot + end immediately)
+  const eventsAlias = await readSseEvents(
+    request,
+    `${apiBase}/runs/${ephemeral.flowRunId}/events`,
+    {
+      until: (evt) => evt.type === 'end',
+      timeoutMs: 15_000,
+    },
+  );
+  expect(eventsAlias.some((e) => e.type === 'snapshot')).toBeTruthy();
+
+  // 6d. Ephemeral alias path /runs/ephemeral
+  const aliasRes = await request.post(`${apiBase}/runs/ephemeral`, {
+    data: {
+      definition: buildTrivialInvectDefinition(),
+      inputs: { hello: 'alias' },
+    },
+  });
+  expect(aliasRes.ok()).toBeTruthy();
+  const aliasBody = await aliasRes.json();
+  expect(aliasBody).toHaveProperty('flowRunId');
+
+  // 6e. Invalid definition → 400
+  const invalidRes = await request.post(`${apiBase}/flow-runs/ephemeral`, {
+    data: {
+      definition: {
+        nodes: [
+          {
+            id: 'a',
+            type: 'core.input',
+            referenceId: 'a',
+            label: 'A',
+            params: {},
+            position: { x: 0, y: 0 },
+          },
+        ],
+        edges: [
+          // Edge references a non-existent node — FlowValidator should reject
+          { id: 'edge_bad', source: 'a', target: 'does-not-exist' },
+        ],
+      },
+      inputs: {},
+    },
+  });
+  expect(invalidRes.status()).toBe(400);
+
+  // 6f. Missing definition → 400
+  const noBodyRes = await request.post(`${apiBase}/flow-runs/ephemeral`, {
+    data: { inputs: {} },
+  });
+  expect(noBodyRes.status()).toBe(400);
 }
 
 /**
@@ -170,7 +384,10 @@ export async function cleanupTestData(request: APIRequestContext, apiBase: strin
         ? body
         : (body.data ?? []);
       for (const f of flows) {
-        if (f.name && f.name.includes('Platform Parity Test')) {
+        if (
+          f.name &&
+          (f.name.includes('Platform Parity Test') || f.name.startsWith('__ephemeral_'))
+        ) {
           await request.delete(`${apiBase}/flows/${f.id}`);
         }
       }

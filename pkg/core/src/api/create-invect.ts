@@ -33,27 +33,7 @@ import { createActionsAPI } from './actions';
 import { createTestingAPI } from './testing';
 import { createAuthAPI } from './auth';
 import { createPluginsAPI } from './plugins';
-
-/**
- * Check if we're in a build-time environment where database connections should be avoided.
- */
-function isBuildTime(): boolean {
-  if (process.env.NEXT_PHASE === 'phase-production-build') {
-    return true;
-  }
-  if (process.env.VERCEL_ENV && process.env.CI) {
-    return true;
-  }
-  if (
-    process.env.CI &&
-    (process.env.NODE_ENV === 'production' ||
-      process.env.BUILD_PHASE ||
-      process.argv.includes('build'))
-  ) {
-    return true;
-  }
-  return false;
-}
+import { createMaintenanceAPI } from './maintenance';
 
 /**
  * Seed default credentials (non-blocking helper).
@@ -156,14 +136,18 @@ async function seedDefaultCredentials(sf: ServiceFactory, config: InvectConfig):
  */
 export async function createInvect(config: InvectConfig): Promise<InvectInstance> {
   const initStart = Date.now();
-  // Parse and validate config
-  const parsedConfig = InvectConfigSchema.parse(config);
+  // Parse and validate config. Cast back to `InvectConfig` because the
+  // `services` block is typed as `unknown` in the Zod schema (adapter
+  // instances aren't validatable) but `InvectConfig` overlays the typed
+  // `InvectServiceOverrides` shape — so the parsed object is structurally
+  // a strict subset of the input type.
+  const parsedConfig = InvectConfigSchema.parse(config) as InvectConfig;
 
-  // Build-time check (Next.js, Vercel)
-  if (isBuildTime()) {
-    throw new DatabaseError('Invect Core initialization skipped during build', {
+  // Explicit opt-in skip — host (e.g. framework adapter) is responsible for
+  // setting this flag. Core does not sniff the environment.
+  if (parsedConfig.skipDatabaseInit) {
+    throw new DatabaseError('Invect Core initialization skipped (skipDatabaseInit=true)', {
       reason: 'build_time_skip',
-      phase: process.env.NEXT_PHASE || 'unknown',
     });
   }
 
@@ -180,9 +164,6 @@ export async function createInvect(config: InvectConfig): Promise<InvectInstance
     databaseType: parsedConfig.database?.type,
     hasConnectionString: !!parsedConfig.database?.connectionString,
     pluginCount: parsedConfig.plugins?.length ?? 0,
-    NODE_ENV: process.env.NODE_ENV,
-    VERCEL_ENV: process.env.VERCEL_ENV,
-    VERCEL_REGION: process.env.VERCEL_REGION,
   });
 
   try {
@@ -285,6 +266,7 @@ export async function createInvect(config: InvectConfig): Promise<InvectInstance
     );
     const auth = createAuthAPI(authService, pluginManager, sf);
     const plugins = createPluginsAPI(pluginManager, sf);
+    const maintenance = createMaintenanceAPI(sf);
 
     // Assemble the instance
     const instance: InvectInstance = {
@@ -299,6 +281,7 @@ export async function createInvect(config: InvectConfig): Promise<InvectInstance
       testing,
       auth,
       plugins,
+      maintenance,
 
       // Root-level logging
       getLogger(scope, context?) {

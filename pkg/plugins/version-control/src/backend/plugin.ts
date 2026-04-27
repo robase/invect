@@ -3,7 +3,6 @@
 // =============================================================================
 
 import type { InvectPlugin, InvectPluginDefinition, PluginEndpointContext } from '@invect/core';
-import { randomUUID } from 'node:crypto';
 
 import type { VersionControlPluginOptions } from './types';
 import { VC_SCHEMA } from './schema';
@@ -238,7 +237,9 @@ function _vcBackendPlugin(options: Omit<VersionControlPluginOptions, 'frontend'>
           // Verify signature
           const signature = ctx.headers['x-hub-signature-256'] ?? '';
           const body = JSON.stringify(ctx.body);
-          if (!options.provider.verifyWebhookSignature(body, signature, options.webhookSecret)) {
+          if (
+            !(await options.provider.verifyWebhookSignature(body, signature, options.webhookSecret))
+          ) {
             return { status: 401, body: { error: 'Invalid webhook signature' } };
           }
 
@@ -332,7 +333,7 @@ function _vcBackendPlugin(options: Omit<VersionControlPluginOptions, 'frontend'>
         `INSERT INTO invect_vc_sync_history (id, flow_id, action, pr_number, message, created_at)
          VALUES (?, ?, ?, ?, ?, ?)`,
         [
-          randomUUID(),
+          crypto.randomUUID(),
           row.flow_id,
           'pr-merged',
           prNumber,

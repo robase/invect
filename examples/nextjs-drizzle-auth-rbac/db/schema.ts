@@ -335,6 +335,7 @@ export const flowRuns = pgTable('invect_flow_executions', {
   triggerNodeId: text('trigger_node_id'),
   triggerData: json('trigger_data').$type<JSONValue>(),
   lastHeartbeatAt: timestamp('last_heartbeat_at'),
+  nodeOutputs: json('node_outputs').$type<JSONValue>(),
 });
 
 export const nodeExecutions = pgTable('execution_traces', {

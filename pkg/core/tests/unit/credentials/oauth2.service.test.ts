@@ -319,4 +319,55 @@ describe('OAuth2Service', () => {
       expect(service.canRefresh({ oauth2Provider: 'google' })).toBe(false);
     });
   });
+
+  // PR 5/14 (flowlib-hosted/UPSTREAM.md): pending-state cleanup must be
+  // driven externally now that the module-level setInterval has been
+  // removed. These tests cover both the new method behavior and the
+  // absence of any module-load timer side effect.
+  describe('cleanupExpiredStates() (PR 5/14)', () => {
+    it('removes pending states older than the expiry window and reports the count', () => {
+      const tenMinutesMs = 10 * 60 * 1000;
+      const t0 = Date.parse('2026-04-26T12:00:00.000Z');
+
+      // Two fresh states, two stale states.
+      vi.setSystemTime(new Date(t0));
+      const fresh1 = service.startAuthorizationFlow('google', appConfig);
+      const fresh2 = service.startAuthorizationFlow('google', appConfig);
+      vi.setSystemTime(new Date(t0 - tenMinutesMs - 1));
+      const stale1 = service.startAuthorizationFlow('google', appConfig);
+      const stale2 = service.startAuthorizationFlow('google', appConfig);
+      // Track for afterEach teardown of any survivors.
+      createdStates.push(fresh1.state, fresh2.state, stale1.state, stale2.state);
+
+      // Sweep at "now = t0" — fresh states are still inside the 10-min
+      // window; stale states sit further than 10 min in the past.
+      const result = service.cleanupExpiredStates(t0);
+
+      expect(result.count).toBe(2);
+      expect(service.getPendingState(fresh1.state)).toBeDefined();
+      expect(service.getPendingState(fresh2.state)).toBeDefined();
+      expect(service.getPendingState(stale1.state)).toBeUndefined();
+      expect(service.getPendingState(stale2.state)).toBeUndefined();
+    });
+
+    it('returns { count: 0 } when nothing is expired', () => {
+      const result = service.cleanupExpiredStates(Date.now());
+      expect(result.count).toBe(0);
+    });
+  });
+});
+
+// PR 5/14 (flowlib-hosted/UPSTREAM.md): the previous module-level
+// `setInterval` cleanup loop ran at import time, broke edge runtimes,
+// and was never cleared. This test verifies that simply loading the
+// module does NOT register any timer.
+describe('oauth2.service module load (PR 5/14)', () => {
+  it('does not call setInterval at module-load time', async () => {
+    const setIntervalSpy = vi.spyOn(globalThis, 'setInterval');
+    // Force a fresh module evaluation so we observe the import-time effect.
+    vi.resetModules();
+    await import('src/services/credentials/oauth2.service');
+    expect(setIntervalSpy).not.toHaveBeenCalled();
+    setIntervalSpy.mockRestore();
+  });
 });

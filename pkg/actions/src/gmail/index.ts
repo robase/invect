@@ -15,6 +15,9 @@ import { gmailGetMessageAction } from './get-message';
 import { gmailCreateDraftAction } from './create-draft';
 import { gmailModifyLabelsAction } from './modify-labels';
 
+// Lazy descriptors (edge-runtime bundle size — see ../LAZY_ACTIONS_MIGRATION.md)
+export { lazyGmailActions } from './lazy';
+
 /** All Gmail actions as an array (for bulk registration). */
 export const gmailActions: ActionDefinition[] = [
   gmailListMessagesAction,

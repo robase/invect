@@ -18,10 +18,9 @@
  * whose params contain complex JSON structures the LLM might misformat).
  */
 
-import { createHash } from 'node:crypto';
 import { z } from 'zod/v4';
 import { emitSdkSource } from '@invect/sdk';
-import { evaluateSdkSource } from '@invect/sdk/evaluator';
+import { evaluateSdkSource, typecheckSdkSource } from '@invect/sdk/evaluator';
 import { transformArrowsToStrings } from '@invect/sdk/transform';
 import { mergeParsedIntoDefinition } from '@invect/sdk';
 import type { DbFlowDefinition, NodeSpan } from '@invect/sdk';
@@ -40,8 +39,19 @@ import type { InvectInstance } from 'src/api/types';
  */
 const SOURCE_INCLUDE_BUDGET = 8000;
 
-function sha1(input: string): string {
-  return createHash('sha1').update(input).digest('hex');
+async function sha1(input: string): Promise<string> {
+  // WebCrypto exposes SHA-1 (legacy but still defined) — used solely as a short
+  // content-fingerprint for read-state invariants, not for security. Routed
+  // through `crypto.subtle.digest` so this runs unchanged on Workers/Deno/Bun.
+  // Copy into a fresh ArrayBuffer to satisfy WebCrypto's `BufferSource` type.
+  const data = new TextEncoder().encode(input).slice().buffer;
+  const digest = await crypto.subtle.digest('SHA-1', data);
+  const bytes = new Uint8Array(digest);
+  let hex = '';
+  for (let i = 0; i < bytes.length; i++) {
+    hex += bytes[i].toString(16).padStart(2, '0');
+  }
+  return hex;
 }
 
 interface NodeIndexEntry extends NodeSpan {
@@ -318,7 +328,7 @@ export const getFlowSourceTool: ChatToolDefinition = {
         },
       });
 
-      const sourceHash = sha1(code);
+      const sourceHash = await sha1(code);
       // Record the read for this turn so subsequent edits can verify the
       // invariant. Cross-turn state is intentionally not tracked.
       if (ctx.readState && ctx.currentStep !== undefined) {
@@ -360,8 +370,9 @@ export const editFlowSourceTool: ChatToolDefinition = {
     'REQUIRES a prior `get_flow_source` call in this turn — otherwise the tool returns the fresh source without attempting the edit. ' +
     'Both `oldString` and `newString` must match the emitted source verbatim (whitespace-sensitive). ' +
     'The edit must identify `oldString` unambiguously — include enough surrounding context for the match to be unique. ' +
-    'After the edit, the full source is evaluated, arrow functions are serialised back to strings for QuickJS storage, ' +
+    'After the edit, the full source is evaluated, **typechecked** with the real TypeScript compiler, arrow functions are serialised back to strings for QuickJS storage, ' +
     'and the result is merged into the prior DB version (preserving node ids, positions, and agent-tool instance ids). ' +
+    'Type errors (wrong handles, missing fields, unknown referenceIds, bad types) reject the save with line-numbered diagnostics — fix and retry. ' +
     'For single-node parameter changes prefer `update_node_config`; this tool is for multi-node refactors.',
   parameters: z.object({
     oldString: z
@@ -389,7 +400,7 @@ export const editFlowSourceTool: ChatToolDefinition = {
       };
     }
     const { code: currentSource, nodeSpans, def } = emitted;
-    const currentHash = sha1(currentSource);
+    const currentHash = await sha1(currentSource);
 
     // Read-before-edit invariant: only enforced when the caller (the session)
     // provides a `readState` map. Callers without it (tests, direct programmatic
@@ -519,14 +530,34 @@ export const writeFlowSourceTool: ChatToolDefinition = {
     'Replace the entire flow with the provided TypeScript source. ' +
     'Use this for new flows or when making several coordinated edits that would be awkward as individual `edit_flow_source` calls. ' +
     'For flows that already have a version, this tool REQUIRES a prior `get_flow_source` call in this turn. ' +
-    'The source must be a complete `@invect/sdk` flow file — `import { defineFlow, ... } from "@invect/sdk"` plus `export default defineFlow({...})`. ' +
+    'The source must be a complete `@invect/sdk` flow file. Use the **named-record** form for nodes — keys are referenceIds, edges narrow `from`/`to`/`handle` against them. Example:\n\n' +
+    '```ts\n' +
+    "import { defineFlow, input, output, ifElse } from '@invect/sdk';\n" +
+    "import { gmail } from '@invect/sdk/actions';\n\n" +
+    'export default defineFlow({\n' +
+    '  name: "Triage email",\n' +
+    '  nodes: {\n' +
+    '    event:    input(),\n' +
+    '    classify: ifElse({ condition: "{{ event.priority > 5 }}" }),\n' +
+    '    notify:   gmail.sendMessage({ credentialId: "{{ env.GMAIL }}", to: "x@y.z", subject: "Alert", body: "{{ event.message }}" }),\n' +
+    '    log:      output({ value: "logged" }),\n' +
+    '  },\n' +
+    '  edges: [\n' +
+    '    { from: "event",    to: "classify" },\n' +
+    '    { from: "classify", to: "notify", handle: "true_output" },\n' +
+    '    { from: "classify", to: "log",    handle: "false_output" },\n' +
+    '  ],\n' +
+    '});\n' +
+    '```\n\n' +
+    'The source is **typechecked** before save. Wrong handles, unknown referenceIds, missing required fields, and bad types are rejected with line-numbered diagnostics. ' +
     'Node ids, canvas positions, and agent-tool instance ids are preserved from the prior version by matching on `referenceId`.',
   parameters: z.object({
     source: z
       .string()
       .min(1)
       .describe(
-        'Complete TypeScript source for the flow. Must include imports from @invect/sdk and an `export default defineFlow({...})`.',
+        'Complete TypeScript source for the flow. Must include imports from @invect/sdk and an `export default defineFlow({...})`. ' +
+          'Use the named-record form `nodes: { ref: helper(...) }` and object-form edges `{ from, to, handle? }`.',
       ),
   }),
   async execute(params, ctx): Promise<ChatToolResult> {
@@ -555,7 +586,7 @@ export const writeFlowSourceTool: ChatToolDefinition = {
       if (priorDef && ctx.readState) {
         const emitted = await emitCurrentSource(ctx.invect, flowId);
         if (emitted.ok) {
-          const currentHash = sha1(emitted.code);
+          const currentHash = await sha1(emitted.code);
           const priorRead = ctx.readState.get(flowId);
           if (!priorRead) {
             logEditFailure(ctx, 'write_flow_source', 'stale_or_missing_read');
@@ -645,6 +676,22 @@ async function saveFlowFromSource(
     };
   }
 
+  // 1b. Typecheck — feed the source into the real TypeScript compiler so
+  //     LLM-generated source has to be type-safe before it can save. Catches
+  //     wrong handle ids, unknown referenceIds, missing required fields,
+  //     wrong types, etc. — the same errors a human would see in the
+  //     editor. Non-trivial cold-path (~200ms) but bounded; the LLM is
+  //     network-paced anyway.
+  const tcResult = await typecheckSdkSource(source);
+  if (!tcResult.ok) {
+    return {
+      success: false,
+      error: 'Flow source has TypeScript errors — fix and retry',
+      data: { stage: 'typecheck', diagnostics: tcResult.diagnostics },
+      suggestion: formatTypecheckSuggestion(tcResult.diagnostics),
+    };
+  }
+
   // 2. Transform — arrow functions → QuickJS-compatible string expressions.
   const transformResult = transformArrowsToStrings(evalResult.flow.nodes);
   if (!transformResult.ok) {
@@ -721,6 +768,30 @@ function formatEvalSuggestion(errors: Array<{ code: string; message: string }>):
     return 'The default export must be the return value of defineFlow({...}).';
   }
   return 'Review the errors and regenerate the flow source.';
+}
+
+/**
+ * Format typecheck diagnostics into a single-line suggestion the LLM can
+ * act on. Most errors land on the `defineFlow(...)` call line because the
+ * overload-match-failure surfaces there; the diagnostic message itself
+ * names the exact field/handle/type that's wrong, so just pass it through.
+ */
+function formatTypecheckSuggestion(
+  diagnostics: Array<{ line: number; column: number; message: string; code: number }>,
+): string {
+  if (diagnostics.length === 0) {
+    return '';
+  }
+  const head = diagnostics[0];
+  const more = diagnostics.length > 1 ? ` (+${diagnostics.length - 1} more)` : '';
+  // Trim deep overload-mismatch chatter; the first line of the message
+  // usually identifies the offending field. Diagnostic codes 2769 (no
+  // overload matches) emit multi-paragraph chains — the LLM needs the
+  // first line plus the most specific assignment-failure clause.
+  const firstLine = head.message.split('\n', 1)[0];
+  const assignClause = head.message.match(/Type '[^']+' is not assignable to type '[^']+'\.?/);
+  const tail = assignClause && !firstLine.includes(assignClause[0]) ? ` ${assignClause[0]}` : '';
+  return `Line ${head.line}: ${firstLine}${tail}${more}`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

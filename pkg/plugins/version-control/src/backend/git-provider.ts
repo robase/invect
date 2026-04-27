@@ -110,6 +110,13 @@ export interface GitProvider {
 
   // -- Webhook --
 
-  /** Verify a webhook signature. Returns true if valid. */
-  verifyWebhookSignature(payload: string, signature: string, secret: string): boolean;
+  /**
+   * Verify a webhook signature. Returns true if valid.
+   *
+   * Async because the WebCrypto-based HMAC implementation (used so this runs on
+   * Cloudflare Workers / Deno) returns a `Promise<boolean>`. Node-only providers
+   * may still implement it synchronously and return a boolean — `Promise<boolean>`
+   * accepts both.
+   */
+  verifyWebhookSignature(payload: string, signature: string, secret: string): Promise<boolean>;
 }

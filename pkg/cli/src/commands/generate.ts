@@ -394,6 +394,7 @@ async function runAppendMode(
     appendResult = await generateAppendSchema({
       plugins: config.plugins,
       dialect,
+      transforms: config.schemaTransforms,
     });
   } catch (error) {
     console.error(pc.red(`\n✗ Schema generation failed:`));
@@ -627,6 +628,7 @@ async function runSeparateFilesMode(
       plugins: config.plugins,
       outputDir,
       dialect,
+      transforms: config.schemaTransforms,
     });
   } catch (error) {
     console.error(pc.red(`\n✗ Schema generation failed:`));
@@ -1103,6 +1105,7 @@ async function runSqlMode(
       plugins: config.plugins,
       dialect,
       outputDir: options.output || '.',
+      transforms: config.schemaTransforms,
     });
   } catch (error) {
     console.error(pc.red(`\n✗ SQL generation failed:`));

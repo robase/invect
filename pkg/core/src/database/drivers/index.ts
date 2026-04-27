@@ -28,9 +28,11 @@ export function resolveDatabaseDriverType(config: InvectDatabaseConfig): Databas
 
   switch (config.type) {
     case 'sqlite':
-      return config.connectionString.startsWith('libsql://') ? 'libsql' : 'better-sqlite3';
+      // D1 is never auto-resolved — it requires an explicit `driver: 'd1'`
+      // because it's selected by binding presence, not connection string.
+      return config.connectionString?.startsWith('libsql://') ? 'libsql' : 'better-sqlite3';
     case 'postgresql':
-      if (config.connectionString.includes('.neon.tech')) {
+      if (config.connectionString?.includes('.neon.tech')) {
         return 'neon-serverless';
       }
       return 'postgres';
@@ -65,27 +67,47 @@ export async function createDatabaseDriver(
     }
     case 'libsql': {
       const { createLibsqlDriver } = await import('./libsql');
-      return createLibsqlDriver(config.connectionString, sqliteFilePath ?? ':memory:', logger);
+      return createLibsqlDriver(
+        config.connectionString ?? '',
+        sqliteFilePath ?? ':memory:',
+        logger,
+      );
+    }
+    case 'd1': {
+      if (config.type !== 'sqlite' || !config.binding) {
+        throw new Error(
+          'D1 driver requires a `binding` (the `D1Database` from `env.DB` in your Workers handler).',
+        );
+      }
+      const { createD1Driver } = await import('./d1');
+      return createD1Driver(config.binding as Parameters<typeof createD1Driver>[0], logger);
     }
 
     // PostgreSQL
     case 'postgres': {
       const { createPostgresJsDriver } = await import('./postgres-js');
-      return createPostgresJsDriver(config.connectionString, logger);
+      return createPostgresJsDriver(requireConnectionString(config, 'postgres'), logger);
     }
     case 'pg': {
       const { createNodePostgresDriver } = await import('./node-postgres');
-      return createNodePostgresDriver(config.connectionString, logger);
+      return createNodePostgresDriver(requireConnectionString(config, 'pg'), logger);
     }
     case 'neon-serverless': {
       const { createNeonServerlessDriver } = await import('./neon-serverless');
-      return createNeonServerlessDriver(config.connectionString, logger);
+      return createNeonServerlessDriver(requireConnectionString(config, 'neon-serverless'), logger);
     }
 
     // MySQL
     case 'mysql2': {
       const { createMysql2Driver } = await import('./mysql2');
-      return createMysql2Driver(config.connectionString, logger);
+      return createMysql2Driver(requireConnectionString(config, 'mysql2'), logger);
     }
   }
+}
+
+function requireConnectionString(config: InvectDatabaseConfig, driver: string): string {
+  if (!config.connectionString) {
+    throw new Error(`${driver} driver requires a connectionString in database config.`);
+  }
+  return config.connectionString;
 }

@@ -143,7 +143,7 @@ export default defineFlow({ nodes: [input('q')], edges: [] });
 import { defineFlow, input, output } from '@invect/sdk';
 export default defineFlow({
   nodes: [input('query'), output('result', { value: 'hello' })],
-  edges: [['query', 'result']],
+  edges: [{ from: 'query', to: 'result' }],
 });
       `;
       const { ok, flow, errors } = await evaluateSdkSource(src);
@@ -164,7 +164,7 @@ export default defineFlow({
     input('x'),
     code('double', { code: 'return x * 2' }),
   ],
-  edges: [['x', 'double']],
+  edges: [{ from: 'x', to: 'double' }],
 });
       `;
       const { ok, flow } = await evaluateSdkSource(src);
@@ -258,7 +258,7 @@ export default defineFlow({
       body: 'Hello',
     }),
   ],
-  edges: [['event', 'notify']],
+  edges: [{ from: 'event', to: 'notify' }],
 });
       `;
       const { ok, flow, errors } = await evaluateSdkSource(src);

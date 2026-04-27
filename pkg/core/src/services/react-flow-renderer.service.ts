@@ -538,6 +538,13 @@ export class ReactFlowRendererService {
     nodes: ReactFlowNode[],
     edges: ReactFlowEdge[],
   ): Promise<ReactFlowNode[]> {
-    return applyElkLayout(nodes, edges);
+    const laidOut = await applyElkLayout(nodes, edges);
+    return laidOut.map((node) => ({
+      ...node,
+      position: {
+        x: Math.round(node.position.x * 100) / 100,
+        y: Math.round(node.position.y * 100) / 100,
+      },
+    }));
   }
 }

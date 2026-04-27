@@ -104,6 +104,7 @@ model FlowRuns {
   triggerNodeId   String?        @map("trigger_node_id")
   triggerData     Json?          @map("trigger_data")
   lastHeartbeatAt DateTime?      @map("last_heartbeat_at")
+  nodeOutputs     Json?          @map("node_outputs")
   flow            Flows          @relation(fields: [flowId], references: [id], onDelete: Cascade)
   actionTraces    ActionTraces[]
   batchJobs       BatchJobs[]

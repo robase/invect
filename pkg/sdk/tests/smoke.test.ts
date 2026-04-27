@@ -103,7 +103,7 @@ describe('@invect/sdk', () => {
       const flow = defineFlow({
         name: 'test',
         nodes: [input('q'), output('r', { value: '{{ q }}' })],
-        edges: [['q', 'r']],
+        edges: [{ from: 'q', to: 'r' }],
       });
       expect(flow.edges).toEqual([{ from: 'q', to: 'r' }]);
     });
@@ -139,7 +139,7 @@ describe('@invect/sdk', () => {
       expect(() =>
         defineFlow({
           nodes: [input('q')],
-          edges: [['q', 'nowhere']],
+          edges: [{ from: 'q', to: 'nowhere' }],
         }),
       ).toThrow(/unknown target/);
     });
@@ -174,7 +174,7 @@ describe('@invect/sdk', () => {
 
       const flow = defineFlow({
         nodes: [input('event'), myCustom('notify', { channel: '#alerts', summary: 'hi' })],
-        edges: [['event', 'notify']],
+        edges: [{ from: 'event', to: 'notify' }],
       });
 
       expect(flow.nodes).toHaveLength(2);

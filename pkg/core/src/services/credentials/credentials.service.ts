@@ -7,7 +7,7 @@
  */
 
 import { CredentialsModel } from './credentials.model';
-import { EncryptionService } from './encryption.service';
+import type { EncryptionAdapter, EncryptionContext } from '../../types/services';
 import type { InvectAdapter } from '../../database/adapter';
 import type {
   CredentialConfig,
@@ -67,11 +67,78 @@ export class CredentialsService {
 
   constructor(
     private adapter: InvectAdapter,
-    private encryption: EncryptionService,
+    /**
+     * Encryption adapter — accepts either the default `EncryptionService` or
+     * any object conforming to `EncryptionAdapter` (the pluggable adapter
+     * interface introduced in PR 2/14 of flowlib-hosted/UPSTREAM.md).
+     *
+     * Only `encrypt`/`decrypt` are called from this service; the convenience
+     * `encryptObject` / `decryptObject` helpers on `EncryptionService` are
+     * inlined here as `encryptConfig` / `decryptConfig` so any conforming
+     * adapter (e.g. a Cloudflare KMS-backed implementation) works without
+     * needing to expose those helpers.
+     */
+    private encryption: EncryptionAdapter,
     private logger: Logger,
   ) {
     this.model = new CredentialsModel(adapter, logger);
     this.oauth2Service = createOAuth2Service(logger);
+  }
+
+  /**
+   * Encrypt a credential config object and return its JSON-encoded envelope.
+   * Wire-compatible with `EncryptionService.encryptObject` so existing
+   * persisted envelopes remain readable.
+   */
+  private async encryptConfig(
+    config: CredentialConfig,
+    context?: EncryptionContext,
+  ): Promise<string> {
+    const envelope = await this.encryption.encrypt(JSON.stringify(config), context);
+    return JSON.stringify(envelope);
+  }
+
+  /**
+   * Decrypt a JSON-encoded envelope produced by `encryptConfig` (or by the
+   * legacy `EncryptionService.encryptObject`).
+   */
+  private async decryptConfig(
+    envelopeJson: string,
+    context?: EncryptionContext,
+  ): Promise<CredentialConfig> {
+    const envelope = JSON.parse(envelopeJson);
+    const plaintext = await this.encryption.decrypt(envelope, context);
+    return JSON.parse(plaintext) as CredentialConfig;
+  }
+
+  /**
+   * Build a default EncryptionContext from a credential row.
+   *
+   * The core `credentials` schema does NOT include `organizationId` today
+   * (only `workspaceId`). Multi-tenant hosts that inject an `organization_id`
+   * column via the schema transform from PR 4 of flowlib-hosted/UPSTREAM.md
+   * will see that value land on the row at runtime — we look for it
+   * dynamically here so the caller doesn't have to thread context through
+   * every call site.
+   *
+   * Caller-supplied `context` always wins over the row-derived default.
+   */
+  private resolveContext(
+    credential: unknown,
+    explicit?: EncryptionContext,
+  ): EncryptionContext | undefined {
+    if (explicit) {
+      return explicit;
+    }
+    if (!credential || typeof credential !== 'object') {
+      return undefined;
+    }
+    const row = credential as Record<string, unknown>;
+    const orgId = row.organizationId ?? row.organization_id;
+    if (typeof orgId === 'string' && orgId.length > 0) {
+      return { organizationId: orgId };
+    }
+    return undefined;
   }
 
   /**
@@ -84,10 +151,15 @@ export class CredentialsService {
   /**
    * Create a new credential
    * Automatically encrypts the config
+   *
+   * `context` is forwarded to the encryption adapter (PR 12 in
+   * flowlib-hosted/UPSTREAM.md) so multi-tenant hosts can derive a per-org
+   * DEK. Default in-process `EncryptionService` ignores it — wire format
+   * unchanged when `context` is omitted.
    */
-  async create(input: CreateCredentialInput): Promise<Credential> {
+  async create(input: CreateCredentialInput, context?: EncryptionContext): Promise<Credential> {
     // Encrypt the config before storing
-    const encryptedConfigString = this.encryption.encryptObject(input.config);
+    const encryptedConfigString = await this.encryptConfig(input.config, context);
 
     // Create the credential via model
     const credential = await this.model.create({
@@ -96,8 +168,12 @@ export class CredentialsService {
     });
 
     // Decrypt config for return (config is already a string from DB)
-    const decryptedConfig = this.encryption.decryptObject<CredentialConfig>(
+    // Use explicit context (which we just used to encrypt) or fall back to
+    // the row-derived default.
+    const decryptionContext = this.resolveContext(credential, context);
+    const decryptedConfig = await this.decryptConfig(
       typeof credential.config === 'string' ? credential.config : JSON.stringify(credential.config),
+      decryptionContext,
     );
 
     return {
@@ -109,8 +185,14 @@ export class CredentialsService {
   /**
    * Get a credential by ID
    * Decrypts the config before returning
+   *
+   * If `context` is omitted, defaults to `{ organizationId }` derived from
+   * the credential row when the host has injected an `organization_id`
+   * column (see PR 4 / PR 12 in flowlib-hosted/UPSTREAM.md). On stock
+   * single-tenant deployments there is no such column and the default
+   * adapter ignores context — behavior unchanged.
    */
-  async get(id: string): Promise<Credential> {
+  async get(id: string, context?: EncryptionContext): Promise<Credential> {
     const credential = await this.model.findById(id);
 
     if (!credential) {
@@ -118,8 +200,10 @@ export class CredentialsService {
     }
 
     // Decrypt the config (config is already a string from DB)
-    const decryptedConfig = this.encryption.decryptObject<CredentialConfig>(
+    const decryptionContext = this.resolveContext(credential, context);
+    const decryptedConfig = await this.decryptConfig(
       typeof credential.config === 'string' ? credential.config : JSON.stringify(credential.config),
+      decryptionContext,
     );
 
     return {
@@ -132,8 +216,8 @@ export class CredentialsService {
    * Get a credential by ID with sensitive config fields redacted.
    * Safe for returning to the frontend — secrets are replaced with a masked placeholder.
    */
-  async getSanitized(id: string): Promise<Credential> {
-    const credential = await this.get(id);
+  async getSanitized(id: string, context?: EncryptionContext): Promise<Credential> {
+    const credential = await this.get(id, context);
     return {
       ...credential,
       config: CredentialsService.sanitizeConfig(credential.config),
@@ -171,8 +255,8 @@ export class CredentialsService {
   /**
    * Alias for get() - Get a decrypted credential by ID
    */
-  async getDecrypted(id: string): Promise<Credential> {
-    return this.get(id);
+  async getDecrypted(id: string, context?: EncryptionContext): Promise<Credential> {
+    return this.get(id, context);
   }
 
   /**
@@ -186,10 +270,12 @@ export class CredentialsService {
    * 5. Returns the credential with fresh token
    *
    * @param id - Credential ID
+   * @param context - Optional encryption context (PR 12). When omitted,
+   *   defaults to `{ organizationId }` derived from the credential row.
    * @returns Credential with valid (possibly refreshed) access token
    */
-  async getDecryptedWithRefresh(id: string): Promise<Credential> {
-    const credential = await this.get(id);
+  async getDecryptedWithRefresh(id: string, context?: EncryptionContext): Promise<Credential> {
+    const credential = await this.get(id, context);
 
     // Check if this is an OAuth2 credential that needs refresh
     if (
@@ -233,8 +319,9 @@ export class CredentialsService {
           expiresAt,
         };
 
-        // Update in database
-        await this.update(id, { config: updatedConfig });
+        // Update in database — propagate context so the re-encrypt uses
+        // the same DEK scope as the read.
+        await this.update(id, { config: updatedConfig }, context);
 
         this.logger.info('OAuth2 token refreshed successfully', { credentialId: id });
 
@@ -264,8 +351,17 @@ export class CredentialsService {
    * List all credentials
    * Does NOT decrypt configs (for security)
    * Use get() to decrypt a specific credential
+   *
+   * Note: `list()` does not decrypt, so the second `_context` parameter is
+   * unused today. It is accepted for signature symmetry with the rest of
+   * the CRUD API and to reserve the seam for hosted variants that may
+   * apply tenant-scoped row filtering on top of the encryption context
+   * (PR 12 in flowlib-hosted/UPSTREAM.md).
    */
-  async list(filters?: CredentialFilters): Promise<Array<Omit<Credential, 'config'>>> {
+  async list(
+    filters?: CredentialFilters,
+    _context?: EncryptionContext,
+  ): Promise<Array<Omit<Credential, 'config'>>> {
     // Get all credentials
     const allCredentials = await this.model.findAll();
     const credentials = allCredentials.data;
@@ -295,10 +391,19 @@ export class CredentialsService {
   /**
    * Update a credential
    * Re-encrypts config if provided
+   *
+   * If `context` is omitted, it is derived from the existing credential
+   * row (e.g. host-injected `organizationId`). The default in-process
+   * encryption adapter ignores context entirely.
    */
-  async update(id: string, input: UpdateCredentialInput): Promise<Credential> {
+  async update(
+    id: string,
+    input: UpdateCredentialInput,
+    context?: EncryptionContext,
+  ): Promise<Credential> {
     // Get existing credential to verify it exists
-    const _existing = await this.get(id);
+    const existing = await this.get(id, context);
+    const resolvedContext = this.resolveContext(existing, context);
 
     // Build update object
     const updateData: UpdateCredentialInput = {
@@ -307,7 +412,7 @@ export class CredentialsService {
 
     // Encrypt config if provided
     if (input.config !== undefined) {
-      const encryptedConfigStr = this.encryption.encryptObject(input.config);
+      const encryptedConfigStr = await this.encryptConfig(input.config, resolvedContext);
       updateData.config = encryptedConfigStr as unknown as CredentialConfig;
     }
 
@@ -316,8 +421,9 @@ export class CredentialsService {
 
     // Decrypt config for return
     if (updated.config) {
-      const decryptedConfig = this.encryption.decryptObject<CredentialConfig>(
+      const decryptedConfig = await this.decryptConfig(
         typeof updated.config === 'string' ? updated.config : JSON.stringify(updated.config),
+        this.resolveContext(updated, resolvedContext),
       );
       return {
         ...updated,
@@ -330,10 +436,14 @@ export class CredentialsService {
 
   /**
    * Delete a credential
+   *
+   * `context` is used only for the existence check (which decrypts to
+   * verify the row); the underlying delete does not touch ciphertext.
+   * Accepted for symmetry with the rest of the CRUD API.
    */
-  async delete(id: string): Promise<void> {
-    // Verify credential exists
-    await this.get(id);
+  async delete(id: string, context?: EncryptionContext): Promise<void> {
+    // Verify credential exists (decrypts → context-aware)
+    await this.get(id, context);
 
     // Check if credential is in use
     const usage = await this.getUsage(id);
@@ -445,16 +555,21 @@ export class CredentialsService {
   async getExpiringCredentials(daysUntilExpiry: number = 7): Promise<Credential[]> {
     const expiredCredentials = await this.model.getExpiredCredentials(daysUntilExpiry);
 
-    // Decrypt configs, then sanitize before returning
-    return expiredCredentials.map((cred) => {
-      const decryptedConfig = this.encryption.decryptObject<CredentialConfig>(
-        JSON.stringify(cred.config),
-      );
-      return {
-        ...cred,
-        config: CredentialsService.sanitizeConfig(decryptedConfig),
-      };
-    });
+    // Decrypt configs, then sanitize before returning.
+    // Each row supplies its own context (host-injected `organizationId`)
+    // so multi-tenant deployments decrypt with the right per-tenant DEK.
+    return Promise.all(
+      expiredCredentials.map(async (cred) => {
+        const decryptedConfig = await this.decryptConfig(
+          typeof cred.config === 'string' ? cred.config : JSON.stringify(cred.config),
+          this.resolveContext(cred),
+        );
+        return {
+          ...cred,
+          config: CredentialsService.sanitizeConfig(decryptedConfig),
+        };
+      }),
+    );
   }
 
   // ========================================================================

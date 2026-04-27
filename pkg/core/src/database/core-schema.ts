@@ -120,6 +120,21 @@ export const CORE_SCHEMA: InvectPluginSchema = {
       triggerNodeId: { type: 'string', required: false },
       triggerData: { type: 'json', required: false, typeAnnotation: 'JSONValue' },
       lastHeartbeatAt: { type: 'date', required: false },
+      /**
+       * Buffered node executions for `execution.persistence: 'per-run'` mode.
+       * Populated only at flow-run completion (success OR failure) — never
+       * during an in-flight run. Stores a JSON-encoded array of
+       * `NodeExecution` rows that would otherwise have been written to
+       * `invect_action_traces` one-row-per-node-per-state.
+       *
+       * NOT written by `'per-node'` (default) mode — readers must check
+       * both this column AND `invect_action_traces` so a single deployment
+       * can serve historical runs that were captured under either mode.
+       *
+       * Stored as JSONB on PostgreSQL, JSON on MySQL, and TEXT (json mode)
+       * on SQLite — same physical encoding as `outputs` / `inputs` above.
+       */
+      nodeOutputs: { type: 'json', required: false, typeAnnotation: 'JSONValue' },
     },
   },
 

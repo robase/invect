@@ -5,9 +5,18 @@
  * The underlying actions (exported as callable `ActionHelper`s from
  * `defineAction`) have strict signatures inferred from their Zod schemas.
  * These wrappers provide the author-friendly shapes users expect:
- *   - `input('ref')` — no params required (schema defaults apply)
- *   - `output('ref', { value })` — `value` is an alias for `outputValue`
- *   - `code('ref', { code })` — matches the primitives-SDK name
+ *   - `input()` / `input('ref')` — no params required (schema defaults apply)
+ *   - `output({ value })` / `output('ref', { value })` — `value` is an
+ *     alias for `outputValue`
+ *   - `code({ code })` / `code('ref', { code })` — matches the
+ *     primitives-SDK name
+ *
+ * Every helper supports two call forms:
+ *
+ *   1. **Named-record form** (preferred): `input(params)` / `input()`. Used
+ *      inside `defineFlow({ nodes: { event: input(...) } })` — the key
+ *      becomes the referenceId, the helper itself doesn't need it.
+ *   2. **Positional form** (legacy + array `defineFlow`): `input('ref', params)`.
  *
  * Each wrapper delegates to the real action helper, producing the same
  * `SdkFlowNode` shape and threading `NodeOptions` through untouched.
@@ -29,21 +38,80 @@ import type { NodeOptions, SdkFlowNode } from '@invect/action-kit';
 import type { ToolInstance } from '../tool';
 
 // ═══════════════════════════════════════════════════════════════════════════
+// Shared overload-discrimination
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Discriminates the two call forms by the first argument:
+ *   helper(referenceId: string, params, options?) — positional
+ *   helper(params: object,             options?) — named-record
+ *
+ * For the named-record path, returns an empty `referenceId` — `defineFlow`
+ * overwrites it from the object key.
+ */
+function splitArgs<P>(
+  arg0: string | P | undefined,
+  arg1: P | NodeOptions | undefined,
+  arg2: NodeOptions | undefined,
+): { referenceId: string; params: P; options: NodeOptions | undefined } {
+  if (typeof arg0 === 'string') {
+    return {
+      referenceId: arg0,
+      params: (arg1 ?? {}) as P,
+      options: arg2,
+    };
+  }
+  return {
+    referenceId: '',
+    params: (arg0 ?? {}) as P,
+    options: arg1 as NodeOptions | undefined,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Code-expression form (string | arrow)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Code-bearing fields (`output.value`, `code.code`, `ifElse.condition`, and
+ * each `switchNode` case's `expression`) accept either a string template /
+ * JS expression, or a `(ctx) => ...` arrow that the save pipeline's
+ * arrow-to-string transform converts to a runtime string.
+ *
+ * Both forms type-check; runtime stores strings only.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type CodeExpression<T = unknown> = string | ((ctx: any) => T);
+
+// ═══════════════════════════════════════════════════════════════════════════
 // input
 // ═══════════════════════════════════════════════════════════════════════════
+
+interface InputParams {
+  variableName?: string;
+  defaultValue?: string;
+}
 
 /**
  * Flow input node.
  *
  * With no params, uses the referenceId as the runtime variable name.
- *   `input('query')` — reads `inputs.query` at runtime.
- *   `input('user', { variableName: 'current_user' })` — explicit name.
+ *   `input()` (named form, key = ref) — reads `inputs.<key>` at runtime.
+ *   `input('query')` (positional)     — reads `inputs.query` at runtime.
+ *   `input({ variableName: 'current_user' })` — explicit variable name.
  */
+export function input(params?: InputParams, options?: NodeOptions): SdkFlowNode;
 export function input(
   referenceId: string,
-  params?: { variableName?: string; defaultValue?: string },
+  params?: InputParams,
   options?: NodeOptions,
+): SdkFlowNode;
+export function input(
+  arg0?: string | InputParams,
+  arg1?: InputParams | NodeOptions,
+  arg2?: NodeOptions,
 ): SdkFlowNode {
+  const { referenceId, params, options } = splitArgs<InputParams | undefined>(arg0, arg1, arg2);
   return inputAction(
     referenceId,
     {
@@ -58,21 +126,39 @@ export function input(
 // output
 // ═══════════════════════════════════════════════════════════════════════════
 
+interface OutputParams {
+  /** Output value — either a `{{ expr }}` template string or a `(ctx) => ...` arrow. */
+  value: CodeExpression;
+  name?: string;
+}
+
 /**
  * Flow output node.
  *
  * `value` supports `{{ expr }}` template syntax (JS, evaluated in QuickJS at
- * runtime). After the Phase 4 arrow-to-string transform lands, this will also
- * accept `(ctx) => ...` arrow forms.
+ * runtime).
  */
+export function output(params: OutputParams, options?: NodeOptions): SdkFlowNode;
 export function output(
   referenceId: string,
-  params: { value: string; name?: string },
+  params: OutputParams,
   options?: NodeOptions,
+): SdkFlowNode;
+export function output(
+  arg0: string | OutputParams,
+  arg1?: OutputParams | NodeOptions,
+  arg2?: NodeOptions,
 ): SdkFlowNode {
+  const { referenceId, params, options } = splitArgs<OutputParams>(arg0, arg1, arg2);
   return outputAction(
     referenceId,
-    { outputValue: params.value, outputName: params.name ?? referenceId },
+    {
+      // Cast: outputAction's Zod schema declares `outputValue` as a string;
+      // arrow values get converted by `transformArrowsToStrings` in the
+      // save pipeline. Runtime never sees the function.
+      outputValue: params.value as string,
+      outputName: params.name ?? referenceId,
+    },
     options,
   );
 }
@@ -81,18 +167,25 @@ export function output(
 // code / javascript
 // ═══════════════════════════════════════════════════════════════════════════
 
+interface CodeParams {
+  /** JS expression — either a string of source or a `(ctx) => ...` arrow. */
+  code: CodeExpression;
+}
+
 /**
  * Run a JavaScript expression/block in QuickJS.
  *
  * Today: pass a string of JS source (the runtime form).
- * After Phase 4 (arrow-to-string transform): `code: (ctx) => ...` also accepted.
  */
+export function code(params: CodeParams, options?: NodeOptions): SdkFlowNode;
+export function code(referenceId: string, params: CodeParams, options?: NodeOptions): SdkFlowNode;
 export function code(
-  referenceId: string,
-  params: { code: string },
-  options?: NodeOptions,
+  arg0: string | CodeParams,
+  arg1?: CodeParams | NodeOptions,
+  arg2?: NodeOptions,
 ): SdkFlowNode {
-  return javascriptAction(referenceId, { code: params.code }, options);
+  const { referenceId, params, options } = splitArgs<CodeParams>(arg0, arg1, arg2);
+  return javascriptAction(referenceId, { code: params.code as string }, options);
 }
 
 /** Alias matching the `javascript()` name used in `@invect/core/sdk`. */
@@ -102,49 +195,104 @@ export const javascript = code;
 // ifElse
 // ═══════════════════════════════════════════════════════════════════════════
 
+interface IfElseParams {
+  /** Boolean expression — string or `(ctx) => boolean` arrow. */
+  condition: CodeExpression<boolean>;
+}
+
 /**
  * Two-way conditional branching — edges from this node use source handles
  * `true_output` and `false_output`.
- *
- * Today: `condition` is a string JS expression.
- * After Phase 4: `condition: (ctx) => boolean` also accepted.
  */
 export function ifElse(
-  referenceId: string,
-  params: { condition: string },
+  params: IfElseParams,
   options?: NodeOptions,
-): SdkFlowNode {
-  return ifElseAction(referenceId, { expression: params.condition }, options);
+): SdkFlowNode<string, 'core.if_else', 'true_output' | 'false_output'>;
+export function ifElse(
+  referenceId: string,
+  params: IfElseParams,
+  options?: NodeOptions,
+): SdkFlowNode<string, 'core.if_else', 'true_output' | 'false_output'>;
+export function ifElse(
+  arg0: string | IfElseParams,
+  arg1?: IfElseParams | NodeOptions,
+  arg2?: NodeOptions,
+): SdkFlowNode<string, 'core.if_else', 'true_output' | 'false_output'> {
+  const { referenceId, params, options } = splitArgs<IfElseParams>(arg0, arg1, arg2);
+  return ifElseAction(
+    referenceId,
+    { expression: params.condition as string },
+    options,
+  ) as SdkFlowNode<string, 'core.if_else', 'true_output' | 'false_output'>;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // switchNode
 // ═══════════════════════════════════════════════════════════════════════════
 
-export interface SwitchCase {
-  slug: string;
+export interface SwitchCase<Slug extends string = string> {
+  slug: Slug;
   label: string;
-  /** JS expression string. Post-Phase-4 also accepts `(ctx) => boolean`. */
-  expression: string;
+  /** Boolean expression — string or `(ctx) => boolean` arrow. */
+  expression: CodeExpression<boolean>;
+}
+
+/**
+ * Extract the per-case slug union from a `cases` tuple literal.
+ *
+ * `switchAction` declares `dynamicOutputs: true` at the runtime level
+ * (handles depend on the user's `cases` array, not on a static `outputs`
+ * tuple), so the SDK helper computes the handle union locally from the
+ * caller's `cases` literal. Always includes `'default'` for the
+ * fallthrough branch.
+ */
+type SwitchHandlesOf<C extends readonly SwitchCase[]> =
+  | (C[number] extends { slug: infer S extends string } ? S : never)
+  | 'default';
+
+interface SwitchParams<C extends readonly SwitchCase[]> {
+  cases: C;
+  matchMode?: 'first' | 'all';
 }
 
 /**
  * Multi-way conditional branching. Edges use source handles that match each
  * case's `slug` (plus `default` for the fallthrough).
+ *
+ * The `const C` modifier captures the `cases` literal so each `slug` becomes
+ * part of the node's handle union — `edge: { from: 'router', to: 'x', handle: 'unknown' }`
+ * type-errors if `'unknown'` isn't one of the declared slugs (or `'default'`).
  */
-export function switchNode(
-  referenceId: string,
-  params: { cases: SwitchCase[]; matchMode?: 'first' | 'all' },
+export function switchNode<const C extends readonly SwitchCase[]>(
+  params: SwitchParams<C>,
   options?: NodeOptions,
-): SdkFlowNode {
+): SdkFlowNode<string, 'core.switch', SwitchHandlesOf<C>>;
+export function switchNode<R extends string, const C extends readonly SwitchCase[]>(
+  referenceId: R,
+  params: SwitchParams<C>,
+  options?: NodeOptions,
+): SdkFlowNode<R, 'core.switch', SwitchHandlesOf<C>>;
+export function switchNode<C extends readonly SwitchCase[]>(
+  arg0: string | SwitchParams<C>,
+  arg1?: SwitchParams<C> | NodeOptions,
+  arg2?: NodeOptions,
+): SdkFlowNode<string, 'core.switch', SwitchHandlesOf<C>> {
+  const { referenceId, params, options } = splitArgs<SwitchParams<C>>(arg0, arg1, arg2);
   return switchAction(
     referenceId,
     {
-      cases: params.cases,
+      // Cast: arrow expressions inside cases get converted to strings by
+      // the save-pipeline's arrow-to-string transform; runtime stores
+      // strings only.
+      cases: params.cases.map((c) => ({
+        slug: c.slug,
+        label: c.label,
+        expression: c.expression as string,
+      })),
       matchMode: params.matchMode ?? 'first',
     },
     options,
-  );
+  ) as unknown as SdkFlowNode<string, 'core.switch', SwitchHandlesOf<C>>;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -164,11 +312,14 @@ export interface ModelParams {
 }
 
 /** Single-shot LLM call (OpenAI / Anthropic / OpenRouter). */
+export function model(params: ModelParams, options?: NodeOptions): SdkFlowNode;
+export function model(referenceId: string, params: ModelParams, options?: NodeOptions): SdkFlowNode;
 export function model(
-  referenceId: string,
-  params: ModelParams,
-  options?: NodeOptions,
+  arg0: string | ModelParams,
+  arg1?: ModelParams | NodeOptions,
+  arg2?: NodeOptions,
 ): SdkFlowNode {
+  const { referenceId, params, options } = splitArgs<ModelParams>(arg0, arg1, arg2);
   return modelAction(
     referenceId,
     {
@@ -215,13 +366,13 @@ export interface AgentParams {
  * assigns stable `instanceId`s by matching against the prior version; new
  * tools get fresh ids.
  */
+export function agent(params: AgentParams, options?: NodeOptions): SdkFlowNode;
+export function agent(referenceId: string, params: AgentParams, options?: NodeOptions): SdkFlowNode;
 export function agent(
-  referenceId: string,
-  params: AgentParams,
-  options?: NodeOptions,
+  arg0: string | AgentParams,
+  arg1?: AgentParams | NodeOptions,
+  arg2?: NodeOptions,
 ): SdkFlowNode {
-  // Pass the authored params through directly. Zod parses + defaults fill in
-  // missing optional fields at runtime; the agent action's schema is lenient
-  // enough that the author-friendly shape here is a superset.
+  const { referenceId, params, options } = splitArgs<AgentParams>(arg0, arg1, arg2);
   return agentAction(referenceId, params as unknown as Parameters<typeof agentAction>[1], options);
 }

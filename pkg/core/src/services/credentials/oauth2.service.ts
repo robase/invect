@@ -79,24 +79,40 @@ const pendingStates = new Map<string, OAuth2PendingState>();
 // Clean up expired states (older than 10 minutes)
 const STATE_EXPIRY_MS = 10 * 60 * 1000;
 
-function cleanupExpiredStates() {
-  const now = Date.now();
-  for (const [state, pending] of pendingStates.entries()) {
-    if (now - pending.createdAt > STATE_EXPIRY_MS) {
-      pendingStates.delete(state);
-    }
-  }
-}
-
-// Run cleanup every 5 minutes
-const expiredStateCleanupInterval = setInterval(cleanupExpiredStates, 5 * 60 * 1000);
-expiredStateCleanupInterval.unref?.();
+// PR 5/14 (flowlib-hosted/UPSTREAM.md): pending-state cleanup is now driven
+// by the host. The previous module-level `setInterval` started a timer at
+// import time which broke edge runtimes (no timers between requests, the
+// interval ran in every isolate, and was never cleared). Hosts must now
+// invoke `invect.maintenance.cleanupExpiredOAuthStates()` from a cron entry
+// point, OR call `OAuth2Service.cleanupExpiredStates()` directly.
 
 /**
  * OAuth2 Service for handling authorization flows
  */
 export class OAuth2Service {
   constructor(private readonly logger: Logger) {}
+
+  /**
+   * Sweep the in-memory pending-state map and drop entries older than
+   * `STATE_EXPIRY_MS`. Returns the number of entries evicted.
+   *
+   * Self-hosted long-lived processes can wire this to a `setInterval`;
+   * serverless / edge hosts should drive it from an external cron tick
+   * via `invect.maintenance.cleanupExpiredOAuthStates()`.
+   */
+  cleanupExpiredStates(now: number = Date.now()): { count: number } {
+    let count = 0;
+    for (const [state, pending] of pendingStates.entries()) {
+      if (now - pending.createdAt > STATE_EXPIRY_MS) {
+        pendingStates.delete(state);
+        count += 1;
+      }
+    }
+    if (count > 0) {
+      this.logger.debug('Evicted expired OAuth2 pending states', { count });
+    }
+    return { count };
+  }
 
   /**
    * Get all available OAuth2 providers

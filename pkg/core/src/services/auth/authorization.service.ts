@@ -18,6 +18,7 @@ import {
   AuthAuthorizedEvent,
   AuthForbiddenEvent,
   AuthUnauthenticatedEvent,
+  AuthEvent,
   DEFAULT_ROLE_PERMISSIONS,
 } from '../../types/auth.types';
 import type { Logger } from '../../schemas/invect-config';
@@ -38,6 +39,13 @@ export interface AuthorizationServiceOptions {
  * - All identity information resolved at request time
  * - Emits events for host app audit logging
  * - Supports custom roles and permission overrides
+ *
+ * Currently extends Node's `EventEmitter` for back-compat with existing
+ * `service.on('auth:authorized', ...)` callers. New code should prefer the
+ * abstract `onChange(handler)` method below: it returns an idempotent
+ * disposer, doesn't depend on `EventEmitter`, and is the surface that future
+ * out-of-process auth-event adapters (mirror of `RemoteEventBus`) will
+ * implement. See PR 8 in `flowlib-hosted/UPSTREAM.md`.
  */
 export class AuthorizationService extends EventEmitter {
   private readonly config: InvectAuthConfig;
@@ -213,6 +221,34 @@ export class AuthorizationService extends EventEmitter {
    */
   getResolvedRole(identity: InvectIdentity): InvectRole {
     return this.resolveRole(identity);
+  }
+
+  /**
+   * Subscribe to authorization-state changes (`auth:authorized`,
+   * `auth:forbidden`, `auth:unauthenticated`).
+   *
+   * Future-proof alternative to `service.on('auth:authorized', …)`. Returns
+   * an idempotent disposer — calling it more than once is a no-op. New code
+   * should prefer this over the inherited `EventEmitter` API; the latter
+   * remains supported for back-compat but will become an implementation
+   * detail of an `AuthEventBusAdapter` in a future PR.
+   */
+  onChange(handler: (event: AuthEvent) => void): () => void {
+    const forward = (event: AuthEvent) => handler(event);
+    this.on('auth:authorized', forward);
+    this.on('auth:forbidden', forward);
+    this.on('auth:unauthenticated', forward);
+
+    let disposed = false;
+    return () => {
+      if (disposed) {
+        return;
+      }
+      disposed = true;
+      this.off('auth:authorized', forward);
+      this.off('auth:forbidden', forward);
+      this.off('auth:unauthenticated', forward);
+    };
   }
 
   /**

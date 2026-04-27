@@ -114,10 +114,13 @@ export function FlowRunsView({ flowId, flowVersion, basePath }: FlowRunsViewProp
 
   const handleModeChange = (newMode: 'edit' | 'runs') => {
     if (newMode === 'edit') {
-      const editPath = flowVersion
-        ? `${basePath}/flow/${flowId}/version/${flowVersion}`
-        : `${basePath}/flow/${flowId}`;
-      navigate(editPath);
+      // Always switch to the latest version on Edit. Pinning the
+      // editor to a historical `flowVersion` (the version this run
+      // executed against) would let the user accidentally edit an old
+      // snapshot rather than the live definition; the runs view is the
+      // place to inspect history, the editor is the place to change
+      // the current flow.
+      navigate(`${basePath}/flow/${flowId}`);
     }
   };
 

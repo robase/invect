@@ -318,6 +318,11 @@ export class FlowRunsService {
     data?: {
       outputs?: Record<string, unknown>;
       error?: string;
+      /**
+       * Buffered node-execution blob for `execution.persistence: 'per-run'`.
+       * Only set on terminal-state updates from the FlowRunCoordinator.
+       */
+      nodeOutputs?: unknown;
     },
   ): Promise<FlowRun> {
     try {

@@ -16,7 +16,6 @@
  * Redis-backed implementation of this same shape.
  */
 
-import { randomUUID } from 'node:crypto';
 import type { Logger } from 'src/schemas';
 import type { ChatStreamEvent } from './chat-types';
 
@@ -65,7 +64,7 @@ export class ActiveChatSessions {
    * via `push()` and calling `close()` when generation finishes.
    */
   create(options: { flowId?: string; id?: string } = {}): ActiveChatSession {
-    const id = options.id ?? randomUUID();
+    const id = options.id ?? crypto.randomUUID();
     const session: ActiveChatSession = {
       id,
       flowId: options.flowId,
@@ -225,6 +224,51 @@ export class ActiveChatSessions {
         signal.removeEventListener('abort', onAbort);
       }
     }
+  }
+
+  /**
+   * Evict any session that has either:
+   *   - exceeded `MAX_SESSION_LIFETIME_MS` since `startedAt` (runaway producer), OR
+   *   - completed (`done=true`) AND lived past `RECONNECT_GRACE_MS`
+   *     (i.e. the per-session evict timer would have fired by now).
+   *
+   * PR 5/14 (flowlib-hosted/UPSTREAM.md) — provided so hosts on serverless
+   * / edge runtimes can drive eviction from an external cron entry point
+   * (`invect.maintenance.evictExpiredChatSessions()`) instead of relying on
+   * per-session `setTimeout`s that don't run between worker invocations.
+   * Long-lived Node processes use the in-process `setTimeout`s (set in
+   * `create()` and `close()`) and rarely need to call this.
+   *
+   * Returns the number of sessions evicted.
+   */
+  evictExpiredSessions(now: number = Date.now()): { count: number } {
+    let count = 0;
+    for (const [id, session] of this.sessions) {
+      const aged = now - session.startedAt > MAX_SESSION_LIFETIME_MS;
+      const completedAndExpired = session.done && now - session.startedAt > RECONNECT_GRACE_MS;
+      if (!aged && !completedAndExpired) {
+        continue;
+      }
+      if (session.evictTimer) {
+        clearTimeout(session.evictTimer);
+      }
+      // Live subscribers must see closure before the session disappears.
+      if (!session.done) {
+        for (const subscriber of session.subscribers) {
+          try {
+            subscriber(null);
+          } catch {
+            // best-effort teardown
+          }
+        }
+      }
+      this.sessions.delete(id);
+      count += 1;
+    }
+    if (count > 0) {
+      this.logger.debug('Evicted expired chat sessions', { count });
+    }
+    return { count };
   }
 
   /** Evict every session — called on shutdown. */

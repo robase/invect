@@ -564,6 +564,60 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
   );
 
   /**
+   * Shared handler for the SSE event stream.
+   * Wired to both `/flow-runs/:flowRunId/stream` (legacy / canonical) and
+   * `/runs/:flowRunId/events` (alias used by the VSCode extension and other
+   * external clients that prefer a `/runs/...` REST shape).
+   */
+  async function handleRunEventsStream(req: Request, res: Response, flowRunId: string) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    // Disable Nagle so each `res.write` chunk hits the socket immediately
+    // — important for SSE under bursty event traffic (parallel scheduler).
+    res.socket?.setNoDelay(true);
+
+    // If a compression middleware is in the stack, `res.flush()` exists and
+    // must be called after every write to defeat its buffer.
+    const flush = (res as unknown as { flush?: () => void }).flush;
+    const flushIfPresent = typeof flush === 'function' ? flush.bind(res) : (): void => undefined;
+
+    // Clean shutdown if the client disconnects mid-stream.
+    let clientGone = false;
+    req.on('close', () => {
+      clientGone = true;
+    });
+
+    try {
+      const stream = invect.runs.createEventStream(flowRunId);
+
+      for await (const event of stream) {
+        if (clientGone || res.destroyed) {
+          break;
+        }
+        const data = JSON.stringify(event);
+        res.write(`event: ${event.type}\ndata: ${data}\n\n`);
+        flushIfPresent();
+      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Stream failed';
+      if (res.headersSent) {
+        res.write(`event: error\ndata: ${JSON.stringify({ type: 'error', message })}\n\n`);
+        flushIfPresent();
+      } else {
+        return res.status(500).json({ error: 'Internal Server Error', message });
+      }
+    } finally {
+      if (!res.destroyed) {
+        res.end();
+      }
+    }
+  }
+
+  /**
    * GET /flow-runs/:flowRunId/stream - SSE stream of execution events
    * Core method: ✅ createFlowRunEventStream(flowRunId: string)
    *
@@ -575,44 +629,83 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
     '/flow-runs/:flowRunId/stream',
     requirePermission('flow-run:read'),
     async (req: Request, res: Response) => {
-      // SSE headers
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-      res.setHeader('X-Accel-Buffering', 'no');
-      res.flushHeaders();
+      await handleRunEventsStream(req, res, param(req, 'flowRunId'));
+    },
+  );
 
-      // Disable Nagle so each `res.write` chunk hits the socket immediately
-      // — important for SSE under bursty event traffic (parallel scheduler).
-      res.socket?.setNoDelay(true);
+  /**
+   * GET /runs/:flowRunId/events - SSE stream of execution events (alias).
+   *
+   * Identical semantics to `/flow-runs/:flowRunId/stream`. Exposed under the
+   * shorter `/runs/...` shape for external clients (VSCode extension, etc.)
+   * that prefer it.
+   * Permission: flow-run:read
+   */
+  router.get(
+    '/runs/:flowRunId/events',
+    requirePermission('flow-run:read'),
+    async (req: Request, res: Response) => {
+      await handleRunEventsStream(req, res, param(req, 'flowRunId'));
+    },
+  );
 
-      // If a compression middleware is in the stack, `res.flush()` exists and
-      // must be called after every write to defeat its buffer.
-      const flush = (res as unknown as { flush?: () => void }).flush;
-      const flushIfPresent = typeof flush === 'function' ? flush.bind(res) : () => {};
-
-      try {
-        const stream = invect.runs.createEventStream(param(req, 'flowRunId'));
-
-        for await (const event of stream) {
-          if (res.destroyed) {
-            break;
-          }
-          const data = JSON.stringify(event);
-          res.write(`event: ${event.type}\ndata: ${data}\n\n`);
-          flushIfPresent();
-        }
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Stream failed';
-        if (res.headersSent) {
-          res.write(`event: error\ndata: ${JSON.stringify({ type: 'error', message })}\n\n`);
-          flushIfPresent();
-        } else {
-          return res.status(500).json({ error: 'Internal Server Error', message });
-        }
-      } finally {
-        res.end();
+  /**
+   * POST /flow-runs/ephemeral - Run an inline flow definition without
+   * persisting it as a regular flow.
+   *
+   * Body: { definition: InvectDefinition, inputs?: Record<string, unknown>, name?: string }
+   * Returns: { flowRunId, flowId, status, eventsPath }
+   *
+   * Credentials are NOT ephemeral — `credentialId` references in the
+   * definition still resolve against the persisted credential store.
+   * Permission: flow:create (ephemeral runs implicitly create a flow record)
+   */
+  router.post(
+    '/flow-runs/ephemeral',
+    requirePermission('flow:create'),
+    async (req: Request, res: Response) => {
+      const { definition, inputs, name } = (req.body ?? {}) as {
+        definition?: unknown;
+        inputs?: Record<string, unknown>;
+        name?: string;
+      };
+      if (!definition || typeof definition !== 'object') {
+        return res.status(400).json({
+          error: 'Bad Request',
+          message: 'Body.definition (InvectDefinition) is required',
+        });
       }
+      const result = await invect.runs.runEphemeral(definition as never, inputs ?? {}, {
+        name,
+        initiatedBy: req.invectIdentity?.id,
+      });
+      res.json(result);
+    },
+  );
+
+  /**
+   * POST /runs/ephemeral - Alias for /flow-runs/ephemeral.
+   */
+  router.post(
+    '/runs/ephemeral',
+    requirePermission('flow:create'),
+    async (req: Request, res: Response) => {
+      const { definition, inputs, name } = (req.body ?? {}) as {
+        definition?: unknown;
+        inputs?: Record<string, unknown>;
+        name?: string;
+      };
+      if (!definition || typeof definition !== 'object') {
+        return res.status(400).json({
+          error: 'Bad Request',
+          message: 'Body.definition (InvectDefinition) is required',
+        });
+      }
+      const result = await invect.runs.runEphemeral(definition as never, inputs ?? {}, {
+        name,
+        initiatedBy: req.invectIdentity?.id,
+      });
+      res.json(result);
     },
   );
 
@@ -1719,6 +1812,19 @@ export async function createInvectRouter(config: InvectConfig): Promise<Router> 
     }
 
     // Handle other known errors
+    if (error.name === 'ValidationError') {
+      const ve = error as Error & {
+        field?: string;
+        context?: Record<string, unknown>;
+      };
+      return res.status(400).json({
+        error: 'Validation Error',
+        message: error.message || 'Validation failed',
+        field: ve.field,
+        details: ve.context,
+      });
+    }
+
     if (error.name === 'DatabaseError') {
       return res.status(500).json({
         error: 'Database Error',

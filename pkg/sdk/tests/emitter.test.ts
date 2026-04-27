@@ -39,8 +39,8 @@ describe('emitSdkSource', () => {
       assertParses(code);
       expect(code).toContain(`import { defineFlow, input, output } from "@invect/sdk"`);
       expect(code).toContain(`export const myFlow = defineFlow({`);
-      expect(code).toContain(`input("query")`);
-      expect(code).toContain(`output("out"`);
+      expect(code).toContain(`query: input(),`);
+      expect(code).toContain(`out: output({`);
       expect(code).toContain(`{ from: "query", to: "out" }`);
       expect(sdkImports.sort()).toEqual(['defineFlow', 'input', 'output'].sort());
     });
@@ -79,7 +79,7 @@ describe('emitSdkSource', () => {
       };
       const { code } = emitSdkSource(def);
       assertParses(code);
-      expect(code).toContain(`code("greet", { code:`);
+      expect(code).toContain(`greet: code({ code:`);
       expect(code).toContain(`const { user } = ctx;`);
       // needsAutoReturn wraps expressions in return()
       expect(code).toContain(`return (\`Hi \${user.name}\`);`);
@@ -95,7 +95,7 @@ describe('emitSdkSource', () => {
       };
       const { code } = emitSdkSource(def);
       assertParses(code);
-      expect(code).toContain(`ifElse("check", { condition:`);
+      expect(code).toContain(`check: ifElse({ condition:`);
       expect(code).toContain(`const { x } = ctx;`);
       expect(code).toContain(`return (x > 5);`);
     });
@@ -121,7 +121,7 @@ describe('emitSdkSource', () => {
       };
       const { code } = emitSdkSource(def);
       assertParses(code);
-      expect(code).toContain(`switchNode("route", {`);
+      expect(code).toContain(`route: switchNode({`);
       expect(code).toContain(`matchMode: "first"`);
       expect(code).toContain(`slug: "a", label: "A", expression:`);
       expect(code).toContain(`return (kind === "a");`);
@@ -232,7 +232,7 @@ describe('emitSdkSource', () => {
       };
       const { code, sdkImports } = emitSdkSource(def);
       assertParses(code);
-      expect(code).toContain(`agent("researcher", {`);
+      expect(code).toContain(`researcher: agent({`);
       expect(code).toContain(`credentialId: "cred_abc"`);
       expect(code).toContain(`addedTools: [`);
       expect(code).toContain(`tool("github.search_issues"`);
@@ -298,7 +298,7 @@ describe('emitSdkSource', () => {
       };
       const { code, sdkImports } = emitSdkSource(def);
       assertParses(code);
-      expect(code).toContain(`trigger.manual("start")`);
+      expect(code).toContain(`start: trigger.manual()`);
       expect(sdkImports).toContain('trigger');
     });
 
@@ -316,7 +316,7 @@ describe('emitSdkSource', () => {
       };
       const { code } = emitSdkSource(def);
       assertParses(code);
-      expect(code).toContain(`trigger.manual("start"`);
+      expect(code).toContain(`start: trigger.manual({`);
       expect(code).toContain(`foo: "bar"`);
       expect(code).toContain(`count: 5`);
     });
@@ -335,7 +335,7 @@ describe('emitSdkSource', () => {
       };
       const { code } = emitSdkSource(def);
       assertParses(code);
-      expect(code).toContain(`trigger.cron("sched"`);
+      expect(code).toContain(`sched: trigger.cron({`);
       expect(code).toContain(`expression: "0 9 * * 1-5"`);
       expect(code).toContain(`timezone: "America/New_York"`);
     });
@@ -427,7 +427,7 @@ describe('emitSdkSource', () => {
       const { code, actionImports } = emitSdkSource(def);
       assertParses(code);
       expect(code).toContain(`import { gmailSendMessageAction } from "@invect/actions/gmail"`);
-      expect(code).toContain(`gmailSendMessageAction("notify"`);
+      expect(code).toContain(`notify: gmailSendMessageAction({`);
       expect(actionImports['@invect/actions/gmail']).toEqual(['gmailSendMessageAction']);
     });
 
@@ -438,7 +438,7 @@ describe('emitSdkSource', () => {
       };
       const { code, sdkImports } = emitSdkSource(def);
       assertParses(code);
-      expect(code).toContain(`node("x", "weirdtype"`);
+      expect(code).toContain(`x: node("weirdtype"`);
       expect(code).toContain(`foo: "bar"`);
       expect(sdkImports).toContain('node');
     });

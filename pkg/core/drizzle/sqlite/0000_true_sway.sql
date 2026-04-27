@@ -80,6 +80,7 @@ CREATE TABLE `invect_flow_executions` (
 	`trigger_node_id` text,
 	`trigger_data` text,
 	`last_heartbeat_at` text,
+	`node_outputs` text,
 	FOREIGN KEY (`flow_id`) REFERENCES `invect_flows`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint

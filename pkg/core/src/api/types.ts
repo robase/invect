@@ -37,7 +37,11 @@ import type { ReactFlowData } from '../services/react-flow-renderer.service';
 import type { NodeDefinition } from '../types/node-definition.types';
 import type { BatchProvider, Model, BatchPollingRunResult } from '../services/ai/base-client';
 import type { PaginatedResponse, QueryOptions } from '../schemas';
-import type { CreateFlowVersionRequest, FlowEdge } from '../services/flow-versions/schemas-fresh';
+import type {
+  CreateFlowVersionRequest,
+  FlowEdge,
+  InvectDefinition,
+} from '../services/flow-versions/schemas-fresh';
 import type { ExecutionStreamEvent } from '../services/execution-event-bus';
 import type { ActionDefinition, ProviderDef, LoadOptionsResult } from '../actions';
 import type { ActionRegistry } from '../actions';
@@ -145,6 +149,34 @@ export interface FlowRunsAPI {
   cancel(flowRunId: string): Promise<{ message: string; timestamp: string }>;
   pause(flowRunId: string, reason?: string): Promise<{ message: string; timestamp: string }>;
   createEventStream(flowRunId: string): AsyncGenerator<ExecutionStreamEvent, void, undefined>;
+  /**
+   * Run an inline flow definition without persisting it as a regular flow.
+   *
+   * The definition is validated, then a temporary flow + version is created
+   * (tagged `__ephemeral__`) so the run integrates with the existing
+   * `flow_runs` and event bus infrastructure. SSE consumers, run inspection,
+   * and node executions all work as normal — only the flow itself is hidden
+   * from typical "list flows" surfaces by virtue of the tag.
+   *
+   * **Credentials are NOT ephemeral.** Any `credentialId` referenced by the
+   * inline definition still resolves against the backend's persisted
+   * credential store. Ephemeral here means flow-definition-ephemeral, not
+   * credential-ephemeral.
+   *
+   * @returns `{ flowRunId, flowId, status, eventsPath }` — `eventsPath` is
+   * the relative SSE path (e.g. `/flow-runs/<id>/stream`) the caller should
+   * subscribe to for live execution events.
+   */
+  runEphemeral(
+    definition: InvectDefinition,
+    inputs?: FlowInputs,
+    options?: { initiatedBy?: string; name?: string; useBatchProcessing?: boolean },
+  ): Promise<{
+    flowRunId: string;
+    flowId: string;
+    status: string;
+    eventsPath: string;
+  }>;
   getNodeExecutions(
     flowRunId: string,
     options?: QueryOptions<NodeExecution>,
@@ -361,6 +393,36 @@ export interface PluginsAPI {
 }
 
 // =====================================
+// MAINTENANCE (PR 5/14)
+// =====================================
+
+/**
+ * External-scheduler entry points for the periodic lifecycle work that
+ * `@invect/core` would otherwise drive with in-process `setInterval`s.
+ *
+ * Each method performs exactly one tick and returns a `{ count }` summary
+ * of how many records it touched. Designed to be invoked from a host's
+ * cron facility (Cloudflare Cron Triggers, Vercel Cron, Kubernetes
+ * CronJob, etc.).
+ *
+ * On a long-lived Node process the existing `start*Polling` lifecycle
+ * methods continue to handle this with timers — these maintenance
+ * methods are an alternative entry point, not a replacement.
+ */
+export interface MaintenanceAPI {
+  /** Mark RUNNING/PENDING runs whose heartbeat is stale as FAILED. */
+  detectStaleRuns(): Promise<{ count: number }>;
+  /** Resume flows paused for batch processing whose batches have completed. */
+  pollBatchJobs(): Promise<{ count: number }>;
+  /** Poll provider batch APIs for status updates on pending batch jobs. */
+  pollPendingBatches(): Promise<{ count: number }>;
+  /** Drop in-memory chat sessions past the lifetime / reconnect-grace cap. */
+  evictExpiredChatSessions(): Promise<{ count: number }>;
+  /** Drop in-memory OAuth2 pending-state entries older than 10 minutes. */
+  cleanupExpiredOAuthStates(): Promise<{ count: number }>;
+}
+
+// =====================================
 // INVECT INSTANCE (top-level)
 // =====================================
 
@@ -376,6 +438,11 @@ export interface InvectInstance {
   readonly testing: TestingAPI;
   readonly auth: AuthAPI;
   readonly plugins: PluginsAPI;
+  /**
+   * External-scheduler entry points for periodic lifecycle work
+   * (PR 5/14). See {@link MaintenanceAPI}.
+   */
+  readonly maintenance: MaintenanceAPI;
 
   // Logging (root-level — too small for a namespace)
   getLogger(scope: string, context?: string): ScopedLogger;

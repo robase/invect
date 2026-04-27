@@ -7,20 +7,18 @@
  *   - Light server-side round-trip checks where the full module-eval overhead
  *     is unwanted.
  *
- * Accepts three input shapes:
+ * Accepts two input shapes:
  *
  *   1. Fragment-structured — `nodes: [...], edges: [...]` (the shape
  *      `serializeToSDK`'s copy-paste output produces without the full-file
  *      wrapper).
- *   2. Fragment-flat — a bare sequence of node calls + edge tuples, legacy
- *      shape that predates the structured form.
- *   3. Full file — `import ... from '...'; export default defineFlow({...})`
+ *   2. Full file — `import ... from '...'; export default defineFlow({...})`
  *      gets unwrapped to the body, with `defineFlow` stubbed as identity
  *      during evaluation.
  *
  * Returns `{ nodes, edges }` in `@invect/sdk` shape — `SdkFlowNode` with
  * optional `id`/`label`/`position`, plus edges in the canonical
- * `{ from, to, handle? }` or tuple form.
+ * `{ from, to, handle? }` form.
  *
  * This is user-initiated evaluation (clipboard paste or test context), so the
  * `new Function` approach is acceptable — the user is the trust boundary.
@@ -82,13 +80,7 @@ function isSdkFlowNode(item: unknown): item is SdkFlowNode {
 }
 
 function isSdkEdge(item: unknown): item is SdkEdge {
-  if (Array.isArray(item)) {
-    if (item.length < 2 || item.length > 3) {
-      return false;
-    }
-    return item.every((el) => typeof el === 'string');
-  }
-  if (typeof item === 'object' && item !== null) {
+  if (typeof item === 'object' && item !== null && !Array.isArray(item)) {
     const obj = item as Record<string, unknown>;
     return (
       typeof obj.from === 'string' &&
@@ -156,7 +148,7 @@ function unwrapFullFile(text: string): string {
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Parse SDK source text into node definitions + edge tuples.
+ * Parse SDK source text into node definitions + edges.
  *
  * The parser is permissive: accepts the structured `nodes: [...], edges: [...]`
  * fragment form, the flat bare-call form, or a full file that will be
@@ -190,18 +182,32 @@ export function parseSDKText(text: string): ParsedFragment {
   }
 
   const obj = result as Record<string, unknown>;
-  const rawNodes = Array.isArray(obj.nodes) ? obj.nodes : [];
   const rawEdges = Array.isArray(obj.edges) ? obj.edges : [];
 
+  // Nodes accepted in two shapes:
+  //   - Array form (legacy): `nodes: [helper('ref', ...), ...]`. Each item
+  //     is an `SdkFlowNode` with referenceId already set.
+  //   - Named-record form (Phase 9 emitter output): `nodes: { ref: helper(...) }`.
+  //     The key becomes the referenceId; the helper itself was called
+  //     without a positional ref so produced `referenceId: ''`.
   const nodes: SdkFlowNode[] = [];
-  const edges: SdkEdge[] = [];
-
-  for (const item of rawNodes) {
-    if (item !== null && item !== undefined && isSdkFlowNode(item)) {
-      nodes.push(item);
+  if (Array.isArray(obj.nodes)) {
+    for (const item of obj.nodes) {
+      if (item !== null && item !== undefined && isSdkFlowNode(item)) {
+        nodes.push(item);
+      }
+    }
+  } else if (obj.nodes !== null && typeof obj.nodes === 'object') {
+    for (const [key, value] of Object.entries(obj.nodes as Record<string, unknown>)) {
+      if (value !== null && value !== undefined && isSdkFlowNodeShape(value)) {
+        // Inject the key as referenceId — helpers called without a positional
+        // ref leave the field empty.
+        nodes.push({ ...(value as SdkFlowNode), referenceId: key });
+      }
     }
   }
 
+  const edges: SdkEdge[] = [];
   for (const item of rawEdges) {
     if (item !== null && item !== undefined && isSdkEdge(item)) {
       edges.push(item);
@@ -209,4 +215,17 @@ export function parseSDKText(text: string): ParsedFragment {
   }
 
   return { nodes, edges };
+}
+
+/**
+ * Looser SdkFlowNode check used for named-record values: the key supplies
+ * the referenceId, so we only require `type` and `params`.
+ */
+function isSdkFlowNodeShape(item: unknown): boolean {
+  return (
+    typeof item === 'object' &&
+    item !== null &&
+    !Array.isArray(item) &&
+    typeof (item as Record<string, unknown>).type === 'string'
+  );
 }

@@ -73,8 +73,8 @@ function buildFlowDefinition(credentialId: string, isOpenAI: boolean) {
       }),
     ],
     edges: [
-      ['topic_input', 'prompt_builder'],
-      ['prompt_builder', 'ai_generator'],
+      { from: 'topic_input', to: 'prompt_builder' },
+      { from: 'prompt_builder', to: 'ai_generator' },
     ],
   });
 }

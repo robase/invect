@@ -114,6 +114,7 @@
     "typescript": ">=4.9.0"
   },
   "optionalDependencies": {
+    "@cloudflare/workers-types": "^4.20240117.0",
     "@libsql/client": "^0.17.2",
     "@neondatabase/serverless": "^1.0.0",
     "better-sqlite3": "^12.0.0",

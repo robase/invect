@@ -40,7 +40,13 @@
       "types": "./dist/evaluator/index.d.mts",
       "import": "./dist/evaluator/index.mjs",
       "require": "./dist/evaluator/index.cjs"
-    }
+    },
+    "./actions": {
+      "types": "./dist/generated/index.d.mts",
+      "import": "./dist/generated/index.mjs",
+      "require": "./dist/generated/index.cjs"
+    },
+    "./package.json": "./package.json"
   },
   "publishConfig": {
     "access": "public"
@@ -52,7 +58,9 @@
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "gen-actions": "node scripts/gen-actions.mjs",
+    "gen-actions:check": "node scripts/gen-actions.mjs && git diff --exit-code src/generated"
   },
   "dependencies": {
     "@invect/action-kit": "workspace:*",

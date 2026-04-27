@@ -15,5 +15,10 @@ export {
 } from './js-expression.service';
 export type { JsExpressionServiceConfig } from './js-expression.service';
 
-export { DirectEvaluator, JsExpressionEvaluationError, needsAutoReturn } from './evaluator';
-export type { JsExpressionEvaluator } from './evaluator';
+export {
+  DirectEvaluator,
+  HAS_EVAL,
+  JsExpressionEvaluationError,
+  needsAutoReturn,
+} from './evaluator';
+export type { DirectEvaluatorOptions, JsExpressionEvaluator } from './evaluator';

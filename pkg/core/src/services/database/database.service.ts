@@ -610,7 +610,7 @@ export class DatabaseService {
       '╚══════════════════════════════════════════════════════════════╝',
       '',
       `Database type:       ${dbType}`,
-      `Connection string:   ${this.redactConnectionString(connStr)}`,
+      `Connection string:   ${connStr ? this.redactConnectionString(connStr) : '(none — using binding)'}`,
       `Error:               ${msg}`,
       '',
     ];

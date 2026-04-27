@@ -36,6 +36,31 @@
       "import": "./dist/core/index.mjs",
       "require": "./dist/core/index.cjs"
     },
+    "./core/lazy": {
+      "types": "./dist/core/lazy.d.mts",
+      "import": "./dist/core/lazy.mjs",
+      "require": "./dist/core/lazy.cjs"
+    },
+    "./gmail/lazy": {
+      "types": "./dist/gmail/lazy.d.mts",
+      "import": "./dist/gmail/lazy.mjs",
+      "require": "./dist/gmail/lazy.cjs"
+    },
+    "./slack/lazy": {
+      "types": "./dist/slack/lazy.d.mts",
+      "import": "./dist/slack/lazy.mjs",
+      "require": "./dist/slack/lazy.cjs"
+    },
+    "./github/lazy": {
+      "types": "./dist/github/lazy.d.mts",
+      "import": "./dist/github/lazy.mjs",
+      "require": "./dist/github/lazy.cjs"
+    },
+    "./http/lazy": {
+      "types": "./dist/http/lazy.d.mts",
+      "import": "./dist/http/lazy.mjs",
+      "require": "./dist/http/lazy.cjs"
+    },
     "./asana": {
       "types": "./dist/asana/index.d.mts",
       "import": "./dist/asana/index.mjs",
@@ -245,7 +270,8 @@
       "types": "./dist/registry/index.d.mts",
       "import": "./dist/registry/index.mjs",
       "require": "./dist/registry/index.cjs"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "publishConfig": {
     "access": "public"

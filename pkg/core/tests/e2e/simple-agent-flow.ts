@@ -98,8 +98,8 @@ Use the math_eval tool if you need to perform any calculations. Be precise and s
       }),
     ],
     edges: [
-      ['user_question', 'calculator_agent'],
-      ['calculator_agent', 'final_answer'],
+      { from: 'user_question', to: 'calculator_agent' },
+      { from: 'calculator_agent', to: 'final_answer' },
     ],
   });
 }

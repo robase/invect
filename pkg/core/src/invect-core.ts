@@ -185,8 +185,10 @@ export class Invect {
    * @param config - Invect configuration object
    */
   constructor(private readonly config: InvectConfig) {
-    // Parse and validate the config to ensure defaults are applied
-    this.config = InvectConfigSchema.parse(config);
+    // Parse and validate the config to ensure defaults are applied.
+    // Cast back to `InvectConfig` because the `services` block is typed as
+    // `unknown` in the Zod schema (adapter instances aren't validatable).
+    this.config = InvectConfigSchema.parse(config) as InvectConfig;
 
     // Initialize logger manager with scoped logging support
     const loggingConfig: ScopedLoggingConfig = {
@@ -423,12 +425,12 @@ export class Invect {
       return;
     }
 
-    // Skip initialization during Next.js build phase
-    if (this.isBuildTime()) {
-      this.config.logger.info('Skipping Invect Core initialization during build time');
-      throw new DatabaseError('Invect Core initialization skipped during build', {
+    // Explicit opt-in skip — host (e.g. framework adapter) is responsible for
+    // setting `config.skipDatabaseInit`. Core does not sniff the environment.
+    if (this.config.skipDatabaseInit) {
+      this.config.logger.info('Skipping Invect Core initialization (skipDatabaseInit=true)');
+      throw new DatabaseError('Invect Core initialization skipped (skipDatabaseInit=true)', {
         reason: 'build_time_skip',
-        phase: process.env.NEXT_PHASE || 'unknown',
       });
     }
 
@@ -503,33 +505,6 @@ export class Invect {
       this.config.logger.error('Failed to initialize Invect Core', error);
       throw new DatabaseError('Invect Core initialization failed', { error });
     }
-  }
-
-  /**
-   * Check if we're in a build-time environment where database connections should be avoided
-   */
-  private isBuildTime(): boolean {
-    // Next.js build detection
-    if (process.env.NEXT_PHASE === 'phase-production-build') {
-      return true;
-    }
-
-    // Vercel build detection
-    if (process.env.VERCEL_ENV && process.env.CI) {
-      return true;
-    }
-
-    // Generic CI/build environment detection
-    if (
-      process.env.CI &&
-      (process.env.NODE_ENV === 'production' ||
-        process.env.BUILD_PHASE ||
-        process.argv.includes('build'))
-    ) {
-      return true;
-    }
-
-    return false;
   }
 
   /**

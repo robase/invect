@@ -95,8 +95,10 @@ export function emitSdkSource(def: DbFlowDefinition, options: EmitOptions = {}):
   // Action-catalogue imports: { '@invect/actions/gmail': Set{ 'gmailSendMessageAction' } }
   const actionImports = new Map<string, Set<string>>();
 
-  // Render each node.
-  const nodeLines = def.nodes.map((node) => {
+  // Render each node as a helper-call expression (no leading referenceId,
+  // no trailing comma). The composer wraps each one as a named-record
+  // entry: `${key}: ${value},`.
+  const nodeValues = def.nodes.map((node) => {
     return emitNode(node, { upstreamByRef, sdkImports, actionImports, actionsImportRoot });
   });
   const edgeLines = def.edges.map((e) => emitEdge(e, def.nodes));
@@ -134,14 +136,22 @@ export function emitSdkSource(def: DbFlowDefinition, options: EmitOptions = {}):
     metadataLines.push(`  tags: ${JSON.stringify(metadata.tags)},`);
   }
 
+  // Wrap each node value as a named-record entry. Keys that aren't valid
+  // JS identifiers (e.g. `"my ref"`, `"42"`) get string-literal quoting.
+  const nodeEntryLines = def.nodes.map((node, i) => {
+    const ref = node.referenceId ?? node.id;
+    const key = isValidJsIdent(ref) ? ref : JSON.stringify(ref);
+    return `${key}: ${nodeValues[i]},`;
+  });
+
   const body: string[] = [
     importLines.join('\n'),
     '',
     `export const ${flowName} = defineFlow({`,
     ...metadataLines,
-    `  nodes: [`,
-    ...nodeLines.map((l) => indent(l, 4)),
-    `  ],`,
+    `  nodes: {`,
+    ...nodeEntryLines.map((l) => indent(l, 4)),
+    `  },`,
     `  edges: [`,
     ...edgeLines.map((l) => `    ${l},`),
     `  ],`,
@@ -160,21 +170,21 @@ export function emitSdkSource(def: DbFlowDefinition, options: EmitOptions = {}):
   //   line importLines.length + 1        → blank
   //   line importLines.length + 2        → `export const ${flowName} = defineFlow({`
   //   next metadataLines.length lines    → metadata fields
-  //   line after metadata                → `  nodes: [`
-  //   then each nodeLines[i] (indented), one per node, possibly multi-line
+  //   line after metadata                → `  nodes: {`
+  //   then each nodeEntryLines[i] (indented), one per node, possibly multi-line
   const preambleLines =
     importLines.length + // imports
     1 + // blank
     1 + // defineFlow opener
     metadataLines.length + // metadata
-    1; // `  nodes: [`
+    1; // `  nodes: {`
 
   const nodeSpans: Record<string, NodeSpan> = {};
   let cursor = preambleLines + 1;
   for (let i = 0; i < def.nodes.length; i++) {
     const node = def.nodes[i];
     const ref = node.referenceId ?? node.id;
-    const lineCount = nodeLines[i].split('\n').length;
+    const lineCount = nodeEntryLines[i].split('\n').length;
     nodeSpans[ref] = { start: cursor, end: cursor + lineCount - 1 };
     cursor += lineCount;
   }
@@ -200,9 +210,13 @@ interface EmitCtx {
   actionsImportRoot: string;
 }
 
+/**
+ * Emit a single node as a helper-call expression — no leading referenceId,
+ * no trailing comma. The composer wraps the result as a named-record entry
+ * (`${key}: ${value},`).
+ */
 function emitNode(node: DbFlowNode, ctx: EmitCtx): string {
   const ref = node.referenceId ?? node.id;
-  const refLit = JSON.stringify(ref);
   const upstream = ctx.upstreamByRef.get(ref) ?? [];
   const nodeOptions = buildNodeOptions(node);
 
@@ -212,7 +226,7 @@ function emitNode(node: DbFlowNode, ctx: EmitCtx): string {
     if (importName) {
       ctx.sdkImports.add(importName);
     }
-    return emitKnownNode(node, sdkHelper, refLit, upstream, nodeOptions, ctx);
+    return emitKnownNode(node, sdkHelper, ref, upstream, nodeOptions, ctx);
   }
 
   // Provider actions (core + non-core): look up the provider prefix, emit
@@ -229,21 +243,22 @@ function emitNode(node: DbFlowNode, ctx: EmitCtx): string {
       ctx.actionImports.set(modulePath, set);
     }
     set.add(importName);
-    return emitActionCall(importName, refLit, node.params ?? {}, nodeOptions);
+    return emitActionCall(importName, node.params ?? {}, nodeOptions);
   }
 
-  // Truly unknown: generic node() fallback.
+  // Truly unknown: generic node() fallback. New no-ref signature is
+  // `node(type, params?, options?)`.
   ctx.sdkImports.add('node');
   const paramsLit = toTsLiteral(node.params ?? {});
   const typeLit = JSON.stringify(node.type);
-  const parts = [`node(${refLit}, ${typeLit}`];
+  const parts = [`node(${typeLit}`];
   if (paramsLit !== '{}') {
     parts.push(paramsLit);
   }
   if (nodeOptions !== null) {
     parts.push(nodeOptions);
   }
-  return `${parts.join(', ')}),`;
+  return `${parts.join(', ')})`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -253,7 +268,7 @@ function emitNode(node: DbFlowNode, ctx: EmitCtx): string {
 function emitKnownNode(
   node: DbFlowNode,
   sdkHelper: string,
-  refLit: string,
+  ref: string,
   upstream: string[],
   nodeOptions: string | null,
   ctx: EmitCtx,
@@ -266,7 +281,8 @@ function emitKnownNode(
       const variableName = params.variableName;
       const defaultValue = params.defaultValue;
       const p: string[] = [];
-      const ref = node.referenceId ?? node.id;
+      // Helper auto-defaults variableName to the referenceId at runtime, so
+      // omit the field when it equals the ref.
       if (typeof variableName === 'string' && variableName !== ref) {
         p.push(`variableName: ${JSON.stringify(variableName)}`);
       }
@@ -274,10 +290,10 @@ function emitKnownNode(
         p.push(`defaultValue: ${JSON.stringify(defaultValue)}`);
       }
       if (p.length === 0 && !nodeOptions) {
-        return `input(${refLit}),`;
+        return `input()`;
       }
       const paramsLit = p.length === 0 ? '{}' : `{ ${p.join(', ')} }`;
-      return `input(${refLit}, ${paramsLit}${optionsSuffix}),`;
+      return `input(${paramsLit}${optionsSuffix})`;
     }
 
     case 'core.output': {
@@ -285,24 +301,23 @@ function emitKnownNode(
       const raw = params.outputValue ?? params.output ?? params.value ?? params.template ?? '';
       const value = arrowFromOutputValue(raw, upstream);
       const outputName = typeof params.outputName === 'string' ? params.outputName : undefined;
-      const ref = node.referenceId ?? node.id;
       const nameFragment =
         outputName !== undefined && outputName !== ref
           ? `, name: ${JSON.stringify(outputName)}`
           : '';
-      return `output(${refLit}, { value: ${value}${nameFragment} }${optionsSuffix}),`;
+      return `output({ value: ${value}${nameFragment} }${optionsSuffix})`;
     }
 
     case 'core.javascript': {
       const raw = params.code;
       if (typeof raw !== 'string') {
         throw new SdkEmitError(
-          `code node "${refLit}" is missing params.code (expected string)`,
+          `code node "${ref}" is missing params.code (expected string)`,
           node.id,
         );
       }
       const body = arrowFromExpression(raw, upstream);
-      return `code(${refLit}, { code: ${body} }${optionsSuffix}),`;
+      return `code({ code: ${body} }${optionsSuffix})`;
     }
 
     case 'core.if_else': {
@@ -313,14 +328,14 @@ function emitKnownNode(
       // so a genuinely broken node fails on execute, not on copy.
       const expr = typeof raw === 'string' && raw.trim() !== '' ? raw : 'return null';
       const body = arrowFromExpression(expr, upstream);
-      return `ifElse(${refLit}, { condition: ${body} }${optionsSuffix}),`;
+      return `ifElse({ condition: ${body} }${optionsSuffix})`;
     }
 
     case 'core.switch': {
       const rawCases = params.cases;
       if (!Array.isArray(rawCases)) {
         throw new SdkEmitError(
-          `switch node "${refLit}" is missing params.cases (expected array)`,
+          `switch node "${ref}" is missing params.cases (expected array)`,
           node.id,
         );
       }
@@ -328,51 +343,51 @@ function emitKnownNode(
       const caseLines = rawCases.map((c, i) => {
         const rec = c as { slug?: unknown; label?: unknown; expression?: unknown };
         if (typeof rec.slug !== 'string' || typeof rec.label !== 'string') {
-          throw new SdkEmitError(`switch "${refLit}" case[${i}] missing slug/label`, node.id);
+          throw new SdkEmitError(`switch "${ref}" case[${i}] missing slug/label`, node.id);
         }
         if (typeof rec.expression !== 'string') {
-          throw new SdkEmitError(`switch "${refLit}" case[${i}] missing expression`, node.id);
+          throw new SdkEmitError(`switch "${ref}" case[${i}] missing expression`, node.id);
         }
         const cond = arrowFromExpression(rec.expression, upstream);
         return `    { slug: ${JSON.stringify(rec.slug)}, label: ${JSON.stringify(rec.label)}, expression: ${cond} },`;
       });
       const lines = [
-        `switchNode(${refLit}, {`,
+        `switchNode({`,
         `  matchMode: ${JSON.stringify(matchMode)},`,
         `  cases: [`,
         ...caseLines,
         `  ],`,
-        `}${optionsSuffix}),`,
+        `}${optionsSuffix})`,
       ];
       return lines.join('\n');
     }
 
     case 'core.template_string': {
       const tmpl = typeof params.template === 'string' ? params.template : '';
-      return `template(${refLit}, { template: ${JSON.stringify(tmpl)} }${optionsSuffix}),`;
+      return `template({ template: ${JSON.stringify(tmpl)} }${optionsSuffix})`;
     }
 
     case 'core.model': {
-      return emitActionCall(sdkHelper, refLit, params, nodeOptions);
+      return emitActionCall(sdkHelper, params, nodeOptions);
     }
 
     case 'core.agent': {
-      return emitAgent(refLit, params, nodeOptions, ctx);
+      return emitAgent(params, nodeOptions, ctx);
     }
 
     case 'http.request': {
-      return emitActionCall(sdkHelper, refLit, params, nodeOptions);
+      return emitActionCall(sdkHelper, params, nodeOptions);
     }
 
     case 'trigger.manual': {
       const di = params.defaultInputs;
       if (di && typeof di === 'object' && !Array.isArray(di) && Object.keys(di).length > 0) {
         const lit = toTsLiteral({ defaultInputs: di });
-        return `trigger.manual(${refLit}, ${lit}${optionsSuffix}),`;
+        return `trigger.manual(${lit}${optionsSuffix})`;
       }
       return nodeOptions === null
-        ? `trigger.manual(${refLit}),`
-        : `trigger.manual(${refLit}, undefined, ${nodeOptions}),`;
+        ? `trigger.manual()`
+        : `trigger.manual(undefined, ${nodeOptions})`;
     }
 
     case 'trigger.cron': {
@@ -388,7 +403,7 @@ function emitKnownNode(
       ) {
         body.staticInputs = staticInputs;
       }
-      return `trigger.cron(${refLit}, ${toTsLiteral(body)}${optionsSuffix}),`;
+      return `trigger.cron(${toTsLiteral(body)}${optionsSuffix})`;
     }
   }
 
@@ -422,7 +437,6 @@ interface AddedToolLike {
 }
 
 function emitAgent(
-  refLit: string,
   params: Record<string, unknown>,
   nodeOptions: string | null,
   ctx: EmitCtx,
@@ -433,7 +447,7 @@ function emitAgent(
   }
 
   const lines: string[] = [];
-  lines.push(`agent(${refLit}, {`);
+  lines.push(`agent({`);
 
   const emitField = (key: string, value: unknown) => {
     lines.push(`  ${key}: ${toTsLiteral(value).replace(/\n/g, '\n  ')},`);
@@ -476,8 +490,9 @@ function emitAgent(
     lines.push(`  ],`);
   }
 
-  const closeSuffix = nodeOptions === null ? ',' : `, ${nodeOptions}),`;
-  lines.push(nodeOptions === null ? '}),' : `}${closeSuffix}`);
+  // Closing of the agent({ ... }) call. No trailing comma — the composer
+  // adds it when wrapping as a named-record entry.
+  lines.push(nodeOptions === null ? '})' : `}, ${nodeOptions})`);
   return lines.join('\n');
 }
 
@@ -519,13 +534,12 @@ function emitToolCall(t: AddedToolLike): string {
 
 function emitActionCall(
   fnName: string,
-  refLit: string,
   params: Record<string, unknown>,
   nodeOptions: string | null,
 ): string {
   const paramsLit = toTsLiteral(params);
   const optionsSuffix = nodeOptions === null ? '' : `, ${nodeOptions}`;
-  return `${fnName}(${refLit}, ${paramsLit}${optionsSuffix}),`;
+  return `${fnName}(${paramsLit}${optionsSuffix})`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

@@ -393,29 +393,31 @@ export class InvectController {
   }
 
   /**
-   * GET /flow-runs/:flowRunId/stream - SSE stream of execution events
-   * Core method: ✅ createFlowRunEventStream(flowRunId: string)
+   * Shared SSE handler for the run-events stream. Wired to both
+   * `/flow-runs/:flowRunId/stream` (canonical) and `/runs/:flowRunId/events`
+   * (alias for external clients).
    */
-  @Get('flow-runs/:flowRunId/stream')
-  async streamFlowRun(@Param('flowRunId') flowRunId: string, @Res() res: Response) {
+  private async pipeRunEventsToSse(flowRunId: string, req: Request, res: Response): Promise<void> {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
 
-    // Disable Nagle so each SSE chunk is delivered immediately under bursty
-    // event traffic (relevant for the parallel scheduler).
     res.socket?.setNoDelay(true);
 
-    // Defeat any compression-middleware buffer in the stack.
     const flush = (res as unknown as { flush?: () => void }).flush;
-    const flushIfPresent = typeof flush === 'function' ? flush.bind(res) : () => {};
+    const flushIfPresent = typeof flush === 'function' ? flush.bind(res) : (): void => undefined;
+
+    let clientGone = false;
+    req.on('close', () => {
+      clientGone = true;
+    });
 
     try {
       const stream = this.invect.runs.createEventStream(flowRunId);
       for await (const event of stream) {
-        if (res.destroyed) {
+        if (clientGone || res.destroyed) {
           break;
         }
         const data = JSON.stringify(event);
@@ -428,10 +430,119 @@ export class InvectController {
         res.write(`event: error\ndata: ${JSON.stringify({ type: 'error', message })}\n\n`);
         flushIfPresent();
       } else {
-        return res.status(500).json({ error: 'Internal Server Error', message });
+        res.status(500).json({ error: 'Internal Server Error', message });
+        return;
       }
     } finally {
-      res.end();
+      if (!res.destroyed) {
+        res.end();
+      }
+    }
+  }
+
+  /**
+   * GET /flow-runs/:flowRunId/stream - SSE stream of execution events
+   * Core method: ✅ createFlowRunEventStream(flowRunId: string)
+   *
+   * NOTE: not using NestJS `@Sse()` decorator because the existing semantics
+   * frame the events as `event: <type>\ndata: <json>` (a stable contract the
+   * frontend, version-control, and the new VSCode extension all consume).
+   * `@Sse()` would re-wrap with its own framing.
+   */
+  @Get('flow-runs/:flowRunId/stream')
+  async streamFlowRun(
+    @Param('flowRunId') flowRunId: string,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    await this.pipeRunEventsToSse(flowRunId, req, res);
+  }
+
+  /**
+   * GET /runs/:flowRunId/events - SSE stream alias.
+   * Identical to `/flow-runs/:flowRunId/stream`.
+   */
+  @Get('runs/:flowRunId/events')
+  async streamRunEvents(
+    @Param('flowRunId') flowRunId: string,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    await this.pipeRunEventsToSse(flowRunId, req, res);
+  }
+
+  /**
+   * POST /flow-runs/ephemeral - Run an inline flow definition without
+   * persisting it as a regular flow.
+   *
+   * Body: { definition: InvectDefinition, inputs?: Record<string, unknown>, name?: string }
+   * Returns: { flowRunId, flowId, status, eventsPath }
+   *
+   * Credentials are NOT ephemeral — `credentialId` references in the
+   * definition still resolve against the persisted credential store.
+   */
+  @Post('flow-runs/ephemeral')
+  async runEphemeralFlow(
+    @Body()
+    body: {
+      definition?: unknown;
+      inputs?: Record<string, unknown>;
+      name?: string;
+    },
+    @Req() req: Request,
+  ) {
+    return this.runEphemeralImpl(body, req);
+  }
+
+  /**
+   * POST /runs/ephemeral - Alias for /flow-runs/ephemeral.
+   */
+  @Post('runs/ephemeral')
+  async runEphemeralFlowAlias(
+    @Body()
+    body: {
+      definition?: unknown;
+      inputs?: Record<string, unknown>;
+      name?: string;
+    },
+    @Req() req: Request,
+  ) {
+    return this.runEphemeralImpl(body, req);
+  }
+
+  private async runEphemeralImpl(
+    body: { definition?: unknown; inputs?: Record<string, unknown>; name?: string } | undefined,
+    req: Request,
+  ) {
+    if (!body?.definition || typeof body.definition !== 'object') {
+      throw new BadRequestException('Body.definition (InvectDefinition) is required');
+    }
+    try {
+      return await this.invect.runs.runEphemeral(
+        body.definition as InvectDefinition,
+        body.inputs ?? {},
+        { name: body.name, initiatedBy: req.invectIdentity?.id },
+      );
+    } catch (error) {
+      // Translate ValidationError → 400 so callers get a structured response
+      // rather than NestJS's default 500.
+      if (
+        error &&
+        typeof error === 'object' &&
+        (error as { name?: string }).name === 'ValidationError'
+      ) {
+        const ve = error as Error & {
+          field?: string;
+          context?: Record<string, unknown>;
+        };
+        throw new BadRequestException({
+          error: 'Validation Error',
+          message: ve.message,
+          field: ve.field,
+          details: ve.context,
+        });
+      }
+      throw error;
     }
   }
 

@@ -70,3 +70,5 @@ lerna-debug.log*
 .npmrc
 
 plans
+
+internal-docs

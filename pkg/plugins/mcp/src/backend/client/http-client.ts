@@ -2,7 +2,7 @@
  * HttpClient — wraps Invect HTTP API for CLI/stdio mode.
  */
 
-import { emitSdkSource, SdkEmitError } from '@invect/primitives';
+import { emitSdkSource, SdkEmitError } from '@invect/sdk';
 import type {
   InvectClient,
   CredentialSummary,
@@ -92,7 +92,7 @@ export class HttpClient implements InvectClient {
       );
       return {
         code: result.code,
-        importedBuilders: result.importedBuilders,
+        importedBuilders: result.sdkImports,
         flowName: options.flowName ?? 'myFlow',
         version: version.version,
       };

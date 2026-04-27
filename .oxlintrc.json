@@ -61,7 +61,9 @@
     ".turbo",
     "drizzle",
     "pnpm-lock.yaml",
-    "docs/"
+    "docs/",
+    ".claude",
+    "**/.claude/**"
   ],
   "overrides": [
     {
@@ -92,7 +94,14 @@
       }
     },
     {
-      "files": ["pkg/cli/src/**", "examples/**", "docker/**", "scripts/**"],
+      "files": [
+        "pkg/cli/src/**",
+        "examples/**",
+        "docker/**",
+        "scripts/**",
+        "**/scripts/**",
+        "experiments/**"
+      ],
       "rules": {
         "no-console": "off",
         "typescript/no-explicit-any": "warn",

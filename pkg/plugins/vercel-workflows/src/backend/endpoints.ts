@@ -13,7 +13,7 @@
  * No state is persisted — compilation is deterministic from the flow version.
  */
 import type { InvectPlugin, InvectDefinition, FlowNodeDefinitions } from '@invect/core';
-import { emitSdkSource } from '@invect/primitives';
+import { emitSdkSource } from '@invect/sdk';
 import { compile } from '../compiler/flow-compiler';
 
 const OUTPUT_TYPES = new Set(['core.output', 'primitives.output']);
@@ -97,7 +97,10 @@ function collectReachable(startId: string, edges: InvectDefinition['edges']): Se
   const visited = new Set<string>([startId]);
   const queue: string[] = [startId];
   while (queue.length > 0) {
-    const next = queue.shift()!;
+    const next = queue.shift();
+    if (next === undefined) {
+      break;
+    }
     for (const target of outgoing.get(next) ?? []) {
       if (!visited.has(target)) {
         visited.add(target);
@@ -205,7 +208,7 @@ export function buildBackendPlugin(options: VercelWorkflowsBackendOptions = {}):
 
           let sdkSource: string;
           try {
-            const sdkResult = emitSdkSource(filtered, {
+            const sdkResult = emitSdkSource(filtered as Parameters<typeof emitSdkSource>[0], {
               flowName: flowExport,
             });
             sdkSource = sdkResult.code;

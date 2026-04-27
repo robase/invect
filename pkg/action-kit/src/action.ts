@@ -215,17 +215,44 @@ export interface ActionRetryConfig {
   retryOn?: readonly import('./node-execution').NodeErrorCode[];
 }
 
-export interface ActionDefinition<TParams = unknown> {
+/**
+ * One declared output handle. `id` is the source-handle string used by
+ * downstream edges (`{ from, to, handle: 'true_output' }`); the `Id`
+ * generic captures it as a string literal so action helpers can narrow
+ * edge `handle` against the actual declared values.
+ */
+export interface ActionOutputDef<Id extends string = string> {
+  id: Id;
+  label: string;
+  type: string;
+}
+
+/**
+ * Action params type generics:
+ *
+ * - `TParamsIn` is the **input** shape — what callers of the action helper
+ *   provide. Optional/defaulted Zod fields are optional here.
+ * - `TParamsOut` is the **output** shape — what `execute()` receives at
+ *   runtime. Defaults are filled in by Zod parse, so they're required here.
+ *
+ * Inferred via `z.input<typeof schema>` / `z.output<typeof schema>` by
+ * `defineAction`. Authors don't write these by hand.
+ */
+export interface ActionDefinition<
+  TParamsIn = unknown,
+  TParamsOut = TParamsIn,
+  THandles extends readonly ActionOutputDef[] = readonly ActionOutputDef[],
+> {
   id: string;
   name: string;
   description: string;
   provider: ProviderDef;
   credential?: CredentialRequirement;
   params: {
-    schema: z.ZodType<TParams>;
+    schema: z.ZodType<TParamsOut, TParamsIn>;
     fields: ParamField[];
   };
-  outputs?: Array<{ id: string; label: string; type: string }>;
+  outputs?: THandles;
   dynamicOutputs?: boolean;
   noInput?: boolean;
   maxInstances?: number;
@@ -236,7 +263,7 @@ export interface ActionDefinition<TParams = unknown> {
   actionCategory?: ActionCategory;
   /** Optional declarative retry policy — see ActionRetryConfig. */
   retry?: ActionRetryConfig;
-  execute(params: TParams, context: ActionExecutionContext): Promise<ActionResult>;
+  execute(params: TParamsOut, context: ActionExecutionContext): Promise<ActionResult>;
   onConfigUpdate?(
     event: ActionConfigUpdateEvent,
     context: ActionConfigUpdateContext,

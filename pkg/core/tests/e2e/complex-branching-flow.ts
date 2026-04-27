@@ -70,10 +70,10 @@ function buildFlowDefinition(isAdult: boolean) {
       }),
     ],
     edges: [
-      ['user_data', 'user_info'],
-      ['user_info', 'age_check'],
-      ['age_check', 'adult_message', 'true_output'],
-      ['age_check', 'minor_message', 'false_output'],
+      { from: 'user_data', to: 'user_info' },
+      { from: 'user_info', to: 'age_check' },
+      { from: 'age_check', to: 'adult_message', handle: 'true_output' },
+      { from: 'age_check', to: 'minor_message', handle: 'false_output' },
     ],
   });
 }

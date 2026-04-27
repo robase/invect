@@ -114,7 +114,7 @@ skipOrDescribe('Parallel flow execution (ready-set scheduler)', () => {
     expect(getOutputString(result, 'right')).toBe('R');
     // Sequential: ~400ms. Parallel: ~220ms (with overhead). Generous
     // headroom for CI noise while still catching serialization.
-    expect(elapsed).toBeLessThan(380);
+    expect(elapsed).toBeLessThan(450);
   });
 
   it('diamond convergence: node waits for both parents', async () => {

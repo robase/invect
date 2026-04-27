@@ -30,6 +30,9 @@ const DATABASE_URL =
         agentNodeTimeoutMs: 900_000,
         heartbeatIntervalMs: 30_000,
         staleRunCheckIntervalMs: 60_000,
+        disableNativeEval: false,
+        sseHeartbeatIntervalMs: 15_000,
+        persistence: 'per-node',
       },
       logging: {
         level: 'info',

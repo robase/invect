@@ -19,6 +19,20 @@ import { Logger, InvectConfig } from 'src/schemas';
 import { FlowVersionsService } from './flow-versions/flow-versions.service';
 import { ReactFlowRendererService } from './react-flow-renderer.service';
 import type { PluginHookRunner } from 'src/types/plugin.types';
+import type {
+  EncryptionAdapter,
+  ExecutionEventBusAdapter,
+  CronSchedulerAdapter,
+  BatchPollerAdapter,
+  ChatSessionStore,
+  JobRunnerAdapter,
+} from 'src/types/services';
+import {
+  AdapterBackedExecutionEventBus,
+  cronSchedulerToAdapter,
+  batchPollerFromAIClient,
+} from './adapter-bridges';
+import { InProcessJobRunner } from './job-runner/in-process-job-runner';
 
 /**
  * Core Services container
@@ -40,6 +54,20 @@ interface CoreServices {
   cronScheduler: CronSchedulerService;
   chatStreamService: ChatStreamService;
   executionEventBus: ExecutionEventBus;
+  // Adapter handles for `InvectInstance` lifecycle methods. These resolve
+  // to either the user-supplied override (`config.services?.X`) or a
+  // default-wrapping bridge created at init time.
+  encryptionAdapter: EncryptionAdapter;
+  cronSchedulerAdapter: CronSchedulerAdapter;
+  batchPollerAdapter: BatchPollerAdapter;
+  chatSessionStore: ChatSessionStore | null;
+  /**
+   * Background job runner (PR 13/14). Either the user-supplied
+   * `config.services.jobRunner` adapter or a default
+   * `InProcessJobRunner` whose handlers are registered by
+   * `FlowOrchestrationService.initialize()`.
+   */
+  jobRunner: JobRunnerAdapter;
 }
 
 /**
@@ -103,6 +131,11 @@ export class ServiceFactory {
       const flowVersionsService = new FlowVersionsService(this.logger, databaseService);
       const flowsService = new FlowsService(this.logger, databaseService);
       const nodeExecutionsService = new NodeExecutionService(this.logger, databaseService);
+      // Honor `config.execution.persistence` — `'per-run'` mode buffers node
+      // executions in-memory and flushes them as a JSON blob into
+      // `flow_runs.node_outputs` at terminal-state. Default `'per-node'`
+      // matches the historical behavior (one row per node per state change).
+      nodeExecutionsService.setPersistenceMode(this.config.execution?.persistence ?? 'per-node');
       const flowRunsService = new FlowRunsService(this.logger, databaseService, flowsService);
       const nodeDataService = new NodeDataService(
         this.config,
@@ -119,18 +152,43 @@ export class ServiceFactory {
         nodeExecutionsService,
       );
 
-      // 5b. Create credentials service with encryption
-      const encryptionService = new EncryptionService({
-        masterKey: this.config.encryptionKey,
-      });
+      // 5b. Create credentials service with encryption.
+      // Honor an injected EncryptionAdapter if the host provided one (PR 2);
+      // otherwise build the default in-process EncryptionService. The default
+      // class is structurally compatible with EncryptionAdapter — the
+      // optional `EncryptionContext` parameter is silently ignored by it
+      // (per-tenant DEK lookup is PR 12 territory).
+      const overrides = this.config.services;
+      const encryptionAdapter: EncryptionAdapter =
+        (overrides?.encryption as EncryptionAdapter | undefined) ??
+        new EncryptionService({ masterKey: this.config.encryptionKey });
       const credentialsService = new CredentialsService(
         databaseService.adapter,
-        encryptionService,
+        encryptionAdapter,
         this.logger,
       );
 
       // 5d. Create triggers service (needs orchestration, wired after orchestration is created)
       // Placeholder — we wire the real orchestrationService reference below.
+
+      // PR 5/14: when the host has supplied a `BatchPollerAdapter` override
+      // (typical for serverless / edge runtimes that drive scheduling
+      // externally — e.g. Cloudflare Cron Triggers calling
+      // `invect.maintenance.pollBatchJobs()`), suppress the in-process
+      // `setInterval` loops in the orchestration service. The `runMaintenance`
+      // / `maintenance.*` entry points still work in this mode.
+      const externalScheduler = !!(this.config.services as { batchPoller?: unknown } | undefined)
+        ?.batchPoller;
+
+      // 5e. Resolve background job runner adapter (PR 13/14). When the
+      // host hasn't supplied an override, build the default in-process
+      // runner — `FlowOrchestrationService.initialize()` then registers
+      // its FLOW_RUN / BATCH_JOB_RESUME handlers on it. External
+      // adapters (Cloudflare Queues, SQS) are expected to register
+      // matching consumer-side handlers in their own consumer Worker.
+      const jobRunner: JobRunnerAdapter =
+        (overrides?.jobRunner as JobRunnerAdapter | undefined) ??
+        new InProcessJobRunner({ logger: this.logger });
 
       // 6. Create orchestration service with proper dependencies
       const orchestrationService = new FlowOrchestrationService(
@@ -149,10 +207,12 @@ export class ServiceFactory {
           heartbeatIntervalMs: this.config.execution?.heartbeatIntervalMs ?? 30_000,
           flowTimeoutMs: this.config.execution?.flowTimeoutMs ?? 600_000,
           staleRunCheckIntervalMs: this.config.execution?.staleRunCheckIntervalMs ?? 60_000,
+          externalScheduler,
         },
         this.pluginHookRunner, // Plugin hooks for flow/node execution lifecycle
         this.jsExpressionServiceRef, // JS expression engine for data mapper
         this.templateServiceRef, // Template service for {{ }} expression resolution
+        jobRunner, // PR 13/14 — pluggable background job runner
       );
 
       // 6b. Create triggers service (depends on orchestration)
@@ -177,10 +237,39 @@ export class ServiceFactory {
         null, // invect instance wired post-init via chatStreamService.setInvectInstance()
       );
 
-      // 6e. Wire execution event bus to services that write state
-      const executionEventBus = getExecutionEventBus();
+      // 6e. Wire execution event bus to services that write state.
+      // Honor an injected ExecutionEventBusAdapter if the host provided one
+      // (PR 2). The bridge subclass keeps the in-process EventEmitter as a
+      // fallback so same-isolate subscribers still work, and additionally
+      // forwards every emit through the adapter for out-of-process delivery
+      // (e.g. a Cloudflare Durable Object). PR 8 will remove the bridge by
+      // making the default class itself implement the adapter.
+      const eventBusOverride = overrides?.eventBus as ExecutionEventBusAdapter | undefined;
+      const executionEventBus: ExecutionEventBus = eventBusOverride
+        ? new AdapterBackedExecutionEventBus(eventBusOverride)
+        : getExecutionEventBus();
       flowRunsService.setEventBus(executionEventBus);
       nodeExecutionsService.setEventBus(executionEventBus);
+
+      // 6f. Resolve cron / batch poller adapters. Defaults wrap the
+      // existing in-process services; hosts can pass no-op adapters when
+      // their platform handles scheduling externally (Cloudflare Cron
+      // Triggers, Vercel Cron). PR 5 will fully decouple the lifecycle.
+      const cronSchedulerAdapter: CronSchedulerAdapter =
+        (overrides?.cronScheduler as CronSchedulerAdapter | undefined) ??
+        cronSchedulerToAdapter(cronScheduler);
+      const batchPollerAdapter: BatchPollerAdapter =
+        (overrides?.batchPoller as BatchPollerAdapter | undefined) ??
+        batchPollerFromAIClient(baseAIClient);
+
+      // 6g. Resolve chat session store override. The in-process
+      // `ActiveChatSessions` is owned by `ChatStreamService` and isn't a
+      // simple `Map<id, session>` (it carries subscribers and timers), so
+      // there is no default `ChatSessionStore` instance to expose here.
+      // The override is held for the next wave of PRs (5/14) when chat
+      // sessions move behind this contract.
+      const chatSessionStoreOverride =
+        (overrides?.chatSessionStore as ChatSessionStore | undefined) ?? null;
 
       // Initialize services
       await Promise.all([
@@ -212,6 +301,11 @@ export class ServiceFactory {
         cronScheduler,
         chatStreamService,
         executionEventBus,
+        encryptionAdapter,
+        cronSchedulerAdapter,
+        batchPollerAdapter,
+        chatSessionStore: chatSessionStoreOverride,
+        jobRunner,
       };
 
       this.initialized = true;
@@ -258,6 +352,14 @@ export class ServiceFactory {
    */
   getOrchestrationService(): FlowOrchestrationService {
     return this.getServices().orchestrationService;
+  }
+
+  /**
+   * Get the config the factory was constructed with. Useful for callers that
+   * need a non-service config field (e.g. `execution.sseHeartbeatIntervalMs`).
+   */
+  getConfig(): InvectConfig {
+    return this.config;
   }
 
   getFlowVersionsService() {
@@ -332,6 +434,43 @@ export class ServiceFactory {
    */
   getExecutionEventBus(): ExecutionEventBus {
     return this.getServices().executionEventBus;
+  }
+
+  // ─── Adapter accessors (PR 2/14) ───────────────────────────────────
+  // These return the resolved adapter for each pluggable service —
+  // either the user-supplied override or a default-wrapping bridge.
+
+  /** Encryption adapter (override or default `EncryptionService`). */
+  getEncryptionAdapter(): EncryptionAdapter {
+    return this.getServices().encryptionAdapter;
+  }
+
+  /** Cron scheduler adapter (override or default `CronSchedulerService`). */
+  getCronSchedulerAdapter(): CronSchedulerAdapter {
+    return this.getServices().cronSchedulerAdapter;
+  }
+
+  /** Batch poller adapter (override or default `BaseAIClient` polling loop). */
+  getBatchPollerAdapter(): BatchPollerAdapter {
+    return this.getServices().batchPollerAdapter;
+  }
+
+  /**
+   * Chat session store override, if the host supplied one. Returns `null`
+   * when running with the default in-process `ActiveChatSessions` (which is
+   * owned by `ChatStreamService` and not exposed here).
+   */
+  getChatSessionStoreOverride(): ChatSessionStore | null {
+    return this.getServices().chatSessionStore;
+  }
+
+  /**
+   * Background job runner (PR 13/14) — override or default
+   * `InProcessJobRunner`. Hosts use this from `InvectInstance`
+   * lifecycle / maintenance methods to drive the in-process queue.
+   */
+  getJobRunner(): JobRunnerAdapter {
+    return this.getServices().jobRunner;
   }
 
   /**

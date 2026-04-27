@@ -61,10 +61,10 @@ describe('sync plugin flow serialisation (via @invect/sdk emitter)', () => {
     expect(code).toContain(`export const questionAnsweringFlow = defineFlow({`);
     expect(code).toContain(`name: "Question Answering"`);
     expect(code).toContain(`description: "A simple Q&A flow"`);
-    // Core helpers rather than namespace objects.
-    expect(code).toContain(`input("query"`);
-    expect(code).toContain(`model("answer"`);
-    expect(code).toContain(`output("result"`);
+    // Core helpers in named-record form (key: helper(...)).
+    expect(code).toContain(`query: input(`);
+    expect(code).toContain(`answer: model(`);
+    expect(code).toContain(`result: output(`);
     // Edges use object form with preserved referenceIds.
     expect(code).toContain(`{ from: "query", to: "answer" }`);
     expect(code).toContain(`{ from: "answer", to: "result" }`);
@@ -102,7 +102,7 @@ describe('sync plugin flow serialisation (via @invect/sdk emitter)', () => {
     // Unified emitter pulls in the action callable directly from the
     // provider package, no namespace aliasing.
     expect(code).toContain(`import { gmailSendMessageAction } from "@invect/actions/gmail"`);
-    expect(code).toContain(`gmailSendMessageAction("send"`);
+    expect(code).toContain(`send: gmailSendMessageAction(`);
   });
 
   it('preserves sourceHandle on edges in object form', () => {

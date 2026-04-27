@@ -120,7 +120,7 @@ describe('compile — emitter integration', () => {
   it('warns when a flow has no output nodes', () => {
     const flow = defineFlow({
       nodes: [input('x'), code('end', { code: (ctx) => ctx.x })],
-      edges: [['x', 'end']],
+      edges: [{ from: 'x', to: 'end' }],
     });
 
     const { warnings } = compile(flow, defaultOptions);

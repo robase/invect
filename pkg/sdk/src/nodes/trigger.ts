@@ -6,32 +6,49 @@
  * a specific trigger fires, only that trigger node's downstream subtree runs;
  * other triggers and their subtrees are skipped.
  *
- * Exposed as a namespace to match the action ID layout (`trigger.manual`,
- * `trigger.cron`) and leave room for plugin-provided triggers like
- * `trigger.webhook` (from `@invect/webhooks`) to be called via the generic
- * `node()` helper until they ship their own SDK wrapper.
+ * Both call forms supported:
+ *   - `trigger.manual()` / `trigger.cron({ expression })` — named form.
+ *   - `trigger.manual('ref')` / `trigger.cron('ref', { expression })` — positional.
  */
 
 import { manualTriggerAction, cronTriggerAction } from '@invect/actions/triggers';
 import type { NodeOptions, SdkFlowNode } from '@invect/action-kit';
 
+interface ManualParams {
+  defaultInputs?: Record<string, unknown>;
+}
+
+interface CronParams {
+  expression: string;
+  timezone?: string;
+  staticInputs?: Record<string, unknown>;
+}
+
+function manual(params?: ManualParams, options?: NodeOptions): SdkFlowNode;
+function manual(referenceId: string, params?: ManualParams, options?: NodeOptions): SdkFlowNode;
 function manual(
-  referenceId: string,
-  params?: { defaultInputs?: Record<string, unknown> },
-  options?: NodeOptions,
+  arg0?: string | ManualParams,
+  arg1?: ManualParams | NodeOptions,
+  arg2?: NodeOptions,
 ): SdkFlowNode {
+  const referenceId = typeof arg0 === 'string' ? arg0 : '';
+  const params = (typeof arg0 === 'string' ? arg1 : arg0) as ManualParams | undefined;
+  const options = (typeof arg0 === 'string' ? arg2 : arg1) as NodeOptions | undefined;
+
   return manualTriggerAction(referenceId, { defaultInputs: params?.defaultInputs }, options);
 }
 
+function cron(params: CronParams, options?: NodeOptions): SdkFlowNode;
+function cron(referenceId: string, params: CronParams, options?: NodeOptions): SdkFlowNode;
 function cron(
-  referenceId: string,
-  params: {
-    expression: string;
-    timezone?: string;
-    staticInputs?: Record<string, unknown>;
-  },
-  options?: NodeOptions,
+  arg0: string | CronParams,
+  arg1?: CronParams | NodeOptions,
+  arg2?: NodeOptions,
 ): SdkFlowNode {
+  const referenceId = typeof arg0 === 'string' ? arg0 : '';
+  const params = (typeof arg0 === 'string' ? arg1 : arg0) as CronParams;
+  const options = (typeof arg0 === 'string' ? arg2 : arg1) as NodeOptions | undefined;
+
   return cronTriggerAction(
     referenceId,
     {

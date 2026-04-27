@@ -20,6 +20,7 @@ export type DatabaseDriverType =
   // SQLite
   | 'better-sqlite3' // native C++ (default)
   | 'libsql' // @libsql/client (WASM / Turso)
+  | 'd1' // Cloudflare D1 binding (Workers runtime)
   // MySQL
   | 'mysql2'; // mysql2 (default, only option)
 

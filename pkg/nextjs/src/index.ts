@@ -120,11 +120,15 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
       initializationPromise = (async () => {
         const startTime = Date.now();
         try {
-          // Skip initialization during build time
-          if (
+          // Detect Next.js build-phase here (the adapter, not core). Core no
+          // longer sniffs `process.env` so it stays portable to edge runtimes —
+          // the build-phase check belongs to the framework adapter. We also
+          // pass `skipDatabaseInit: true` defensively in case any wrapper
+          // caches this branch differently.
+          const isBuildPhase =
             process.env.NODE_ENV === 'production' &&
-            process.env.NEXT_PHASE === 'phase-production-build'
-          ) {
+            process.env.NEXT_PHASE === 'phase-production-build';
+          if (isBuildPhase) {
             throw new Error('Skipping database initialization during build');
           }
 
@@ -416,6 +420,32 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
         return Response.json(flowRuns);
       }
 
+      // POST /flow-runs/ephemeral and POST /runs/ephemeral
+      // Run an inline definition without persisting it as a regular flow.
+      // Body: { definition, inputs?, name? }
+      // Credentials referenced inside the definition still resolve by ID
+      // against the persisted credential store.
+      if (method === 'POST' && (path === 'flow-runs/ephemeral' || path === 'runs/ephemeral')) {
+        const { definition, inputs, name } = (body ?? {}) as {
+          definition?: unknown;
+          inputs?: Record<string, unknown>;
+          name?: string;
+        };
+        if (!definition || typeof definition !== 'object') {
+          return Response.json(
+            {
+              error: 'Bad Request',
+              message: 'Body.definition (InvectDefinition) is required',
+            },
+            { status: 400 },
+          );
+        }
+        const result = await initializedCore.runs.runEphemeral(definition as never, inputs ?? {}, {
+          name,
+        });
+        return Response.json(result, { status: 201 });
+      }
+
       if (method === 'POST' && path.match(/^flow-runs\/[^/]+\/resume$/)) {
         const flowRunId = path.split('/')[1];
         const result = await initializedCore.runs.resume(flowRunId);
@@ -461,29 +491,49 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
         return Response.json(nodeExecutions);
       }
 
-      // GET /flow-runs/:flowRunId/stream - SSE stream of execution events
-      if (method === 'GET' && path.match(/^flow-runs\/[^/]+\/stream$/)) {
-        const flowRunId = path.split('/')[1];
+      // Shared SSE handler for run-events streaming.
+      // Used by both `flow-runs/:flowRunId/stream` (canonical) and
+      // `runs/:flowRunId/events` (alias for external clients).
+      const buildRunEventsResponse = (flowRunId: string): Response => {
         const stream = initializedCore.runs.createEventStream(flowRunId);
-
         const encoder = new TextEncoder();
+
+        // Track client disconnect via the request's AbortSignal so we don't
+        // keep buffering events after the consumer is gone.
+        const clientSignal = request.signal;
+
         const readable = new ReadableStream({
           async start(controller) {
             try {
               for await (const event of stream) {
+                if (clientSignal?.aborted) {
+                  break;
+                }
                 const data = JSON.stringify(event);
                 controller.enqueue(encoder.encode(`event: ${event.type}\ndata: ${data}\n\n`));
               }
             } catch (error: unknown) {
               const message = error instanceof Error ? error.message : 'Stream failed';
-              controller.enqueue(
-                encoder.encode(
-                  `event: error\ndata: ${JSON.stringify({ type: 'error', message })}\n\n`,
-                ),
-              );
+              try {
+                controller.enqueue(
+                  encoder.encode(
+                    `event: error\ndata: ${JSON.stringify({ type: 'error', message })}\n\n`,
+                  ),
+                );
+              } catch {
+                // Controller already closed by client disconnect — ignore.
+              }
             } finally {
-              controller.close();
+              try {
+                controller.close();
+              } catch {
+                // Already closed — ignore.
+              }
             }
+          },
+          cancel() {
+            // Consumer aborted — best-effort no-op; the event-bus subscription
+            // is unsubscribed by `createEventStream`'s `finally` block.
           },
         });
 
@@ -495,6 +545,18 @@ export function createInvectHandler(config: InvectConfig): InvectHandler {
             'X-Accel-Buffering': 'no',
           },
         });
+      };
+
+      // GET /flow-runs/:flowRunId/stream - SSE stream of execution events
+      if (method === 'GET' && path.match(/^flow-runs\/[^/]+\/stream$/)) {
+        const flowRunId = path.split('/')[1];
+        return buildRunEventsResponse(flowRunId);
+      }
+
+      // GET /runs/:flowRunId/events - SSE stream alias for external clients.
+      if (method === 'GET' && path.match(/^runs\/[^/]+\/events$/)) {
+        const flowRunId = path.split('/')[1];
+        return buildRunEventsResponse(flowRunId);
       }
 
       // GET /flows/:flowId/flow-runs

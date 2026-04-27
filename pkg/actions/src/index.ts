@@ -9,7 +9,7 @@
  * `@invect/action-kit`.
  */
 
-import type { ActionDefinition } from '@invect/action-kit';
+import type { ActionDefinition, LazyActionDefinition } from '@invect/action-kit';
 
 // ── Shared ──────────────────────────────────────────────────────────────
 
@@ -130,6 +130,47 @@ import { triggerActions } from './triggers';
 import { twitterActions } from './twitter';
 import { woocommerceActions } from './woocommerce';
 import { zendeskActions } from './zendesk';
+
+// ── Lazy provider bundles (edge-runtime bundle size) ───────────────────
+//
+// Mirrors the eager provider bundles above, but each entry is a
+// `LazyActionDefinition` with a `load()` thunk. Use these in edge bundles
+// (Cloudflare Workers, Vercel Workflows) so 40+ provider SDKs aren't pulled
+// into the cold-start. The eager bundles still exist for self-hosted
+// backwards compatibility.
+//
+// Only 5 representative providers are migrated in this PR; remaining
+// providers are tracked in `LAZY_ACTIONS_MIGRATION.md`.
+
+export { lazyCoreActions } from './core/lazy';
+export { lazyGmailActions } from './gmail/lazy';
+export { lazySlackActions } from './slack/lazy';
+export { lazyGithubActions } from './github/lazy';
+export { lazyHttpActions } from './http/lazy';
+
+import { lazyCoreActions } from './core/lazy';
+import { lazyGmailActions } from './gmail/lazy';
+import { lazySlackActions } from './slack/lazy';
+import { lazyGithubActions } from './github/lazy';
+import { lazyHttpActions } from './http/lazy';
+
+/**
+ * Lazy descriptors for every provider that has been migrated to the lazy
+ * loading pattern. Provider modules are only imported when the action is
+ * resolved (via {@link ActionRegistry.loadAction} or
+ * {@link ActionRegistry.executeAction}).
+ *
+ * Currently migrated: `core`, `gmail`, `slack`, `github`, `http`. Remaining
+ * providers fall back to the eager bundles in {@link allProviderActions} —
+ * see `LAZY_ACTIONS_MIGRATION.md` for the full list.
+ */
+export const allProviderActionsLazy: LazyActionDefinition[] = [
+  ...lazyCoreActions,
+  ...lazyHttpActions,
+  ...lazyGithubActions,
+  ...lazyGmailActions,
+  ...lazySlackActions,
+];
 
 /** Every provider action bundled in `@invect/actions`. */
 export const allProviderActions: ActionDefinition[] = [

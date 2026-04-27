@@ -94,7 +94,7 @@ export default defineFlow({
       ],
     }),
   ],
-  edges: [['prompt', 'assistant']],
+  edges: [{ from: 'prompt', to: 'assistant' }],
 });
 `;
       const result = await writeFlowSourceTool.execute(
@@ -131,7 +131,7 @@ export default defineFlow({
       ],
     }),
   ],
-  edges: [['prompt', 'assistant']],
+  edges: [{ from: 'prompt', to: 'assistant' }],
 });
 `;
       const result = await writeFlowSourceTool.execute(
@@ -205,7 +205,7 @@ export default defineFlow({
       ],
     }),
   ],
-  edges: [['prompt', 'assistant']],
+  edges: [{ from: 'prompt', to: 'assistant' }],
 });
 `;
       const result = await writeFlowSourceTool.execute(
@@ -248,7 +248,7 @@ export default defineFlow({
       ],
     }),
   ],
-  edges: [['prompt', 'assistant']],
+  edges: [{ from: 'prompt', to: 'assistant' }],
 });
 `;
       const result = await writeFlowSourceTool.execute(
@@ -283,7 +283,7 @@ export default defineFlow({
       ],
     }),
   ],
-  edges: [['prompt', 'assistant']],
+  edges: [{ from: 'prompt', to: 'assistant' }],
 });
 `;
       const result = await writeFlowSourceTool.execute(
@@ -322,7 +322,7 @@ export default defineFlow({
       ],
     }),
   ],
-  edges: [['prompt', 'assistant']],
+  edges: [{ from: 'prompt', to: 'assistant' }],
 });
 `;
       await writeFlowSourceTool.execute({ source }, { ...baseCtx, chatContext: { flowId } });

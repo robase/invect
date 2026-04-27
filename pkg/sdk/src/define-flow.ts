@@ -1,11 +1,19 @@
 /**
  * `defineFlow` — the canonical authoring entry point.
  *
- * Accepts an author-friendly `SdkFlowDefinition` (nodes + edges in tuple or
- * object form, optional metadata) and validates basic structural rules:
- * - non-empty nodes + edges arrays (empty is allowed, represents a blank flow)
- * - unique referenceIds
- * - edges reference existing nodes
+ * Accepts an author-friendly flow definition in either form:
+ *
+ *   1. **Named-record form** (preferred): `nodes: { ref: helper(...) }`. Keys
+ *      are referenceIds; edges are typed via `EdgeOf<N>` so `from`/`to`
+ *      narrow against `keyof N` and `handle` narrows against the source
+ *      node's declared output handles.
+ *   2. **Array form** (legacy): `nodes: [helper('ref', ...)]`. Each helper
+ *      carries its own referenceId. Edges are plain `{ from, to, handle? }`.
+ *
+ * Validates basic structural rules:
+ *   - empty arrays are allowed (represents a blank flow)
+ *   - unique referenceIds
+ *   - edges reference existing nodes
  *
  * Does NOT mutate the input. Returns the definition as-is with edges
  * normalized so downstream consumers (emitter, runtime, save pipeline) can
@@ -16,7 +24,7 @@
  * *save* pipeline — `defineFlow` is a pure function that just validates shape.
  */
 
-import type { SdkFlowDefinition, SdkFlowNode, ResolvedEdge } from './types';
+import type { SdkFlowDefinition, SdkFlowDefinitionNamed, SdkFlowNode, ResolvedEdge } from './types';
 import { resolveEdge } from './edge';
 
 export class FlowValidationError extends Error {
@@ -35,21 +43,93 @@ export interface DefinedFlow {
   edges: ResolvedEdge[];
 }
 
-export function defineFlow(def: SdkFlowDefinition): DefinedFlow {
-  validateStructure(def);
+// Overloads — named form first so editor inference prefers it.
+export function defineFlow<const N extends Record<string, SdkFlowNode>>(
+  def: SdkFlowDefinitionNamed<N>,
+): DefinedFlow;
+export function defineFlow(def: SdkFlowDefinition): DefinedFlow;
+export function defineFlow(
+  def: SdkFlowDefinition | SdkFlowDefinitionNamed<Record<string, SdkFlowNode>>,
+): DefinedFlow {
+  // Normalize: named-record → array form. The key becomes the node's
+  // referenceId, overwriting whatever the helper produced (helpers called
+  // without a positional ref leave `referenceId` empty, by convention).
+  const arrayDef: SdkFlowDefinition = isNamedForm(def)
+    ? {
+        ...(def.name !== undefined ? { name: def.name } : {}),
+        ...(def.description !== undefined ? { description: def.description } : {}),
+        ...(def.tags !== undefined ? { tags: def.tags } : {}),
+        nodes: Object.entries(def.nodes).map(([key, node]) => ({
+          ...node,
+          referenceId: key,
+        })),
+        edges: [...def.edges] as SdkFlowDefinition['edges'],
+      }
+    : def;
 
-  const nodes = def.nodes;
-  const edges = def.edges.map(resolveEdge);
+  validateStructure(arrayDef);
 
-  validateEdgeRefs(edges, nodes);
+  const nodes = arrayDef.nodes;
+  const resolvedEdges = arrayDef.edges.map(resolveEdge);
+  // Lenient mode: drop edges that reference unknown nodes instead of
+  // throwing. Used by editor / preview environments (e.g. the VSCode
+  // extension) where mid-edit flows are routinely structurally
+  // invalid — we'd rather render the partial graph than show a hard
+  // error. Production servers leave this off so bad flows fail loudly.
+  const lenient = isLenient();
+  const edges = lenient ? filterValidEdges(resolvedEdges, nodes) : resolvedEdges;
+  if (!lenient) {
+    validateEdgeRefs(edges, nodes);
+  }
 
   return {
-    ...(def.name !== undefined ? { name: def.name } : {}),
-    ...(def.description !== undefined ? { description: def.description } : {}),
-    ...(def.tags !== undefined ? { tags: def.tags } : {}),
+    ...(arrayDef.name !== undefined ? { name: arrayDef.name } : {}),
+    ...(arrayDef.description !== undefined ? { description: arrayDef.description } : {}),
+    ...(arrayDef.tags !== undefined ? { tags: arrayDef.tags } : {}),
     nodes,
     edges,
   };
+}
+
+/**
+ * Discriminate named-record form from array form. Records have non-array
+ * `nodes`; the named form does not allow `nodes` to be missing.
+ */
+function isNamedForm(
+  def: SdkFlowDefinition | SdkFlowDefinitionNamed<Record<string, SdkFlowNode>>,
+): def is SdkFlowDefinitionNamed<Record<string, SdkFlowNode>> {
+  return !Array.isArray(def.nodes) && typeof def.nodes === 'object' && def.nodes !== null;
+}
+
+function isLenient(): boolean {
+  // Process env is the simplest opt-in. The VSCode extension sets
+  // this on activation; the SDK's evaluator + jiti load this module
+  // in the same process so the flag is visible.
+  return (
+    typeof process !== 'undefined' &&
+    typeof process.env !== 'undefined' &&
+    process.env.INVECT_SDK_LENIENT === '1'
+  );
+}
+
+function filterValidEdges(edges: ResolvedEdge[], nodes: SdkFlowNode[]): ResolvedEdge[] {
+  const refs = new Set(nodes.map((n) => n.referenceId));
+  const valid: ResolvedEdge[] = [];
+  for (const edge of edges) {
+    const fromOk = refs.has(edge.from);
+    const toOk = refs.has(edge.to);
+    if (!fromOk || !toOk) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `defineFlow (lenient): dropping edge ${edge.from} → ${edge.to} (` +
+          (!fromOk ? `unknown source "${edge.from}"` : `unknown target "${edge.to}"`) +
+          ')',
+      );
+      continue;
+    }
+    valid.push(edge);
+  }
+  return valid;
 }
 
 function validateStructure(def: SdkFlowDefinition): void {
